@@ -1,0 +1,42 @@
+# TijarahJo Environment Variables Template
+# Copy these to your environment or .env file
+# NEVER commit actual values to version control!
+
+# ============================================
+# DATABASE CONFIGURATION
+# ============================================
+
+# Option 1: Individual database settings
+DB_HOST=localhost
+DB_NAME=TijarahJoDB
+DB_USER=sa
+DB_PASSWORD=YourPasswordHere
+
+# Option 2: Full connection string (overrides individual settings)
+# DATABASE_CONNECTION_STRING=Data Source=localhost;Database=TijarahJoDB;User Id=sa;Password=YourPasswordHere;TrustServerCertificate=True;
+
+# ============================================
+# JWT CONFIGURATION
+# ============================================
+
+JWT_SIGNING_KEY=YourSecretKeyHere_Minimum32CharactersLong_12345678901234567890
+JWT_ISSUER=https://localhost
+JWT_AUDIENCE=https://localhost
+
+# ============================================
+# APPLICATION CONFIGURATION
+# ============================================
+
+# Environment (Development, Production)
+ASPNETCORE_ENVIRONMENT=Development
+
+# CORS Allowed Origins (comma-separated)
+CORS_AllowedOrigins=http://localhost:5173,https://localhost:5173
+
+# ============================================
+# FRONTEND CONFIGURATION
+# ============================================
+
+# Backend API Base URL
+VITE_API_BASE_URL=http://localhost:5033/api
+
