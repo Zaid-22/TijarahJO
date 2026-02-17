@@ -22,13 +22,13 @@ test_endpoint() {
     echo -n "Testing $method $endpoint - $description... "
     
     if [ -z "$data" ]; then
-        response=$(curl -s -w "\n%{http_code}" -X $method "$BASE_URL$endpoint" -H "Content-Type: application/json" 2>&1)
+        response=$(curl -sS -w "\n%{http_code}" -X "$method" "$BASE_URL$endpoint" -H "Content-Type: application/json" 2>&1)
     else
-        response=$(curl -s -w "\n%{http_code}" -X $method "$BASE_URL$endpoint" -H "Content-Type: application/json" -d "$data" 2>&1)
+        response=$(curl -sS -w "\n%{http_code}" -X "$method" "$BASE_URL$endpoint" -H "Content-Type: application/json" -d "$data" 2>&1)
     fi
-    
-    http_code=$(echo "$response" | tail -n1)
-    body=$(echo "$response" | head -n-1)
+
+    http_code=$(printf "%s\n" "$response" | tail -n1)
+    body=$(printf "%s\n" "$response" | sed '$d')
     
     if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
         echo -e "${GREEN}✓ OK (${http_code})${NC}"
@@ -49,7 +49,7 @@ test_endpoint() {
 
 echo "=== AUTH ENDPOINTS ==="
 test_endpoint "POST" "/api/auth/login" "Login" '{"Login":"test","Password":"test"}'
-test_endpoint "POST" "/api/auth/signup" "Signup" '{"Username":"testuser","Email":"test@test.com","Password":"test123","FirstName":"Test"}'
+test_endpoint "POST" "/api/auth/signup" "Signup" '{"Email":"test@test.com","Password":"test123","FirstName":"Test","LastName":"User","Phone":"+962790000000"}'
 # GetCurrentUser requires auth token, skip for now
 
 echo ""
@@ -90,4 +90,3 @@ echo ""
 echo "========================================="
 echo "Testing Complete"
 echo "========================================="
-

@@ -36,7 +36,7 @@
 **Status:** ✅ **WORKING**
 - **Test 1:** Invalid data → Returns 400 ✅
 - **Test 2:** Valid data → Returns 201 with token ✅
-- **Request Format:** `{ "Username": "...", "Email": "...", "Password": "...", "FirstName": "...", "LastName": "..." }`
+- **Request Format:** `{ "Login": "...", "Email": "...", "Password": "...", "FirstName": "...", "LastName": "..." }`
 - **Response Format:** `{ "Success": true, "Token": "...", "User": {...} }`
 - **Frontend Integration:** ✅ Mapped correctly in `services/api.ts`
 
@@ -180,7 +180,7 @@
 
 ### ✅ Request Mapping
 All frontend requests are properly mapped to backend format:
-- ✅ Login: `usernameOrEmail` → `Login`
+- ✅ Login: `login` → `Login`
 - ✅ Signup: camelCase → PascalCase
 - ✅ Posts: Frontend Product → Backend PostModel
 - ✅ Categories: Frontend Category → Backend CategoryModel

@@ -32,6 +32,19 @@ Progress tracking for launch checklist items.
 
 ---
 
+### PR_QUALITY_CHECKLIST.md
+Pull request quality gates and pre-merge verification checklist.
+
+**Includes:**
+- Local build/lint checks
+- Backend smoke/regression checks
+- Local CI mirror commands
+- CI workflow expectations
+
+**Use when:** Opening or reviewing pull requests.
+
+---
+
 ## Usage
 
 1. Open the appropriate checklist
@@ -41,4 +54,3 @@ Progress tracking for launch checklist items.
 ---
 
 **Last Updated:** December 2024
-

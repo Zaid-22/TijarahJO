@@ -5,7 +5,10 @@ import { ProductCard } from "../components/figma/ProductCard";
 import { Language } from "../translations";
 import { Product } from "../types";
 import { useEffect, useMemo, useState } from "react";
-import { rankProductsBySearch } from "../lib/searchRanking";
+import { useDebounce } from "../hooks/useDebounce";
+import { api } from "../services/api";
+import { isActiveProduct, rankProductsBySearch } from "../lib/searchRanking";
+import { APP_CONFIG } from "../constants/appConfig";
 import {
   Search,
   Grid3x3,
@@ -25,7 +28,7 @@ interface SearchResultsPageProps {
   onFavoriteToggle: (id: string) => void;
   onSearch: (query: string) => void;
   isAuthenticated?: boolean;
-  currentUserName?: string;
+  currentUserDisplayName?: string;
 }
 
 export function SearchResultsPage({
@@ -38,24 +41,94 @@ export function SearchResultsPage({
   onFavoriteToggle,
   onSearch,
   isAuthenticated = false,
-  currentUserName,
+  currentUserDisplayName,
 }: SearchResultsPageProps) {
   const [viewMode, setViewMode] = useState<
     "grid-4" | "grid-3" | "grid-2" | "list"
   >("grid-4");
   const [localSearchQuery, setLocalSearchQuery] = useState(initialSearchQuery);
+  const [searchResults, setSearchResults] = useState<Product[]>(() =>
+    products.filter(isActiveProduct),
+  );
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const debouncedSearchQuery = useDebounce(localSearchQuery, 300);
 
   useEffect(() => {
     setLocalSearchQuery(initialSearchQuery);
   }, [initialSearchQuery]);
 
-  const filteredProducts = useMemo(
-    () => rankProductsBySearch(products, localSearchQuery),
-    [products, localSearchQuery],
-  );
+  useEffect(() => {
+    let cancelled = false;
+    const query = debouncedSearchQuery.trim();
+
+    if (!query) {
+      setSearchResults(products.filter(isActiveProduct));
+      setSearchError(null);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    setSearchError(null);
+
+    void (async () => {
+      try {
+        const response = await api.search.search({
+          query,
+          status: "ACTIVE",
+          page: 1,
+          limit: APP_CONFIG.search.searchResultsLimit,
+          sortBy: "date",
+          sortOrder: "desc",
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        if (response.success) {
+          setSearchResults(rankProductsBySearch(response.posts, query));
+          setSearchError(null);
+          return;
+        }
+
+        const fallbackResults = rankProductsBySearch(products, query);
+        setSearchResults(fallbackResults);
+        setSearchError(
+          fallbackResults.length > 0
+            ? null
+            : response.error?.message || "Search failed",
+        );
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        console.error("Search request failed:", error);
+        const fallbackResults = rankProductsBySearch(products, query);
+        setSearchResults(fallbackResults);
+        setSearchError(
+          fallbackResults.length > 0 ? null : "Search request failed",
+        );
+      } finally {
+        if (!cancelled) {
+          setIsSearching(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearchQuery, products]);
+
+  const filteredProducts = useMemo(() => {
+    const query = debouncedSearchQuery.trim();
+    return query ? searchResults : products.filter(isActiveProduct);
+  }, [debouncedSearchQuery, searchResults, products]);
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="bg-gray-100 dark:bg-gray-900">
       {/* Header */}
       {/* Search Info - optional or keep? Global header has search bar. 
           But "Search results for X" is useful content. 
@@ -86,6 +159,17 @@ export function SearchResultsPage({
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {isSearching && (
+          <div className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+            {language === "ar" ? "جاري البحث..." : "Searching..."}
+          </div>
+        )}
+        {searchError && !isSearching && (
+          <div className="mb-4 text-sm text-red-600 dark:text-red-400">
+            {searchError}
+          </div>
+        )}
+
         {/* View Controls - Hidden on mobile, shown on larger screens */}
         <div className="hidden sm:flex items-center justify-end mb-8">
           <div className="flex items-center gap-1 bg-white dark:bg-gray-800 rounded-lg p-1 shadow-sm border border-gray-200 dark:border-gray-700">
@@ -173,7 +257,7 @@ export function SearchResultsPage({
                 isFavorite={favoriteIds.includes(product.id)}
                 onFavoriteToggle={onFavoriteToggle}
                 isAuthenticated={isAuthenticated}
-                currentUserName={currentUserName}
+                currentUserDisplayName={currentUserDisplayName}
               />
             ))
           )}

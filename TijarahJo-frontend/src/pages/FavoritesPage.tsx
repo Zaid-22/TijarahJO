@@ -1,7 +1,6 @@
 import { Logo } from "../components/ui/logo";
 import { Button } from "../components/ui/button";
 import { ProductCard } from "../components/figma/ProductCard";
-import { Footer } from "../components/figma/Footer";
 import { translations, Language } from "../translations";
 import { Product } from "../types";
 import { ArrowLeft, Heart, ShoppingBag } from "lucide-react";
@@ -31,7 +30,7 @@ export function FavoritesPage({
   const favoriteProducts = products.filter((p) => favoriteIds.includes(p.id));
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#1a1a1a]">
+    <div className="bg-gray-50 dark:bg-[#1a1a1a]">
       {/* Header */}
       <div className="sticky top-0 z-50 bg-white dark:bg-[#111111] shadow-sm border-b dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -128,8 +127,6 @@ export function FavoritesPage({
         )}
       </div>
 
-      {/* Footer */}
-      <Footer language={language} />
     </div>
   );
 }

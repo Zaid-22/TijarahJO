@@ -255,7 +255,7 @@ All major features are integrated between frontend and backend. The system uses 
 | `Id`          | `id`           | Direct mapping  | ✅     |
 | `FirstName`   | `firstName`    | Direct mapping  | ✅     |
 | `LastName`    | `lastName`     | Direct mapping  | ✅     |
-| `Username`    | `username`     | Direct mapping  | ✅     |
+| `Login`    | `login`     | Direct mapping  | ✅     |
 | `Email`       | `email`        | Direct mapping  | ✅     |
 | `Phone`       | `phone`        | Direct mapping  | ✅     |
 | `City`        | `city`         | Direct mapping  | ✅     |

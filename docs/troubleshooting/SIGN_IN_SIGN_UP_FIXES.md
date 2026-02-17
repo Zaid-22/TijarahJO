@@ -85,7 +85,7 @@
 
 ### Sign Up:
 - [x] Invalid data shows proper error messages
-- [x] Duplicate username/email shows specific error
+- [x] Duplicate login/email shows specific error
 - [x] Valid data successfully creates account
 - [x] Token is saved to localStorage
 - [x] User data is properly extracted

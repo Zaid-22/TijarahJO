@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -22,7 +22,6 @@ import {
 import { Label } from "../ui/label";
 import { Badge } from "../ui/badge";
 import { toast } from "sonner";
-import { useEffect } from "react";
 import { api } from "../../services/api";
 
 export function CategoriesManagement() {
@@ -37,6 +36,8 @@ export function CategoriesManagement() {
     name: "",
     nameAr: "",
     color: "#0A4ABF",
+    icon: "box",
+    image: "",
   });
 
   const fetchCategories = async () => {
@@ -57,6 +58,18 @@ export function CategoriesManagement() {
     fetchCategories();
   }, []);
 
+  const ensureCategoryExists = async (categoryId: string): Promise<boolean> => {
+    const exists = await api.categories.exists(categoryId);
+    if (!exists) {
+      setCategories((prevCategories) =>
+        prevCategories.filter((c) => c.id !== categoryId),
+      );
+      toast.error("Category no longer exists");
+      return false;
+    }
+    return true;
+  };
+
   const filteredCategories = categories.filter(
     (cat) =>
       cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -64,15 +77,29 @@ export function CategoriesManagement() {
   );
 
   const handleSave = async () => {
+    const trimmedName = formData.name.trim();
+    if (!trimmedName) {
+      toast.error("Category name is required");
+      return;
+    }
+
     try {
       if (selectedCategory) {
         // Edit mode
+        const stillExists = await ensureCategoryExists(selectedCategory.id);
+        if (!stillExists) {
+          setIsEditOpen(false);
+          return;
+        }
+
         const response = await api.categories.updateCategory(
           selectedCategory.id,
           {
-            name: formData.name,
-            nameAr: formData.nameAr,
+            name: trimmedName,
+            nameAr: formData.nameAr.trim(),
             color: formData.color,
+            icon: formData.icon.trim(),
+            image: formData.image.trim(),
           },
         );
 
@@ -90,9 +117,11 @@ export function CategoriesManagement() {
       } else {
         // Add mode
         const response = await api.categories.createCategory({
-          name: formData.name,
-          nameAr: formData.nameAr,
+          name: trimmedName,
+          nameAr: formData.nameAr.trim(),
           color: formData.color,
+          icon: formData.icon.trim(),
+          image: formData.image.trim(),
         });
 
         if (response.success) {
@@ -108,16 +137,38 @@ export function CategoriesManagement() {
       toast.error("An error occurred");
     }
 
-    setFormData({ name: "", nameAr: "", color: "#0A4ABF" });
+    setFormData({
+      name: "",
+      nameAr: "",
+      color: "#0A4ABF",
+      icon: "box",
+      image: "",
+    });
     setSelectedCategory(null);
   };
 
-  const openEdit = (category: any) => {
-    setSelectedCategory(category);
+  const openEdit = async (category: any) => {
+    const categoryId = String(category?.id || "").trim();
+    if (!categoryId) {
+      toast.error("Invalid category");
+      return;
+    }
+
+    const stillExists = await ensureCategoryExists(categoryId);
+    if (!stillExists) {
+      return;
+    }
+
+    const latestCategory = await api.categories.getCategory(categoryId);
+    const sourceCategory = latestCategory || category;
+
+    setSelectedCategory(sourceCategory);
     setFormData({
-      name: category.name,
-      nameAr: category.nameAr || "",
-      color: category.color,
+      name: sourceCategory.name,
+      nameAr: sourceCategory.nameAr || "",
+      color: sourceCategory.color,
+      icon: sourceCategory.icon || "box",
+      image: sourceCategory.image || "",
     });
     setIsEditOpen(true);
   };
@@ -125,10 +176,21 @@ export function CategoriesManagement() {
   const deleteCategory = async (category: any) => {
     if (window.confirm(`Are you sure you want to delete ${category.name}?`)) {
       try {
+        const categoryId = String(category?.id || "").trim();
+        if (!categoryId) {
+          toast.error("Invalid category");
+          return;
+        }
+
+        const stillExists = await ensureCategoryExists(categoryId);
+        if (!stillExists) {
+          return;
+        }
+
         const response = await api.categories.deleteCategory(category.id);
         if (response.success) {
           setCategories((prevCategories) =>
-            prevCategories.filter((c) => c.id !== category.id),
+            prevCategories.filter((c) => c.id !== categoryId),
           );
           toast.success("Category deleted");
         } else {
@@ -162,7 +224,13 @@ export function CategoriesManagement() {
               <Button
                 onClick={() => {
                   setSelectedCategory(null);
-                  setFormData({ name: "", nameAr: "", color: "#0A4ABF" });
+                  setFormData({
+                    name: "",
+                    nameAr: "",
+                    color: "#0A4ABF",
+                    icon: "box",
+                    image: "",
+                  });
                 }}
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -223,6 +291,47 @@ export function CategoriesManagement() {
                     </span>
                   </div>
                 </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="icon" className="text-right">
+                    Icon Name
+                  </Label>
+                  <Input
+                    id="icon"
+                    value={formData.icon}
+                    onChange={(e) =>
+                      setFormData({ ...formData, icon: e.target.value })
+                    }
+                    className="col-span-3"
+                    placeholder="box"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="image" className="text-right">
+                    Image URL
+                  </Label>
+                  <Input
+                    id="image"
+                    value={formData.image}
+                    onChange={(e) =>
+                      setFormData({ ...formData, image: e.target.value })
+                    }
+                    className="col-span-3"
+                    placeholder="https://example.com/category.jpg"
+                  />
+                </div>
+                {formData.image.trim() ? (
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <div />
+                    <img
+                      src={formData.image}
+                      alt="Category preview"
+                      className="col-span-3 h-24 w-full rounded-md object-cover border border-gray-200"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  </div>
+                ) : null}
               </div>
               <DialogFooter>
                 <Button onClick={handleSave}>Save Category</Button>
@@ -235,20 +344,21 @@ export function CategoriesManagement() {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Icon</TableHead>
-              <TableHead>Name (EN)</TableHead>
-              <TableHead>Name (AR)</TableHead>
-              <TableHead>Color</TableHead>
-              <TableHead>Subcategories</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableRow>
+                <TableHead>Icon</TableHead>
+                <TableHead>Image</TableHead>
+                <TableHead>Name (EN)</TableHead>
+                <TableHead>Name (AR)</TableHead>
+                <TableHead>Color</TableHead>
+                <TableHead>Subcategories</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredCategories.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="text-center py-8 text-gray-500"
                 >
                   No categories found
@@ -266,6 +376,18 @@ export function CategoriesManagement() {
                           style={{ color: cat.color }}
                         />
                       </div>
+                      <div className="mt-1 text-xs text-gray-500">{cat.icon || "box"}</div>
+                    </TableCell>
+                    <TableCell>
+                      {cat.image ? (
+                        <img
+                          src={cat.image}
+                          alt={cat.name}
+                          className="h-12 w-16 rounded object-cover border border-gray-200"
+                        />
+                      ) : (
+                        <span className="text-xs text-gray-400">No image</span>
+                      )}
                     </TableCell>
                     <TableCell className="font-medium">{cat.name}</TableCell>
                     <TableCell className="font-arabic">{cat.nameAr}</TableCell>
@@ -363,6 +485,47 @@ export function CategoriesManagement() {
                 <span className="text-sm text-gray-500">{formData.color}</span>
               </div>
             </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-icon" className="text-right">
+                Icon Name
+              </Label>
+              <Input
+                id="edit-icon"
+                value={formData.icon}
+                onChange={(e) =>
+                  setFormData({ ...formData, icon: e.target.value })
+                }
+                className="col-span-3"
+                placeholder="box"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-image" className="text-right">
+                Image URL
+              </Label>
+              <Input
+                id="edit-image"
+                value={formData.image}
+                onChange={(e) =>
+                  setFormData({ ...formData, image: e.target.value })
+                }
+                className="col-span-3"
+                placeholder="https://example.com/category.jpg"
+              />
+            </div>
+            {formData.image.trim() ? (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <div />
+                <img
+                  src={formData.image}
+                  alt="Category preview"
+                  className="col-span-3 h-24 w-full rounded-md object-cover border border-gray-200"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              </div>
+            ) : null}
           </div>
           <DialogFooter>
             <Button onClick={handleSave}>Save Changes</Button>

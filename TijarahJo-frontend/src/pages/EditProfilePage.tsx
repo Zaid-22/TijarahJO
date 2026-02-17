@@ -23,6 +23,16 @@ import {
 } from "../components/ui/select";
 import { ArrowLeft, Save, Camera, Upload, X } from "lucide-react";
 
+const DEBUG_PROFILE =
+  Boolean((import.meta as any).env?.DEV) &&
+  (import.meta as any).env?.VITE_DEBUG_PROFILE === "true";
+
+const debugProfileLog = (...args: any[]) => {
+  if (DEBUG_PROFILE) {
+    console.log(...args);
+  }
+};
+
 export interface UserProfile {
   id: string;
   name: string; // Computed from firstName + middleName + lastName
@@ -65,8 +75,8 @@ export function EditProfilePage({
   const [hasChanges, setHasChanges] = useState(false);
 
   // Debug: Log initial form data
-  console.log("[EditProfilePage] Initial profile:", profile);
-  console.log("[EditProfilePage] Initial formData:", formData);
+  debugProfileLog("[EditProfilePage] Initial profile:", profile);
+  debugProfileLog("[EditProfilePage] Initial formData:", formData);
   const [errors, setErrors] = useState<{
     firstName?: string;
     lastName?: string;
@@ -177,8 +187,8 @@ export function EditProfilePage({
   };
 
   const handleSave = () => {
-    console.log("[EditProfilePage] handleSave called");
-    console.log("[EditProfilePage] formData:", formData);
+    debugProfileLog("[EditProfilePage] handleSave called");
+    debugProfileLog("[EditProfilePage] formData:", formData);
 
     // Validate form data
     const newErrors: typeof errors = {};
@@ -187,13 +197,13 @@ export function EditProfilePage({
     if (!formData.firstName || !formData.firstName.trim()) {
       newErrors.firstName =
         language === "ar" ? "الاسم الأول مطلوب" : "First name is required";
-      console.log("[EditProfilePage] Validation error: First name is required");
+      debugProfileLog("[EditProfilePage] Validation error: First name is required");
     }
 
     if (!formData.lastName || !formData.lastName.trim()) {
       newErrors.lastName =
         language === "ar" ? "اسم العائلة مطلوب" : "Last name is required";
-      console.log("[EditProfilePage] Validation error: Last name is required");
+      debugProfileLog("[EditProfilePage] Validation error: Last name is required");
     }
 
     // City is optional - only validate if user tries to set it but it's invalid
@@ -220,7 +230,7 @@ export function EditProfilePage({
 
     // If there are errors, show them and don't save
     if (Object.keys(newErrors).length > 0) {
-      console.log("[EditProfilePage] Validation errors:", newErrors);
+      debugProfileLog("[EditProfilePage] Validation errors:", newErrors);
       setErrors(newErrors);
       toast.error(
         language === "ar"
@@ -231,7 +241,7 @@ export function EditProfilePage({
     }
 
     // Clear errors and save
-    console.log("[EditProfilePage] Validation passed, calling onSave");
+    debugProfileLog("[EditProfilePage] Validation passed, calling onSave");
     setErrors({});
 
     // Call onSave - it will handle API call and navigation
@@ -242,7 +252,7 @@ export function EditProfilePage({
     if (savePromise instanceof Promise) {
       savePromise
         .then(() => {
-          console.log("[EditProfilePage] Save successful");
+          debugProfileLog("[EditProfilePage] Save successful");
           setHasChanges(false);
         })
         .catch((error) => {
@@ -262,7 +272,7 @@ export function EditProfilePage({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#1a1a1a]">
+    <div className="bg-gray-50 dark:bg-[#1a1a1a]">
       {/* Header */}
       <div className="sticky top-0 z-50 bg-white dark:bg-[#111111] shadow-sm border-b dark:border-gray-800">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -541,10 +551,7 @@ export function EditProfilePage({
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 gap-4">
-                <div
-                  className="text-center p-4 rounded-lg"
-                  style={{ backgroundColor: "#F5F6FA" }}
-                >
+                <div className="text-center p-4 rounded-lg bg-gray-100 dark:bg-gray-800">
                   <div className="text-sm text-gray-600">
                     {t.memberSince || "Member since"}
                   </div>
@@ -555,10 +562,7 @@ export function EditProfilePage({
           </Card>
 
           {/* Action Buttons */}
-          <div
-            className="flex items-center justify-end gap-3 pt-4 border-t"
-            style={{ borderColor: "#E5E7EB" }}
-          >
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             <Button variant="outline" onClick={handleCancel}>
               {t.cancel || "Cancel"}
             </Button>

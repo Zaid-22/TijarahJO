@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 
@@ -25,8 +25,10 @@ import { Product, Language } from "../types";
 import { translations } from "../translations";
 import { EditProductDialog } from "../components/figma/EditProductDialog";
 import { Logo } from "../components/ui/logo";
+import { api } from "../services/api";
 import { shareProduct } from "../utils/shareUtils";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
+import { normalizeSellerDisplayName } from "../utils/sellerDisplayName";
 import {
   Eye,
   ChevronLeft,
@@ -36,6 +38,7 @@ import {
   Heart,
   Share2,
   Phone,
+  MessageSquare,
   Trash2,
   ArrowLeft,
   Edit,
@@ -51,10 +54,11 @@ interface ProductDetailsPageProps {
   onUpdateProduct?: (product: Product) => void | Promise<void>;
   onDeleteProduct?: (productId: string) => void | Promise<void>;
   isOwnProduct?: boolean;
+  onChatWithSeller?: () => void;
   favoriteIds?: string[];
   onFavoriteToggle?: (productId: string) => void;
   isAuthenticated?: boolean;
-  currentUserName?: string;
+  currentUserDisplayName?: string;
 }
 
 export function ProductDetailsPage({
@@ -66,6 +70,7 @@ export function ProductDetailsPage({
   onUpdateProduct,
   onDeleteProduct,
   isOwnProduct,
+  onChatWithSeller,
   favoriteIds = [],
   onFavoriteToggle,
   isAuthenticated = false,
@@ -82,6 +87,10 @@ export function ProductDetailsPage({
   const [sellerAvatar, setSellerAvatar] = useState<string | null>(null);
   const [sellerPhone, setSellerPhone] = useState<string | null>(null);
   const [sellerName, setSellerName] = useState<string | null>(null);
+  const [sellerCity, setSellerCity] = useState<string | null>(null);
+  const [sellerArea, setSellerArea] = useState<string | null>(null);
+  const [displayedViews, setDisplayedViews] = useState<number>(product.views ?? 0);
+  const [nowTimestamp, setNowTimestamp] = useState<number>(() => Date.now());
 
   const t = translations[language];
   const isRTL = language === "ar";
@@ -89,46 +98,43 @@ export function ProductDetailsPage({
   // Scroll to top when product details page loads or product changes
   useEffect(() => {
     setSelectedImage(0);
+    setDisplayedViews(product.views ?? 0);
     // Scroll to top immediately and forcefully when product changes
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     // Backup: Also try scrolling the document element
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
-  }, [product.id]);
+  }, [product.id, product.views]);
+
+  // Keep relative time label fresh while user stays on this page.
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNowTimestamp(Date.now());
+    }, 60_000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   // Track view when product details page is viewed
   useEffect(() => {
+    let cancelled = false;
+
     if (product.id) {
       // Increment view count (fire and forget - don't block UI)
-      const apiBaseUrl =
-        (import.meta as any).env?.VITE_API_BASE_URL ||
-        "http://localhost:5033/api";
-      fetch(`${apiBaseUrl}/posts/${product.id}/views`, {
-        method: "POST",
-      })
-        .then((response) => {
-          if (!response.ok) {
-            // Only log if it's not a 500 error (which indicates missing database setup)
-            if (response.status !== 500) {
-              console.warn(
-                `[ProductDetailsPage] Failed to track view: ${response.status} ${response.statusText}`,
-              );
-            }
-            // Silently ignore 500 errors - they indicate missing database setup
-            // and will be fixed when migration scripts are run
-          }
-        })
-        .catch((error) => {
-          // Only log network errors, not HTTP errors (which are handled above)
-          if (error.name === "TypeError" && error.message.includes("fetch")) {
-            console.warn(
-              "[ProductDetailsPage] Network error tracking view:",
-              error,
-            );
-          }
-          // Silently ignore other errors
-        });
+      api.posts.trackView(product.id).then((tracked) => {
+        if (tracked && !cancelled) {
+          setDisplayedViews((prev) => prev + 1);
+        }
+      }).catch(() => {
+        // Fire-and-forget analytics should not block UI.
+      });
     }
+
+    return () => {
+      cancelled = true;
+    };
   }, [product.id]);
 
   // Fetch seller data to get join date, avatar, and phone
@@ -140,59 +146,59 @@ export function ProductDetailsPage({
       setSellerAvatar(null);
       setSellerPhone(null);
       setSellerName(null);
+      setSellerCity(null);
+      setSellerArea(null);
 
       if (product.sellerId) {
         try {
-          const apiBaseUrl =
-            (import.meta as any).env?.VITE_API_BASE_URL ||
-            "http://localhost:5033/api";
-          const response = await fetch(
-            `${apiBaseUrl}/users/${product.sellerId}`,
-          );
-          if (response.ok) {
-            const userData = await response.json();
-            if (cancelled) {
-              return;
-            }
+          const user = await api.users.getUser(String(product.sellerId));
+          if (cancelled || !user) {
+            return;
+          }
 
-            // Handle both direct data and wrapped response
-            const user = userData.data || userData;
-            const joinDate =
-              user?.JoinedDate ||
-              user?.joinedDate ||
-              user?.JoinDate ||
-              user?.joinDate;
-            const avatar = user?.Avatar || user?.avatar;
-            const phone = user?.Phone || user?.phone;
-            const firstName = user?.FirstName || user?.firstName || "";
-            const lastName = user?.LastName || user?.lastName || "";
-            const fullName = user?.Name || `${firstName} ${lastName}`.trim();
+          const joinDate =
+            user?.JoinedDate || user?.joinedDate || user?.JoinDate;
+          const avatar = user?.avatar;
+          const phone = user?.phone;
+          let city = user?.city || null;
+          let area = user?.area || null;
+          const firstName = user?.FirstName || user?.firstName || "";
+          const lastName = user?.LastName || user?.lastName || "";
+          const fullName = user?.name || `${firstName} ${lastName}`.trim();
+          const email = user?.Email || user?.email || "";
 
-            if (fullName) {
-              setSellerName(fullName);
-            }
-            if (joinDate) {
-              setSellerJoinDate(joinDate);
-            } else {
-              console.warn(
-                "[ProductDetailsPage] No join date found in seller data",
-              );
-            }
-            if (avatar) {
-              setSellerAvatar(avatar);
-            }
-            if (phone) {
-              setSellerPhone(phone);
-            } else {
-              console.warn(
-                "[ProductDetailsPage] No phone found in seller data",
-              );
-            }
-          } else {
-            console.warn(
-              "[ProductDetailsPage] Failed to fetch seller data, status:",
-              response.status,
+          if (fullName || email) {
+            setSellerName(
+              normalizeSellerDisplayName(fullName || email, String(product.sellerId)),
             );
+          }
+          if (joinDate) {
+            setSellerJoinDate(joinDate);
+          }
+          if (avatar) {
+            setSellerAvatar(avatar);
+          }
+          if (phone) {
+            setSellerPhone(phone);
+          }
+          if (!city && !area) {
+            try {
+              const sellerProfileResponse = await api.sellers.getSellerProfile(
+                String(product.sellerId),
+              );
+              const sellerProfile = sellerProfileResponse?.seller;
+              city = sellerProfile?.city || city;
+              area = sellerProfile?.area || area;
+            } catch {
+              // Keep existing location fallback behavior if seller profile fetch fails.
+            }
+          }
+
+          if (city) {
+            setSellerCity(String(city));
+          }
+          if (area) {
+            setSellerArea(String(area));
           }
         } catch (error) {
           console.warn(
@@ -245,21 +251,67 @@ export function ProductDetailsPage({
     }
   };
 
-  const handleWhatsAppMessage = () => {
-    const phoneNumber = sellerPhone || product.phone || "962700000000"; // Default Jordanian number format
-    // Remove + and spaces for WhatsApp URL
-    const cleanPhone = phoneNumber.replace(/[\s+]/g, "");
-    const message =
-      language === "ar"
-        ? `مرحباً، أنا مهتم بـ ${product.name} المعروض بسعر ${product.price} دينار أردني`
-        : `Hi, I'm interested in ${product.name} listed for ${product.price} JOD`;
-    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
-      message,
-    )}`;
-    window.open(whatsappUrl, "_blank");
-  };
-
   const isFavorited = favoriteIds.includes(product.id);
+  const publicSellerName = normalizeSellerDisplayName(
+    sellerName || product.seller,
+    String(product.sellerId || ""),
+  );
+
+  const displayLocationLabel = useMemo(() => {
+    const normalizeLocationValue = (value: unknown): string => {
+      if (typeof value !== "string") {
+        return "";
+      }
+      const trimmed = value.trim();
+      if (!trimmed) {
+        return "";
+      }
+      const lowered = trimmed.toLowerCase();
+      if (lowered === "null" || lowered === "undefined" || lowered === "n/a") {
+        return "";
+      }
+      return trimmed;
+    };
+
+    const jordanLabels = [t.jordan, "Jordan", "الأردن"].map((value) =>
+      value.toLowerCase(),
+    );
+    const isJordanLabel = (value: string): boolean =>
+      jordanLabels.includes(value.toLowerCase());
+    const postArea = normalizeLocationValue(product.area);
+    const sellerAreaValue = normalizeLocationValue(sellerArea);
+    const resolvedArea = postArea || sellerAreaValue;
+
+    const postCityRaw = normalizeLocationValue(product.location);
+    const sellerCityValue = normalizeLocationValue(sellerCity);
+    const resolvedCity =
+      postCityRaw && !isJordanLabel(postCityRaw)
+        ? postCityRaw
+        : sellerCityValue || postCityRaw;
+
+    const parts: string[] = [];
+    if (resolvedArea && !isJordanLabel(resolvedArea)) {
+      parts.push(resolvedArea);
+    }
+
+    if (
+      resolvedCity &&
+      !isJordanLabel(resolvedCity) &&
+      !parts.some((part) => part.toLowerCase() === resolvedCity.toLowerCase())
+    ) {
+      parts.push(resolvedCity);
+    }
+
+    if (parts.length > 0) {
+      return parts.join(", ");
+    }
+
+    if (resolvedCity) {
+      return resolvedCity;
+    }
+
+    return t.jordan;
+  }, [product.area, product.location, sellerArea, sellerCity, t.jordan]);
 
   // Calculate seller's active listings
   const normalizedCurrentSellerId = String(product.sellerId || "").trim();
@@ -286,7 +338,7 @@ export function ProductDetailsPage({
     : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#1a1a1a]">
+    <div className="bg-gray-50 dark:bg-[#1a1a1a]">
       {/* Header */}
       <div className="sticky top-0 z-50 bg-white dark:bg-[#111111] shadow-sm border-b dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
@@ -313,29 +365,10 @@ export function ProductDetailsPage({
               <button
                 type="button"
                 onClick={onBack}
-                className="cursor-pointer transition-all duration-300 hover:scale-110 active:scale-95 hidden sm:flex items-center gap-3 px-4 py-2 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-transparent"
+                className="cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 hidden sm:flex items-center px-3 py-2 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-transparent"
                 title="Return to Home"
               >
-                <div
-                  className="flex items-center justify-center w-10 h-10 rounded-xl shadow-sm"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #0A4ABF 0%, #3E7EFF 100%)",
-                  }}
-                >
-                  <Logo color="white" showText={false} />
-                </div>
-                <div className="flex flex-col items-start">
-                  <span
-                    className="text-sm font-bold"
-                    style={{ color: "#000000" }}
-                  >
-                    TijarahJo
-                  </span>
-                  <span className="text-xs text-gray-500 font-medium">
-                    {t.marketplace || "Marketplace"}
-                  </span>
-                </div>
+                <Logo size="md" />
               </button>
             </div>
             <div className="flex items-center gap-1 sm:gap-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl p-1">
@@ -538,39 +571,7 @@ export function ProductDetailsPage({
                     <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-4 flex-wrap">
                       <div className="flex items-center gap-1">
                         <MapPin className="w-4 h-4" />
-                        <span className="font-medium">
-                          {(() => {
-                            const location = product.location || "";
-                            const area = product.area || "";
-                            const parts = [];
-
-                            // Add area if it exists and is different from location
-                            if (area && area !== location) {
-                              parts.push(area);
-                            }
-
-                            // Add location if it exists and is not "Jordan"
-                            if (
-                              location &&
-                              location !== "Jordan" &&
-                              location !== t.jordan
-                            ) {
-                              parts.push(location);
-                            }
-
-                            // Always add Jordan at the end if we have other parts, or if location is empty
-                            if (
-                              parts.length > 0 ||
-                              !location ||
-                              location === "Jordan" ||
-                              location === t.jordan
-                            ) {
-                              parts.push(t.jordan);
-                            }
-
-                            return parts.join(", ") || t.jordan;
-                          })()}
-                        </span>
+                        <span className="font-medium">{displayLocationLabel}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock className="w-4 h-4" />
@@ -578,7 +579,7 @@ export function ProductDetailsPage({
                           {(() => {
                             if (!product.createdAt) return t.postedDaysAgo;
                             const createdDate = new Date(product.createdAt);
-                            const now = new Date();
+                            const now = new Date(nowTimestamp);
                             const diffTime = Math.abs(
                               now.getTime() - createdDate.getTime(),
                             );
@@ -653,7 +654,7 @@ export function ProductDetailsPage({
                       <div className="flex items-center gap-1">
                         <Eye className="w-4 h-4" />
                         <span className="font-medium">
-                          {product.views ?? 0} {t.views}
+                          {displayedViews} {t.views}
                         </span>
                       </div>
                     </div>
@@ -711,15 +712,15 @@ export function ProductDetailsPage({
                 <div className="text-center mb-4">
                   <Avatar className="w-20 h-20 mx-auto mb-3">
                     {sellerAvatar && (
-                      <AvatarImage src={sellerAvatar} alt={product.seller} />
+                      <AvatarImage src={sellerAvatar} alt={publicSellerName} />
                     )}
-                    <AvatarFallback>{product.seller.charAt(0)}</AvatarFallback>
+                    <AvatarFallback>{publicSellerName.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <h3
                     className="mb-1 text-lg font-bold"
                     style={{ color: "#000000" }}
                   >
-                    {sellerName || product.seller}
+                    {publicSellerName}
                   </h3>
                 </div>
 
@@ -828,20 +829,18 @@ export function ProductDetailsPage({
                             variant="outline"
                             className="w-full hover:opacity-90 font-semibold text-base"
                             style={{
-                              backgroundColor: "#25D366",
-                              borderColor: "#25D366",
+                              backgroundColor: "#1D4ED8",
+                              borderColor: "#1D4ED8",
                               color: "white",
                             }}
-                            onClick={handleWhatsAppMessage}
+                            onClick={onChatWithSeller}
                           >
-                            <svg
-                              className={`w-5 h-5 ${isRTL ? "ml-2" : "mr-2"}`}
-                              viewBox="0 0 24 24"
-                              fill="currentColor"
-                            >
-                              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
-                            </svg>
-                            {t.sendMessage || "Send Message"}
+                            <MessageSquare
+                              className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`}
+                            />
+                            {language === "ar"
+                              ? "الدردشة مع البائع"
+                              : "Chat with Seller"}
                           </Button>
                         </>
                       )}
@@ -869,37 +868,7 @@ export function ProductDetailsPage({
                   {t.locationTitle}
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
-                  {(() => {
-                    const location = product.location || "";
-                    const area = product.area || "";
-                    const parts = [];
-
-                    // Add area if it exists and is different from location
-                    if (area && area !== location) {
-                      parts.push(area);
-                    }
-
-                    // Add location if it exists and is not "Jordan"
-                    if (
-                      location &&
-                      location !== "Jordan" &&
-                      location !== t.jordan
-                    ) {
-                      parts.push(location);
-                    }
-
-                    // Always add Jordan at the end if we have other parts, or if location is empty
-                    if (
-                      parts.length > 0 ||
-                      !location ||
-                      location === "Jordan" ||
-                      location === t.jordan
-                    ) {
-                      parts.push(t.jordan);
-                    }
-
-                    return parts.join(", ") || t.jordan;
-                  })()}
+                  {displayLocationLabel}
                 </p>
               </CardContent>
             </Card>
@@ -1096,9 +1065,7 @@ export function ProductDetailsPage({
                           : "Copy this link:",
                         shareUrl,
                       );
-                      if (userSelection) {
-                        console.log("User manually copied link");
-                      }
+                      void userSelection;
                     }
                   }
                 }}

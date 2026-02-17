@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Users,
   Tags,
+  Shield,
   LogOut,
   Menu,
   X,
@@ -23,6 +24,7 @@ export function AdminLayout() {
     { label: "Dashboard", path: "/admin", icon: LayoutDashboard },
     { label: "Users", path: "/admin/users", icon: Users },
     { label: "Categories", path: "/admin/categories", icon: Tags },
+    { label: "Roles", path: "/admin/roles", icon: Shield },
   ];
 
   const handleLogout = async () => {

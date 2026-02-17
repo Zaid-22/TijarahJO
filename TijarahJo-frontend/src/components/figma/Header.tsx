@@ -35,7 +35,7 @@ import { categoryData } from "../../data/categoryData";
 interface HeaderProps {
   language: Language;
   isAuthenticated?: boolean;
-  currentUserName?: string;
+  currentUserDisplayName?: string;
   userAvatar?: string;
   userFirstName?: string;
   userLastName?: string;
@@ -59,7 +59,7 @@ interface HeaderProps {
 export function Header({
   language,
   isAuthenticated = false,
-  currentUserName,
+  currentUserDisplayName,
   userAvatar,
   userFirstName,
   userLastName,
@@ -321,14 +321,15 @@ export function Header({
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="hidden sm:flex hover:opacity-80 transition-opacity rounded-full focus:outline-none">
-                    <Avatar className="w-10 h-10 border-2 border-primary dark:border-secondary">
+                  <button className="hidden sm:flex items-center justify-center rounded-full focus:outline-none transition-all duration-200 hover:scale-105">
+                    <Avatar className="w-10 h-10 border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 shadow-sm ring-2 ring-white dark:ring-gray-900">
                       <AvatarImage
                         src={userAvatar}
-                        alt={currentUserName || "User"}
+                        alt={currentUserDisplayName || "User"}
+                        className="object-cover object-[center_20%]"
                       />
-                      <AvatarFallback className="bg-primary text-white dark:bg-secondary text-sm">
-                        {userFirstName?.[0] || currentUserName?.[0] || "U"}
+                      <AvatarFallback className="bg-primary text-white dark:bg-secondary text-sm font-semibold">
+                        {userFirstName?.[0] || currentUserDisplayName?.[0] || "U"}
                         {userLastName?.[0] || ""}
                       </AvatarFallback>
                     </Avatar>

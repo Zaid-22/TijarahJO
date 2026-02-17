@@ -132,7 +132,7 @@
 
 The following endpoints return 401 (Unauthorized) because they require authentication:
 
-- `/api/auth/login` - Requires valid username/email and password
+- `/api/auth/login` - Requires valid login/email and password
 - `/api/auth/me` - Requires JWT token in Authorization header
 - `/api/users/Exists/{id}` - Requires `[Authorize]` attribute
 

@@ -9,6 +9,8 @@ module.exports = {
   parserOptions: {
     ecmaVersion: "latest",
     sourceType: "module",
+    // Suppress version-range warning when local TypeScript is newer than parser's tested range.
+    warnOnUnsupportedTypeScriptVersion: false,
     ecmaFeatures: {
       jsx: true,
     },

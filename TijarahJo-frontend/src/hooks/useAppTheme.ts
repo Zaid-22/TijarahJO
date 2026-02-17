@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 import { Language } from "../types";
 
@@ -14,14 +14,14 @@ export function useAppTheme() {
 
   const isRTL = language === "ar";
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.dir = isRTL ? "rtl" : "ltr";
     document.documentElement.lang = language;
   }, [isRTL, language]);
 
-  useEffect(() => {
-    if (darkMode) document.documentElement.classList.add("dark");
-    else document.documentElement.classList.remove("dark");
+  useLayoutEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode);
+    document.documentElement.style.colorScheme = darkMode ? "dark" : "light";
   }, [darkMode]);
 
   const toggleLanguage = () =>

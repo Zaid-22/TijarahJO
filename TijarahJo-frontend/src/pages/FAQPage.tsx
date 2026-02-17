@@ -73,7 +73,7 @@ export function FAQPage({ language, onBack }: FAQPageProps) {
   const t = content[language];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#1a1a1a] pb-20">
+    <div className="bg-gray-50 dark:bg-[#1a1a1a] pb-8">
       {/* Header */}
       <div className="bg-white dark:bg-[#111111] border-b border-gray-200 dark:border-gray-800 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-4">

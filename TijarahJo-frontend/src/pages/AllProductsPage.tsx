@@ -1,12 +1,14 @@
 import { Logo } from "../components/ui/logo";
 import { Button } from "../components/ui/button";
 import { ProductCard } from "../components/figma/ProductCard";
-import { Footer } from "../components/figma/Footer";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
 import { translations, Language } from "../translations";
 import { Product } from "../types";
-import { rankProductsBySearch } from "../lib/searchRanking";
+import { api } from "../services/api";
+import { useDebounce } from "../hooks/useDebounce";
+import { isActiveProduct, rankProductsBySearch } from "../lib/searchRanking";
+import { APP_CONFIG } from "../constants/appConfig";
 import {
   ArrowLeft,
   Search,
@@ -18,7 +20,7 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Select,
@@ -37,7 +39,7 @@ interface AllProductsPageProps {
   language: Language;
   isAuthenticated?: boolean;
   darkMode?: boolean;
-  currentUserName?: string;
+  currentUserDisplayName?: string;
 }
 
 export function AllProductsPage({
@@ -49,7 +51,7 @@ export function AllProductsPage({
   language,
   isAuthenticated = false,
   darkMode = false,
-  currentUserName,
+  currentUserDisplayName,
 }: AllProductsPageProps) {
   const t = translations[language];
   const isRTL = language === "ar";
@@ -61,56 +63,150 @@ export function AllProductsPage({
     "grid-4" | "grid-3" | "grid-2" | "list"
   >("grid-4");
   const [showFilters, setShowFilters] = useState(false);
-
-  const searchRankedProducts = useMemo(
-    () => rankProductsBySearch(products, searchQuery),
-    [products, searchQuery],
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>(() =>
+    products.filter(isActiveProduct),
   );
-  let filteredProducts = searchRankedProducts;
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  // Filter by price range
-  if (priceRange !== "all") {
-    switch (priceRange) {
-      case "0-50":
-        filteredProducts = filteredProducts.filter((p) => p.price <= 50);
-        break;
-      case "50-100":
-        filteredProducts = filteredProducts.filter(
-          (p) => p.price > 50 && p.price <= 100,
-        );
-        break;
-      case "100-500":
-        filteredProducts = filteredProducts.filter(
-          (p) => p.price > 100 && p.price <= 500,
-        );
-        break;
-      case "500+":
-        filteredProducts = filteredProducts.filter((p) => p.price > 500);
-        break;
-    }
-  }
+  useEffect(() => {
+    setFilteredProducts(products.filter(isActiveProduct));
+  }, [products]);
 
-  // Sort products
-  switch (sortBy) {
-    case "price-low":
-      filteredProducts = [...filteredProducts].sort(
-        (a, b) => a.price - b.price,
-      );
-      break;
-    case "price-high":
-      filteredProducts = [...filteredProducts].sort(
-        (a, b) => b.price - a.price,
-      );
-      break;
-    case "name":
-      filteredProducts = [...filteredProducts].sort((a, b) =>
-        a.name.localeCompare(b.name),
-      );
-      break;
-  }
+  useEffect(() => {
+    let cancelled = false;
+
+    const resolvePriceRange = (): { minPrice?: number; maxPrice?: number } => {
+      switch (priceRange) {
+        case "0-50":
+          return { maxPrice: 50 };
+        case "50-100":
+          return { minPrice: 50.01, maxPrice: 100 };
+        case "100-500":
+          return { minPrice: 100.01, maxPrice: 500 };
+        case "500+":
+          return { minPrice: 500.01 };
+        default:
+          return {};
+      }
+    };
+
+    const resolveSort = (): {
+      sortBy: "date" | "price" | "views";
+      sortOrder: "asc" | "desc";
+    } => {
+      if (sortBy === "price-low") {
+        return { sortBy: "price", sortOrder: "asc" };
+      }
+      if (sortBy === "price-high") {
+        return { sortBy: "price", sortOrder: "desc" };
+      }
+
+      return { sortBy: "date", sortOrder: "desc" };
+    };
+
+    const { minPrice, maxPrice } = resolvePriceRange();
+    const sortConfig = resolveSort();
+    const query = debouncedSearchQuery.trim();
+
+    const sortByUiMode = (results: Product[]): Product[] => {
+      if (sortBy === "price-low") {
+        return [...results].sort((a, b) => Number(a.price) - Number(b.price));
+      }
+      if (sortBy === "price-high") {
+        return [...results].sort((a, b) => Number(b.price) - Number(a.price));
+      }
+      if (sortBy === "name") {
+        return [...results].sort((a, b) => a.name.localeCompare(b.name));
+      }
+      if (!query) {
+        return [...results].sort((a, b) => {
+          const timestampA = Date.parse(a.createdAt || "") || 0;
+          const timestampB = Date.parse(b.createdAt || "") || 0;
+          return timestampB - timestampA;
+        });
+      }
+      return results;
+    };
+
+    const applyLocalFallback = (): Product[] => {
+      let results = products.filter(isActiveProduct);
+      if (query) {
+        results = rankProductsBySearch(results, query);
+      }
+      if (typeof minPrice === "number") {
+        results = results.filter((product) => Number(product.price) >= minPrice);
+      }
+      if (typeof maxPrice === "number") {
+        results = results.filter((product) => Number(product.price) <= maxPrice);
+      }
+      return sortByUiMode(results);
+    };
+
+    setIsSearching(true);
+    setSearchError(null);
+
+    void (async () => {
+      try {
+        const response = await api.search.search({
+          query: query || undefined,
+          minPrice,
+          maxPrice,
+          status: "ACTIVE",
+          sortBy: sortConfig.sortBy,
+          sortOrder: sortConfig.sortOrder,
+          page: 1,
+          limit: APP_CONFIG.search.allProductsLimit,
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        if (!response.success) {
+          const fallbackResults = applyLocalFallback();
+          setFilteredProducts(fallbackResults);
+          setSearchError(
+            fallbackResults.length > 0
+              ? null
+              : response.error?.message || "Failed to fetch products",
+          );
+          return;
+        }
+
+        let results = response.posts.filter(isActiveProduct);
+        if (query && sortBy === "recent") {
+          results = rankProductsBySearch(results, query);
+        }
+        results = sortByUiMode(results);
+
+        setFilteredProducts(results);
+        setSearchError(null);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        console.error("All products search failed:", error);
+        const fallbackResults = applyLocalFallback();
+        setFilteredProducts(fallbackResults);
+        setSearchError(
+          fallbackResults.length > 0 ? null : "Failed to fetch products",
+        );
+      } finally {
+        if (!cancelled) {
+          setIsSearching(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearchQuery, priceRange, products, sortBy]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#1a1a1a]">
+    <div className="bg-gray-50 dark:bg-[#1a1a1a]">
       {/* Header */}
       <div className="sticky top-0 z-50 bg-white dark:bg-[#111111] shadow-sm border-b dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -383,6 +479,16 @@ export function AllProductsPage({
 
       {/* Products Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {isSearching && (
+          <div className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+            {language === "ar" ? "جاري تحميل النتائج..." : "Loading results..."}
+          </div>
+        )}
+        {searchError && !isSearching && (
+          <div className="mb-4 text-sm text-red-600 dark:text-red-400">
+            {searchError}
+          </div>
+        )}
         {filteredProducts.length > 0 ? (
           <div
             className={`grid ${
@@ -404,7 +510,7 @@ export function AllProductsPage({
                 isFavorite={favoriteIds.includes(product.id)}
                 onFavoriteToggle={onFavoriteToggle}
                 isAuthenticated={isAuthenticated}
-                currentUserName={currentUserName}
+                currentUserDisplayName={currentUserDisplayName}
               />
             ))}
           </div>
@@ -436,8 +542,6 @@ export function AllProductsPage({
         )}
       </div>
 
-      {/* Footer */}
-      <Footer language={language} />
     </div>
   );
 }

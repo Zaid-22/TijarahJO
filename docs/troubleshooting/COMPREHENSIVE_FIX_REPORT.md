@@ -223,7 +223,7 @@ dotnet run
 curl http://localhost:5033/swagger
 curl -X POST http://localhost:5033/api/auth/signup \
   -H "Content-Type: application/json" \
-  -d '{"Username":"test","Email":"test@test.com","Password":"test123","FirstName":"Test","LastName":"User"}'
+  -d '{"Login":"test","Email":"test@test.com","Password":"test123","FirstName":"Test","LastName":"User"}'
 ```
 
 ### Check Backend Status

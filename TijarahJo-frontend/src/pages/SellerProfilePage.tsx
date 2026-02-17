@@ -9,21 +9,97 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
-// import { api } from "../services/api"; // Ensure api supports reviews or fetch directly
+import { api } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
-// import { ProductCard } from "../components/figma/ProductCard";
+import { ProductCard } from "../components/figma/ProductCard";
 import { Textarea } from "../components/ui/textarea";
+import { Product } from "../types";
+import { normalizeSellerDisplayName } from "../utils/sellerDisplayName";
+
+function normalizeListingToProduct(
+  post: any,
+  fallbackIndex: number,
+  sellerName: string,
+  sellerId: string,
+  fallbackLocation: string,
+): Product {
+  const rawId =
+    post?.id ??
+    post?.Id ??
+    post?.PostID ??
+    post?.postID ??
+    post?.postId ??
+    `seller-post-${fallbackIndex}`;
+  const id = String(rawId);
+
+  const listImages = Array.isArray(post?.images)
+    ? post.images
+    : Array.isArray(post?.Images)
+      ? post.Images
+      : [];
+  const normalizedImages = listImages
+    .map((value: unknown) => String(value || "").trim())
+    .filter((value: string) => value.length > 0);
+  const primaryImage =
+    String(
+      post?.image ??
+        post?.Image ??
+        post?.postImageURL ??
+        post?.PostImageURL ??
+        normalizedImages[0] ??
+        "",
+    ).trim() || "";
+
+  const categoryName = String(
+    post?.category ?? post?.Category ?? post?.CategoryName ?? "General",
+  ).trim();
+  const resolvedCategory = categoryName.length > 0 ? categoryName : "General";
+
+  const location = String(
+    post?.location ?? post?.Location ?? post?.city ?? post?.City ?? fallbackLocation,
+  ).trim();
+  const resolvedLocation = location.length > 0 ? location : fallbackLocation;
+
+  return {
+    id,
+    name: String(post?.name ?? post?.PostTitle ?? post?.title ?? "Untitled").trim(),
+    price: Number(post?.price ?? post?.Price ?? 0) || 0,
+    location: resolvedLocation,
+    area: String(post?.area ?? post?.Area ?? "").trim() || undefined,
+    seller: String(post?.seller ?? post?.Seller ?? sellerName).trim() || sellerName,
+    sellerId:
+      String(post?.sellerId ?? post?.SellerID ?? post?.UserID ?? sellerId).trim() ||
+      sellerId,
+    category: resolvedCategory,
+    categoryId: String(post?.categoryId ?? post?.CategoryID ?? "").trim() || undefined,
+    image: primaryImage,
+    images: normalizedImages.length > 0 ? normalizedImages : [primaryImage].filter(Boolean),
+    description: String(post?.description ?? post?.PostDescription ?? "").trim() || undefined,
+    createdAt:
+      String(post?.createdAt ?? post?.CreatedAt ?? new Date().toISOString()).trim() ||
+      new Date().toISOString(),
+    updatedAt:
+      String(post?.updatedAt ?? post?.UpdatedAt ?? new Date().toISOString()).trim() ||
+      new Date().toISOString(),
+    views: Number(post?.views ?? post?.Views ?? 0) || 0,
+    status:
+      String(post?.status ?? post?.Status ?? "ACTIVE").toUpperCase() === "SOLD"
+        ? "SOLD"
+        : String(post?.status ?? post?.Status ?? "ACTIVE").toUpperCase() === "DELETED"
+          ? "DELETED"
+          : "ACTIVE",
+    phone: String(post?.phone ?? post?.Phone ?? "").trim() || undefined,
+  };
+}
 
 export function SellerProfilePage() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const apiBaseUrl =
-    (import.meta as any).env?.VITE_API_BASE_URL || "http://localhost:5033/api";
 
   // const [seller, setSeller] = useState<any>(null);
-  const [activeListings, setActiveListings] = useState<any[]>([]);
+  const [activeListings, setActiveListings] = useState<Product[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sellerProfile, setSellerProfile] = useState<{
@@ -48,100 +124,123 @@ export function SellerProfilePage() {
     setReviews([]);
     setSellerProfile(null);
     try {
-      // 0. Fetch User Details explicitly
-      const userRes = await fetch(`${apiBaseUrl}/users/${userId}`);
-      if (userRes.ok) {
-        const userPayload = await userRes.json();
-        const user = userPayload?.data || userPayload;
-        // setSeller(user); // If we had a seller state object
+      const sellerResponse = await api.sellers.getSellerProfile(String(userId));
+      if (sellerResponse?.seller) {
+        const seller = sellerResponse.seller;
+        const city = seller?.city;
+        const area = seller?.area;
+        const location = [area, city].filter(Boolean).join(", ") || "Amman, Jordan";
+        const sellerName = normalizeSellerDisplayName(
+          seller.name,
+          String(seller?.id || userId),
+        );
 
-        // Extended logic to use fetched user data (hacky state updates matching existing structure)
-        const firstName = user?.FirstName || user?.firstName || "";
-        const lastName = user?.LastName || user?.lastName || "";
-        const fullName = user?.Name || `${firstName} ${lastName}`.trim();
-        const city = user?.City || user?.city;
-        const area = user?.Area || user?.area;
-        const location =
-          [area, city].filter(Boolean).join(", ") || "Amman, Jordan";
-        // Update title directly or via state if we had one.
-        // Since the original code didn't have a user state, we should probably add one or update the UI to use variables if we re-render.
-        // Let's add a state for sellerProfile
         setSellerProfile({
-          name: fullName || `User ${userId}`,
-          joinDate:
-            user?.JoinedDate ||
-            user?.joinedDate ||
-            user?.JoinDate ||
-            user?.joinDate ||
-            "2024",
+          name: sellerName,
+          joinDate: seller.joinedDate || "2024",
           location,
-          avatar: user?.Avatar || user?.avatar,
+          avatar: seller.avatar,
         });
-      }
 
-      // 1. Fetch Posts (Active Listings)
-      const postsRes = await fetch(`${apiBaseUrl}/posts/user/${userId}`);
-      if (postsRes.ok) {
-        const postsPayload = await postsRes.json();
-        const posts = Array.isArray(postsPayload)
-          ? postsPayload
-          : postsPayload?.data || [];
-        const activePosts = posts.filter((post: any) => {
-          const status = post?.Status ?? post?.status;
-          const isDeleted = Boolean(post?.IsDeleted ?? post?.isDeleted ?? false);
-          if (isDeleted) {
-            return false;
-          }
-
-          return (
-            status === 0 ||
-            status === "0" ||
-            String(status || "").toUpperCase() === "ACTIVE"
+        const activePosts = (sellerResponse.posts || [])
+          .filter(
+            (post: any) =>
+              String(post?.status || post?.Status || "").toUpperCase() === "ACTIVE" &&
+              !(post?.isDeleted ?? false),
+          )
+          .map((post: any, index: number) =>
+            normalizeListingToProduct(
+              post,
+              index,
+              sellerName,
+              String(seller?.id || userId),
+              location,
+            ),
           );
-        });
+        setActiveListings(activePosts);
+      } else {
+        const sellerUser = await api.users.getUser(String(userId));
+        let fallbackSellerName = `User ${userId}`;
+        let fallbackLocation = "Amman, Jordan";
+        if (sellerUser) {
+          const firstName = sellerUser?.FirstName || sellerUser?.firstName || "";
+          const lastName = sellerUser?.LastName || sellerUser?.lastName || "";
+          const fullName = sellerUser?.name || `${firstName} ${lastName}`.trim();
+          const email = sellerUser?.Email || sellerUser?.email || "";
+          const city = sellerUser?.city;
+          const area = sellerUser?.area;
+          const location = [area, city].filter(Boolean).join(", ") || "Amman, Jordan";
+
+          fallbackSellerName = normalizeSellerDisplayName(
+            fullName || email,
+            String(userId),
+          );
+          fallbackLocation = location;
+          setSellerProfile({
+            name: fallbackSellerName,
+            joinDate:
+              sellerUser?.JoinedDate ||
+              sellerUser?.joinedDate ||
+              sellerUser?.JoinDate ||
+              "2024",
+            location,
+            avatar: sellerUser?.avatar,
+          });
+        }
+
+        const userPosts = await api.posts.getUserPosts(String(userId));
+        const activePosts = userPosts
+          .filter(
+            (post: Product) =>
+              String(post?.status || "").toUpperCase() === "ACTIVE" &&
+              !(post as any)?.isDeleted,
+          )
+          .map((post: Product, index: number) =>
+            normalizeListingToProduct(
+              post,
+              index,
+              fallbackSellerName,
+              String(userId),
+              fallbackLocation,
+            ),
+          );
         setActiveListings(activePosts);
       }
 
       // Fetch Reviews
-      const reviewRes = await fetch(`${apiBaseUrl}/reviews/user/${userId}`);
-      if (reviewRes.ok) {
-        const reviewPayload = await reviewRes.json();
-        const reviewList = Array.isArray(reviewPayload)
-          ? reviewPayload
-          : reviewPayload?.data || [];
-        const normalizedReviews = reviewList.map((review: any) => {
-          const reviewId = review?.ReviewID ?? review?.reviewID;
-          const reviewerId = review?.ReviewerID ?? review?.reviewerID ?? 0;
-          const rawRating = Number(review?.Rating ?? review?.rating ?? 0);
-          const safeRating =
-            Number.isFinite(rawRating) && rawRating > 0
-              ? Math.min(5, Math.max(1, Math.round(rawRating)))
-              : 0;
-          const rawTimestamp = review?.Timestamp ?? review?.timestamp;
-          const parsedTimestamp = rawTimestamp ? new Date(rawTimestamp) : null;
-          const timestamp =
-            parsedTimestamp && !Number.isNaN(parsedTimestamp.getTime())
-              ? parsedTimestamp.toISOString()
-              : new Date().toISOString();
+      const reviewList = await api.reviews.getUserReviews(String(userId));
+      const normalizedReviews = reviewList.map((review: any) => {
+        const reviewId = review?.ReviewID ?? review?.reviewID;
+        const reviewerId = review?.ReviewerID ?? review?.reviewerID ?? 0;
+        const rawRating = Number(review?.Rating ?? review?.rating ?? 0);
+        const safeRating =
+          Number.isFinite(rawRating) && rawRating > 0
+            ? Math.min(5, Math.max(1, Math.round(rawRating)))
+            : 0;
+        const rawTimestamp = review?.Timestamp ?? review?.timestamp;
+        const parsedTimestamp = rawTimestamp ? new Date(rawTimestamp) : null;
+        const timestamp =
+          parsedTimestamp && !Number.isNaN(parsedTimestamp.getTime())
+            ? parsedTimestamp.toISOString()
+            : new Date().toISOString();
 
-          return {
-            reviewID: reviewId,
-            reviewerID: reviewerId,
-            reviewerName:
-              review?.ReviewerName || review?.reviewerName || `User ${reviewerId}`,
-            rating: safeRating,
-            comment: review?.Comment || review?.comment || "",
-            timestamp,
-          };
-        });
-        setReviews(normalizedReviews);
-      }
+        return {
+          reviewID: reviewId,
+          reviewerID: reviewerId,
+          reviewerName:
+            review?.ReviewerName || review?.reviewerName || `User ${reviewerId}`,
+          rating: safeRating,
+          comment: review?.Comment || review?.comment || "",
+          timestamp,
+        };
+      });
+      setReviews(normalizedReviews);
     } catch (e) {
-      console.error(e);
+      toast.error("Failed to load seller profile");
     } finally {
       setIsLoading(false);
     }
-  }, [apiBaseUrl, userId]);
+  }, [userId]);
 
   useEffect(() => {
     loadData();
@@ -153,29 +252,24 @@ export function SellerProfilePage() {
 
     setIsSubmittingReview(true);
     try {
-      const token = localStorage.getItem("tijarahjo_token");
-      const res = await fetch(`${apiBaseUrl}/reviews`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          reviewedUserId: parseInt(userId || "0"),
-          reviewerID: 0, // Backend sets this
-          rating,
-          comment,
-          timestamp: new Date().toISOString(),
-        }),
+      const reviewedUserId = Number.parseInt(userId || "0", 10);
+      if (!Number.isInteger(reviewedUserId) || reviewedUserId <= 0) {
+        toast.error("Invalid seller ID");
+        return;
+      }
+
+      const response = await api.reviews.addReview({
+        reviewedUserId,
+        rating,
+        comment: comment.trim(),
       });
 
-      if (res.ok) {
+      if (response.success) {
         toast.success("Review submitted!");
         setComment("");
         loadData(); // Refresh reviews
       } else {
-        const txt = await res.text();
-        toast.error(txt || "Failed to submit review");
+        toast.error(response.message || "Failed to submit review");
       }
     } catch (e) {
       toast.error("Error submitting review");
@@ -184,8 +278,13 @@ export function SellerProfilePage() {
     }
   };
 
-  if (isLoading)
-    return <div className="p-10 text-center">Loading Seller Profile...</div>;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-500 dark:text-gray-400">
+        Loading Seller Profile...
+      </div>
+    );
+  }
 
   const parsedJoinDate = sellerProfile?.joinDate
     ? new Date(sellerProfile.joinDate)
@@ -196,7 +295,7 @@ export function SellerProfilePage() {
       : "2024";
 
   return (
-    <div className="container mx-auto p-4 max-w-6xl mt-20">
+    <div className="container mx-auto px-4 py-6 max-w-6xl">
       <Button
         variant="ghost"
         onClick={() => navigate(-1)}
@@ -219,7 +318,7 @@ export function SellerProfilePage() {
         </div>
 
         <div className="px-6 pb-6 relative">
-          <div className="flex flex-col md:flex-row items-center md:items-end gap-6 -mt-12 sm:-mt-16">
+          <div className="flex flex-col md:flex-row items-center md:items-end gap-6 -mt-8 sm:-mt-10">
             {/* Avatar */}
             <div className="relative">
               <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-white dark:border-gray-800 bg-white dark:bg-gray-800 shadow-md flex items-center justify-center overflow-hidden">
@@ -237,7 +336,12 @@ export function SellerProfilePage() {
 
             {/* User Info */}
             <div className="flex-1 text-center md:text-left mb-2">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              <div className="mb-2">
+                <span className="inline-flex items-center rounded-full bg-blue-50 text-[#0A4ABF] px-3 py-1 text-xs font-semibold uppercase tracking-wide">
+                  Seller Profile
+                </span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2 leading-tight">
                 {sellerProfile?.name || `User ${userId}`}
               </h1>
 
@@ -290,29 +394,14 @@ export function SellerProfilePage() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {activeListings.length > 0 ? (
-              activeListings.map((post: any) => (
-                // Very simplified mapping, ideally transformPostModelToProduct shared logic
-                <div
-                  key={post.postID || post.PostID}
-                  className="border p-4 rounded bg-white dark:bg-gray-800"
-                >
-                  <h3 className="font-bold">
-                    {post.postTitle || post.PostTitle}
-                  </h3>
-                  <p className="text-green-600 font-bold">
-                    {post.price || post.Price} JOD
-                  </p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="mt-2"
-                    onClick={() =>
-                      navigate(`/product/${post.postID || post.PostID}`)
-                    }
-                  >
-                    View
-                  </Button>
-                </div>
+              activeListings.map((post: Product) => (
+                <ProductCard
+                  key={post.id}
+                  product={post}
+                  onProductClick={(productId) => navigate(`/product/${productId}`)}
+                  isAuthenticated={isAuthenticated}
+                  currentUserDisplayName={user?.name}
+                />
               ))
             ) : (
               <p className="text-gray-500">No active listings.</p>

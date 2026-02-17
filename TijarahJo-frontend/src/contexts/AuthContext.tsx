@@ -21,6 +21,27 @@ interface AuthContextType extends AuthState {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const DEBUG_AUTH =
+  Boolean((import.meta as any).env?.DEV) &&
+  (import.meta as any).env?.VITE_DEBUG_AUTH === "true";
+
+const debugAuthLog = (...args: any[]) => {
+  if (DEBUG_AUTH) {
+    console.log(...args);
+  }
+};
+
+const debugAuthWarn = (...args: any[]) => {
+  if (DEBUG_AUTH) {
+    console.warn(...args);
+  }
+};
+
+const debugAuthError = (...args: any[]) => {
+  if (DEBUG_AUTH) {
+    console.error(...args);
+  }
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [authState, setAuthState] = useState<AuthState>({
@@ -52,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // If we have a valid token, clear guestMode (user is authenticated)
     if (token && guestMode === "true") {
-      console.log("[AuthContext] Found token, clearing guestMode");
+      debugAuthLog("[AuthContext] Found token, clearing guestMode");
       localStorage.removeItem("guestMode");
       setIsGuest(false);
     }
@@ -108,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             user,
             token,
           });
-          console.log(
+          debugAuthLog(
             "[AuthContext] checkAuth successful, user authenticated:",
             user.id,
             "Role:",
@@ -116,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           );
         } else {
           // Token is invalid, clear it
-          console.warn(
+          debugAuthWarn(
             "[AuthContext] Token validation failed - response not successful",
           );
           localStorage.removeItem("tijarahjo_token");
@@ -128,17 +149,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         // If backend is not available or token is invalid, clear auth state
-        console.warn("[AuthContext] checkAuth error:", error);
+        debugAuthWarn("[AuthContext] checkAuth error:", error);
         const errorMessage =
           error instanceof Error ? error.message : String(error);
-        console.warn("[AuthContext] Error details:", errorMessage);
+        debugAuthWarn("[AuthContext] Error details:", errorMessage);
 
         // Only clear token if it's an authentication error (401), not a network error
         if (
           errorMessage.includes("401") ||
           errorMessage.includes("Unauthorized")
         ) {
-          console.warn(
+          debugAuthWarn(
             "[AuthContext] Token is invalid (401), clearing auth state",
           );
           localStorage.removeItem("tijarahjo_token");
@@ -149,7 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
         } else {
           // Network error or other issue - keep token but mark as unauthenticated temporarily
-          console.warn(
+          debugAuthWarn(
             "[AuthContext] Network/backend error, keeping token but marking as unauthenticated",
           );
           setAuthState({
@@ -181,7 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "tijarahjo_token") {
-        console.log(
+        debugAuthLog(
           "[AuthContext] Token changed in localStorage, refreshing auth state",
         );
         checkAuth();
@@ -190,7 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Also listen for custom authTokenSet event (for same-tab token updates)
     const handleAuthTokenSet = () => {
-      console.log("[AuthContext] authTokenSet event received, checking auth");
+      debugAuthLog("[AuthContext] authTokenSet event received, checking auth");
       checkAuth();
     };
 
@@ -205,13 +226,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      console.log("[AuthContext] Attempting login with:", email);
+      debugAuthLog("[AuthContext] Attempting login with:", email);
       const response = await api.auth.login({
         email: email,
         password: password,
       });
 
-      console.log("[AuthContext] Login response:", {
+      debugAuthLog("[AuthContext] Login response:", {
         success: response.success,
         hasToken: !!response.token,
         hasUser: !!response.user,
@@ -221,7 +242,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Check if login failed
       if (!response.success) {
-        console.error(
+        debugAuthError(
           "[AuthContext] Login failed:",
           (response as any).message || "Unknown error",
         );
@@ -259,7 +280,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           };
         } else {
           // Create minimal user from email if user object is missing
-          console.warn(
+          debugAuthWarn(
             "[AuthContext] No user object in response, creating minimal user from email",
           );
 
@@ -277,10 +298,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem("guestMode");
         setIsGuest(false);
 
-        // Fetch full user data from backend if user object is incomplete
-        if (!user.firstName && !user.lastName && !user.name) {
+        // Fetch full user data from backend when critical identity fields are missing.
+        const needsUserHydration =
+          !String(user.id || "").trim() ||
+          (!String(user.firstName || "").trim() &&
+            !String(user.lastName || "").trim());
+
+        if (needsUserHydration) {
           try {
-            console.log(
+            debugAuthLog(
               "[AuthContext] User object incomplete, fetching full user data...",
             );
             const userResponse = await api.auth.getCurrentUser();
@@ -321,10 +347,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   undefined,
                 role: role,
               };
-              console.log("[AuthContext] Fetched full user data:", user);
+              debugAuthLog("[AuthContext] Fetched full user data:", user);
             }
           } catch (error) {
-            console.warn(
+            debugAuthWarn(
               "[AuthContext] Failed to fetch full user data after login:",
               error,
             );
@@ -337,13 +363,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           user,
           token: response.token,
         });
-        console.log("[AuthContext] Login successful, user set:", user);
+        debugAuthLog("[AuthContext] Login successful, user set:", user);
         return true;
       }
 
       // If we reach here, login failed
       const errorMessage = (response as any).message || "Login failed";
-      console.error(
+      debugAuthError(
         "[AuthContext] Login failed - success:",
         response.success,
         "hasToken:",
@@ -353,7 +379,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
       return false;
     } catch (error) {
-      console.error("[AuthContext] Login error:", error);
+      debugAuthError("[AuthContext] Login error:", error);
       return false;
     }
   };
@@ -428,13 +454,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return true;
       }
 
-      console.error(
+      debugAuthError(
         "[AuthContext] Register failed:",
         (authResponse as any)?.message || "Unknown error",
       );
       return false;
     } catch (error) {
-      console.error("Register error:", error);
+      debugAuthError("Register error:", error);
       return false;
     }
   };
@@ -443,7 +469,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await api.auth.logout();
     } catch (error) {
-      console.error("Logout error:", error);
+      debugAuthError("Logout error:", error);
     } finally {
       localStorage.removeItem("tijarahjo_token");
       localStorage.removeItem("guestMode");

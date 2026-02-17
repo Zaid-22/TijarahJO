@@ -143,7 +143,7 @@ console.log("User ID in token:", payload.nameid || payload.sub);
 - [ ] Check backend console: `[UpdateUser Controller] User updated successfully`
 - [ ] Check database:
   ```sql
-  SELECT UserID, Username, Email, FirstName, LastName 
+  SELECT UserID, Login, Email, FirstName, LastName 
   FROM TbUsers 
   WHERE UserID = [your_user_id];
   ```
@@ -185,7 +185,7 @@ if (token) {
 SELECT TOP 10 
     p.PostID, 
     p.UserID, 
-    u.Username,
+    u.Login,
     p.PostTitle, 
     p.CreatedAt 
 FROM TbPosts p
@@ -207,7 +207,7 @@ ORDER BY pi.PostID DESC, pi.PostImageID DESC;
 -- Check user authentication status
 SELECT TOP 10 
     UserID, 
-    Username, 
+    Login, 
     Email, 
     FirstName, 
     LastName,

@@ -14,8 +14,8 @@
 # Check connection string in:
 # TijarahJo-Backend/TijarahJoDBAPI/DAL/clsDataAccessSettings.cs
 
-# Current connection string:
-# Data Source=localhost;Database=TijarahJoDB;User Id=sa;Password=Zaidzaid12;TrustServerCertificate=True;
+# Configure via environment variables (recommended):
+# DATABASE_CONNECTION_STRING=Data Source=localhost;Database=TijarahJoDB;User Id=sa;Password=<your-password>;TrustServerCertificate=True;
 ```
 
 ### 2. Frontend Setup
@@ -58,7 +58,7 @@ npm run dev
 - [ ] **Test:** Fill all required fields:
   - First Name: "Test"
   - Last Name: "User"
-  - Username: "testuser123" (unique)
+  - Login: "testuser123" (unique)
   - Email: "test@example.com" (unique)
   - Password: "Test123!" (meets requirements)
   - Confirm Password: "Test123!"
@@ -69,7 +69,7 @@ npm run dev
   - User is logged in automatically
   - Token is stored in localStorage as `tijarahjo_token`
 - [ ] **Error Cases:**
-  - [ ] Try duplicate username → Should show error
+  - [ ] Try duplicate login → Should show error
   - [ ] Try duplicate email → Should show error
   - [ ] Try weak password → Should show validation error
   - [ ] Try mismatched passwords → Should show error
@@ -78,7 +78,7 @@ npm run dev
 
 - [ ] **Test:** Navigate to login page
 - [ ] **Test:** Enter credentials:
-  - Email/Username: "test@example.com" or "testuser123"
+  - Email/Login: "test@example.com" or "testuser123"
   - Password: "Test123!"
 - [ ] **Expected:**
   - Login successful
@@ -290,7 +290,7 @@ npm run dev
 1. Check SQL Server is running
 2. Verify connection string in `clsDataAccessSettings.cs`
 3. Check database `TijarahJoDB` exists
-4. Verify username/password
+4. Verify login/password
 
 ### Issue: "Token verification failed"
 

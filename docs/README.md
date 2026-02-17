@@ -92,6 +92,7 @@ Quick reference checklists:
 - **LAUNCH_CHECKLIST_PROGRESS.md** - Launch checklist progress
 - **LAUNCH_READINESS_CHECKLIST.md** - Launch readiness checklist
 - **QUICK_LAUNCH_CHECKLIST.md** - Quick launch checklist
+- **PR_QUALITY_CHECKLIST.md** - Pull request quality and CI gate checklist
 
 **When to use:** For quick reference during deployment or launch preparation.
 
@@ -143,4 +144,3 @@ When adding new documentation:
 
 **Last Updated:** December 2024  
 **Maintained By:** Development Team
-

@@ -122,7 +122,7 @@ npm run dev
 
 ### "Cannot connect to database"
 - ✅ Check SQL Server is running
-- ✅ Verify connection string (server name, username, password)
+- ✅ Verify connection string (server name, login, password)
 - ✅ Test connection in SQL Server Management Studio first
 
 ### "JWT validation failed"

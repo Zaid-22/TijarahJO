@@ -109,7 +109,7 @@
 ### Authentication
 - [x] Sign up with new user → Creates account, returns token
 - [x] Sign up with existing email → Shows "email already exists" error
-- [x] Sign up with existing username → Shows "username already exists" error
+- [x] Sign up with existing login → Shows "login already exists" error
 - [x] Login with valid credentials → Returns token, sets auth state
 - [x] Login with invalid credentials → Shows error message
 - [x] Logout → Clears token and auth state

@@ -76,7 +76,6 @@ export function SettingsPage({
       accountSettings: "Account Settings",
       accountDesc: "Manage your account information and preferences",
       fullName: "Full Name",
-      username: "Username",
       email: "Email Address",
       phone: "Phone Number",
       currentLocation: "Current Location",
@@ -130,7 +129,6 @@ export function SettingsPage({
       accountSettings: "إعدادات الحساب",
       accountDesc: "إدارة معلومات حسابك وتفضيلاتك",
       fullName: "الاسم الكامل",
-      username: "اسم المستخدم",
       email: "البريد الإلكتروني",
       phone: "رقم الهاتف",
       currentLocation: "الموقع الحالي",
@@ -184,15 +182,9 @@ export function SettingsPage({
   const text = t[language as keyof typeof t] as typeof t.en;
 
   return (
-    <div
-      className="min-h-screen dark:bg-[#1a1a1a]"
-      style={{ backgroundColor: "#F5F6FA" }}
-    >
+    <div className="min-h-screen bg-[#F5F6FA] dark:bg-[#1a1a1a]">
       {/* Header */}
-      <header
-        className="sticky top-0 z-50 shadow-sm dark:bg-[#111111]"
-        style={{ backgroundColor: "#0A4ABF" }}
-      >
+      <header className="sticky top-0 z-50 shadow-sm bg-[#0A4ABF] dark:bg-[#111111]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16 gap-4">
             <Button

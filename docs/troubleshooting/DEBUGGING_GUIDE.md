@@ -196,7 +196,7 @@ FROM TbPostImages
 WHERE PostID = [post_id];
 
 -- Check user data
-SELECT UserID, Username, Email, FirstName, LastName, IsDeleted
+SELECT UserID, Login, Email, FirstName, LastName, IsDeleted
 FROM TbUsers
 WHERE UserID = [user_id];
 ```

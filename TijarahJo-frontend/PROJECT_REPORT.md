@@ -142,7 +142,7 @@ final project/
 
 **Unused Variables:**
 - `App.tsx`: isMobileMenuOpen, settingsOrigin, showLoginRequiredDialog, hasMore, loadMoreRef, handleLoadMore, navigateTo, navigateBack, IconComponent
-- `ProductDetailsPage.tsx`: onProductClick, currentUserName
+- `ProductDetailsPage.tsx`: onProductClick, currentUserDisplayName
 - `SellItemDialog.tsx`: isRTL
 
 **Impact:** Low (doesn't affect functionality, but increases bundle size)

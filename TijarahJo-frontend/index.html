@@ -4,10 +4,24 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function () {
+        try {
+          const rawValue = localStorage.getItem("tijarahjo_dark_mode");
+          const parsedValue = rawValue === null ? null : JSON.parse(rawValue);
+          const isDark = parsedValue === true || parsedValue === "dark";
+          document.documentElement.classList.toggle("dark", isDark);
+          document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+        } catch {
+          document.documentElement.classList.remove("dark");
+          document.documentElement.style.colorScheme = "light";
+        }
+      })();
+    </script>
     <title>TijarahJo - Jordan's Marketplace</title>
   </head>
   <body style="margin: 0; padding: 0">
-    <div id="root" style="min-height: 100vh; background: #f5f5f5"></div>
+    <div id="root" style="min-height: 100vh"></div>
     <script type="module" src="/src/main.tsx"></script>
     <noscript>You need to enable JavaScript to run this app.</noscript>
   </body>

@@ -12,6 +12,8 @@ type QueryContext = {
   queryTokenSet: Set<string>;
   expandedTokens: string[];
   activeIntents: SearchIntent[];
+  wantsAffordable: boolean;
+  wantsPremium: boolean;
 };
 
 const ARABIC_DIACRITICS_REGEX = /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]/g;
@@ -102,6 +104,36 @@ const SEARCH_INTENTS: SearchIntent[] = [
   },
 ];
 
+const AFFORDABLE_QUERY_TERMS = normalizeTerms([
+  "cheap",
+  "budget",
+  "affordable",
+  "low price",
+  "best price",
+  "deal",
+  "deals",
+  "economy",
+  "رخيص",
+  "رخيصه",
+  "سعر منخفض",
+  "سعر مناسب",
+]);
+
+const PREMIUM_QUERY_TERMS = normalizeTerms([
+  "better",
+  "best",
+  "premium",
+  "luxury",
+  "top",
+  "high end",
+  "newest",
+  "افضل",
+  "الأفضل",
+  "احسن",
+  "ممتاز",
+  "فخم",
+]);
+
 function toTimestamp(dateValue?: string): number {
   if (!dateValue) {
     return 0;
@@ -163,6 +195,16 @@ function queryContainsTerm(
   return normalizedQuery.includes(normalizedTerm);
 }
 
+function queryHasAnyTerm(
+  normalizedQuery: string,
+  queryTokenSet: Set<string>,
+  terms: string[],
+): boolean {
+  return terms.some((term) =>
+    queryContainsTerm(normalizedQuery, queryTokenSet, term),
+  );
+}
+
 function buildQueryContext(query: string): QueryContext | null {
   const normalizedQuery = normalizeSearchText(query || "");
   if (!normalizedQuery) {
@@ -187,47 +229,89 @@ function buildQueryContext(query: string): QueryContext | null {
     }
   }
 
+  const wantsAffordable = queryHasAnyTerm(
+    normalizedQuery,
+    queryTokenSet,
+    AFFORDABLE_QUERY_TERMS,
+  );
+  const wantsPremium = queryHasAnyTerm(
+    normalizedQuery,
+    queryTokenSet,
+    PREMIUM_QUERY_TERMS,
+  );
+
   return {
     normalizedQuery,
     queryTokens,
     queryTokenSet,
     expandedTokens: [...expandedTokenSet],
     activeIntents,
+    wantsAffordable,
+    wantsPremium,
   };
 }
 
 function includesAnyIntentTerm(
   text: string,
-  tokens: string[],
+  tokenSet: Set<string>,
   terms: string[],
 ): boolean {
   return terms.some((term) => {
-    const normalizedTerm = normalizeSearchText(term);
-    if (!normalizedTerm) {
+    if (!term) {
       return false;
     }
 
-    const termTokens = tokenize(normalizedTerm);
+    const termTokens = tokenize(term);
     if (termTokens.length <= 1) {
-      return tokens.includes(normalizedTerm);
+      return tokenSet.has(term);
     }
 
-    return text.includes(normalizedTerm);
+    return text.includes(term);
   });
 }
 
+function listingQualityBoost(product: Product): number {
+  const descriptionLength = normalizeSearchText(product.description || "").length;
+  const imageCount = product.images?.filter(Boolean).length || (product.image ? 1 : 0);
+
+  let score = 0;
+
+  if (imageCount >= 4) score += 10;
+  else if (imageCount >= 2) score += 6;
+  else if (imageCount === 1) score += 3;
+  else score -= 4;
+
+  if (descriptionLength >= 80) score += 8;
+  else if (descriptionLength >= 30) score += 5;
+  else if (descriptionLength > 0) score += 2;
+  else score -= 2;
+
+  if (product.phone && product.phone.trim().length > 0) {
+    score += 2;
+  }
+
+  return score;
+}
+
 function scoreProduct(product: Product, context: QueryContext): number {
-  const { normalizedQuery, queryTokens, queryTokenSet, expandedTokens, activeIntents } =
-    context;
+  const {
+    normalizedQuery,
+    queryTokens,
+    queryTokenSet,
+    expandedTokens,
+    activeIntents,
+    wantsAffordable,
+    wantsPremium,
+  } = context;
 
   const name = normalizeSearchText(product.name || "");
   const category = normalizeSearchText(product.category || "");
   const location = normalizeSearchText(product.location || "");
   const seller = normalizeSearchText(product.seller || "");
   const description = normalizeSearchText(product.description || "");
-  const nameTokens = tokenize(name);
-  const categoryTokens = tokenize(category);
-  const descriptionTokens = tokenize(description);
+  const nameTokenSet = new Set(tokenize(name));
+  const categoryTokenSet = new Set(tokenize(category));
+  const descriptionTokenSet = new Set(tokenize(description));
 
   let score = 0;
 
@@ -262,17 +346,39 @@ function scoreProduct(product: Product, context: QueryContext): number {
   for (const intent of activeIntents) {
     const hasCategoryIntentMatch = includesAnyIntentTerm(
       category,
-      categoryTokens,
+      categoryTokenSet,
       intent.categoryTerms,
     );
     const hasListingIntentMatch =
-      includesAnyIntentTerm(name, nameTokens, intent.listingTerms) ||
-      includesAnyIntentTerm(description, descriptionTokens, intent.listingTerms);
+      includesAnyIntentTerm(name, nameTokenSet, intent.listingTerms) ||
+      includesAnyIntentTerm(
+        description,
+        descriptionTokenSet,
+        intent.listingTerms,
+      );
 
-    if (hasCategoryIntentMatch) {
-      score += 170;
+    if (hasCategoryIntentMatch && hasListingIntentMatch) {
+      score += 240;
+    } else if (hasCategoryIntentMatch) {
+      score += 190;
     } else if (hasListingIntentMatch) {
-      score += 90;
+      score += 130;
+    }
+  }
+
+  const numericPrice = Number(product.price);
+  if (Number.isFinite(numericPrice) && numericPrice > 0) {
+    if (wantsAffordable) {
+      if (numericPrice <= 1_000) score += 22;
+      else if (numericPrice <= 5_000) score += 12;
+      else if (numericPrice <= 10_000) score += 4;
+      else score -= 8;
+    }
+
+    if (wantsPremium) {
+      if (numericPrice >= 20_000) score += 16;
+      else if (numericPrice >= 10_000) score += 10;
+      else if (numericPrice >= 5_000) score += 5;
     }
   }
 
@@ -282,6 +388,12 @@ function scoreProduct(product: Product, context: QueryContext): number {
 
   score += recencyBoost(product.createdAt);
   score += viewsBoost(product.views);
+  score += listingQualityBoost(product);
+
+  if (wantsPremium) {
+    score += Math.min(10, Math.log10(Math.max(0, Number(product.views || 0)) + 1) * 4);
+  }
+
   return score;
 }
 
@@ -302,6 +414,8 @@ export function rankProductsBySearch(products: Product[], query: string): Produc
       product,
       index,
       score: scoreProduct(product, context),
+      createdAtTs: toTimestamp(product.createdAt),
+      views: Number(product.views || 0),
     }))
     .filter((entry) => entry.score > 0)
     .sort((a, b) => {
@@ -309,13 +423,12 @@ export function rankProductsBySearch(products: Product[], query: string): Produc
         return b.score - a.score;
       }
 
-      const createdDiff =
-        toTimestamp(b.product.createdAt) - toTimestamp(a.product.createdAt);
+      const createdDiff = b.createdAtTs - a.createdAtTs;
       if (createdDiff !== 0) {
         return createdDiff;
       }
 
-      const viewsDiff = (b.product.views || 0) - (a.product.views || 0);
+      const viewsDiff = b.views - a.views;
       if (viewsDiff !== 0) {
         return viewsDiff;
       }

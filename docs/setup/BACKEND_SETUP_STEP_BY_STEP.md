@@ -460,7 +460,7 @@ Before starting, make sure you have:
 
 **Solution 3: Check Authentication**
 - Make sure you're using SQL Server Authentication
-- Username: `sa`
+- Login: `sa`
 - Password: The one you set during installation
 
 ### Problem: Backend Won't Start

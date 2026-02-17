@@ -14,21 +14,89 @@ import {
   UpdatePostStatusRequest,
   PostResponse,
   PostsListResponse,
-  FavoritesResponse,
   SellerProfileResponse,
   ApiResponse,
   SearchRequest,
   CategoriesResponse,
 } from "../types/api";
 import { Message, Product } from "../types";
+import { APP_CONFIG } from "../constants/appConfig";
+import { normalizeJordanPhone } from "../utils/phone";
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
 // Vite uses import.meta.env instead of process.env
-const API_BASE_URL =
-  (import.meta as any).env?.VITE_API_BASE_URL || "http://localhost:5033/api";
+const API_BASE_URL = APP_CONFIG.apiBaseUrl;
+const REQUEST_TIMEOUT_MS = APP_CONFIG.requestTimeoutMs;
+const DEBUG_API =
+  Boolean((import.meta as any).env?.DEV) &&
+  (import.meta as any).env?.VITE_DEBUG_API === "true";
+
+const BACKEND_URL_HINT = APP_CONFIG.backendHostUrl;
+const BACKEND_RUN_COMMAND = APP_CONFIG.backendRunCommand;
+const BACKEND_TIMEOUT_MESSAGE = `Request timed out. Please check if the backend is running on ${BACKEND_URL_HINT}`;
+const BACKEND_CONNECTION_MESSAGE = `Cannot connect to backend. Please make sure the backend is running on ${BACKEND_URL_HINT}. Start it with: ${BACKEND_RUN_COMMAND}`;
+const BACKEND_CONNECTION_SHORT_MESSAGE = `Cannot connect to backend. Please make sure the backend is running on ${BACKEND_URL_HINT}`;
+
+const debugLog = (...args: any[]) => {
+  if (DEBUG_API) {
+    console.log(...args);
+  }
+};
+
+const debugWarn = (...args: any[]) => {
+  if (DEBUG_API) {
+    console.warn(...args);
+  }
+};
+
+const debugError = (...args: any[]) => {
+  if (DEBUG_API) {
+    console.error(...args);
+  }
+};
+
+function normalizeProductStatus(rawStatus: unknown): "ACTIVE" | "SOLD" | "DELETED" {
+  if (typeof rawStatus === "string") {
+    const normalized = rawStatus.trim().toUpperCase();
+    if (normalized === "SOLD") {
+      return "SOLD";
+    }
+    if (
+      normalized === "DELETED" ||
+      normalized === "BLOCKED" ||
+      normalized === "INACTIVE"
+    ) {
+      return "DELETED";
+    }
+    return "ACTIVE";
+  }
+
+  const numericStatus = Number(rawStatus);
+  if (numericStatus === 3) {
+    return "SOLD";
+  }
+  if (numericStatus === 1 || numericStatus === 2) {
+    return "DELETED";
+  }
+  return "ACTIVE";
+}
+
+function normalizeLoginIdentifier(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  const normalizedPhone = normalizeJordanPhone(trimmed);
+  if (normalizedPhone) {
+    return normalizedPhone;
+  }
+
+  return trimmed.toLowerCase();
+}
 
 // Mock mode disabled - using real backend API only
 // const MOCK_MODE = false; // Removed mock mode completely
@@ -43,7 +111,10 @@ async function apiRequest<T>(
 
     // Add timeout to prevent hanging requests
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const timeoutId = setTimeout(
+      () => controller.abort(),
+      REQUEST_TIMEOUT_MS,
+    );
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
@@ -147,8 +218,7 @@ async function apiRequest<T>(
           success: false,
           error: {
             code: "TIMEOUT",
-            message:
-              "Request timed out. Please check if the backend is running on http://localhost:5033",
+            message: BACKEND_TIMEOUT_MESSAGE,
           },
         };
       }
@@ -161,8 +231,7 @@ async function apiRequest<T>(
           success: false,
           error: {
             code: "CONNECTION_REFUSED",
-            message:
-              "Cannot connect to backend. Please make sure the backend is running on http://localhost:5033. Start it with: cd TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI && dotnet run",
+            message: BACKEND_CONNECTION_MESSAGE,
           },
         };
       }
@@ -187,36 +256,36 @@ async function apiRequest<T>(
 
 export const authApi = {
   /**
-   * Login user with username/email and password
+   * Login user with email/phone and password
    */
   login: async (credentials: LoginRequest): Promise<AuthResponse> => {
     // Real API call - map frontend format to backend format
     const response = await apiRequest<any>("/auth/login", {
       method: "POST",
       body: JSON.stringify({
-        Login: credentials.email, // Backend expects "Login" which is mapped to Email
+        Login: normalizeLoginIdentifier(credentials.email),
         Password: credentials.password,
       }),
     });
 
     // Debug logging
-    console.log("Login API response:", JSON.stringify(response, null, 2));
-    console.log("Response success:", response.success);
+    debugLog("Login API response:", JSON.stringify(response, null, 2));
+    debugLog("Response success:", response.success);
     if (response.success) {
-      console.log("Response data:", JSON.stringify(response.data, null, 2));
-      console.log("Response data type:", typeof response.data);
-      console.log(
+      debugLog("Response data:", JSON.stringify(response.data, null, 2));
+      debugLog("Response data type:", typeof response.data);
+      debugLog(
         "Response data keys:",
         response.data ? Object.keys(response.data) : "null",
       );
     } else {
-      console.log("Response error:", response.error);
+      debugLog("Response error:", response.error);
     }
 
     if (response.success && response.data) {
       // Map backend response to frontend format
       const backendResponse = response.data;
-      console.log("Backend response structure:", {
+      debugLog("Backend response structure:", {
         hasSuccess: "Success" in backendResponse,
         hasToken: "Token" in backendResponse,
         hasUser: "User" in backendResponse,
@@ -230,7 +299,7 @@ export const authApi = {
       if (backendResponse.Success === false) {
         const errorMessage =
           backendResponse.Message || "Login failed. Please try again.";
-        console.log("Backend returned error in data:", errorMessage);
+        debugLog("Backend returned error in data:", errorMessage);
         return {
           success: false,
           message: errorMessage,
@@ -244,12 +313,12 @@ export const authApi = {
       // If Success is true (or not explicitly false) and Token exists, proceed
       if (backendResponse.Success !== false && backendResponse.Token) {
         localStorage.setItem("tijarahjo_token", backendResponse.Token);
-        console.log("Token saved to localStorage");
+        debugLog("Token saved to localStorage");
 
         // Transform backend UserResponseDTO to frontend User format
         if (backendResponse.User) {
           const user = backendResponse.User;
-          console.log(
+          debugLog(
             "User object from backend:",
             JSON.stringify(user, null, 2),
           );
@@ -269,14 +338,14 @@ export const authApi = {
             roleID: user.RoleID ?? user.roleID ?? 2,
             isDeleted: Boolean(user.IsDeleted ?? user.isDeleted ?? false),
           };
-          console.log("Transformed user:", transformedUser);
+          debugLog("Transformed user:", transformedUser);
           return {
             success: true,
             token: backendResponse.Token,
             user: transformedUser,
           } as any;
         } else {
-          console.warn(
+          debugWarn(
             "No User object in backend response, but Success is true and Token exists",
           );
           // Return success with token, user data will be fetched separately
@@ -289,7 +358,7 @@ export const authApi = {
       }
 
       // If we reach here, something is wrong with the response
-      console.error("Invalid response structure:", backendResponse);
+      debugError("Invalid response structure:", backendResponse);
       return {
         success: false,
         message:
@@ -303,7 +372,7 @@ export const authApi = {
     }
 
     // If we get here, response.success is false or response.data is missing
-    console.error(
+    debugError(
       "Login failed - response.success:",
       response.success,
       "response:",
@@ -320,16 +389,16 @@ export const authApi = {
         const details = response.error.details as any;
         if (details.Success === false && details.Message) {
           errorMessage = details.Message;
-          console.log("Found error in AuthResponse:", errorMessage);
+          debugLog("Found error in AuthResponse:", errorMessage);
         } else if (details.Message) {
           errorMessage = details.Message;
-          console.log(
+          debugLog(
             "Found error message in response.error.details.Message:",
             errorMessage,
           );
         } else if (details.message) {
           errorMessage = details.message;
-          console.log(
+          debugLog(
             "Found error message in response.error.details.message:",
             errorMessage,
           );
@@ -343,13 +412,12 @@ export const authApi = {
         response.error.message
       ) {
         errorMessage = response.error.message;
-        console.log("Using response.error.message:", errorMessage);
+        debugLog("Using response.error.message:", errorMessage);
       }
 
       // Connection errors
       if (response.error && response.error.code === "CONNECTION_REFUSED") {
-        errorMessage =
-          "Cannot connect to backend. Please make sure the backend is running on http://localhost:5033";
+        errorMessage = BACKEND_CONNECTION_SHORT_MESSAGE;
       }
     } else if (response.success && response.data) {
       // Check if data contains error (backend returned 200 OK but Success: false)
@@ -377,23 +445,23 @@ export const authApi = {
     const response = await apiRequest<any>("/auth/signup", {
       method: "POST",
       body: JSON.stringify({
-        Email: userData.email,
+        Email: userData.email?.trim() || null,
         Password: userData.password,
         FirstName: userData.firstName,
         LastName: userData.lastName || "",
-        Phone: userData.phone || null,
+        Phone: normalizeJordanPhone(userData.phone || "") || null,
         City: userData.city || null,
         Area: userData.area || null,
       }),
     });
 
     // Debug logging
-    console.log("Signup API response:", response);
-    console.log("Response success:", response.success);
+    debugLog("Signup API response:", response);
+    debugLog("Response success:", response.success);
     if (response.success) {
-      console.log("Response data:", response.data);
+      debugLog("Response data:", response.data);
     } else {
-      console.log("Response error:", response.error);
+      debugLog("Response error:", response.error);
     }
 
     if (response.success && response.data) {
@@ -405,7 +473,7 @@ export const authApi = {
       if (backendResponse.Success === false) {
         const errorMessage =
           backendResponse.Message || "Registration failed. Please try again.";
-        console.log("Backend returned error in data:", errorMessage);
+        debugLog("Backend returned error in data:", errorMessage);
         return {
           success: false,
           message: errorMessage,
@@ -430,7 +498,6 @@ export const authApi = {
               id: (user.Id || user.id || "").toString(),
               firstName: user.FirstName || user.firstName || "",
               lastName: user.LastName || user.lastName || "",
-              username: user.Username || user.username || "",
               email: user.Email || user.email || "",
               phone: user.Phone || user.phone || "",
               city: user.City || user.city || "",
@@ -455,7 +522,7 @@ export const authApi = {
       }
 
       // If we reach here, something is wrong with the response
-      console.error("Invalid signup response structure:", backendResponse);
+      debugError("Invalid signup response structure:", backendResponse);
       return {
         success: false,
         message:
@@ -478,16 +545,16 @@ export const authApi = {
         const details = response.error.details as any;
         if (details.Success === false && details.Message) {
           errorMessage = details.Message;
-          console.log("Found error in AuthResponse:", errorMessage);
+          debugLog("Found error in AuthResponse:", errorMessage);
         } else if (details.Message) {
           errorMessage = details.Message;
-          console.log(
+          debugLog(
             "Found error message in response.error.details.Message:",
             errorMessage,
           );
         } else if (details.message) {
           errorMessage = details.message;
-          console.log(
+          debugLog(
             "Found error message in response.error.details.message:",
             errorMessage,
           );
@@ -501,7 +568,7 @@ export const authApi = {
         response.error.message
       ) {
         const errorStr = response.error.message;
-        console.log("Using response.error.message:", errorStr);
+        debugLog("Using response.error.message:", errorStr);
 
         // Check for unique constraint violations in the error message
         if (
@@ -509,12 +576,6 @@ export const authApi = {
           errorStr.includes("UQ_TbUsers")
         ) {
           if (
-            errorStr.includes("UQ_TbUsers_Username") ||
-            errorStr.includes("Username")
-          ) {
-            errorMessage =
-              "An account with this username already exists. Please choose a different username.";
-          } else if (
             errorStr.includes("UQ_TbUsers_E") ||
             errorStr.includes("UQ_TbUsers_Email") ||
             errorStr.includes("Email")
@@ -531,8 +592,7 @@ export const authApi = {
       }
       // Connection errors
       if (response.error && response.error.code === "CONNECTION_REFUSED") {
-        errorMessage =
-          "Cannot connect to backend. Please make sure the backend is running on http://localhost:5033";
+        errorMessage = BACKEND_CONNECTION_SHORT_MESSAGE;
       }
     }
 
@@ -568,7 +628,7 @@ export const authApi = {
       firstName: firstName,
       lastName: lastName,
       phone: phone || "",
-      city: city || "Amman",
+      city: city || APP_CONFIG.defaultCity,
       area: area || "",
     };
 
@@ -594,7 +654,7 @@ export const authApi = {
     } catch (error) {
       // Logout endpoint might return 404 if not implemented, that's okay
       // We'll still clear the token client-side
-      console.log("[API] Logout endpoint call failed (this is okay):", error);
+      debugLog("[API] Logout endpoint call failed (this is okay):", error);
     }
     localStorage.removeItem("tijarahjo_token");
     localStorage.removeItem("tijarahjo_auth");
@@ -737,6 +797,44 @@ function getUserDisplayName(user: any, fallbackUserId?: string): string {
   return fallbackUserId ? `User ${fallbackUserId}` : "Unknown";
 }
 
+function isAdminRoleClaimValue(value: unknown): boolean {
+  if (Array.isArray(value)) {
+    return value.some((entry) => isAdminRoleClaimValue(entry));
+  }
+
+  if (typeof value === "number") {
+    return value === 1;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "1" || normalized === "admin";
+  }
+
+  return false;
+}
+
+function isCurrentSessionAdmin(): boolean {
+  const token = localStorage.getItem("tijarahjo_token");
+  if (!token) {
+    return false;
+  }
+
+  const payload = decodeJwtPayload(token);
+  if (!payload) {
+    return false;
+  }
+
+  const roleClaim =
+    payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ??
+    payload.role ??
+    payload.roles ??
+    payload.RoleID ??
+    payload.roleID;
+
+  return isAdminRoleClaimValue(roleClaim);
+}
+
 async function ensureUsersCache(
   forceRefresh: boolean = false,
   userIds: Array<string | number> = [],
@@ -756,7 +854,11 @@ async function ensureUsersCache(
   const shouldRefreshAllUsersCache =
     forceRefresh || !isCacheFresh(usersCacheUpdatedAt) || Object.keys(usersCache).length === 0;
 
-  if (shouldRefreshAllUsersCache && usersAllEndpointAccessible !== false) {
+  if (
+    shouldRefreshAllUsersCache &&
+    usersAllEndpointAccessible !== false &&
+    isCurrentSessionAdmin()
+  ) {
     const usersResponse = await apiRequest<any[]>("/users/All", {
       method: "GET",
     });
@@ -951,17 +1053,57 @@ function transformPostModelToProduct(
   images: string[] = [],
   fallbackIndex?: number,
 ): Product {
+  const normalizePostImages = (rawImages: unknown[]): string[] => {
+    const sanitized = rawImages
+      .map((value) => (typeof value === "string" ? value.trim() : ""))
+      .filter((value) => value.length > 0);
+
+    if (sanitized.length === 0) {
+      return [];
+    }
+
+    const normalized: string[] = [];
+    for (let i = 0; i < sanitized.length; i += 1) {
+      const current = sanitized[i];
+
+      // Backend list endpoints may split data URLs at the first comma.
+      // Rebuild `data:*;base64,<payload>` when needed.
+      const looksLikeSplitDataPrefix =
+        current.startsWith("data:") &&
+        current.includes(";base64") &&
+        !current.includes(",") &&
+        i + 1 < sanitized.length;
+
+      if (looksLikeSplitDataPrefix) {
+        const payload = sanitized[i + 1];
+        if (
+          payload &&
+          !payload.startsWith("http://") &&
+          !payload.startsWith("https://") &&
+          !payload.startsWith("data:") &&
+          !payload.startsWith("blob:")
+        ) {
+          normalized.push(`${current},${payload}`);
+          i += 1;
+          continue;
+        }
+      }
+
+      normalized.push(current);
+    }
+
+    return normalized;
+  };
+
   // Get images for this post
   // Handle various casing valid from backend or frontend
   const backendImages = postModel.Images || postModel.images || [];
   const singleImage = postModel.PostImageURL || postModel.postImageURL || "";
-
-  const postImages =
-    images.length > 0
-      ? images
-      : backendImages.length > 0
-        ? backendImages
-        : [singleImage].filter(Boolean);
+  const preferredImages = images.length > 0 ? images : backendImages;
+  const normalizedImages = normalizePostImages(
+    preferredImages.length > 0 ? preferredImages : [singleImage],
+  );
+  const postImages = normalizedImages.length > 0 ? normalizedImages : [singleImage].filter(Boolean);
 
   // Ensure we always have a unique ID - use fallback index if needed
   const postId = postModel.PostID?.toString() || postModel.id;
@@ -978,12 +1120,13 @@ function transformPostModelToProduct(
     id: uniqueId,
     name: name,
     price: postModel.Price ?? postModel.price ?? 0,
-    location: postModel.City ?? postModel.Location ?? "Jordan",
+    location: postModel.City ?? postModel.Location ?? postModel.location ?? "Jordan",
     area: postModel.Area ?? postModel.area,
     seller: postModel.Seller ?? postModel.seller ?? "Unknown",
     sellerId:
       postModel.UserID?.toString() ??
       postModel.UserId?.toString() ??
+      postModel.SellerID?.toString() ??
       postModel.sellerId ??
       "",
     category: postModel.Category ?? postModel.category ?? "Unknown",
@@ -997,14 +1140,7 @@ function transformPostModelToProduct(
     description: description,
     createdAt: toIsoStringOrNow(postModel.CreatedAt ?? postModel.createdAt),
     views: postModel.Views ?? postModel.views ?? 0,
-    status:
-      postModel.Status === 0
-        ? "ACTIVE"
-        : postModel.Status === 3
-          ? "SOLD"
-          : postModel.Status === 1 || postModel.Status === 2
-            ? "DELETED" // Blocked/inactive are non-listable in current frontend model.
-            : "ACTIVE", // Default to ACTIVE for unknown/null values
+    status: normalizeProductStatus(postModel.Status ?? postModel.status),
   };
 }
 
@@ -1015,18 +1151,28 @@ function transformCategoryModelToCategory(
   categoryModel: any,
   fallbackIndex?: number,
 ): import("../types/api").Category {
-  const categoryId = categoryModel.CategoryID?.toString() || categoryModel.id;
+  const categoryId =
+    categoryModel.CategoryID?.toString() ||
+    categoryModel.categoryID?.toString() ||
+    categoryModel.id;
   const uniqueId =
     categoryId ||
     (fallbackIndex !== undefined
       ? `category-${fallbackIndex}`
       : `category-${Date.now()}-${Math.random()}`);
 
+  const name = categoryModel.CategoryName || categoryModel.categoryName || categoryModel.name || "";
+  const nameAr =
+    categoryModel.NameAr ||
+    categoryModel.nameAr ||
+    categoryModel.categoryNameAr ||
+    name;
+
   return {
     id: uniqueId,
-    name: categoryModel.CategoryName || categoryModel.name || "",
-    nameAr: categoryModel.CategoryName || categoryModel.name || "", // Use same as name for now
-    icon: categoryModel.Icon || categoryModel.icon || "",
+    name,
+    nameAr,
+    icon: categoryModel.Icon || categoryModel.icon || "box",
     color: categoryModel.Color || categoryModel.color || "#0A4ABF",
     image: categoryModel.Image || categoryModel.image || "",
     postCount: 0, // Will be calculated separately if needed
@@ -1095,10 +1241,15 @@ export const postsApi = {
           response.data,
         );
 
-        // Process posts
-        // Note: Images are now populated directly in the post object by the backend
+        // Always merge images from TbPostImages for consistency across DB/SP variants.
+        const allImages = await getAllPostImages();
+        const imagesByPostId = groupImagesByPostId(allImages);
         const posts = enrichedPosts.map((post: any, index: number) =>
-          transformPostModelToProduct(post, [], index),
+          transformPostModelToProduct(
+            post,
+            imagesByPostId[post.PostID?.toString() || ""] || [],
+            index,
+          ),
         );
 
         return {
@@ -1171,12 +1322,12 @@ export const postsApi = {
       if (currentUserResponse.success && currentUserResponse.data) {
         const user = currentUserResponse.data as any;
         userId = (user.Id || user.id || "").toString();
-        console.log("[createPost] Got user ID from /auth/me:", userId);
+        debugLog("[createPost] Got user ID from /auth/me:", userId);
       } else {
-        console.warn("[createPost] Failed to get current user from /auth/me");
+        debugWarn("[createPost] Failed to get current user from /auth/me");
       }
     } catch (error) {
-      console.error("[createPost] Error getting current user:", error);
+      debugError("[createPost] Error getting current user:", error);
     }
 
     // Try to decode JWT token as fallback
@@ -1186,10 +1337,10 @@ export const postsApi = {
         if (token) {
           const payload = decodeJwtPayload(token);
           userId = String(payload?.nameid ?? payload?.sub ?? "");
-          console.log("[createPost] Got user ID from JWT token:", userId);
+          debugLog("[createPost] Got user ID from JWT token:", userId);
         }
       } catch (tokenError) {
-        console.error("[createPost] Error decoding token:", tokenError);
+        debugError("[createPost] Error decoding token:", tokenError);
       }
     }
 
@@ -1197,7 +1348,7 @@ export const postsApi = {
     if (!userId || userId === "" || userId === "0") {
       const errorMsg =
         "Cannot create post: User not authenticated. Please log in first.";
-      console.error("[createPost]", errorMsg);
+      debugError("[createPost]", errorMsg);
       return {
         success: false,
         message: errorMsg,
@@ -1269,12 +1420,12 @@ export const postsApi = {
 
     if (response.success && response.data) {
       const postId = response.data.PostID || response.data.postID;
-      console.log("[createPost] Post created with ID:", postId);
+      debugLog("[createPost] Post created with ID:", postId);
 
       // Create post images
       const savedImageUrls: string[] = [];
       if (postData.images && postData.images.length > 0) {
-        console.log(
+        debugLog(
           "[createPost] Creating",
           postData.images.length,
           "images for post",
@@ -1282,7 +1433,7 @@ export const postsApi = {
         );
         const imagePromises = postData.images.map(async (imageUrl, index) => {
           if (!imageUrl || imageUrl.trim() === "") {
-            console.warn(
+            debugWarn(
               `[createPost] Skipping empty image URL at index ${index}`,
             );
             return null;
@@ -1300,7 +1451,7 @@ export const postsApi = {
             });
 
             if (imageResponse.success && imageResponse.data) {
-              console.log(
+              debugLog(
                 `[createPost] Image ${index + 1} created successfully:`,
                 imageResponse.data,
               );
@@ -1311,14 +1462,14 @@ export const postsApi = {
                 !imageResponse.success && "error" in imageResponse
                   ? imageResponse.error?.message || "Unknown error"
                   : "Unknown error";
-              console.error(
+              debugError(
                 `[createPost] Failed to create image ${index + 1}:`,
                 errorMsg,
               );
               return null;
             }
           } catch (error) {
-            console.error(
+            debugError(
               `[createPost] Error creating image ${index + 1}:`,
               error,
             );
@@ -1328,14 +1479,14 @@ export const postsApi = {
 
         const imageResults = await Promise.all(imagePromises);
         const successfulImages = imageResults.filter((img) => img !== null);
-        console.log(
+        debugLog(
           `[createPost] Successfully created ${successfulImages.length} out of ${postData.images.length} images`,
         );
         if (successfulImages.length > 0) {
           invalidatePostImagesCache();
         }
       } else {
-        console.log("[createPost] No images to create");
+        debugLog("[createPost] No images to create");
       }
 
       // Enrich post with category and seller names before transforming
@@ -1559,25 +1710,25 @@ export const postsApi = {
     id: string,
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      console.log("[deletePost] Attempting to delete post with ID:", id);
+      debugLog("[deletePost] Attempting to delete post with ID:", id);
 
       // Use /posts/ route (matches backend UserPostsController route)
       const response = await apiRequest<any>(`/posts/${id}`, {
         method: "DELETE",
       });
 
-      console.log("[deletePost] Full response object:", response);
-      console.log("[deletePost] Response success:", response.success);
+      debugLog("[deletePost] Full response object:", response);
+      debugLog("[deletePost] Response success:", response.success);
       if (!response.success) {
-        console.log("[deletePost] Response error:", response.error);
+        debugLog("[deletePost] Response error:", response.error);
       } else {
-        console.log("[deletePost] Response data:", response.data);
+        debugLog("[deletePost] Response data:", response.data);
       }
 
       // Backend returns Ok() with message (plain text), so success is true if status is 200
       // The apiRequest function handles plain text responses and sets success: true
       if (response.success) {
-        console.log("[deletePost] Delete successful!");
+        debugLog("[deletePost] Delete successful!");
         invalidatePostImagesCache();
         return { success: true };
       }
@@ -1590,9 +1741,9 @@ export const postsApi = {
           response.error.message || `Error ${response.error.code || "unknown"}`;
       }
 
-      console.error("[deletePost] Delete failed!");
-      console.error("[deletePost] Error message:", errorMessage);
-      console.error(
+      debugError("[deletePost] Delete failed!");
+      debugError("[deletePost] Error message:", errorMessage);
+      debugError(
         "[deletePost] Full response JSON:",
         JSON.stringify(response, null, 2),
       );
@@ -1603,8 +1754,8 @@ export const postsApi = {
         error instanceof Error
           ? error.message
           : "An error occurred while deleting the post";
-      console.error("[deletePost] Exception caught:", error);
-      console.error("[deletePost] Error details:", errorMessage);
+      debugError("[deletePost] Exception caught:", error);
+      debugError("[deletePost] Error details:", errorMessage);
       return { success: false, error: errorMessage };
     }
   },
@@ -1709,8 +1860,19 @@ export const postsApi = {
   /**
    * Track post view (analytics)
    */
-  trackView: async (postId: string): Promise<void> => {
-    await apiRequest(`/analytics/view/${postId}`, { method: "POST" });
+  trackView: async (postId: string): Promise<boolean> => {
+    const response = await apiRequest(`/posts/${postId}/views`, { method: "POST" });
+    return response.success;
+  },
+
+  /**
+   * Check if post exists
+   */
+  exists: async (postId: string): Promise<boolean> => {
+    const response = await apiRequest<boolean>(`/posts/Exists/${postId}`, {
+      method: "GET",
+    });
+    return response.success ? Boolean(response.data) : false;
   },
 };
 
@@ -1741,6 +1903,21 @@ export const categoriesApi = {
   },
 
   /**
+   * Get category by ID
+   */
+  getCategory: async (id: string): Promise<any | null> => {
+    const response = await apiRequest<any>(`/categories/${id}`, {
+      method: "GET",
+    });
+
+    if (response.success && response.data) {
+      return transformCategoryModelToCategory(response.data);
+    }
+
+    return null;
+  },
+
+  /**
    * Create new category
    */
   createCategory: async (data: {
@@ -1753,7 +1930,7 @@ export const categoriesApi = {
     // Map to backend format
     const backendCategory = {
       CategoryName: data.name,
-      // NameAr: data.nameAr, // Assuming backend doesn't support this yet, storing in same field or separate if available
+      NameAr: data.nameAr || data.name,
       Icon: data.icon || "box",
       Color: data.color || "#0A4ABF",
       Image: data.image || "",
@@ -1796,6 +1973,7 @@ export const categoriesApi = {
     const backendCategory = {
       CategoryID: parseInt(id),
       CategoryName: data.name,
+      NameAr: data.nameAr,
       Icon: data.icon,
       Color: data.color,
       Image: data.image,
@@ -1838,6 +2016,16 @@ export const categoriesApi = {
       message: (response as any).error?.message || "Failed to delete category",
     };
   },
+
+  /**
+   * Check if category exists
+   */
+  exists: async (id: string): Promise<boolean> => {
+    const response = await apiRequest<boolean>(`/categories/Exists/${id}`, {
+      method: "GET",
+    });
+    return response.success ? Boolean(response.data) : false;
+  },
 };
 
 // ============================================================================
@@ -1849,37 +2037,64 @@ export const favoritesApi = {
    * Get user's favorites
    */
   getFavorites: async (): Promise<string[]> => {
-    const response = await apiRequest<FavoritesResponse>("/favorites", {
+    const response = await apiRequest<{
+      success?: boolean;
+      favorites?: Array<string | number>;
+    }>("/favorites", {
       method: "GET",
     });
 
-    return response.success ? response.data.favorites : [];
+    if (!response.success) {
+      throw new Error(response.error?.message || "Failed to load favorites");
+    }
+
+    if (
+      response.data &&
+      response.data.success === true &&
+      Array.isArray(response.data.favorites)
+    ) {
+      return response.data.favorites
+        .map((value) => String(value).trim())
+        .filter((value) => value.length > 0);
+    }
+
+    throw new Error("Invalid favorites response");
   },
 
   /**
    * Add post to favorites
    */
   addFavorite: async (postId: string): Promise<boolean> => {
-    const response = await apiRequest<{ success: boolean }>("/favorites", {
+    const normalizedPostId = String(postId).trim();
+    if (!normalizedPostId) {
+      return false;
+    }
+
+    const response = await apiRequest<{ success?: boolean }>("/favorites", {
       method: "POST",
-      body: JSON.stringify({ postId }),
+      body: JSON.stringify({ postId: normalizedPostId }),
     });
 
-    return response.success ? response.data.success : false;
+    return response.success && response.data?.success === true;
   },
 
   /**
    * Remove post from favorites
    */
   removeFavorite: async (postId: string): Promise<boolean> => {
-    const response = await apiRequest<{ success: boolean }>(
-      `/favorites/${postId}`,
+    const normalizedPostId = String(postId).trim();
+    if (!normalizedPostId) {
+      return false;
+    }
+
+    const response = await apiRequest<{ success?: boolean }>(
+      `/favorites/${normalizedPostId}`,
       {
         method: "DELETE",
       },
     );
 
-    return response.success ? response.data.success : false;
+    return response.success && response.data?.success === true;
   },
 };
 
@@ -1894,22 +2109,36 @@ export const sellersApi = {
   getSellerProfile: async (
     sellerId: string,
   ): Promise<SellerProfileResponse | null> => {
-    const response = await apiRequest<SellerProfileResponse>(
-      `/sellers/${sellerId}`,
+    const normalizedSellerId = String(sellerId).trim();
+    if (!normalizedSellerId) {
+      return null;
+    }
+
+    const backendResponse = await apiRequest<SellerProfileResponse>(
+      `/sellers/${normalizedSellerId}`,
       {
         method: "GET",
       },
     );
+    if (backendResponse.success && backendResponse.data) {
+      return backendResponse.data;
+    }
 
-    return response.success ? response.data : null;
+    return null;
   },
 
   /**
    * Get top sellers
    */
   getTopSellers: async () => {
-    const response = await apiRequest("/sellers/top", { method: "GET" });
-    return response.success ? response.data : [];
+    const backendResponse = await apiRequest<any[]>("/sellers/top", {
+      method: "GET",
+    });
+    if (backendResponse.success && Array.isArray(backendResponse.data)) {
+      return backendResponse.data;
+    }
+
+    return [];
   },
 };
 
@@ -1945,7 +2174,6 @@ export const usersApi = {
       return {
         UserID: parseInt(resolvedId, 10) || parseInt(userId, 10),
         id: resolvedId,
-        Username: user.Username || user.username || "",
         Email: user.Email || user.email || "",
         FirstName: user.FirstName || user.firstName || "",
         LastName: user.LastName || user.lastName || "",
@@ -1957,7 +2185,6 @@ export const usersApi = {
         // Also include transformed fields for frontend use
         firstName: user.FirstName || user.firstName || "",
         lastName: user.LastName || user.lastName || "",
-        username: user.Username || user.username || "",
         email: user.Email || user.email || "",
         phone: user.Phone || user.phone || "",
         city: user.City || user.city || "",
@@ -1979,8 +2206,8 @@ export const usersApi = {
    * Update user profile
    */
   updateUser: async (userId: string, userData: any) => {
-    console.log("[updateUser] Updating user:", userId, userData);
-    console.log(
+    debugLog("[updateUser] Updating user:", userId, userData);
+    debugLog(
       "[updateUser] User data being sent:",
       JSON.stringify(userData, null, 2),
     );
@@ -1990,22 +2217,22 @@ export const usersApi = {
       body: JSON.stringify(userData),
     });
 
-    console.log("[updateUser] Response:", response);
-    console.log("[updateUser] Response success:", response.success);
+    debugLog("[updateUser] Response:", response);
+    debugLog("[updateUser] Response success:", response.success);
 
     if (response.success) {
       // TypeScript knows response.data exists when success is true
       const data = (response as { success: true; data: any }).data;
-      console.log("[updateUser] Response data:", data);
-      console.log("[updateUser] Update successful");
+      debugLog("[updateUser] Response data:", data);
+      debugLog("[updateUser] Update successful");
       return data;
     } else {
       // TypeScript knows response.error exists when success is false
       const errorResponse = response as { success: false; error: any };
       const errorMessage =
         errorResponse.error?.message || "Failed to update user";
-      console.error("[updateUser] Failed:", errorMessage);
-      console.error("[updateUser] Full response:", response);
+      debugError("[updateUser] Failed:", errorMessage);
+      debugError("[updateUser] Full response:", response);
       throw new Error(errorMessage);
     }
   },
@@ -2014,6 +2241,10 @@ export const usersApi = {
    * Get all users (Admin only)
    */
   getAllUsers: async (): Promise<{ success: boolean; users: any[] }> => {
+    if (!isCurrentSessionAdmin()) {
+      return { success: false, users: [] };
+    }
+
     // Using common endpoint /users/All which likely returns all users
     const response = await apiRequest<any[]>("/users/All", {
       method: "GET",
@@ -2043,7 +2274,6 @@ export const usersApi = {
           new Date().toISOString(),
         firstName: user.FirstName || user.firstName || "",
         lastName: user.LastName || user.lastName || "",
-        username: user.Username || user.username || "",
         phone: user.Phone || user.phone || "",
         city: user.City || user.city || "",
         avatar: user.Avatar || user.avatar || undefined,
@@ -2055,6 +2285,89 @@ export const usersApi = {
     }
 
     return { success: false, users: [] };
+  },
+
+  /**
+   * Create user (Admin only)
+   */
+  createUser: async (userData: any): Promise<{ success: boolean; user?: any; message?: string }> => {
+    const password = String(userData?.Password ?? userData?.password ?? "").trim();
+    const email = String(userData?.Email ?? userData?.email ?? "").trim().toLowerCase();
+    const firstName = String(userData?.FirstName ?? userData?.firstName ?? "").trim();
+
+    if (!password || !email || !firstName) {
+      return {
+        success: false,
+        message: "Password, email, and first name are required",
+      };
+    }
+
+    const payload = {
+      Password: password,
+      Email: email,
+      FirstName: firstName,
+      LastName: String(userData?.LastName ?? userData?.lastName ?? "").trim(),
+      Phone:
+        userData?.Phone === null || userData?.phone === null
+          ? null
+          : String(userData?.Phone ?? userData?.phone ?? "").trim() || null,
+      JoinDate: userData?.JoinDate ?? userData?.joinDate ?? new Date().toISOString(),
+      Status:
+        Number.isInteger(Number(userData?.Status ?? userData?.status))
+          ? Number(userData?.Status ?? userData?.status)
+          : 1,
+      RoleID:
+        Number.isInteger(Number(userData?.RoleID ?? userData?.roleID))
+          ? Number(userData?.RoleID ?? userData?.roleID)
+          : 2,
+      IsDeleted: Boolean(userData?.IsDeleted ?? userData?.isDeleted ?? false),
+    };
+
+    const response = await apiRequest<any>("/users", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+
+    if (response.success) {
+      return { success: true, user: response.data };
+    }
+
+    return {
+      success: false,
+      message: response.error?.message || "Failed to create user",
+    };
+  },
+
+  /**
+   * Delete user (self or admin)
+   */
+  deleteUser: async (userId: string): Promise<{ success: boolean; message?: string }> => {
+    const response = await apiRequest<any>(`/users/${userId}`, {
+      method: "DELETE",
+    });
+
+    if (response.success) {
+      return {
+        success: true,
+        message:
+          (response.data as any)?.message || "User deleted successfully",
+      };
+    }
+
+    return {
+      success: false,
+      message: response.error?.message || "Failed to delete user",
+    };
+  },
+
+  /**
+   * Check if user exists
+   */
+  exists: async (userId: string): Promise<boolean> => {
+    const response = await apiRequest<boolean>(`/users/Exists/${userId}`, {
+      method: "GET",
+    });
+    return response.success ? Boolean(response.data) : false;
   },
 
   /**
@@ -2073,7 +2386,7 @@ export const usersApi = {
       const lastName = user.LastName || user.lastName || "";
 
       if (!email || !firstName) {
-        console.error("Failed to update user status: missing required fields");
+        debugError("Failed to update user status: missing required fields");
         return false;
       }
 
@@ -2090,7 +2403,7 @@ export const usersApi = {
         });
         return true;
       } catch (error) {
-        console.error("Failed to update user status:", error);
+        debugError("Failed to update user status:", error);
         return false;
       }
     }
@@ -2112,7 +2425,7 @@ export const usersApi = {
       const lastName = user.LastName || user.lastName || "";
 
       if (!email || !firstName) {
-        console.error("Failed to update user role: missing required fields");
+        debugError("Failed to update user role: missing required fields");
         return false;
       }
 
@@ -2128,11 +2441,254 @@ export const usersApi = {
         });
         return true;
       } catch (error) {
-        console.error("Failed to update user role:", error);
+        debugError("Failed to update user role:", error);
         return false;
       }
     }
     return false;
+  },
+};
+
+// ============================================================================
+// Post Images API
+// ============================================================================
+
+export const postImagesApi = {
+  getAll: async (): Promise<any[]> => {
+    const response = await apiRequest<any[]>("/TbPostImages/All", {
+      method: "GET",
+    });
+    return response.success && Array.isArray(response.data) ? response.data : [];
+  },
+
+  getById: async (id: string): Promise<any | null> => {
+    const response = await apiRequest<any>(`/TbPostImages/${id}`, {
+      method: "GET",
+    });
+    return response.success ? response.data : null;
+  },
+
+  create: async (payload: {
+    PostID: number;
+    PostImageURL: string;
+    UploadedAt?: string;
+    IsDeleted?: boolean;
+  }): Promise<{ success: boolean; image?: any; message?: string }> => {
+    const response = await apiRequest<any>("/TbPostImages", {
+      method: "POST",
+      body: JSON.stringify({
+        PostID: payload.PostID,
+        PostImageURL: payload.PostImageURL,
+        UploadedAt: payload.UploadedAt || new Date().toISOString(),
+        IsDeleted: payload.IsDeleted ?? false,
+      }),
+    });
+
+    if (response.success) {
+      invalidatePostImagesCache();
+      return { success: true, image: response.data };
+    }
+
+    return {
+      success: false,
+      message: response.error?.message || "Failed to create post image",
+    };
+  },
+
+  update: async (
+    id: string,
+    payload: {
+      PostID: number;
+      PostImageURL: string;
+      UploadedAt?: string;
+      IsDeleted?: boolean;
+    },
+  ): Promise<{ success: boolean; image?: any; message?: string }> => {
+    const response = await apiRequest<any>(`/TbPostImages/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        PostImageID: Number(id),
+        PostID: payload.PostID,
+        PostImageURL: payload.PostImageURL,
+        UploadedAt: payload.UploadedAt || new Date().toISOString(),
+        IsDeleted: payload.IsDeleted ?? false,
+      }),
+    });
+
+    if (response.success) {
+      invalidatePostImagesCache();
+      return { success: true, image: response.data };
+    }
+
+    return {
+      success: false,
+      message: response.error?.message || "Failed to update post image",
+    };
+  },
+
+  delete: async (id: string): Promise<{ success: boolean; message?: string }> => {
+    const response = await apiRequest<any>(`/TbPostImages/${id}`, {
+      method: "DELETE",
+    });
+
+    if (response.success) {
+      invalidatePostImagesCache();
+      return {
+        success: true,
+        message:
+          (response.data as any)?.message || "Post image deleted successfully",
+      };
+    }
+
+    return {
+      success: false,
+      message: response.error?.message || "Failed to delete post image",
+    };
+  },
+
+  exists: async (id: string): Promise<boolean> => {
+    const response = await apiRequest<boolean>(`/TbPostImages/Exists/${id}`, {
+      method: "GET",
+    });
+    return response.success ? Boolean(response.data) : false;
+  },
+};
+
+// ============================================================================
+// Roles API
+// ============================================================================
+
+export const rolesApi = {
+  getRoles: async (): Promise<any[]> => {
+    const response = await apiRequest<any[]>("/TbRoles/All", { method: "GET" });
+    return response.success && Array.isArray(response.data) ? response.data : [];
+  },
+
+  getRole: async (id: string): Promise<any | null> => {
+    const response = await apiRequest<any>(`/TbRoles/${id}`, { method: "GET" });
+    return response.success ? response.data : null;
+  },
+
+  createRole: async (payload: {
+    RoleName: string;
+    CreatedAt?: string;
+    IsDeleted?: boolean;
+  }): Promise<{ success: boolean; role?: any; message?: string }> => {
+    const response = await apiRequest<any>("/TbRoles", {
+      method: "POST",
+      body: JSON.stringify({
+        RoleName: payload.RoleName,
+        CreatedAt: payload.CreatedAt || new Date().toISOString(),
+        IsDeleted: payload.IsDeleted ?? false,
+      }),
+    });
+
+    if (response.success) {
+      return { success: true, role: response.data };
+    }
+
+    return {
+      success: false,
+      message: response.error?.message || "Failed to create role",
+    };
+  },
+
+  updateRole: async (
+    id: string,
+    payload: {
+      RoleName: string;
+      CreatedAt?: string;
+      IsDeleted?: boolean;
+    },
+  ): Promise<{ success: boolean; role?: any; message?: string }> => {
+    const response = await apiRequest<any>(`/TbRoles/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        RoleID: Number(id),
+        RoleName: payload.RoleName,
+        CreatedAt: payload.CreatedAt || new Date().toISOString(),
+        IsDeleted: payload.IsDeleted ?? false,
+      }),
+    });
+
+    if (response.success) {
+      return { success: true, role: response.data };
+    }
+
+    return {
+      success: false,
+      message: response.error?.message || "Failed to update role",
+    };
+  },
+
+  deleteRole: async (id: string): Promise<{ success: boolean; message?: string }> => {
+    const response = await apiRequest<any>(`/TbRoles/${id}`, {
+      method: "DELETE",
+    });
+
+    if (response.success) {
+      return {
+        success: true,
+        message: (response.data as any)?.message || "Role deleted successfully",
+      };
+    }
+
+    return {
+      success: false,
+      message: response.error?.message || "Failed to delete role",
+    };
+  },
+
+  exists: async (id: string): Promise<boolean> => {
+    const response = await apiRequest<boolean>(`/TbRoles/Exists/${id}`, {
+      method: "GET",
+    });
+    return response.success ? Boolean(response.data) : false;
+  },
+};
+
+// ============================================================================
+// Reviews API
+// ============================================================================
+
+export const reviewsApi = {
+  getUserReviews: async (userId: string): Promise<any[]> => {
+    const response = await apiRequest<any[]>(`/reviews/user/${userId}`, {
+      method: "GET",
+    });
+
+    if (response.success && Array.isArray(response.data)) {
+      return response.data;
+    }
+
+    return [];
+  },
+
+  addReview: async (payload: {
+    reviewedUserId: number;
+    rating: number;
+    comment: string;
+  }): Promise<{ success: boolean; message?: string; data?: any }> => {
+    const response = await apiRequest<any>("/reviews", {
+      method: "POST",
+      body: JSON.stringify({
+        ReviewID: null,
+        ReviewerID: 0,
+        ReviewedUserID: payload.reviewedUserId,
+        Rating: payload.rating,
+        Comment: payload.comment,
+        Timestamp: new Date().toISOString(),
+      }),
+    });
+
+    if (response.success) {
+      return { success: true, data: response.data };
+    }
+
+    return {
+      success: false,
+      message: response.error?.message || "Failed to submit review",
+    };
   },
 };
 
@@ -2163,6 +2719,22 @@ export const chatApi = {
     }
 
     return [];
+  },
+
+  getPresence: async (otherUserId: number): Promise<boolean> => {
+    const response = await apiRequest<any>(`/chat/presence/${otherUserId}`, {
+      method: "GET",
+    });
+
+    if (!response.success || !response.data) {
+      return false;
+    }
+
+    return Boolean(
+      (response.data as any).isOnline ??
+        (response.data as any).IsOnline ??
+        false,
+    );
   },
 
   sendMessage: async (
@@ -2202,29 +2774,80 @@ export const searchApi = {
    */
   search: async (params: SearchRequest): Promise<PostsListResponse> => {
     const queryParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) {
-        queryParams.append(key, String(value));
-      }
-    });
+    if (params.query?.trim()) {
+      queryParams.set("query", params.query.trim());
+    }
+    if (params.category?.trim()) {
+      queryParams.set("category", params.category.trim());
+    }
+    if (params.city?.trim()) {
+      queryParams.set("city", params.city.trim());
+    }
+    if (typeof params.minPrice === "number") {
+      queryParams.set("minPrice", String(params.minPrice));
+    }
+    if (typeof params.maxPrice === "number") {
+      queryParams.set("maxPrice", String(params.maxPrice));
+    }
+    if (params.status) {
+      queryParams.set("status", params.status);
+    }
+    if (params.sortBy) {
+      queryParams.set("sortBy", params.sortBy);
+    }
+    if (params.sortOrder) {
+      queryParams.set("sortOrder", params.sortOrder);
+    }
+    queryParams.set("page", String(params.page && params.page > 0 ? params.page : 1));
+    queryParams.set("limit", String(params.limit && params.limit > 0 ? params.limit : 20));
 
-    const response = await apiRequest<PostsListResponse>(
-      `/search?${queryParams.toString()}`,
-      { method: "GET" },
-    );
+    const queryString = queryParams.toString();
+    const response = await apiRequest<{
+      success?: boolean;
+      posts?: any[];
+      pagination?: {
+        currentPage?: number;
+        totalPages?: number;
+        totalPosts?: number;
+        postsPerPage?: number;
+      };
+    }>(`/search${queryString ? `?${queryString}` : ""}`, { method: "GET" });
 
-    return response.success
-      ? response.data
-      : {
-          success: false,
-          posts: [],
-          pagination: {
-            currentPage: 1,
-            totalPages: 0,
-            totalPosts: 0,
-            postsPerPage: 20,
-          },
-        };
+    if (response.success && response.data && Array.isArray(response.data.posts)) {
+      const posts = response.data.posts.map((post, index) =>
+        transformPostModelToProduct(post, post?.images || post?.Images || [], index),
+      );
+
+      return {
+        success: true,
+        posts,
+        pagination: {
+          currentPage: Number(response.data.pagination?.currentPage || params.page || 1),
+          totalPages: Number(response.data.pagination?.totalPages || 0),
+          totalPosts: Number(response.data.pagination?.totalPosts || posts.length),
+          postsPerPage: Number(
+            response.data.pagination?.postsPerPage || params.limit || 20,
+          ),
+        },
+      };
+    }
+
+    const responseError = response.success ? undefined : response.error;
+
+    return {
+      success: false,
+      posts: [],
+      pagination: {
+        currentPage: params.page && params.page > 0 ? params.page : 1,
+        totalPages: 0,
+        totalPosts: 0,
+        postsPerPage: params.limit && params.limit > 0 ? params.limit : 20,
+      },
+      error: {
+        message: responseError?.message || "Search request failed",
+        code: responseError?.code,
+      },
+    };
   },
 };
 
@@ -2236,9 +2859,12 @@ export const api = {
   auth: authApi,
   posts: postsApi,
   categories: categoriesApi,
+  postImages: postImagesApi,
+  roles: rolesApi,
   favorites: favoritesApi,
   sellers: sellersApi,
   users: usersApi,
+  reviews: reviewsApi,
   chat: chatApi,
   search: searchApi,
   admin: {
@@ -2263,7 +2889,7 @@ export const api = {
           totalRevenue: 0,
         };
       } catch (error) {
-        console.error("Failed to fetch admin stats:", error);
+        debugError("Failed to fetch admin stats:", error);
         return {
           totalUsers: 0,
           totalPosts: 0,

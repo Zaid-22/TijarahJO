@@ -36,7 +36,6 @@ The `scripts.txt` file includes CREATE INDEX statements (lines 179-193):
 - `IX_TbUsers_Email`
 - `IX_TbUsers_HashedPassword`
 - `IX_TbUsers_RoleID`
-- `IX_TbUsers_Username`
 - `IX_TbUsers_Status`
 - `IX_TbUserPosts_UserID`
 - `IX_TbUserPosts_CategoryID`
@@ -252,7 +251,7 @@ BEGIN
 
     SELECT TOP (1)
            u.UserID,
-           u.Username,
+           u.Login,
            u.HashedPassword,
            u.Email,
            u.FirstName,
@@ -262,7 +261,7 @@ BEGIN
            u.RoleID,
            u.IsDeleted
     FROM dbo.TbUsers AS u
-    WHERE (u.Email = @Login OR u.Username = @Login)  -- Accept email or username
+    WHERE (u.Email = @Login OR u.Login = @Login)  -- Accept email or login
       AND u.HashedPassword = @HashedPassword
       AND u.IsDeleted = 0;
 END;

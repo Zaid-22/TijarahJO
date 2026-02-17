@@ -3,8 +3,9 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { api } from "../services/api";
-import { useAuth } from "../contexts/AuthContext";
 import { useState } from "react";
+import { APP_CONFIG } from "../constants/appConfig";
+import { normalizeJordanPhone } from "../utils/phone";
 import {
   Mail,
   Lock,
@@ -13,15 +14,25 @@ import {
   User,
   AlertCircle,
   Loader2,
-  Phone,
 } from "lucide-react";
+
+const DEBUG_LOGIN =
+  Boolean((import.meta as any).env?.DEV) &&
+  (import.meta as any).env?.VITE_DEBUG_LOGIN === "true";
+
+const debugLoginLog = (...args: any[]) => {
+  if (DEBUG_LOGIN) {
+    console.log(...args);
+  }
+};
+
+const BACKEND_CONNECTION_MESSAGE = `Cannot connect to backend. Please make sure the backend is running on ${APP_CONFIG.backendHostUrl}`;
 
 interface LoginPageProps {
   onLogin: (userData: {
     id?: string;
     firstName: string;
     lastName: string;
-    username: string;
     email: string;
     token: string;
     phone?: string;
@@ -35,6 +46,21 @@ interface LoginPageProps {
 const isValidEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
+};
+
+const parseAuthIdentifier = (
+  value: string,
+): { email: string | null; phone: string | null } => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return { email: null, phone: null };
+  }
+
+  if (isValidEmail(trimmed)) {
+    return { email: trimmed.toLowerCase(), phone: null };
+  }
+
+  return { email: null, phone: normalizeJordanPhone(trimmed) };
 };
 
 const formatJoinedDateLabel = (value?: unknown): string => {
@@ -110,7 +136,6 @@ const calculatePasswordStrength = (
 };
 
 export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
-  const { login: authLogin } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
@@ -121,7 +146,6 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
 
   // Field errors
   const [emailError, setEmailError] = useState("");
@@ -129,7 +153,6 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [firstNameError, setFirstNameError] = useState("");
   const [lastNameError, setLastNameError] = useState("");
-  const [phoneError, setPhoneError] = useState("");
 
   // General error from backend
   const [generalError, setGeneralError] = useState("");
@@ -141,12 +164,16 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
   const [confirmPasswordFocused, setConfirmPasswordFocused] = useState(false);
   const [firstNameFocused, setFirstNameFocused] = useState(false);
   const [lastNameFocused, setLastNameFocused] = useState(false);
-  const [phoneFocused, setPhoneFocused] = useState(false);
 
   // Validate individual fields
   const validateEmail = (value: string): string => {
-    if (!value.trim()) return "Email is required";
-    if (!isValidEmail(value)) return "Invalid email format";
+    if (!value.trim()) return "Email or phone is required";
+    if (isSignUp) {
+      const parsedIdentifier = parseAuthIdentifier(value);
+      if (!parsedIdentifier.email && !parsedIdentifier.phone) {
+        return "Enter a valid email or Jordanian phone number";
+      }
+    }
     return "";
   };
 
@@ -188,13 +215,6 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
     return "";
   };
 
-  const validatePhone = (value: string): string => {
-    if (!value.trim()) return "Phone number is required";
-    // Must be exactly 9 digits
-    if (!/^[0-9]{9}$/.test(value)) return "Must be exactly 9 digits";
-    return "";
-  };
-
   // Check if form is valid
   const isFormValid = (): boolean => {
     if (isSignUp) {
@@ -208,9 +228,7 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
         !validatePassword(password) &&
         !validateConfirmPassword(confirmPassword) &&
         !validateFirstName(firstName) &&
-        !validateLastName(lastName) &&
-        phone.trim() !== "" &&
-        !validatePhone(phone) // Valid phone required
+        !validateLastName(lastName)
       );
     } else {
       return email.trim() !== "" && password !== "";
@@ -228,52 +246,49 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
       const confirmPasswordErr = validateConfirmPassword(confirmPassword);
       const firstNameErr = validateFirstName(firstName);
       const lastNameErr = validateLastName(lastName);
-      // const usernameErr = validateUsername(username);
-      const phoneErr = validatePhone(phone);
 
       setEmailError(emailErr);
       setPasswordError(passwordErr);
       setConfirmPasswordError(confirmPasswordErr);
       setFirstNameError(firstNameErr);
       setLastNameError(lastNameErr);
-      setPhoneError(phoneErr);
 
-      if (confirmPasswordErr || firstNameErr || lastNameErr || phoneErr) {
+      if (emailErr || confirmPasswordErr || firstNameErr || lastNameErr) {
         return;
       }
 
       // Call backend API for registration
       setIsLoading(true);
       try {
-        // Process phone number - remove any existing +962 prefix to avoid duplication
-        let processedPhone = phone.trim();
-        if (processedPhone) {
-          // Remove +962 prefix if it exists (in case user typed it)
-          processedPhone = processedPhone.replace(/^\+962\s*/i, "");
-          // Add +962 prefix
-          processedPhone = `+962${processedPhone}`;
+        const parsedIdentifier = parseAuthIdentifier(email);
+        if (!parsedIdentifier.email && !parsedIdentifier.phone) {
+          setEmailError("Enter a valid email or Jordanian phone number");
+          setGeneralError(
+            "Please enter a valid email address or Jordanian phone number.",
+          );
+          setIsLoading(false);
+          return;
         }
 
-        const generatedUsername = `user_${Date.now()}`;
         const response = await api.auth.register(
-          email.trim(),
+          parsedIdentifier.email || "",
           password,
           `${firstName.trim()} ${lastName.trim()}`,
-          processedPhone, // Now required
-          "Amman", // Default city
+          parsedIdentifier.phone || undefined,
+          APP_CONFIG.defaultCity,
           undefined, // No area provided in signup form
         );
 
         // Log the full response for debugging
-        console.log("[SignUp] Full API response:", response);
-        console.log("[SignUp] Response success:", response.success);
-        console.log("[SignUp] Response data:", response.data);
+        debugLoginLog("[SignUp] Full API response:", response);
+        debugLoginLog("[SignUp] Response success:", response.success);
+        debugLoginLog("[SignUp] Response data:", response.data);
 
         // Check for errors - response might be successful HTTP but have Success: false in data
         if (!response.success || !response.data) {
           // Handle backend errors with better messages
-          console.log("[SignUp] Registration failed - no success or no data");
-          console.log("[SignUp] Response error:", (response as any).error);
+          debugLoginLog("[SignUp] Registration failed - no success or no data");
+          debugLoginLog("[SignUp] Response error:", (response as any).error);
 
           let errorMessage =
             response.message ||
@@ -282,14 +297,13 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
               ? (response as any).error
               : null) ||
             ((response as any).error?.code === "CONNECTION_REFUSED"
-              ? "Cannot connect to backend. Please make sure the backend is running on http://localhost:5033"
+              ? BACKEND_CONNECTION_MESSAGE
               : "Registration failed. Please try again.");
 
           // Add helpful suggestion for duplicate account errors
           if (
             errorMessage &&
             (errorMessage.includes("already exists") ||
-              errorMessage.includes("username already") ||
               errorMessage.includes("email address already"))
           ) {
             errorMessage +=
@@ -303,12 +317,12 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
 
         // Check if data contains success: false (register() transforms backend response)
         const responseData = response.data as any;
-        console.log("[SignUp] Response data success:", responseData.success);
-        console.log(
+        debugLoginLog("[SignUp] Response data success:", responseData.success);
+        debugLoginLog(
           "[SignUp] Response data token:",
           responseData.token ? "exists" : "missing",
         );
-        console.log("[SignUp] Response data message:", responseData.message);
+        debugLoginLog("[SignUp] Response data message:", responseData.message);
 
         // Check both formats (transformed and raw backend response)
         // IMPORTANT: Only proceed if sign-up was actually successful
@@ -327,11 +341,11 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
             responseData.Message ||
             response.message ||
             "Registration failed. Please check your information and try again.";
-          console.log(
+          debugLoginLog(
             "[SignUp] Registration failed - success is false or no token:",
             errorMessage,
           );
-          console.log("[SignUp] Response data for debugging:", {
+          debugLoginLog("[SignUp] Response data for debugging:", {
             success: responseData.success,
             Success: responseData.Success,
             hasToken: hasToken,
@@ -373,7 +387,7 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
           // Still proceed if we have a token - user data might be fetched later
         }
 
-        console.log(
+        debugLoginLog(
           "[SignUp] Sign-up successful! Saving token and calling onLogin",
         );
 
@@ -402,7 +416,7 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
           return; // Don't call onLogin if token validation failed
         }
 
-        console.log(
+        debugLoginLog(
           "[SignUp] Token verified, proceeding with onLogin callback",
         );
 
@@ -414,10 +428,17 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
             user?.UserID?.toString(),
           firstName: firstName.trim(),
           lastName: lastName.trim(),
-          username: generatedUsername,
-          email: email.trim(),
+          email:
+            user?.email ||
+            user?.Email ||
+            parsedIdentifier.email ||
+            "",
           token: token,
-          phone: phone.trim() ? `+962${phone.trim()}` : "", // Add +962 prefix if phone exists
+          phone:
+            user?.phone ||
+            user?.Phone ||
+            parsedIdentifier.phone ||
+            "",
           avatar: user?.avatar || user?.Avatar,
           joinedDate: formatJoinedDateLabel(
             user?.joinedDate || user?.JoinedDate || user?.JoinDate,
@@ -431,14 +452,14 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
           error instanceof Error
             ? error.message.includes("Failed to fetch") ||
               error.message.includes("ERR_CONNECTION_REFUSED")
-              ? "Cannot connect to backend. Please make sure the backend is running on http://localhost:5033"
+              ? BACKEND_CONNECTION_MESSAGE
               : error.message
             : "An unexpected error occurred. Please try again.";
         setGeneralError(errorMessage);
         setIsLoading(false);
       }
     } else {
-      // Login - Use AuthContext login function for proper state management
+      // Login
       setIsLoading(true);
       try {
         // Call API directly to get full response for onLogin callback
@@ -457,7 +478,7 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
               ? (response as any).error
               : null) ||
             ((response as any).error?.code === "CONNECTION_REFUSED"
-              ? "Cannot connect to backend. Please make sure the backend is running on http://localhost:5033"
+              ? BACKEND_CONNECTION_MESSAGE
               : "Invalid email or password. Please try again.");
           setGeneralError(errorMessage);
           setIsLoading(false);
@@ -490,16 +511,17 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
           return;
         }
 
-        // User might be null if backend didn't return it, but token is required
-        // If user is missing, we'll still proceed and fetch user data separately
-
-        // Also use AuthContext login to update global auth state
-        const authLoginSuccess = await authLogin(email.trim(), password);
-
-        if (!authLoginSuccess) {
-          console.warn(
-            "[LoginPage] AuthContext login failed but API login succeeded",
-          );
+        // Ensure AuthContext picks up token in the same tab.
+        localStorage.setItem("tijarahjo_token", token);
+        window.dispatchEvent(
+          new CustomEvent("authTokenSet", { detail: { token } }),
+        );
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        const verifyToken = localStorage.getItem("tijarahjo_token");
+        if (!verifyToken || verifyToken !== token) {
+          setGeneralError("Login failed. Authentication token is invalid.");
+          setIsLoading(false);
+          return;
         }
 
         // Call onLogin with user data for App.tsx state updates
@@ -507,8 +529,6 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
         const firstName = user?.firstName || user?.FirstName || "";
         const lastName = user?.lastName || user?.LastName || "";
         const userEmail = user?.email || user?.Email || email;
-        const username =
-          user?.username || user?.Username || userEmail?.split("@")[0] || "";
 
         onLogin({
           id:
@@ -517,7 +537,6 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
             user?.UserID?.toString(),
           firstName: firstName,
           lastName: lastName,
-          username: username,
           email: userEmail,
           token: token,
           phone: user?.phone || user?.Phone || "",
@@ -534,7 +553,7 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
           error instanceof Error
             ? error.message.includes("Failed to fetch") ||
               error.message.includes("ERR_CONNECTION_REFUSED")
-              ? "Cannot connect to backend. Please make sure the backend is running on http://localhost:5033"
+              ? BACKEND_CONNECTION_MESSAGE
               : error.message
             : "An unexpected error occurred. Please try again.";
         setGeneralError(errorMessage);
@@ -570,7 +589,12 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-4 sm:space-y-5"
+            autoComplete="off"
+            noValidate
+          >
             {/* Sign Up Only - First Name & Last Name */}
             {isSignUp && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -702,82 +726,13 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
               </div>
             )}
 
-            {/* Sign Up Only - Phone */}
-            {isSignUp && (
-              <div className="space-y-2">
-                <label
-                  htmlFor="phone"
-                  className="text-sm text-black dark:text-white"
-                >
-                  Phone Number <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <div
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300"
-                    style={{
-                      backgroundColor:
-                        phoneFocused || phone
-                          ? "rgba(10, 74, 191, 0.1)"
-                          : "#F5F6FA",
-                    }}
-                  >
-                    <Phone
-                      className="w-5 h-5 transition-colors duration-300"
-                      style={{
-                        color: phoneFocused || phone ? "#0A4ABF" : "#9CA3AF",
-                      }}
-                    />
-                  </div>
-                  {/* Fixed +962 prefix */}
-                  <div className="absolute left-16 top-1/2 transform -translate-y-1/2 text-gray-700 dark:text-gray-300 text-base font-medium pointer-events-none">
-                    +962
-                  </div>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    autoComplete="tel"
-                    placeholder="791234567"
-                    value={phone}
-                    maxLength={9}
-                    onChange={(e) => {
-                      // Only allow numbers
-                      const value = e.target.value.replace(/[^0-9]/g, "");
-                      setPhone(value);
-                      setPhoneError("");
-                    }}
-                    onBlur={() => {
-                      setPhoneFocused(false);
-                      setPhoneError(validatePhone(phone));
-                    }}
-                    onFocus={() => setPhoneFocused(true)}
-                    className="pl-28 h-14 rounded-xl border-2 transition-all duration-300 text-base text-black dark:text-white bg-white dark:bg-gray-700 placeholder:text-gray-400 dark:placeholder:text-gray-500"
-                    style={{
-                      borderColor: phoneError
-                        ? "#EF4444"
-                        : phoneFocused
-                          ? "#0A4ABF"
-                          : "#E5E7EB",
-                      boxShadow: phoneFocused
-                        ? "0 0 0 4px rgba(10, 74, 191, 0.08)"
-                        : "none",
-                    }}
-                    disabled={isLoading}
-                  />
-                </div>
-                {phoneError && (
-                  <p className="text-xs text-red-500 mt-1">{phoneError}</p>
-                )}
-              </div>
-            )}
-
             {/* Email Field */}
             <div className="space-y-2">
               <label
-                htmlFor="email"
+                htmlFor="authIdentifier"
                 className="text-sm text-black dark:text-white"
               >
-                {isSignUp ? "Email" : "Email or Phone"}{" "}
+                Email or Phone{" "}
                 {isSignUp && <span className="text-red-500">*</span>}
               </label>
               <div className="relative">
@@ -798,13 +753,11 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
                   />
                 </div>
                 <Input
-                  id="email"
-                  name="email"
-                  type={isSignUp ? "email" : "text"}
-                  autoComplete={isSignUp ? "email" : "email"}
-                  placeholder={
-                    isSignUp ? "email address" : "email or phone number"
-                  }
+                  id="authIdentifier"
+                  name="authIdentifier"
+                  type="text"
+                  autoComplete="off"
+                  placeholder="email address or phone number"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
@@ -812,9 +765,7 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
                   }}
                   onBlur={() => {
                     setEmailFocused(false);
-                    if (isSignUp) {
-                      setEmailError(validateEmail(email));
-                    }
+                    setEmailError(validateEmail(email));
                   }}
                   onFocus={() => setEmailFocused(true)}
                   className="pl-11 sm:pl-16 h-12 sm:h-14 rounded-xl border-2 transition-all duration-300 text-sm sm:text-base text-black dark:text-white bg-white dark:bg-gray-700 placeholder:text-gray-400 dark:placeholder:text-gray-500"
@@ -1035,8 +986,6 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
                   setConfirmPasswordError("");
                   setFirstNameError("");
                   setLastNameError("");
-
-                  setPhoneError("");
                 }}
                 className="font-medium hover:underline"
                 style={{ color: "#0A4ABF" }}

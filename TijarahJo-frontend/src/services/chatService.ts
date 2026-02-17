@@ -5,9 +5,18 @@ import {
   LogLevel,
 } from "@microsoft/signalr";
 import { Message } from "../types";
+import { APP_CONFIG } from "../constants/appConfig";
 
-const API_BASE_URL =
-  (import.meta as any).env?.VITE_API_BASE_URL || "http://localhost:5033/api";
+const API_BASE_URL = APP_CONFIG.apiBaseUrl;
+const DEBUG_CHAT =
+  Boolean((import.meta as any).env?.DEV) &&
+  (import.meta as any).env?.VITE_DEBUG_CHAT === "true";
+
+const debugChatLog = (...args: any[]) => {
+  if (DEBUG_CHAT) {
+    console.log(...args);
+  }
+};
 
 const normalizedApiBase = API_BASE_URL.replace(/\/+$/, "");
 const hubBaseUrl = normalizedApiBase.endsWith("/api")
@@ -45,7 +54,7 @@ class ChatService {
         accessTokenFactory: () => token,
       })
       .withAutomaticReconnect()
-      .configureLogging(LogLevel.Information)
+      .configureLogging(DEBUG_CHAT ? LogLevel.Information : LogLevel.Warning)
       .build();
 
     connection.on(
@@ -91,7 +100,7 @@ class ChatService {
     try {
       await connection.start();
       this.connectionToken = token;
-      console.log("SignalR Connected");
+      debugChatLog("SignalR Connected");
     } catch (err) {
       console.error("SignalR Connection Error: ", err);
       this.connection = null;

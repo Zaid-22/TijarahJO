@@ -32,7 +32,7 @@ img_1734600000000_a1b2c  // Image ID
 Each user has:
 - `id`: Unique user identifier
 - `email`: User's email address
-- `username`: Unique username
+- `login`: Unique login
 - `firstName`: User's first name
 - `lastName`: User's last name
 - `name`: Full name (concatenation of firstName + lastName)
@@ -44,7 +44,7 @@ Each user has:
 {
   id: "user_1734600000000_a1b2c",
   email: "ahmed.k@example.com",
-  username: "ahmedk",
+  login: "ahmedk",
   firstName: "Ahmed",
   lastName: "Khaled",
   name: "Ahmed Khaled",
@@ -207,11 +207,10 @@ const sellerProducts = getProductsBySeller("user_1734600000000_a1b2c");
 
 ### Users
 ```typescript
-import { getUserById, getUserByEmail, getUserByUsername } from '../data/mockUsers';
+import { getUserById, getUserByEmail } from '../data/mockUsers';
 
 const user = getUserById("user_1734600000000_a1b2c");
 const userByEmail = getUserByEmail("ahmed.k@example.com");
-const userByUsername = getUserByUsername("ahmedk");
 ```
 
 ### Categories

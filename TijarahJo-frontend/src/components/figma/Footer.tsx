@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   Facebook,
   Twitter,
@@ -14,6 +15,23 @@ interface FooterProps {
 }
 
 export function Footer({ language }: FooterProps) {
+  useEffect(() => {
+    const syncFooters = () => {
+      const footers = Array.from(
+        document.querySelectorAll<HTMLElement>('[data-app-global-footer="true"]'),
+      );
+      footers.forEach((footer, index) => {
+        footer.style.display = index === 0 ? "" : "none";
+      });
+    };
+
+    syncFooters();
+
+    return () => {
+      setTimeout(syncFooters, 0);
+    };
+  }, []);
+
   const t = {
     en: {
       about: "About TijarahJo",
@@ -68,7 +86,7 @@ export function Footer({ language }: FooterProps) {
   const content = t[language];
 
   return (
-    <footer className="bg-black border-t border-gray-800 mt-16">
+    <footer data-app-global-footer="true" className="bg-black border-t border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         {/* Main Footer Content */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 mb-12">
@@ -124,7 +142,7 @@ export function Footer({ language }: FooterProps) {
                 <li key={category.name}>
                   <Link
                     to={`/category/${category.name}`}
-                    className="text-gray-400 hover:text-primary transition-colors"
+                    className="text-gray-400 hover:text-[#60A5FA] focus-visible:text-[#60A5FA] transition-colors"
                   >
                     {language === "ar" ? category.nameAr : category.name}
                   </Link>

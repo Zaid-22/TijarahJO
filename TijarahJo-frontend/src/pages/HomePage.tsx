@@ -19,6 +19,7 @@ import {
 import { ProductCard } from "../components/figma/ProductCard";
 import { categoryData } from "../data/categoryData";
 import { Language, Product, ViewMode } from "../types";
+import { APP_CONFIG } from "../constants/appConfig";
 
 interface HomePageProps {
   language: Language;
@@ -52,7 +53,7 @@ interface HomePageProps {
   onProductClick: (id: string, origin?: string) => void;
   favoriteIds: string[];
   toggleFavorite: (id: string) => void;
-  currentUserName: string;
+  currentUserDisplayName: string;
 
   // Pagination
   currentPage: number;
@@ -87,7 +88,7 @@ export function HomePage({
   onProductClick,
   favoriteIds,
   toggleFavorite,
-  currentUserName,
+  currentUserDisplayName,
   currentPage,
   totalPages,
   isLoading,
@@ -95,6 +96,8 @@ export function HomePage({
   goToPreviousPage,
   getCategoryTranslation,
 }: HomePageProps) {
+  const backendUrlHint = APP_CONFIG.backendHostUrl;
+
   const scrollToTop = () => {
     const mainContent = document.querySelector("main");
     mainContent?.scrollIntoView({
@@ -394,8 +397,8 @@ export function HomePage({
             {productsError.includes("Cannot connect") && (
               <p className="text-yellow-700 dark:text-yellow-300 text-xs text-center mt-2">
                 {language === "ar"
-                  ? "تأكد من تشغيل الخادم الخلفي على http://localhost:5033"
-                  : "Make sure the backend server is running on http://localhost:5033"}
+                  ? `تأكد من تشغيل الخادم الخلفي على ${backendUrlHint}`
+                  : `Make sure the backend server is running on ${backendUrlHint}`}
               </p>
             )}
           </div>
@@ -464,8 +467,8 @@ export function HomePage({
                   isFavorite={favoriteIds.includes(product.id)}
                   onFavoriteToggle={toggleFavorite}
                   isAuthenticated={isAuthenticated}
-                  currentUserName={
-                    isAuthenticated ? currentUserName : undefined
+                  currentUserDisplayName={
+                    isAuthenticated ? currentUserDisplayName : undefined
                   }
                 />
               ))

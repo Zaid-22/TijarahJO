@@ -12,16 +12,16 @@ import { Product } from "../types";
 // ============================================================================
 
 export interface LoginRequest {
-  email: string;
+  email: string; // email or phone login identifier
   password: string;
 }
 
 export interface SignUpRequest {
   firstName: string;
   lastName: string;
-  email: string;
+  email: string; // can be empty when signing up with phone only
   password: string;
-  phone: string; // Must start with +962
+  phone?: string; // Optional; normalized to +962 when provided
   city: string;
   area?: string;
 }
@@ -47,20 +47,6 @@ export interface User {
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
 }
-// ... skipping Product/Post Management sections ...
-export interface SellerProfile {
-  id: string;
-  name: string;
-  phone: string;
-  city: string;
-  area?: string;
-  bio?: string;
-  avatar?: string;
-  joinedDate: string;
-  activeListingsCount: number;
-  totalSalesCount: number;
-}
-
 // ============================================================================
 // Product/Post Management
 // ============================================================================
@@ -221,7 +207,7 @@ export interface UserAnalytics {
 // ============================================================================
 
 /**
- * Expected API Endpoints:
+ * Backend API Endpoints (current controllers):
  *
  * AUTH:
  * - POST   /api/auth/signup
@@ -230,37 +216,70 @@ export interface UserAnalytics {
  * - GET    /api/auth/me (get current user)
  *
  * POSTS:
- * - GET    /api/posts (list all posts with filters)
+ * - GET    /api/posts/All
+ * - GET    /api/posts/pagination?pageNumber=&rowsPerPage=&includeDeleted=
  * - GET    /api/posts/:id (get single post)
  * - POST   /api/posts (create new post)
  * - PUT    /api/posts/:id (update post)
  * - PATCH  /api/posts/:id/status (update post status)
+ * - POST   /api/posts/:id/views (increment views)
  * - DELETE /api/posts/:id (delete post)
  * - GET    /api/posts/user/:userId (get user's posts)
  * - GET    /api/posts/category/:category (get posts by category)
+ * - GET    /api/posts/Exists/:id
  *
  * CATEGORIES:
- * - GET    /api/categories (list all categories)
+ * - GET    /api/categories/All
  * - GET    /api/categories/:id (get single category)
+ * - POST   /api/categories
+ * - PUT    /api/categories/:id
+ * - DELETE /api/categories/:id
+ * - GET    /api/categories/Exists/:id
+ *
+ * USERS:
+ * - GET    /api/users/All
+ * - GET    /api/users/:id (get user profile)
+ * - POST   /api/users
+ * - PUT    /api/users/:id (update user profile)
+ * - DELETE /api/users/:id
+ * - GET    /api/users/Exists/:id
+ *
+ * POST IMAGES:
+ * - GET    /api/TbPostImages/All
+ * - GET    /api/TbPostImages/:id
+ * - POST   /api/TbPostImages
+ * - PUT    /api/TbPostImages/:id
+ * - DELETE /api/TbPostImages/:id
+ * - GET    /api/TbPostImages/Exists/:id
+ *
+ * ROLES:
+ * - GET    /api/TbRoles/All
+ * - GET    /api/TbRoles/:id
+ * - POST   /api/TbRoles
+ * - PUT    /api/TbRoles/:id
+ * - DELETE /api/TbRoles/:id
+ * - GET    /api/TbRoles/Exists/:id
+ *
+ * REVIEWS:
+ * - GET    /api/reviews/user/:userId
+ * - POST   /api/reviews
+ *
+ * CHAT:
+ * - GET    /api/chat/recent
+ * - GET    /api/chat/history/:otherUserId
+ * - POST   /api/chat/send
  *
  * FAVORITES:
- * - GET    /api/favorites (get user's favorites)
- * - POST   /api/favorites (add to favorites)
- * - DELETE /api/favorites/:postId (remove from favorites)
+ * - GET    /api/favorites
+ * - POST   /api/favorites
+ * - DELETE /api/favorites/:postId
  *
- * USERS/SELLERS:
- * - GET    /api/users/:id (get user profile)
- * - PUT    /api/users/:id (update user profile)
- * - GET    /api/sellers/:id (get seller profile with posts)
- * - GET    /api/sellers/top (get top sellers)
+ * SELLERS:
+ * - GET    /api/sellers/:sellerId
+ * - GET    /api/sellers/top
  *
  * SEARCH:
- * - GET    /api/search (search posts with filters)
- *
- * ANALYTICS:
- * - GET    /api/analytics/post/:id (get post analytics)
- * - GET    /api/analytics/user/:id (get user analytics)
- * - POST   /api/analytics/view/:postId (track post view)
+ * - GET    /api/search?query=&category=&city=&minPrice=&maxPrice=&status=&sortBy=&sortOrder=&page=&limit=
  */
 
 // ============================================================================

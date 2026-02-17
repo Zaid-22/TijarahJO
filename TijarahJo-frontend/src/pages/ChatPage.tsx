@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react";
 
 interface ChatSummary {
   userId: number;
-  userName: string;
+  displayName: string;
   lastMessage: string;
   timestamp: string;
   isRead: boolean;
@@ -43,8 +43,8 @@ export function ChatPage() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(
     Number.isNaN(initialSelectedUserId) ? null : initialSelectedUserId,
   );
-  const [selectedUserName, setSelectedUserName] = useState("");
-  const [userNamesById, setUserNamesById] = useState<Record<number, string>>(
+  const [selectedDisplayName, setSelectedDisplayName] = useState("");
+  const [userDisplayNamesById, setUserDisplayNamesById] = useState<Record<number, string>>(
     {},
   );
   const [chats, setChats] = useState<ChatSummary[]>([]);
@@ -64,7 +64,7 @@ export function ChatPage() {
     async function fetchChats() {
       if (!isAuthenticated || !user?.id) {
         setChats([]);
-        setUserNamesById({});
+        setUserDisplayNamesById({});
         setIsLoadingChats(false);
         return;
       }
@@ -101,7 +101,7 @@ export function ChatPage() {
 
           chatsByUser.set(otherUser, {
             userId: otherUser,
-            userName: `User ${otherUser}`,
+            displayName: `User ${otherUser}`,
             lastMessage: message.content,
             timestamp: message.timestamp,
             isRead:
@@ -119,17 +119,17 @@ export function ChatPage() {
           }),
         );
 
-        setUserNamesById(namesById);
+        setUserDisplayNamesById(namesById);
         setChats(
           Array.from(chatsByUser.values()).map((chat) => ({
             ...chat,
-            userName: namesById[chat.userId] || chat.userName,
+            displayName: namesById[chat.userId] || chat.displayName,
           })),
         );
       } catch (error) {
         console.error("Failed to load chats", error);
         setChats([]);
-        setUserNamesById({});
+        setUserDisplayNamesById({});
       } finally {
         setIsLoadingChats(false);
       }
@@ -150,17 +150,17 @@ export function ChatPage() {
 
   useEffect(() => {
     if (selectedUserId === null) {
-      setSelectedUserName("");
+      setSelectedDisplayName("");
       return;
     }
 
-    const cachedName = userNamesById[selectedUserId];
+    const cachedName = userDisplayNamesById[selectedUserId];
     if (cachedName) {
-      setSelectedUserName(cachedName);
+      setSelectedDisplayName(cachedName);
       return;
     }
 
-    setSelectedUserName(`User ${selectedUserId}`);
+    setSelectedDisplayName(`User ${selectedUserId}`);
 
     let isCancelled = false;
     (async () => {
@@ -170,8 +170,8 @@ export function ChatPage() {
       }
 
       const resolvedName = getUserDisplayName(userData, selectedUserId);
-      setSelectedUserName(resolvedName);
-      setUserNamesById((prev) => ({
+      setSelectedDisplayName(resolvedName);
+      setUserDisplayNamesById((prev) => ({
         ...prev,
         [selectedUserId]: resolvedName,
       }));
@@ -180,11 +180,11 @@ export function ChatPage() {
     return () => {
       isCancelled = true;
     };
-  }, [selectedUserId, userNamesById]);
+  }, [selectedUserId, userDisplayNamesById]);
 
   const handleSelectUser = (id: number) => {
     setSelectedUserId(id);
-    setSelectedUserName(userNamesById[id] || `User ${id}`);
+    setSelectedDisplayName(userDisplayNamesById[id] || `User ${id}`);
     navigate(`/chat/${id}`);
   };
 
@@ -229,7 +229,7 @@ export function ChatPage() {
           {selectedUserId ? (
             <ChatWindow
               otherUserId={selectedUserId}
-              otherUserName={selectedUserName || `User ${selectedUserId}`}
+              otherDisplayName={selectedDisplayName || `User ${selectedUserId}`}
               currentUser={{ id: user?.id || "", name: user?.name || "Me" }}
               onBack={() => {
                 setSelectedUserId(null);

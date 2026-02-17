@@ -70,7 +70,7 @@
 
 3. **Validation:**
    - Removed `HashedPassword` from required field validation
-   - Still validates Username, Email, FirstName as required
+   - Still validates Login, Email, FirstName as required
 
 ### Frontend (`api.ts`):
 
@@ -107,7 +107,7 @@
 ## ✅ What Works Now
 
 1. **Profile Updates:**
-   - ✅ Can update username, email, first name, last name
+   - ✅ Can update login, email, first name, last name
    - ✅ Password is preserved if not changed
    - ✅ Proper error messages displayed
    - ✅ No JSON parsing errors
@@ -126,7 +126,7 @@
 ## 🧪 Testing
 
 Test the following scenarios:
-- [x] Update username - should work
+- [x] Update login - should work
 - [x] Update email - should work
 - [x] Update first/last name - should work
 - [ ] Update without password - should preserve existing password

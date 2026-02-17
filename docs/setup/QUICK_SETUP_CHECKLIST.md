@@ -30,7 +30,7 @@ Use this checklist when setting up the project on a new computer.
 - [ ] Can connect to database using SSMS
 - [ ] Test connection with credentials:
   - Server: `_________________`
-  - Username: `_________________`
+  - Login: `_________________`
   - Password: `_________________`
 
 ---
@@ -94,7 +94,7 @@ Use this checklist when setting up the project on a new computer.
 ```
 Server: _________________
 Database: TijarahJoDB
-Username: _________________
+Login: _________________
 Password: _________________
 ```
 

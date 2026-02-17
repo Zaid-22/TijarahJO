@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef } from "react";
-// import { Message } from "../../types";
 import { useChat } from "../../hooks/useChat";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Send, User } from "lucide-react";
 import { ScrollArea } from "../ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { api } from "../../services/api";
 
 interface ChatWindowProps {
   otherUserId: number;
-  otherUserName: string;
+  otherDisplayName: string;
   currentUser: { id: string; name: string };
   onBack: () => void;
   postId?: number; // Optional context
@@ -17,13 +17,14 @@ interface ChatWindowProps {
 
 export function ChatWindow({
   otherUserId,
-  otherUserName,
+  otherDisplayName,
   currentUser,
   onBack,
   postId,
 }: ChatWindowProps) {
   const { messages, isLoading, sendMessage } = useChat(otherUserId);
   const [inputText, setInputText] = useState("");
+  const [isOtherUserOnline, setIsOtherUserOnline] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom
@@ -32,6 +33,31 @@ export function ChatWindow({
       scrollRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const refreshPresence = async () => {
+      try {
+        const isOnline = await api.chat.getPresence(otherUserId);
+        if (!isCancelled) {
+          setIsOtherUserOnline(isOnline);
+        }
+      } catch {
+        if (!isCancelled) {
+          setIsOtherUserOnline(false);
+        }
+      }
+    };
+
+    refreshPresence();
+    const intervalId = window.setInterval(refreshPresence, 15000);
+
+    return () => {
+      isCancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [otherUserId]);
 
   const handleSend = () => {
     if (inputText.trim()) {
@@ -57,9 +83,18 @@ export function ChatWindow({
         </div>
         <div>
           <h3 className="font-semibold text-gray-900 dark:text-white">
-            {otherUserName}
+            {otherDisplayName}
           </h3>
-          <p className="text-xs text-green-500">Online</p>
+          <p
+            className={cn(
+              "text-xs",
+              isOtherUserOnline
+                ? "text-green-500"
+                : "text-gray-500 dark:text-gray-400",
+            )}
+          >
+            {isOtherUserOnline ? "Online" : "Offline"}
+          </p>
         </div>
       </div>
 

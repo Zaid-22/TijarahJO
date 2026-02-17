@@ -114,7 +114,7 @@
 
 - [ ] **Database Cleanup**
 
-  - [ ] Run `CHECK_AND_CLEAN_DUPLICATES.sql` to verify no duplicates
+  - [ ] Run `TijarahJo-Backend/TijarahJoDBAPI/database/scripts/archive/diagnostics/CHECK_AND_CLEAN_DUPLICATES.sql` to verify no duplicates
   - [ ] Clean up any test data
   - [ ] Verify all stored procedures are working correctly
   - [ ] Check for and fix any data inconsistencies
@@ -135,7 +135,7 @@
 - [ ] **Indexes**
   - [ ] Review and add indexes on frequently queried columns
   - [ ] Index foreign keys
-  - [ ] Index search fields (PostTitle, Username, Email)
+  - [ ] Index search fields (PostTitle, Login, Email)
 
 ---
 

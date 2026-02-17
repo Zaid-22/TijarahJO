@@ -27,7 +27,7 @@ interface CategoryPageProps {
   favoriteIds: string[];
   onFavoriteToggle: (productId: string) => void;
   language: Language;
-  currentUserName?: string;
+  currentUserDisplayName?: string;
   isAuthenticated?: boolean;
 }
 
@@ -39,7 +39,7 @@ export function CategoryPage({
   favoriteIds,
   onFavoriteToggle,
   language,
-  currentUserName,
+  currentUserDisplayName,
   isAuthenticated = false,
 }: CategoryPageProps) {
   // const t = translations[language];
@@ -134,7 +134,7 @@ export function CategoryPage({
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a]">
+    <div className="bg-gray-50 dark:bg-[#0a0a0a]">
       {/* Category Header */}
       <section className="bg-white dark:bg-[#111111] border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -287,8 +287,8 @@ export function CategoryPage({
                 isFavorite={favoriteIds.includes(product.id)}
                 onFavoriteToggle={onFavoriteToggle}
                 isAuthenticated={isAuthenticated}
-                currentUserName={
-                  isAuthenticated ? currentUserName || "" : undefined
+                currentUserDisplayName={
+                  isAuthenticated ? currentUserDisplayName || "" : undefined
                 }
                 hideCategoryBadge={true}
               />

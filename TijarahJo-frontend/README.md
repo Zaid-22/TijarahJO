@@ -24,11 +24,11 @@
 - **Post Status System**: Active, Sold, and Deleted states for listings
 
 ### 👤 User Management
-- Login and registration pages with username/email support
+- Login and registration pages with login/email support
 - Guest browsing mode (full marketplace access)
 - User profiles with editable information
 - Post ownership detection and permissions
-- Username or email login with proper validation
+- Login or email login with proper validation
 - Phone number with Jordan "+962" prefix validation
 
 ### 🛍️ Post Features

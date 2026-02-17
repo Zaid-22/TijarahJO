@@ -74,15 +74,18 @@ You have two options:
    GO
    ```
 
-4. Run setup scripts in order:
-   - Navigate to: `TijarahJo-Backend/TijarahJoDBAPI/database/scripts/setup/`
-   - Run scripts in this order:
-     1. `COMPLETE_DATABASE_SETUP.sql` (or)
-     2. `SETUP_ALL_STORED_PROCEDURES.sql`
-     3. `CREATE_SP_ADDTBUSER.sql`
-     4. `CREATE_SP_TBUSERS_LOGIN.sql`
+4. Preferred: run the canonical bootstrap flow:
+   - From repo root run: `./bootstrap_db.sh`
+   - This applies setup + migrations in the correct order automatically.
+   - Manual SQL execution is only needed for troubleshooting.
 
-5. (Optional) Add sample data:
+5. Manual alternative (if not using bootstrap):
+   - Navigate to: `TijarahJo-Backend/TijarahJoDBAPI/database/scripts/setup/`
+   - Run: `COMPLETE_DATABASE_SETUP.sql`
+   - Then apply needed scripts from `database/scripts/migrations/`
+   - Note: legacy per-procedure setup scripts were moved to `database/scripts/archive/`
+
+6. (Optional) Add sample data:
    - Run: `database/scripts/seeds/INSERT_SAMPLE_POSTS.sql`
    - Run: `database/scripts/seeds/CREATE_TEST_USER.sql`
 
@@ -92,7 +95,7 @@ The project uses environment variables for database connection. You need to conf
 
 **Connection String Format:**
 ```
-Data Source=SERVER_NAME;Database=TijarahJoDB;User Id=USERNAME;Password=PASSWORD;TrustServerCertificate=True;
+Data Source=SERVER_NAME;Database=TijarahJoDB;User Id=LOGIN;Password=PASSWORD;TrustServerCertificate=True;
 ```
 
 **Example:**
@@ -289,7 +292,7 @@ The frontend should start on: `http://localhost:5173`
 2. Check connection string:
    - Verify server name (localhost, localhost\SQLEXPRESS, etc.)
    - Verify database name (TijarahJoDB)
-   - Verify username and password
+   - Verify login and password
 
 3. Check SQL Server authentication:
    - Ensure "SQL Server Authentication" is enabled
@@ -300,7 +303,7 @@ The frontend should start on: `http://localhost:5173`
 **Problem:** "Login failed for user"
 
 **Solutions:**
-1. Verify username and password are correct
+1. Verify login and password are correct
 2. Check if SQL Server Authentication is enabled
 3. Try Windows Authentication if available
 
@@ -363,7 +366,7 @@ The frontend should start on: `http://localhost:5173`
 |----------|-------------|---------|
 | `DB_HOST` | SQL Server hostname | `localhost` |
 | `DB_NAME` | Database name | `TijarahJoDB` |
-| `DB_USER` | Database username | `sa` |
+| `DB_USER` | Database login | `sa` |
 | `DB_PASSWORD` | Database password | `YourPassword123` |
 | `DATABASE_CONNECTION_STRING` | Full connection string | `Data Source=...` |
 | `JWT_SIGNING_KEY` | JWT secret key | `YourSecretKey123...` |
@@ -457,4 +460,3 @@ If you encounter issues:
 
 **Last Updated:** December 2024  
 **Version:** 1.0.0
-

@@ -152,7 +152,7 @@ The database follows **3rd Normal Form (3NF)** with the following core entities:
 #### 1. **TbUsers** (Users Table)
 
 - `UserID` (PK, INT)
-- `Username` (NVARCHAR)
+- `Login` (NVARCHAR)
 - `Email` (NVARCHAR)
 - `HashedPassword` (NVARCHAR)
 - `FirstName`, `LastName` (NVARCHAR)
@@ -402,7 +402,7 @@ TijarahJo-frontend/
 
 #### 2. **Authentication**
 
-- Login page with username/email support
+- Login page with login/email support
 - Registration page
 - Guest browsing mode
 - Protected routes
@@ -870,7 +870,7 @@ The database connection string must be configured for the new computer:
 
 - SQL Server hostname (usually `localhost` or `localhost\SQLEXPRESS`)
 - Database name (`TijarahJoDB`)
-- SQL Server username and password
+- SQL Server login and password
 
 **Configuration Methods:**
 

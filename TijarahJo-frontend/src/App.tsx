@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { translations } from "./translations";
 import { categoryData } from "./data/categoryData";
 import { Loader2 } from "lucide-react";
@@ -26,9 +26,27 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, loading: authLoading, logout } = useAuth();
+  const normalizedPathname = location.pathname
+    .toLowerCase()
+    .replace(/\/+$/, "");
+  const pathSegments = normalizedPathname.split("/").filter(Boolean);
+  const primarySegment = pathSegments[0] || "";
+  const isAuthRoute = primarySegment === "login";
+  const hasLocalPageHeader = new Set([
+    "profile",
+    "settings",
+    "products",
+    "favorites",
+    "sell",
+    "faq",
+    "product",
+    "category",
+    "seller",
+  ]).has(primarySegment);
+  const shouldShowGlobalHeader = !isAuthRoute && !hasLocalPageHeader;
 
   // Custom Hooks
-  const { userProfile, setUserProfile, currentUserName } = useUserProfile();
+  const { userProfile, setUserProfile, currentUserDisplayName } = useUserProfile();
   const {
     darkMode,
     setDarkMode,
@@ -65,9 +83,47 @@ export default function App() {
   // Login Modal State
 
   // Effects
-  useEffect(() => {
-    window.scrollTo(0, 0);
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
   }, [location.pathname]);
+
+  useEffect(() => {
+    if ("scrollRestoration" in window.history) {
+      const previous = window.history.scrollRestoration;
+      window.history.scrollRestoration = "manual";
+      return () => {
+        window.history.scrollRestoration = previous;
+      };
+    }
+  }, []);
+
+  useEffect(() => {
+    const dedupeGlobalFooters = () => {
+      const footers = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          'footer[data-app-global-footer="true"]',
+        ),
+      );
+
+      footers.forEach((footer, index) => {
+        if (index > 0) {
+          footer.remove();
+        }
+      });
+    };
+
+    dedupeGlobalFooters();
+
+    const observer = new MutationObserver(() => {
+      dedupeGlobalFooters();
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     document.title = "TijarahJo - Jordan's Marketplace";
@@ -114,86 +170,95 @@ export default function App() {
 
   const t = translations[language];
 
+  const globalHeader = shouldShowGlobalHeader ? (
+    <Header
+      language={language}
+      isAuthenticated={isAuthenticated}
+      currentUserDisplayName={userProfile.name}
+      userAvatar={userProfile.avatar}
+      userFirstName={userProfile.firstName}
+      userLastName={userProfile.lastName}
+      showBackButton={false}
+      showLogo={true}
+      showSearch={true}
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+      onSearchSubmit={() => {
+        setActiveSearchQuery(searchQuery.trim());
+        navigate("/search");
+      }}
+      onShowFavorites={() => navigate("/favorites")}
+      onShowProfile={() => {
+        if (isAuthenticated) navigate("/profile");
+        else navigate("/login");
+      }}
+      onShowSettings={() => navigate("/settings")}
+      onShowSellItem={() => navigate("/sell")}
+      onLogout={logout}
+      onCategoryClick={(cat) => navigate(`/category/${encodeURIComponent(cat)}`)}
+      darkMode={darkMode}
+    />
+  ) : null;
+
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      <div className="min-h-screen bg-gray-50 dark:bg-[#1a1a1a] flex flex-col">
+        {globalHeader}
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#1a1a1a]">
-      <Header
-        language={language}
-        isAuthenticated={isAuthenticated}
-        currentUserName={userProfile.name}
-        userAvatar={userProfile.avatar}
-        userFirstName={userProfile.firstName}
-        userLastName={userProfile.lastName}
-        showBackButton={false}
-        showLogo={true}
-        showSearch={true}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onSearchSubmit={() => {
-          setActiveSearchQuery(searchQuery.trim());
-          navigate("/search");
-        }}
-        onShowFavorites={() => navigate("/favorites")}
-        onShowProfile={() => {
-          if (isAuthenticated) navigate("/profile");
-          else navigate("/login");
-        }}
-        onShowSettings={() => navigate("/settings")}
-        onShowSellItem={() => navigate("/sell")}
-        onLogout={logout}
-        onCategoryClick={(cat) => navigate(`/category/${encodeURIComponent(cat)}`)}
-        darkMode={darkMode}
-      />
+    <div className="min-h-screen bg-gray-50 dark:bg-[#1a1a1a] flex flex-col">
+      {globalHeader}
 
-      <AppRoutes
-        language={language}
-        isAuthenticated={isAuthenticated}
-        userProfile={userProfile}
-        darkMode={darkMode}
-        // Data
-        availableProducts={availableProducts}
-        favoriteIds={favoriteIds}
-        isLoadingProducts={isLoadingProducts}
-        productsError={productsError}
-        // Actions
-        toggleFavorite={toggleFavorite}
-        fetchPostsFromBackend={fetchPostsFromBackend}
-        setDarkMode={setDarkMode}
-        toggleLanguage={toggleLanguage}
-        logout={logout}
-        setUserProfile={setUserProfile}
-        // HomePage specific
-        t={t}
-        isRTL={isRTL}
-        displayedItems={displayedItems}
-        viewMode={viewMode}
-        setViewMode={setViewMode}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        isLoading={isLoading}
-        currentUserName={currentUserName}
-        goToNextPage={goToNextPage}
-        goToPreviousPage={goToPreviousPage}
-        getCategoryTranslation={getCategoryTranslation}
-        // Search
-        setSearchQuery={setSearchQuery}
-        setActiveSearchQuery={setActiveSearchQuery}
-        activeSearchQuery={activeSearchQuery}
-        searchQuery={searchQuery}
-        setShowLoginPrompt={() => {}} // Deprecated
-        setLoginRedirectAction={() => {}} // Deprecated
-        showLoginPrompt={false} // Deprecated
-        loginRedirectAction={null} // Deprecated
-      />
+      <div className="flex-1">
+        <AppRoutes
+          language={language}
+          isAuthenticated={isAuthenticated}
+          userProfile={userProfile}
+          darkMode={darkMode}
+          // Data
+          availableProducts={availableProducts}
+          favoriteIds={favoriteIds}
+          isLoadingProducts={isLoadingProducts}
+          productsError={productsError}
+          // Actions
+          toggleFavorite={toggleFavorite}
+          fetchPostsFromBackend={fetchPostsFromBackend}
+          setDarkMode={setDarkMode}
+          toggleLanguage={toggleLanguage}
+          logout={logout}
+          setUserProfile={setUserProfile}
+          // HomePage specific
+          t={t}
+          isRTL={isRTL}
+          displayedItems={displayedItems}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          isLoading={isLoading}
+          currentUserDisplayName={currentUserDisplayName}
+          goToNextPage={goToNextPage}
+          goToPreviousPage={goToPreviousPage}
+          getCategoryTranslation={getCategoryTranslation}
+          // Search
+          setSearchQuery={setSearchQuery}
+          setActiveSearchQuery={setActiveSearchQuery}
+          activeSearchQuery={activeSearchQuery}
+          searchQuery={searchQuery}
+          setShowLoginPrompt={() => {}} // Deprecated
+          setLoginRedirectAction={() => {}} // Deprecated
+          showLoginPrompt={false} // Deprecated
+          loginRedirectAction={null} // Deprecated
+        />
+      </div>
 
-      <Footer language={language} />
+      {!isAuthRoute && <Footer language={language} />}
       <ScrollToTop />
     </div>
   );

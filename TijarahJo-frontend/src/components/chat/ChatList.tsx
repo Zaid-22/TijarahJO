@@ -1,12 +1,10 @@
-// import React from "react";
 import { User } from "lucide-react";
 import { cn } from "@/lib/utils";
-// import { Message } from "../../types";
 
 interface ChatListProps {
   chats: {
     userId: number;
-    userName: string;
+    displayName: string;
     lastMessage: string;
     timestamp: string;
     isRead: boolean;
@@ -57,7 +55,7 @@ export function ChatList({
                         : "text-gray-700 dark:text-gray-300",
                     )}
                   >
-                    {chat.userName}
+                    {chat.displayName}
                   </h4>
                   <span className="text-xs text-gray-500 dark:text-gray-500 whitespace-nowrap ml-2">
                     {new Date(chat.timestamp).toLocaleDateString()}

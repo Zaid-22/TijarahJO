@@ -78,7 +78,7 @@ interface ProfilePageProps {
   favoriteIds?: string[];
   onFavoriteToggle?: (productId: string) => void;
   isAuthenticated?: boolean;
-  currentUserName?: string;
+  currentUserDisplayName?: string;
 }
 
 export function ProfilePage({
@@ -96,7 +96,7 @@ export function ProfilePage({
   favoriteIds = [],
   onFavoriteToggle,
   isAuthenticated = false,
-  currentUserName,
+  currentUserDisplayName,
 }: ProfilePageProps) {
   const t = translations[language];
   const isRTL = language === "ar";
@@ -105,7 +105,7 @@ export function ProfilePage({
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
 
   const normalizedCurrentUserId = String(userProfile.id || "").trim();
-  const normalizedCurrentUserName = String(currentUserName || "")
+  const normalizedCurrentUserDisplayName = String(currentUserDisplayName || "")
     .trim()
     .toLowerCase();
   const normalizedProfileName = String(userProfile.name || "")
@@ -123,7 +123,7 @@ export function ProfilePage({
   // Filter products for current user
   // Use multiple checks to ensure we match products correctly:
   // 1. Compare sellerId with userProfile.id (most reliable)
-  // 2. Compare seller name with currentUserName (fallback)
+  // 2. Compare seller name with currentUserDisplayName (fallback)
   // 3. Compare seller with name (another fallback)
   const myProducts = products.filter(
     (p) => {
@@ -135,8 +135,8 @@ export function ProfilePage({
       return (
         (normalizedCurrentUserId.length > 0 &&
           normalizedSellerId === normalizedCurrentUserId) ||
-        (normalizedCurrentUserName.length > 0 &&
-          normalizedSellerName === normalizedCurrentUserName) ||
+        (normalizedCurrentUserDisplayName.length > 0 &&
+          normalizedSellerName === normalizedCurrentUserDisplayName) ||
         (normalizedProfileName.length > 0 &&
           normalizedSellerName === normalizedProfileName)
       );
@@ -150,7 +150,7 @@ export function ProfilePage({
   const soldListings = myProducts.filter((p) => p.status === "SOLD");
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#1a1a1a]">
+    <div className="bg-gray-50 dark:bg-[#1a1a1a]">
       {/* Profile Header */}
       <div
         className="relative overflow-hidden"
@@ -283,8 +283,8 @@ export function ProfilePage({
           {/* Right Column - Listings */}
           <div className="lg:col-span-2">
             <Tabs defaultValue="active" className="w-full">
-              <div className="flex items-center justify-between mb-6">
-                <TabsList>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+                <TabsList className="w-full sm:w-auto">
                   <TabsTrigger value="active">
                     <Package className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
                     {t.activeListings || "Active"} ({activeListings.length})
@@ -296,18 +296,18 @@ export function ProfilePage({
                 </TabsList>
 
                 {onAddProductClick ? (
-                  <Button
-                    size="sm"
-                    style={{
-                      backgroundColor: "#0A4ABF",
-                      color: "white",
-                    }}
-                    className="hover:opacity-90"
-                    onClick={handleAddPostAction}
-                  >
-                    <Plus className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
-                    {t.addProduct || "Add Post"}
-                  </Button>
+                    <Button
+                      size="sm"
+                      style={{
+                        backgroundColor: "#0A4ABF",
+                        color: "white",
+                      }}
+                      className="hover:opacity-90 w-full sm:w-auto"
+                      onClick={handleAddPostAction}
+                    >
+                      <Plus className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+                      {t.addProduct || "Add Post"}
+                    </Button>
                 ) : (
                   <Dialog
                     open={isAddDialogOpen}
@@ -320,7 +320,7 @@ export function ProfilePage({
                           backgroundColor: "#0A4ABF",
                           color: "white",
                         }}
-                        className="hover:opacity-90"
+                        className="hover:opacity-90 w-full sm:w-auto"
                         onClick={handleAddPostAction}
                       >
                         <Plus className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
@@ -368,158 +368,148 @@ export function ProfilePage({
                     </DialogContent>
                   </Dialog>
                 )}
+              </div>
 
-                <TabsContent value="active">
-                  {activeListings.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
-                      {activeListings.map((product) => (
-                        <div key={product.id} className="relative group">
-                          <ProductCard
-                            product={product}
-                            onProductClick={onProductClick}
-                            isFavorite={favoriteIds.includes(product.id)}
-                            onFavoriteToggle={onFavoriteToggle}
-                            isAuthenticated={isAuthenticated}
-                            currentUserName={currentUserName}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                      <div
-                        className="w-24 h-24 rounded-full flex items-center justify-center mb-6"
-                        style={{ backgroundColor: "#F5F6FA" }}
-                      >
-                        <Package
-                          className="w-12 h-12"
-                          style={{ color: "#0A4ABF" }}
+              <TabsContent value="active" className="mt-0">
+                {activeListings.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
+                    {activeListings.map((product) => (
+                      <div key={product.id} className="relative group">
+                        <ProductCard
+                          product={product}
+                          onProductClick={onProductClick}
+                          isFavorite={favoriteIds.includes(product.id)}
+                          onFavoriteToggle={onFavoriteToggle}
+                          isAuthenticated={isAuthenticated}
+                          currentUserDisplayName={currentUserDisplayName}
                         />
                       </div>
-                      <h3 className="mb-3" style={{ color: "#000000" }}>
-                        {t.noActiveListings || "No Active Listings"}
-                      </h3>
-                      <p className="text-gray-600 mb-6 max-w-md">
-                        {t.noActiveListingsDescription ||
-                          "You don't have any active listings. Start selling by adding your first product!"}
-                      </p>
-                      <Button
-                        onClick={handleAddPostAction}
-                        style={{
-                          backgroundColor: "#0A4ABF",
-                          color: "white",
-                        }}
-                      >
-                        <Plus
-                          className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`}
-                        />
-                        {t.addProduct || "Add Post"}
-                      </Button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6 bg-gray-100 dark:bg-gray-800">
+                      <Package
+                        className="w-12 h-12"
+                        style={{ color: "#0A4ABF" }}
+                      />
                     </div>
-                  )}
-                </TabsContent>
+                    <h3 className="mb-3 text-gray-900 dark:text-white">
+                      {t.noActiveListings || "No Active Listings"}
+                    </h3>
+                    <p className="text-gray-600 mb-6 max-w-md">
+                      {t.noActiveListingsDescription ||
+                        "You don't have any active listings. Start selling by adding your first product!"}
+                    </p>
+                    <Button
+                      onClick={handleAddPostAction}
+                      style={{
+                        backgroundColor: "#0A4ABF",
+                        color: "white",
+                      }}
+                    >
+                      <Plus className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+                      {t.addProduct || "Add Post"}
+                    </Button>
+                  </div>
+                )}
+              </TabsContent>
 
-                <TabsContent value="sold">
-                  {soldListings.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      {soldListings.map((product) => (
-                        <div key={product.id} className="relative group">
-                          <ProductCard
-                            product={product}
-                            onProductClick={onProductClick}
-                            isFavorite={favoriteIds.includes(product.id)}
-                            onFavoriteToggle={onFavoriteToggle}
-                            isAuthenticated={isAuthenticated}
-                            currentUserName={currentUserName}
-                          />
-                          <div className="absolute top-2 right-2 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {onProductClick && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-9 w-9 p-0 bg-white/90 backdrop-blur-sm hover:bg-blue-50 shadow-md rounded-xl"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onProductClick(product.id);
-                                }}
-                                title={t.viewProduct || "View product"}
-                              >
-                                <Eye
-                                  className="w-4 h-4"
-                                  style={{ color: "#0A4ABF" }}
-                                />
-                              </Button>
-                            )}
+              <TabsContent value="sold" className="mt-0">
+                {soldListings.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {soldListings.map((product) => (
+                      <div key={product.id} className="relative group">
+                        <ProductCard
+                          product={product}
+                          onProductClick={onProductClick}
+                          isFavorite={favoriteIds.includes(product.id)}
+                          onFavoriteToggle={onFavoriteToggle}
+                          isAuthenticated={isAuthenticated}
+                          currentUserDisplayName={currentUserDisplayName}
+                        />
+                        <div className="absolute top-2 right-2 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {onProductClick && (
                             <Button
                               size="sm"
                               variant="ghost"
                               className="h-9 w-9 p-0 bg-white/90 backdrop-blur-sm hover:bg-blue-50 shadow-md rounded-xl"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setProductToEdit(product);
+                                onProductClick(product.id);
                               }}
-                              title={t.editProduct || "Edit Post"}
+                              title={t.viewProduct || "View product"}
                             >
-                              <Edit
+                              <Eye
                                 className="w-4 h-4"
                                 style={{ color: "#0A4ABF" }}
                               />
                             </Button>
-                            {onDeleteProduct && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-9 w-9 p-0 bg-white/90 backdrop-blur-sm hover:bg-red-50 shadow-md rounded-xl"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setProductToDelete(product.id);
-                                }}
-                                title={t.deleteProduct || "Delete Post"}
-                              >
-                                <Trash2
-                                  className="w-4 h-4"
-                                  style={{ color: "#EF4444" }}
-                                />
-                              </Button>
-                            )}
-                          </div>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-9 w-9 p-0 bg-white/90 backdrop-blur-sm hover:bg-blue-50 shadow-md rounded-xl"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProductToEdit(product);
+                            }}
+                            title={t.editProduct || "Edit Post"}
+                          >
+                            <Edit
+                              className="w-4 h-4"
+                              style={{ color: "#0A4ABF" }}
+                            />
+                          </Button>
+                          {onDeleteProduct && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-9 w-9 p-0 bg-white/90 backdrop-blur-sm hover:bg-red-50 shadow-md rounded-xl"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setProductToDelete(product.id);
+                              }}
+                              title={t.deleteProduct || "Delete Post"}
+                            >
+                              <Trash2
+                                className="w-4 h-4"
+                                style={{ color: "#EF4444" }}
+                              />
+                            </Button>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                      <div
-                        className="w-24 h-24 rounded-full flex items-center justify-center mb-6"
-                        style={{ backgroundColor: "#F5F6FA" }}
-                      >
-                        <Package
-                          className="w-12 h-12"
-                          style={{ color: "#0A4ABF" }}
-                        />
                       </div>
-                      <h3 className="mb-3" style={{ color: "#000000" }}>
-                        {t.noSoldListings || "No Sold Listings"}
-                      </h3>
-                      <p className="text-gray-600 mb-6 max-w-md">
-                        {t.noSoldListingsDescription ||
-                          "You don't have any sold listings. Start selling by adding your first product!"}
-                      </p>
-                      <Button
-                        onClick={handleAddPostAction}
-                        style={{
-                          backgroundColor: "#0A4ABF",
-                          color: "white",
-                        }}
-                      >
-                        <Plus
-                          className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`}
-                        />
-                        {t.addProduct || "Add Post"}
-                      </Button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6 bg-gray-100 dark:bg-gray-800">
+                      <Package
+                        className="w-12 h-12"
+                        style={{ color: "#0A4ABF" }}
+                      />
                     </div>
-                  )}
-                </TabsContent>
-              </div>
+                    <h3 className="mb-3 text-gray-900 dark:text-white">
+                      {t.noSoldListings || "No Sold Listings"}
+                    </h3>
+                    <p className="text-gray-600 mb-6 max-w-md">
+                      {t.noSoldListingsDescription ||
+                        "You don't have any sold listings. Start selling by adding your first product!"}
+                    </p>
+                    <Button
+                      onClick={handleAddPostAction}
+                      style={{
+                        backgroundColor: "#0A4ABF",
+                        color: "white",
+                      }}
+                    >
+                      <Plus className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+                      {t.addProduct || "Add Post"}
+                    </Button>
+                  </div>
+                )}
+              </TabsContent>
             </Tabs>
           </div>
         </div>

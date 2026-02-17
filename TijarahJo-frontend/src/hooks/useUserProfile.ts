@@ -20,11 +20,11 @@ function formatJoinedDate(value: unknown, fallback: string): string {
 export function useUserProfile() {
   const { user, isAuthenticated } = useAuth();
   const CURRENT_USER_ID = user?.id || "";
-  const CURRENT_USER_NAME = user?.name || user?.firstName || "Guest";
+  const CURRENT_USER_DISPLAY_NAME = user?.name || user?.firstName || "Guest";
 
   const [userProfile, setUserProfile] = useState<UserProfile>({
     id: CURRENT_USER_ID,
-    name: CURRENT_USER_NAME,
+    name: CURRENT_USER_DISPLAY_NAME,
     firstName: user?.firstName || "",
     lastName: user?.lastName || "",
     email: user?.email || "",
@@ -119,6 +119,6 @@ export function useUserProfile() {
   return {
     userProfile,
     setUserProfile,
-    currentUserName: CURRENT_USER_NAME,
+    currentUserDisplayName: CURRENT_USER_DISPLAY_NAME,
   };
 }

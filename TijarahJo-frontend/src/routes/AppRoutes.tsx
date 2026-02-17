@@ -6,9 +6,11 @@ import {
   useParams,
   Navigate,
 } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { Product, Language, UserProfile, ViewMode } from "../types";
 import { toast } from "sonner";
 import { api } from "../services/api";
+import { APP_CONFIG } from "../constants/appConfig";
 
 const HomePage = lazy(() =>
   import("../pages/HomePage").then((m) => ({ default: m.HomePage })),
@@ -92,7 +94,7 @@ interface AppRoutesProps {
   currentPage: number;
   totalPages: number;
   isLoading: boolean;
-  currentUserName: string;
+  currentUserDisplayName: string;
   goToNextPage: () => void;
   goToPreviousPage: () => void;
   getCategoryTranslation: (key: string) => string;
@@ -113,6 +115,18 @@ export function AppRoutes(props: AppRoutesProps) {
   const redirectToLogin = () => navigate("/login");
   const requireAuth = (element: ReactElement) =>
     props.isAuthenticated ? element : <Navigate to="/login" replace />;
+
+  type CreatePostInput = {
+    name: string;
+    description?: string;
+    price: number;
+    category: string;
+    location?: string;
+    area?: string;
+    image?: string;
+    images?: string[];
+  };
+
   const decodeJwtPayload = (jwtToken: string): Record<string, unknown> | null => {
     const payloadPart = jwtToken.split(".")[1];
     if (!payloadPart) {
@@ -147,6 +161,79 @@ export function AppRoutes(props: AppRoutesProps) {
     return /^\d+$/.test(tokenUserId) ? tokenUserId : null;
   };
 
+  const resolvePostCity = (preferredCity?: string): string => {
+    const city = String(
+      preferredCity || props.userProfile.city || APP_CONFIG.defaultCity,
+    ).trim();
+    return city || APP_CONFIG.defaultCity;
+  };
+
+  const resolvePostArea = (preferredArea?: string): string =>
+    String(preferredArea || props.userProfile.area || "").trim();
+
+  const resolvePostPhone = (): string => {
+    const phone = String(
+      props.userProfile.phone || APP_CONFIG.defaultPhonePrefix,
+    ).trim();
+    return phone || APP_CONFIG.defaultPhonePrefix;
+  };
+
+  const buildCreatePostPayload = (product: CreatePostInput) => ({
+    // Ensure API receives only valid image URL strings.
+    images:
+      (product.images?.length
+        ? product.images
+        : [product.image]
+      ).filter(
+        (value): value is string =>
+          typeof value === "string" && value.trim().length > 0,
+      ),
+    title: product.name,
+    description: product.description || "",
+    price: product.price,
+    category: product.category,
+    city: resolvePostCity(product.location),
+    area: resolvePostArea(product.area),
+    phone: resolvePostPhone(),
+  });
+
+  const createPost = async (product: CreatePostInput) => {
+    const result = await api.posts.createPost(buildCreatePostPayload(product));
+    if (!result.success) {
+      throw new Error(result.message || "Failed to create post");
+    }
+
+    await props.fetchPostsFromBackend();
+    return result;
+  };
+
+  const updatePost = async (updatedProduct: {
+    id: string;
+    name: string;
+    description?: string;
+    price: number;
+    category: string;
+    status?: "ACTIVE" | "SOLD" | "DELETED";
+    images?: string[];
+  }) => {
+    await api.posts.updatePost({
+      id: updatedProduct.id,
+      title: updatedProduct.name,
+      description: updatedProduct.description,
+      price: updatedProduct.price,
+      category: updatedProduct.category,
+      status: updatedProduct.status,
+      images: updatedProduct.images || [],
+    });
+
+    await props.fetchPostsFromBackend();
+  };
+
+  const deletePost = async (postId: string) => {
+    await api.posts.deletePost(postId);
+    await props.fetchPostsFromBackend();
+  };
+
   // Helper to handle category pages based on URL param
   const CategoryRouteWrapper = () => {
     const { categoryName } = useParams();
@@ -173,7 +260,7 @@ export function AppRoutes(props: AppRoutesProps) {
         onFavoriteToggle={props.toggleFavorite}
         language={props.language}
         isAuthenticated={props.isAuthenticated}
-        currentUserName={props.isAuthenticated ? props.currentUserName : undefined}
+        currentUserDisplayName={props.isAuthenticated ? props.currentUserDisplayName : undefined}
       />
     );
   };
@@ -225,7 +312,11 @@ export function AppRoutes(props: AppRoutesProps) {
     const resolvedProduct = product || fallbackProduct;
 
     if ((isLoadingProducts || isLoadingFallbackProduct) && !resolvedProduct) {
-      return <div className="p-10 text-center">Loading product...</div>;
+      return (
+        <div className="min-h-screen flex items-center justify-center text-gray-500 dark:text-gray-400">
+          Loading product...
+        </div>
+      );
     }
 
     if (!resolvedProduct) {
@@ -245,14 +336,14 @@ export function AppRoutes(props: AppRoutesProps) {
     const normalizedSellerName = String(resolvedProduct.seller || "")
       .trim()
       .toLowerCase();
-    const normalizedCurrentUserName = String(props.userProfile.name || "")
+    const normalizedCurrentUserDisplayName = String(props.userProfile.name || "")
       .trim()
       .toLowerCase();
     const isOwnProduct =
       props.isAuthenticated &&
       (resolvedProduct.sellerId === CURRENT_USER_ID ||
         (normalizedSellerName.length > 0 &&
-          normalizedSellerName === normalizedCurrentUserName));
+          normalizedSellerName === normalizedCurrentUserDisplayName));
 
     return (
       <ProductDetailsPage
@@ -272,29 +363,39 @@ export function AppRoutes(props: AppRoutesProps) {
             navigate(`/seller/${targetSellerId}`);
           }
         }}
+        onChatWithSeller={() => {
+          const targetSellerId = String(resolvedProduct.sellerId || "").trim();
+          if (!targetSellerId) {
+            toast.error("Seller chat unavailable");
+            return;
+          }
+
+          if (!props.isAuthenticated) {
+            navigate("/login");
+            return;
+          }
+
+          const currentUserId = resolveCurrentUserId();
+          if (currentUserId && currentUserId === targetSellerId) {
+            toast.error("You cannot chat with yourself");
+            return;
+          }
+
+          navigate(`/chat/${targetSellerId}`);
+        }}
         isOwnProduct={isOwnProduct}
         onUpdateProduct={async (updatedProduct: any) => {
           try {
-            await api.posts.updatePost({
-              id: updatedProduct.id,
-              title: updatedProduct.name,
-              description: updatedProduct.description,
-              price: updatedProduct.price,
-              category: updatedProduct.category,
-              status: updatedProduct.status,
-              images: updatedProduct.images || [],
-            });
+            await updatePost(updatedProduct);
             toast.success("Post updated");
-            await props.fetchPostsFromBackend();
           } catch (e) {
             toast.error("Error updating");
           }
         }}
         onDeleteProduct={async (pid: string) => {
           try {
-            await api.posts.deletePost(pid);
+            await deletePost(pid);
             toast.success("Post deleted");
-            await props.fetchPostsFromBackend();
             navigate("/");
           } catch (e) {
             toast.error("Error deleting");
@@ -303,7 +404,7 @@ export function AppRoutes(props: AppRoutesProps) {
         favoriteIds={props.favoriteIds}
         onFavoriteToggle={props.toggleFavorite}
         isAuthenticated={props.isAuthenticated}
-        currentUserName={props.currentUserName}
+        currentUserDisplayName={props.currentUserDisplayName}
       />
     );
   };
@@ -312,7 +413,14 @@ export function AppRoutes(props: AppRoutesProps) {
   // const SellerProfileRouteWrapper = () => { ... }
 
   return (
-    <Suspense fallback={<div className="p-10 text-center">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 gap-3">
+          <Loader2 className="h-7 w-7 animate-spin text-blue-600" />
+          <span>Loading...</span>
+        </div>
+      }
+    >
       <Routes>
         <Route
           path="/"
@@ -349,7 +457,7 @@ export function AppRoutes(props: AppRoutesProps) {
               onProductClick={(id) => navigate(`/product/${id}`)}
               favoriteIds={props.favoriteIds}
               toggleFavorite={props.toggleFavorite}
-              currentUserName={props.currentUserName}
+              currentUserDisplayName={props.currentUserDisplayName}
               currentPage={props.currentPage}
               totalPages={props.totalPages}
               isLoading={props.isLoading}
@@ -407,30 +515,17 @@ export function AppRoutes(props: AppRoutesProps) {
             onBack={() => navigate("/")}
             onSubmit={async (product) => {
               try {
-                const result = await api.posts.createPost({
-                  title: product.name,
-                  description: product.description || "",
-                  price: product.price,
-                  category: product.category,
-                  city: product.location || props.userProfile.city || "Amman",
-                  area: product.area || props.userProfile.area || "",
-                  images: product.images || [product.image].filter(Boolean),
-                  phone: props.userProfile.phone || "+962",
-                });
-
-                if (result.success) {
-                  await props.fetchPostsFromBackend();
-                  toast.success(
-                    props.language === "ar"
-                      ? "تم نشر المنشور!"
-                      : "Post created!",
-                  );
-                  navigate("/");
-                } else {
-                  toast.error(result.message || "Failed");
-                }
+                await createPost(product);
+                toast.success(
+                  props.language === "ar"
+                    ? "تم نشر المنشور!"
+                    : "Post created!",
+                );
+                navigate("/");
               } catch (e) {
-                toast.error("Error creating post");
+                toast.error(
+                  e instanceof Error ? e.message : "Error creating post",
+                );
               }
             }}
             userProfile={props.userProfile}
@@ -452,7 +547,7 @@ export function AppRoutes(props: AppRoutesProps) {
             onFavoriteToggle={props.toggleFavorite}
             isAuthenticated={props.isAuthenticated}
             darkMode={props.darkMode}
-            currentUserName={props.currentUserName}
+            currentUserDisplayName={props.currentUserDisplayName}
           />
         }
       />
@@ -469,7 +564,7 @@ export function AppRoutes(props: AppRoutesProps) {
             favoriteIds={props.favoriteIds}
             onFavoriteToggle={props.toggleFavorite}
             isAuthenticated={props.isAuthenticated}
-            currentUserName={props.currentUserName}
+            currentUserDisplayName={props.currentUserDisplayName}
             onSearch={(newQuery) => {
               props.setActiveSearchQuery(newQuery);
               props.setSearchQuery(newQuery);
@@ -487,50 +582,28 @@ export function AppRoutes(props: AppRoutesProps) {
             onProductClick={(id) => navigate(`/product/${id}`)}
             onDeleteProduct={async (pid) => {
               try {
-                await api.posts.deletePost(pid);
+                await deletePost(pid);
                 toast.success("Post deleted");
-                await props.fetchPostsFromBackend();
               } catch (e) {
                 toast.error("Error deleting post");
               }
             }}
             onUpdateProduct={async (updatedProduct) => {
               try {
-                await api.posts.updatePost({
-                  id: updatedProduct.id,
-                  title: updatedProduct.name,
-                  description: updatedProduct.description,
-                  price: updatedProduct.price,
-                  category: updatedProduct.category,
-                  status: updatedProduct.status,
-                  images: updatedProduct.images || [],
-                });
+                await updatePost(updatedProduct);
                 toast.success("Post updated");
-                await props.fetchPostsFromBackend();
               } catch (e) {
                 toast.error("Error updating post");
               }
             }}
             onAddProduct={async (product) => {
               try {
-                const result = await api.posts.createPost({
-                  title: product.name,
-                  description: product.description || "",
-                  price: product.price,
-                  category: product.category,
-                  city: product.location || props.userProfile.city || "Amman",
-                  area: product.area || props.userProfile.area || "",
-                  images: product.images || [product.image].filter(Boolean),
-                  phone: props.userProfile.phone || "+962",
-                });
-                if (result.success) {
-                  await props.fetchPostsFromBackend();
-                  toast.success("Post created");
-                } else {
-                  toast.error("Failed to create post");
-                }
+                await createPost(product);
+                toast.success("Post created");
               } catch (e) {
-                toast.error("Error creating post");
+                toast.error(
+                  e instanceof Error ? e.message : "Error creating post",
+                );
               }
             }}
             onAddProductClick={() => navigate("/sell")}
@@ -554,7 +627,7 @@ export function AppRoutes(props: AppRoutesProps) {
             favoriteIds={props.favoriteIds}
             onFavoriteToggle={props.toggleFavorite}
             isAuthenticated={props.isAuthenticated}
-            currentUserName={props.currentUserName}
+            currentUserDisplayName={props.currentUserDisplayName}
           />,
         )}
       />

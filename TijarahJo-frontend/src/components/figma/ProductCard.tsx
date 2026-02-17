@@ -14,7 +14,7 @@ interface ProductCardProps {
   isFavorite?: boolean;
   onFavoriteToggle?: (productId: string) => void;
   isAuthenticated?: boolean;
-  currentUserName?: string; // Add this to check if user is the owner
+  currentUserDisplayName?: string; // Add this to check if user is the owner
   hideCategoryBadge?: boolean; // Hide category badge when on category page
 }
 
@@ -25,7 +25,7 @@ export function ProductCard({
   isFavorite = false,
   onFavoriteToggle,
   isAuthenticated = false,
-  currentUserName,
+  currentUserDisplayName,
   hideCategoryBadge,
 }: ProductCardProps) {
   // const [isImageLoaded, setIsImageLoaded] = useState(false);
@@ -44,13 +44,13 @@ export function ProductCard({
   };
 
   // Check if the current user is the owner of the product
-  const normalizedCurrentUserName = String(currentUserName || "")
+  const normalizedCurrentUserDisplayName = String(currentUserDisplayName || "")
     .trim()
     .toLowerCase();
   const normalizedSellerName = String(product.seller || "").trim().toLowerCase();
   const isOwner =
-    normalizedCurrentUserName.length > 0 &&
-    normalizedCurrentUserName === normalizedSellerName;
+    normalizedCurrentUserDisplayName.length > 0 &&
+    normalizedCurrentUserDisplayName === normalizedSellerName;
   // Only show favorite button if authenticated AND not the owner
   const showFavoriteButton = isAuthenticated && !isOwner;
 
