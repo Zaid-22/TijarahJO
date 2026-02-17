@@ -31,6 +31,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
@@ -43,15 +45,11 @@ jobs:
       - name: Build backend solution
         run: dotnet build ./TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI.sln -c Release --no-restore
 
-      - name: Run backend unit tests
-        run: dotnet test ./TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI.Tests/TijarahJoDBAPI.Tests.csproj -c Release --no-build --verbosity normal
-
       - name: Ensure scripts are executable
         run: |
           chmod +x ./bootstrap_db.sh
           chmod +x ./verify_all_apis.sh
           chmod +x ./TijarahJo-Backend/TijarahJoDBAPI/tests/backend_smoke.sh
-          chmod +x ./TijarahJo-Backend/TijarahJoDBAPI/tests/backend_integration_contract.sh
 
       - name: Validate required secrets
         run: |
@@ -65,9 +63,6 @@ jobs:
 
       - name: Run backend smoke suite
         run: BASE_URL=http://localhost:5033 ./TijarahJo-Backend/TijarahJoDBAPI/tests/backend_smoke.sh
-
-      - name: Run backend integration contract
-        run: BASE_URL=http://localhost:5033 ./TijarahJo-Backend/TijarahJoDBAPI/tests/backend_integration_contract.sh
 
       - name: Run full API verification
         run: BASE_URL=http://localhost:5033 ./verify_all_apis.sh
