@@ -1,0 +1,3 @@
+[submodule "TijarahJo-Backend"]
+	path = TijarahJo-Backend
+	url = https://github.com/AhmadHirzallah/TijarahJo-Backend.git

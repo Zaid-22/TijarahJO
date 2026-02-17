@@ -2,6 +2,9 @@
 node_modules/
 package-lock.json
 
+# Keep lockfiles out by default, but track frontend lockfile for deterministic CI
+!TijarahJo-frontend/package-lock.json
+
 # Build outputs
 dist/
 build/
@@ -67,4 +70,3 @@ docs/_build/
 
 # TypeScript
 *.tsbuildinfo
-
