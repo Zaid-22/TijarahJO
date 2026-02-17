@@ -8,6 +8,11 @@ import {
 import { Product } from "../../types";
 import { authApi } from "./auth";
 import { apiRequest, debugError, debugLog, debugWarn } from "./client";
+import {
+  decodeJwtPayload,
+  isCurrentSessionAdmin,
+  toIsoStringOrNow,
+} from "./shared";
 
 function normalizeProductStatus(rawStatus: unknown): "ACTIVE" | "SOLD" | "DELETED" {
   if (typeof rawStatus === "string") {
@@ -154,44 +159,6 @@ function getUserDisplayName(user: any, fallbackUserId?: string): string {
   }
 
   return fallbackUserId ? `User ${fallbackUserId}` : "Unknown";
-}
-
-function isAdminRoleClaimValue(value: unknown): boolean {
-  if (Array.isArray(value)) {
-    return value.some((entry) => isAdminRoleClaimValue(entry));
-  }
-
-  if (typeof value === "number") {
-    return value === 1;
-  }
-
-  if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
-    return normalized === "1" || normalized === "admin";
-  }
-
-  return false;
-}
-
-function isCurrentSessionAdmin(): boolean {
-  const token = localStorage.getItem("tijarahjo_token");
-  if (!token) {
-    return false;
-  }
-
-  const payload = decodeJwtPayload(token);
-  if (!payload) {
-    return false;
-  }
-
-  const roleClaim =
-    payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ??
-    payload.role ??
-    payload.roles ??
-    payload.RoleID ??
-    payload.roleID;
-
-  return isAdminRoleClaimValue(roleClaim);
 }
 
 async function ensureUsersCache(
@@ -349,34 +316,6 @@ export function clearCaches() {
   usersAllEndpointAccessible = null;
 }
 
-
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  const payloadPart = token.split(".")[1];
-  if (!payloadPart) {
-    return null;
-  }
-
-  const base64 = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
-
-  try {
-    return JSON.parse(atob(padded)) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
-function toIsoStringOrNow(value: unknown): string {
-  if (value !== null && value !== undefined && value !== "") {
-    const parsedDate = new Date(value as string | number | Date);
-    if (!Number.isNaN(parsedDate.getTime())) {
-      return parsedDate.toISOString();
-    }
-  }
-
-  return new Date().toISOString();
-}
-
 export function transformPostModelToProduct(
   postModel: any,
   images: string[] = [],
@@ -478,11 +417,155 @@ export const postsApi = {
    * Get all posts with optional filters and pagination
    */
   getPosts: async (params?: SearchRequest): Promise<PostsListResponse> => {
-    // Use pagination endpoint if page/limit provided, otherwise use All
-    if (params?.page || params?.limit) {
-      const pageNumber = params.page || 1;
-      const rowsPerPage = params.limit || 20;
+    const isPaginatedRequest =
+      params?.page !== undefined || params?.limit !== undefined;
+    const pageNumber =
+      params?.page && Number.isFinite(params.page) && params.page > 0
+        ? Math.floor(params.page)
+        : 1;
+    const rowsPerPage =
+      params?.limit && Number.isFinite(params.limit) && params.limit > 0
+        ? Math.min(500, Math.floor(params.limit))
+        : 20;
 
+    const normalizePagination = (
+      pagination: any,
+      fallbackPage: number,
+      fallbackRowsPerPage: number,
+      fallbackTotalPosts: number,
+    ) => {
+      const resolvedCurrentPage =
+        Number.isFinite(Number(pagination?.currentPage)) &&
+        Number(pagination.currentPage) > 0
+          ? Math.floor(Number(pagination.currentPage))
+          : fallbackPage;
+
+      const resolvedRowsPerPage =
+        Number.isFinite(Number(pagination?.postsPerPage)) &&
+        Number(pagination.postsPerPage) > 0
+          ? Math.floor(Number(pagination.postsPerPage))
+          : fallbackRowsPerPage;
+
+      const resolvedTotalPosts =
+        Number.isFinite(Number(pagination?.totalPosts)) &&
+        Number(pagination.totalPosts) >= 0
+          ? Math.floor(Number(pagination.totalPosts))
+          : fallbackTotalPosts;
+
+      const resolvedTotalPages =
+        Number.isFinite(Number(pagination?.totalPages)) &&
+        Number(pagination.totalPages) >= 0
+          ? Math.floor(Number(pagination.totalPages))
+          : resolvedTotalPosts > 0
+            ? Math.ceil(resolvedTotalPosts / resolvedRowsPerPage)
+            : 0;
+
+      return {
+        currentPage: resolvedCurrentPage,
+        totalPages: resolvedTotalPages,
+        totalPosts: resolvedTotalPosts,
+        postsPerPage: resolvedRowsPerPage,
+      };
+    };
+
+    const fetchFeedPage = async (page: number, limit: number) => {
+      const response = await apiRequest<any>(
+        `/posts/feed?page=${page}&limit=${limit}&includeDeleted=false`,
+        { method: "GET" },
+      );
+
+      if (
+        !response.success ||
+        !response.data ||
+        !Array.isArray(response.data.posts)
+      ) {
+        return null;
+      }
+
+      const posts = response.data.posts.map((post: any, index: number) =>
+        transformPostModelToProduct(
+          post,
+          Array.isArray(post?.images) ? post.images : [],
+          index,
+        ),
+      );
+
+      return {
+        posts,
+        pagination: normalizePagination(
+          response.data.pagination,
+          page,
+          limit,
+          posts.length,
+        ),
+      };
+    };
+
+    if (isPaginatedRequest) {
+      const pagedFeed = await fetchFeedPage(pageNumber, rowsPerPage);
+      if (pagedFeed) {
+        return {
+          success: true,
+          posts: pagedFeed.posts,
+          pagination: pagedFeed.pagination,
+        };
+      }
+    } else {
+      const feedPageSize = 500;
+      const firstFeedPage = await fetchFeedPage(1, feedPageSize);
+      if (firstFeedPage) {
+        const totalPages = firstFeedPage.pagination.totalPages;
+        if (totalPages <= 1) {
+          return {
+            success: true,
+            posts: firstFeedPage.posts,
+            pagination: {
+              currentPage: 1,
+              totalPages: firstFeedPage.posts.length > 0 ? 1 : 0,
+              totalPosts: firstFeedPage.posts.length,
+              postsPerPage:
+                firstFeedPage.posts.length > 0 ? firstFeedPage.posts.length : 20,
+            },
+          };
+        }
+
+        const remainingPages = Array.from(
+          { length: totalPages - 1 },
+          (_, index) => index + 2,
+        );
+        const remainingResults = await Promise.all(
+          remainingPages.map((page) => fetchFeedPage(page, feedPageSize)),
+        );
+
+        const hasFeedGap = remainingResults.some((result) => result === null);
+        if (!hasFeedGap) {
+          const allPosts = [...firstFeedPage.posts];
+          remainingResults.forEach((result) => {
+            if (result) {
+              allPosts.push(...result.posts);
+            }
+          });
+
+          return {
+            success: true,
+            posts: allPosts,
+            pagination: {
+              currentPage: 1,
+              totalPages: allPosts.length > 0 ? 1 : 0,
+              totalPosts: allPosts.length,
+              postsPerPage: allPosts.length > 0 ? allPosts.length : 20,
+            },
+          };
+        }
+
+        debugWarn(
+          "[postsApi.getPosts] Feed returned partial pages. Falling back to legacy endpoint.",
+        );
+      }
+    }
+
+    // Legacy fallback for environments where /posts/feed is not yet available.
+    if (isPaginatedRequest) {
       const response = await apiRequest<any[]>(
         `/posts/pagination?PageNumber=${pageNumber}&RowsPerPage=${rowsPerPage}&IncludeDeleted=false`,
         { method: "GET" },
@@ -492,12 +575,10 @@ export const postsApi = {
         const allImages = await getAllPostImages();
         const imagesByPostId = groupImagesByPostId(allImages);
 
-        // Enrich posts with category and seller names
         const enrichedPosts = await enrichPostsWithCategoryAndSeller(
           response.data,
         );
 
-        // Process posts (even if empty array)
         const posts = enrichedPosts.map((post: any) =>
           transformPostModelToProduct(
             post,
@@ -520,18 +601,15 @@ export const postsApi = {
         };
       }
     } else {
-      // Get all posts
       const response = await apiRequest<any[]>("/posts/All", {
         method: "GET",
       });
 
       if (response.success && response.data && Array.isArray(response.data)) {
-        // Enrich posts with category and seller names
         const enrichedPosts = await enrichPostsWithCategoryAndSeller(
           response.data,
         );
 
-        // Always merge images from TbPostImages for consistency across DB/SP variants.
         const allImages = await getAllPostImages();
         const imagesByPostId = groupImagesByPostId(allImages);
         const posts = enrichedPosts.map((post: any, index: number) =>
