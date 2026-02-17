@@ -39,20 +39,15 @@ jobs:
           git -C ./TijarahJo-Backend fetch origin main --depth=1
           git -C ./TijarahJo-Backend checkout --detach FETCH_HEAD
 
-      - name: Detect strict backend test assets
-        id: strict_backend_assets
-        run: |
-          if [ -f ./TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI.Tests/TijarahJoDBAPI.Tests.csproj ] && [ -f ./TijarahJo-Backend/TijarahJoDBAPI/tests/backend_integration_contract.sh ]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Strict backend unit/integration gates pending: required files not found on upstream backend main."
-          fi
-
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
+
+      - name: Validate SQL procedure dedupe guard
+        run: |
+          chmod +x ./TijarahJo-Backend/TijarahJoDBAPI/database/scripts/guard_no_duplicate_procs.sh
+          ./TijarahJo-Backend/TijarahJoDBAPI/database/scripts/guard_no_duplicate_procs.sh
 
       - name: Restore backend solution
         run: dotnet restore ./TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI.sln
@@ -61,7 +56,6 @@ jobs:
         run: dotnet build ./TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI.sln -c Release --no-restore
 
       - name: Run backend unit tests
-        if: steps.strict_backend_assets.outputs.enabled == 'true'
         run: dotnet test ./TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI.Tests/TijarahJoDBAPI.Tests.csproj -c Release --verbosity normal
 
       - name: Ensure scripts are executable
@@ -69,10 +63,7 @@ jobs:
           chmod +x ./bootstrap_db.sh
           chmod +x ./verify_all_apis.sh
           chmod +x ./TijarahJo-Backend/TijarahJoDBAPI/tests/backend_smoke.sh
-
-      - name: Ensure backend integration contract is executable
-        if: steps.strict_backend_assets.outputs.enabled == 'true'
-        run: chmod +x ./TijarahJo-Backend/TijarahJoDBAPI/tests/backend_integration_contract.sh
+          chmod +x ./TijarahJo-Backend/TijarahJoDBAPI/tests/backend_integration_contract.sh
 
       - name: Validate required secrets
         run: |
@@ -88,7 +79,6 @@ jobs:
         run: BASE_URL=http://localhost:5033 ./TijarahJo-Backend/TijarahJoDBAPI/tests/backend_smoke.sh
 
       - name: Run backend integration contract
-        if: steps.strict_backend_assets.outputs.enabled == 'true'
         run: BASE_URL=http://localhost:5033 ./TijarahJo-Backend/TijarahJoDBAPI/tests/backend_integration_contract.sh
 
       - name: Run full API verification

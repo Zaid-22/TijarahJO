@@ -212,6 +212,54 @@ token2_login="$(printf "%s" "$LAST_BODY" | jq -r '.Token // empty')"
 if [ -n "$token2_login" ]; then token2="$token2_login"; fi
 require_non_empty "$token2" "auth.login.user2.token"
 
+# Cookie-authenticated CSRF checks
+csrf_cookie_jar="$TMP_DIR/csrf_user1.cookies"
+csrf_login_body="$TMP_DIR/csrf_login_body.json"
+csrf_login_code="$(curl -sS -o "$csrf_login_body" -w "%{http_code}" \
+  -c "$csrf_cookie_jar" -b "$csrf_cookie_jar" \
+  -X POST "$BASE_URL/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d "$login1_payload" || true)"
+if [ "$csrf_login_code" != "200" ]; then
+  abort_verification "csrf.cookie.login" "Expected 200 for cookie login, got $csrf_login_code body=$(cat "$csrf_login_body" 2>/dev/null || true)"
+fi
+log_ok "csrf.cookie.login ($csrf_login_code)"
+
+csrf_logout_no_token_code="$(curl -sS -o "$TMP_DIR/csrf_logout_no_token_body.json" -w "%{http_code}" \
+  -c "$csrf_cookie_jar" -b "$csrf_cookie_jar" \
+  -X POST "$BASE_URL/api/auth/logout" \
+  -H "Content-Type: application/json" || true)"
+if [[ ",403,400," == *",$csrf_logout_no_token_code,"* ]]; then
+  log_ok "csrf.logout.rejected.without_header ($csrf_logout_no_token_code)"
+else
+  abort_verification "csrf.logout.rejected.without_header" "Expected 403/400, got $csrf_logout_no_token_code body=$(cat "$TMP_DIR/csrf_logout_no_token_body.json" 2>/dev/null || true)"
+fi
+
+csrf_me_code="$(curl -sS -o "$TMP_DIR/csrf_me_body.json" -w "%{http_code}" \
+  -c "$csrf_cookie_jar" -b "$csrf_cookie_jar" \
+  -X GET "$BASE_URL/api/auth/me" \
+  -H "Content-Type: application/json" || true)"
+if [ "$csrf_me_code" != "200" ]; then
+  abort_verification "csrf.cookie.me" "Expected 200 for cookie /auth/me, got $csrf_me_code body=$(cat "$TMP_DIR/csrf_me_body.json" 2>/dev/null || true)"
+fi
+log_ok "csrf.cookie.me ($csrf_me_code)"
+
+csrf_token="$(awk '$6=="XSRF-TOKEN" {print $7}' "$csrf_cookie_jar" | tail -n1)"
+if [ -z "$csrf_token" ]; then
+  abort_verification "csrf.cookie.token.present" "Missing XSRF-TOKEN cookie after authenticated GET."
+fi
+log_ok "csrf.cookie.token.present"
+
+csrf_logout_with_header_code="$(curl -sS -o "$TMP_DIR/csrf_logout_with_header_body.json" -w "%{http_code}" \
+  -c "$csrf_cookie_jar" -b "$csrf_cookie_jar" \
+  -X POST "$BASE_URL/api/auth/logout" \
+  -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: $csrf_token" || true)"
+if [ "$csrf_logout_with_header_code" != "200" ]; then
+  abort_verification "csrf.logout.allowed.with_header" "Expected 200, got $csrf_logout_with_header_code body=$(cat "$TMP_DIR/csrf_logout_with_header_body.json" 2>/dev/null || true)"
+fi
+log_ok "csrf.logout.allowed.with_header ($csrf_logout_with_header_code)"
+
 require_api "auth.me.user1" "GET" "/api/auth/me" "200" "" "$token1"
 if [ -z "$user1_id" ]; then
   user1_id="$(printf "%s" "$LAST_BODY" | jq -r '.Id // .UserID // empty')"
@@ -255,11 +303,17 @@ else
   log_skip "roles.byid / roles.exists (no roles returned)"
 fi
 
-require_api "posts.all" "GET" "/api/posts/All" "200"
-assert_jq_or_abort "posts.all.array" 'type=="array"'
-first_post_id="$(printf "%s" "$LAST_BODY" | jq -r '.[0].PostID // empty')"
+require_api "posts.all.gone" "GET" "/api/posts/All" "410"
+assert_jq_or_abort "posts.all.gone.contract" '.code=="POSTS_LEGACY_ENDPOINT_REMOVED" and (.message|type=="string")'
 
-require_api "posts.pagination" "GET" "/api/posts/pagination?pageNumber=1&rowsPerPage=10&includeDeleted=false" "200"
+require_api "posts.pagination.gone" "GET" "/api/posts/pagination?pageNumber=1&rowsPerPage=10&includeDeleted=false" "410"
+assert_jq_or_abort "posts.pagination.gone.contract" '.code=="POSTS_LEGACY_ENDPOINT_REMOVED" and (.message|type=="string")'
+
+require_api "posts.feed.page1" "GET" "/api/posts/feed?page=1&limit=10&includeDeleted=false" "200"
+assert_jq_or_abort "posts.feed.page1.shape" '.success==true and (.posts|type=="array") and (.pagination.currentPage==1) and (.pagination.postsPerPage==10) and (.pagination.totalPages>=0) and (.pagination.totalPosts>=0)'
+assert_jq_or_abort "posts.feed.page1.post.shape" '(.posts|length==0) or ((.posts[0].id|tostring|length>0) and (.posts[0].sellerId|tostring|length>0) and (.posts[0].categoryId|tostring|length>0) and (.posts[0].images|type=="array"))'
+first_post_id="$(printf "%s" "$LAST_BODY" | jq -r '.posts[0].id // empty')"
+
 if is_positive_int "$first_post_id"; then
   require_api "posts.byid" "GET" "/api/posts/$first_post_id" "200"
   require_api "posts.exists" "GET" "/api/posts/Exists/$first_post_id" "200"
@@ -284,6 +338,12 @@ assert_jq_or_abort "sellers.profile.user1.shape" '.success==true and (.seller.id
 
 require_api "postimages.all" "GET" "/api/TbPostImages/All" "200"
 assert_jq "postimages.all.array" 'type=="array"'
+if is_positive_int "$first_post_id"; then
+  require_api "postimages.by_post" "GET" "/api/TbPostImages/post/$first_post_id" "200"
+  assert_jq "postimages.by_post.array" 'type=="array"'
+else
+  log_skip "postimages.by_post (no posts returned)"
+fi
 first_image_id="$(printf "%s" "$LAST_BODY" | jq -r '.[0].PostImageID // empty')"
 if is_positive_int "$first_image_id"; then
   require_api "postimages.byid" "GET" "/api/TbPostImages/$first_image_id" "200,404"
@@ -362,6 +422,8 @@ else
 
   require_api "posts.views.increment" "POST" "/api/posts/$new_post_id/views" "200"
   require_api "posts.status.patch" "PATCH" "/api/posts/$new_post_id/status" "200" '{"Status":"ACTIVE"}' "$token2"
+  require_api "posts.feed.newpost" "GET" "/api/posts/feed?page=1&limit=100&includeDeleted=false" "200"
+  assert_jq "posts.feed.newpost.present" ".success==true and ((.posts|map(.id|tostring)|index(\"$new_post_id\")) != null)"
   require_api "posts.user.filter.newuser" "GET" "/api/posts/user/$user2_id" "200"
   assert_jq "posts.user.filter.newuser.nonempty" 'type=="array" and length>0'
   require_api "posts.category.filter.newpost" "GET" "/api/posts/category/$first_category_id" "200"
