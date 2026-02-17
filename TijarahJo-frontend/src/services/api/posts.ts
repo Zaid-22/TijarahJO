@@ -9,407 +9,28 @@ import { Product } from "../../types";
 import { authApi } from "./auth";
 import { apiRequest, debugError, debugLog, debugWarn } from "./client";
 import {
-  decodeJwtPayload,
-  isCurrentSessionAdmin,
-  toIsoStringOrNow,
-} from "./shared";
+  transformPostModelToProduct,
+} from "./posts/mappers";
+import {
+  clearCaches,
+  enrichPostsWithCategoryAndSeller,
+  getAllPostImages,
+  getPostImagesByPostId,
+  groupImagesByPostId,
+  invalidatePostImagesCache,
+} from "./posts/lookups";
+import { RawCategory, RawPost } from "./posts/types";
 
-function normalizeProductStatus(rawStatus: unknown): "ACTIVE" | "SOLD" | "DELETED" {
-  if (typeof rawStatus === "string") {
-    const normalized = rawStatus.trim().toUpperCase();
-    if (normalized === "SOLD") {
-      return "SOLD";
-    }
-    if (
-      normalized === "DELETED" ||
-      normalized === "BLOCKED" ||
-      normalized === "INACTIVE"
-    ) {
-      return "DELETED";
-    }
-    return "ACTIVE";
-  }
-
-  const numericStatus = Number(rawStatus);
-  if (numericStatus === 3) {
-    return "SOLD";
-  }
-  if (numericStatus === 1 || numericStatus === 2) {
-    return "DELETED";
-  }
-  return "ACTIVE";
+interface PaginationLike {
+  currentPage?: unknown;
+  totalPages?: unknown;
+  totalPosts?: unknown;
+  postsPerPage?: unknown;
 }
 
-let categoriesCache: Record<string, string> | null = null;
-let usersCache: Record<string, string> | null = null;
-let postImagesCache: any[] | null = null;
-let categoriesCacheUpdatedAt = 0;
-let usersCacheUpdatedAt = 0;
-let postImagesCacheUpdatedAt = 0;
-let usersAllEndpointAccessible: boolean | null = null;
-const LOOKUP_CACHE_TTL_MS = 60_000;
-
-function isCacheFresh(updatedAt: number): boolean {
-  return updatedAt > 0 && Date.now() - updatedAt < LOOKUP_CACHE_TTL_MS;
-}
-
-function invalidatePostImagesCache() {
-  postImagesCache = null;
-  postImagesCacheUpdatedAt = 0;
-}
-
-function groupImagesByPostId(images: any[]): Record<string, string[]> {
-  const imagesByPostId: Record<string, string[]> = {};
-
-  images.forEach((img: any) => {
-    const postId = img?.PostID?.toString() || "";
-    const imageUrl = img?.PostImageURL;
-    if (!postId || !imageUrl || typeof imageUrl !== "string") {
-      return;
-    }
-    if (img?.IsDeleted) {
-      return;
-    }
-
-    const normalizedUrl = imageUrl.trim();
-    if (!normalizedUrl) {
-      return;
-    }
-
-    if (!imagesByPostId[postId]) {
-      imagesByPostId[postId] = [];
-    }
-    imagesByPostId[postId].push(normalizedUrl);
-  });
-
-  return imagesByPostId;
-}
-
-async function getAllPostImages(forceRefresh: boolean = false): Promise<any[]> {
-  if (!forceRefresh && postImagesCache && isCacheFresh(postImagesCacheUpdatedAt)) {
-    return postImagesCache;
-  }
-
-  const imagesResponse = await apiRequest<any[]>("/TbPostImages/All", {
-    method: "GET",
-  });
-
-  if (imagesResponse.success && Array.isArray(imagesResponse.data)) {
-    postImagesCache = imagesResponse.data;
-    postImagesCacheUpdatedAt = Date.now();
-    return postImagesCache;
-  }
-
-  return postImagesCache || [];
-}
-
-async function ensureCategoriesCache(
-  forceRefresh: boolean = false,
-): Promise<Record<string, string>> {
-  if (!forceRefresh && categoriesCache && isCacheFresh(categoriesCacheUpdatedAt)) {
-    return categoriesCache;
-  }
-
-  const categoriesResponse = await apiRequest<any[]>("/categories/All", {
-    method: "GET",
-  });
-
-  if (categoriesResponse.success && Array.isArray(categoriesResponse.data)) {
-    const nextCache: Record<string, string> = {};
-    categoriesResponse.data.forEach((cat: any) => {
-      const catId = cat?.CategoryID ?? cat?.categoryID ?? cat?.id;
-      const catName = cat?.CategoryName || cat?.categoryName || cat?.name;
-      if (catId !== null && catId !== undefined && catName) {
-        nextCache[String(catId)] = String(catName);
-      }
-    });
-
-    categoriesCache = nextCache;
-    categoriesCacheUpdatedAt = Date.now();
-    return categoriesCache;
-  }
-
-  if (!categoriesCache) {
-    categoriesCache = {};
-  }
-  return categoriesCache;
-}
-
-function getUserIdentifier(user: any): string {
-  const userId = user?.UserID ?? user?.userID ?? user?.Id ?? user?.id;
-  return userId === null || userId === undefined ? "" : String(userId);
-}
-
-function getUserDisplayName(user: any, fallbackUserId?: string): string {
-  const explicitName = user?.Name || user?.name;
-  if (typeof explicitName === "string" && explicitName.trim()) {
-    return explicitName.trim();
-  }
-
-  const firstName = user?.FirstName || user?.firstName || "";
-  const lastName = user?.LastName || user?.lastName || "";
-  const fullName = `${firstName} ${lastName}`.trim();
-  if (fullName) {
-    return fullName;
-  }
-
-  const email = user?.Email || user?.email || "";
-  if (email) {
-    return email;
-  }
-
-  return fallbackUserId ? `User ${fallbackUserId}` : "Unknown";
-}
-
-async function ensureUsersCache(
-  forceRefresh: boolean = false,
-  userIds: Array<string | number> = [],
-): Promise<Record<string, string>> {
-  if (!usersCache) {
-    usersCache = {};
-  }
-
-  const requestedUserIds = Array.from(
-    new Set(
-      userIds
-        .map((id) => String(id).trim())
-        .filter((id) => id.length > 0 && id !== "0"),
-    ),
-  );
-
-  const shouldRefreshAllUsersCache =
-    forceRefresh || !isCacheFresh(usersCacheUpdatedAt) || Object.keys(usersCache).length === 0;
-
-  if (
-    shouldRefreshAllUsersCache &&
-    usersAllEndpointAccessible !== false &&
-    isCurrentSessionAdmin()
-  ) {
-    const usersResponse = await apiRequest<any[]>("/users/All", {
-      method: "GET",
-    });
-
-    if (usersResponse.success && Array.isArray(usersResponse.data)) {
-      const nextCache: Record<string, string> = {};
-      usersResponse.data.forEach((user: any) => {
-        const userId = getUserIdentifier(user);
-        if (!userId) {
-          return;
-        }
-
-        nextCache[userId] = getUserDisplayName(user, userId);
-      });
-
-      usersCache = nextCache;
-      usersCacheUpdatedAt = Date.now();
-      usersAllEndpointAccessible = true;
-    } else if (!usersResponse.success) {
-      const errorCode = usersResponse.error?.code || "";
-      if (errorCode === "HTTP_401" || errorCode === "HTTP_403") {
-        usersAllEndpointAccessible = false;
-      }
-    }
-  }
-
-  const missingUserIds = requestedUserIds.filter((id) => !usersCache?.[id]);
-
-  if (missingUserIds.length > 0) {
-    await Promise.all(
-      missingUserIds.map(async (userId) => {
-        const userResponse = await apiRequest<any>(`/users/${userId}`, {
-          method: "GET",
-        });
-
-        if (userResponse.success && userResponse.data) {
-          const resolvedUserId = getUserIdentifier(userResponse.data) || userId;
-          const displayName = getUserDisplayName(
-            userResponse.data,
-            resolvedUserId,
-          );
-
-          usersCache![resolvedUserId] = displayName;
-          usersCache![userId] = displayName;
-          return;
-        }
-
-        usersCache![userId] = `User ${userId}`;
-      }),
-    );
-    usersCacheUpdatedAt = Date.now();
-  }
-
-  return usersCache;
-}
-
-async function enrichPostsWithCategoryAndSeller(
-  posts: any[],
-  forceRefresh: boolean = false,
-): Promise<any[]> {
-  const postUserIds = posts
-    .map((post: any) =>
-      post?.UserID ??
-      post?.userID ??
-      post?.UserId ??
-      post?.sellerId ??
-      post?.SellerId,
-    )
-    .filter(
-      (id: any) =>
-        id !== null &&
-        id !== undefined &&
-        String(id).trim() !== "" &&
-        String(id) !== "0",
-    );
-
-  const [resolvedCategories, resolvedUsers] = await Promise.all([
-    ensureCategoriesCache(forceRefresh),
-    ensureUsersCache(forceRefresh, postUserIds),
-  ]);
-
-  return posts.map((post: any) => {
-    const categoryId = post?.CategoryID ?? post?.categoryID;
-    const userId =
-      post?.UserID ??
-      post?.userID ??
-      post?.UserId ??
-      post?.sellerId ??
-      post?.SellerId;
-
-    let categoryName = String(post?.Category || post?.category || "").trim();
-    if (!categoryName) {
-      categoryName =
-        categoryId !== null && categoryId !== undefined
-          ? resolvedCategories[String(categoryId)] || "Unknown"
-          : "Unknown";
-    }
-
-    const existingSeller =
-      typeof (post?.Seller ?? post?.seller) === "string"
-        ? String(post?.Seller ?? post?.seller).trim()
-        : "";
-    let sellerName = existingSeller;
-    if (!sellerName) {
-      sellerName =
-        userId !== null && userId !== undefined
-          ? resolvedUsers[String(userId)] || `User ${userId}`
-          : "Unknown";
-    }
-
-    return {
-      ...post,
-      Category: categoryName,
-      Seller: sellerName,
-    };
-  });
-}
-
-/**
- * Clear caches - call this when data might have changed (e.g., after creating a post)
- */
-export function clearCaches() {
-  categoriesCache = null;
-  usersCache = null;
-  postImagesCache = null;
-  categoriesCacheUpdatedAt = 0;
-  usersCacheUpdatedAt = 0;
-  postImagesCacheUpdatedAt = 0;
-  usersAllEndpointAccessible = null;
-}
-
-export function transformPostModelToProduct(
-  postModel: any,
-  images: string[] = [],
-  fallbackIndex?: number,
-): Product {
-  const normalizePostImages = (rawImages: unknown[]): string[] => {
-    const sanitized = rawImages
-      .map((value) => (typeof value === "string" ? value.trim() : ""))
-      .filter((value) => value.length > 0);
-
-    if (sanitized.length === 0) {
-      return [];
-    }
-
-    const normalized: string[] = [];
-    for (let i = 0; i < sanitized.length; i += 1) {
-      const current = sanitized[i];
-
-      // Backend list endpoints may split data URLs at the first comma.
-      // Rebuild `data:*;base64,<payload>` when needed.
-      const looksLikeSplitDataPrefix =
-        current.startsWith("data:") &&
-        current.includes(";base64") &&
-        !current.includes(",") &&
-        i + 1 < sanitized.length;
-
-      if (looksLikeSplitDataPrefix) {
-        const payload = sanitized[i + 1];
-        if (
-          payload &&
-          !payload.startsWith("http://") &&
-          !payload.startsWith("https://") &&
-          !payload.startsWith("data:") &&
-          !payload.startsWith("blob:")
-        ) {
-          normalized.push(`${current},${payload}`);
-          i += 1;
-          continue;
-        }
-      }
-
-      normalized.push(current);
-    }
-
-    return normalized;
-  };
-
-  // Get images for this post
-  // Handle various casing valid from backend or frontend
-  const backendImages = postModel.Images || postModel.images || [];
-  const singleImage = postModel.PostImageURL || postModel.postImageURL || "";
-  const preferredImages = images.length > 0 ? images : backendImages;
-  const normalizedImages = normalizePostImages(
-    preferredImages.length > 0 ? preferredImages : [singleImage],
-  );
-  const postImages = normalizedImages.length > 0 ? normalizedImages : [singleImage].filter(Boolean);
-
-  // Ensure we always have a unique ID - use fallback index if needed
-  const postId = postModel.PostID?.toString() || postModel.id;
-  const uniqueId =
-    postId ||
-    (fallbackIndex !== undefined
-      ? `post-${fallbackIndex}`
-      : `post-${Date.now()}-${Math.random()}`);
-
-  const name = postModel.PostTitle ?? postModel.name ?? "";
-  const description = postModel.PostDescription ?? postModel.description ?? "";
-
-  return {
-    id: uniqueId,
-    name: name,
-    price: postModel.Price ?? postModel.price ?? 0,
-    location: postModel.City ?? postModel.Location ?? postModel.location ?? "Jordan",
-    area: postModel.Area ?? postModel.area,
-    seller: postModel.Seller ?? postModel.seller ?? "Unknown",
-    sellerId:
-      postModel.UserID?.toString() ??
-      postModel.UserId?.toString() ??
-      postModel.SellerID?.toString() ??
-      postModel.sellerId ??
-      "",
-    category: postModel.Category ?? postModel.category ?? "Unknown",
-    categoryId:
-      postModel.CategoryID?.toString() ??
-      postModel.CategoryId?.toString() ??
-      postModel.categoryId ??
-      "",
-    image: postImages[0] ?? "",
-    images: postImages,
-    description: description,
-    createdAt: toIsoStringOrNow(postModel.CreatedAt ?? postModel.createdAt),
-    views: postModel.Views ?? postModel.views ?? 0,
-    status: normalizeProductStatus(postModel.Status ?? postModel.status),
-  };
+interface FeedPayload {
+  posts?: RawPost[];
+  pagination?: PaginationLike;
 }
 
 export const postsApi = {
@@ -429,33 +50,33 @@ export const postsApi = {
         : 20;
 
     const normalizePagination = (
-      pagination: any,
+      pagination: PaginationLike | undefined,
       fallbackPage: number,
       fallbackRowsPerPage: number,
       fallbackTotalPosts: number,
     ) => {
+      const currentPageValue = Number(pagination?.currentPage);
       const resolvedCurrentPage =
-        Number.isFinite(Number(pagination?.currentPage)) &&
-        Number(pagination.currentPage) > 0
-          ? Math.floor(Number(pagination.currentPage))
+        Number.isFinite(currentPageValue) && currentPageValue > 0
+          ? Math.floor(currentPageValue)
           : fallbackPage;
 
+      const postsPerPageValue = Number(pagination?.postsPerPage);
       const resolvedRowsPerPage =
-        Number.isFinite(Number(pagination?.postsPerPage)) &&
-        Number(pagination.postsPerPage) > 0
-          ? Math.floor(Number(pagination.postsPerPage))
+        Number.isFinite(postsPerPageValue) && postsPerPageValue > 0
+          ? Math.floor(postsPerPageValue)
           : fallbackRowsPerPage;
 
+      const totalPostsValue = Number(pagination?.totalPosts);
       const resolvedTotalPosts =
-        Number.isFinite(Number(pagination?.totalPosts)) &&
-        Number(pagination.totalPosts) >= 0
-          ? Math.floor(Number(pagination.totalPosts))
+        Number.isFinite(totalPostsValue) && totalPostsValue >= 0
+          ? Math.floor(totalPostsValue)
           : fallbackTotalPosts;
 
+      const totalPagesValue = Number(pagination?.totalPages);
       const resolvedTotalPages =
-        Number.isFinite(Number(pagination?.totalPages)) &&
-        Number(pagination.totalPages) >= 0
-          ? Math.floor(Number(pagination.totalPages))
+        Number.isFinite(totalPagesValue) && totalPagesValue >= 0
+          ? Math.floor(totalPagesValue)
           : resolvedTotalPosts > 0
             ? Math.ceil(resolvedTotalPosts / resolvedRowsPerPage)
             : 0;
@@ -469,7 +90,7 @@ export const postsApi = {
     };
 
     const fetchFeedPage = async (page: number, limit: number) => {
-      const response = await apiRequest<any>(
+      const response = await apiRequest<FeedPayload>(
         `/posts/feed?page=${page}&limit=${limit}&includeDeleted=false`,
         { method: "GET" },
       );
@@ -482,7 +103,7 @@ export const postsApi = {
         return null;
       }
 
-      const posts = response.data.posts.map((post: any, index: number) =>
+      const posts = response.data.posts.map((post, index) =>
         transformPostModelToProduct(
           post,
           Array.isArray(post?.images) ? post.images : [],
@@ -566,7 +187,7 @@ export const postsApi = {
 
     // Legacy fallback for environments where /posts/feed is not yet available.
     if (isPaginatedRequest) {
-      const response = await apiRequest<any[]>(
+      const response = await apiRequest<RawPost[]>(
         `/posts/pagination?PageNumber=${pageNumber}&RowsPerPage=${rowsPerPage}&IncludeDeleted=false`,
         { method: "GET" },
       );
@@ -579,7 +200,7 @@ export const postsApi = {
           response.data,
         );
 
-        const posts = enrichedPosts.map((post: any) =>
+        const posts = enrichedPosts.map((post) =>
           transformPostModelToProduct(
             post,
             imagesByPostId[post.PostID?.toString() || ""] || [],
@@ -601,7 +222,7 @@ export const postsApi = {
         };
       }
     } else {
-      const response = await apiRequest<any[]>("/posts/All", {
+      const response = await apiRequest<RawPost[]>("/posts/All", {
         method: "GET",
       });
 
@@ -612,7 +233,7 @@ export const postsApi = {
 
         const allImages = await getAllPostImages();
         const imagesByPostId = groupImagesByPostId(allImages);
-        const posts = enrichedPosts.map((post: any, index: number) =>
+        const posts = enrichedPosts.map((post, index) =>
           transformPostModelToProduct(
             post,
             imagesByPostId[post.PostID?.toString() || ""] || [],
@@ -649,18 +270,12 @@ export const postsApi = {
    * Get single post by ID
    */
   getPost: async (id: string): Promise<Product | null> => {
-    const response = await apiRequest<any>(`/posts/${id}`, {
+    const response = await apiRequest<RawPost>(`/posts/${id}`, {
       method: "GET",
     });
 
     if (response.success && response.data) {
-      // Get images for this post
-      const allImages = await getAllPostImages();
-
-      const postImages = allImages
-        .filter((img: any) => img.PostID?.toString() === id && !img.IsDeleted)
-        .map((img: any) => img.PostImageURL)
-        .filter((url: string) => url && url.trim() !== "");
+      const postImages = await getPostImagesByPostId(id);
 
       // Enrich post with category and seller names before transforming
       const enrichedPost = await enrichPostsWithCategoryAndSeller([
@@ -683,7 +298,7 @@ export const postsApi = {
    * Create new post
    */
   createPost: async (postData: CreatePostRequest): Promise<PostResponse> => {
-    // Get current user ID from JWT token by calling /auth/me endpoint
+    // Resolve current user from cookie-authenticated /auth/me session.
     let userId = "";
     try {
       const currentUserResponse = await authApi.getCurrentUser();
@@ -696,20 +311,6 @@ export const postsApi = {
       }
     } catch (error) {
       debugError("[createPost] Error getting current user:", error);
-    }
-
-    // Try to decode JWT token as fallback
-    if (!userId) {
-      try {
-        const token = localStorage.getItem("tijarahjo_token");
-        if (token) {
-          const payload = decodeJwtPayload(token);
-          userId = String(payload?.nameid ?? payload?.sub ?? "");
-          debugLog("[createPost] Got user ID from JWT token:", userId);
-        }
-      } catch (tokenError) {
-        debugError("[createPost] Error decoding token:", tokenError);
-      }
     }
 
     // If still no user ID, throw error instead of defaulting to admin
@@ -728,18 +329,20 @@ export const postsApi = {
     }
 
     // Find category ID by name
-    const categoriesResponse = await apiRequest<any[]>("/categories/All", {
+    const categoriesResponse = await apiRequest<RawCategory[]>("/categories/All", {
       method: "GET",
     });
     const categories = categoriesResponse.success
       ? categoriesResponse.data || []
       : [];
     const normalizedCategory = (postData.category || "").trim();
-    const category = categories.find(
-      (cat: any) =>
-        cat.CategoryName?.toLowerCase() ===
-        normalizedCategory.toLowerCase(),
-    );
+    const normalizedCategoryLower = normalizedCategory.toLowerCase();
+    const category = categories.find((cat) => {
+      const rawName = cat.CategoryName ?? cat.categoryName ?? cat.name;
+      const categoryName =
+        typeof rawName === "string" ? rawName.trim().toLowerCase() : "";
+      return categoryName.length > 0 && categoryName === normalizedCategoryLower;
+    });
 
     let categoryId =
       category?.CategoryID !== undefined && category?.CategoryID !== null
@@ -781,13 +384,20 @@ export const postsApi = {
       Area: postData.area || null,
     };
 
-    const response = await apiRequest<any>("/posts", {
+    const response = await apiRequest<RawPost>("/posts", {
       method: "POST",
       body: JSON.stringify(backendPost),
     });
 
     if (response.success && response.data) {
-      const postId = response.data.PostID || response.data.postID;
+      const postIdValue = response.data.PostID ?? response.data.postID ?? response.data.id;
+      const postId = Number(postIdValue);
+      if (!Number.isInteger(postId) || postId <= 0) {
+        return {
+          success: false,
+          message: "Post created but response did not include a valid PostID.",
+        };
+      }
       debugLog("[createPost] Post created with ID:", postId);
 
       // Create post images
@@ -808,7 +418,7 @@ export const postsApi = {
           }
 
           try {
-            const imageResponse = await apiRequest<any>("/TbPostImages", {
+            const imageResponse = await apiRequest<unknown>("/TbPostImages", {
               method: "POST",
               body: JSON.stringify({
                 PostID: postId,
@@ -895,7 +505,7 @@ export const postsApi = {
    */
   updatePost: async (postData: UpdatePostRequest): Promise<PostResponse> => {
     // Get current post to preserve fields
-    const currentPostResponse = await apiRequest<any>(`/posts/${postData.id}`, {
+    const currentPostResponse = await apiRequest<RawPost>(`/posts/${postData.id}`, {
       method: "GET",
     });
     if (!currentPostResponse.success || !currentPostResponse.data) {
@@ -943,17 +553,19 @@ export const postsApi = {
     // Find category ID if category name provided
     let categoryId = currentPost.CategoryID;
     if (postData.category) {
-      const categoriesResponse = await apiRequest<any[]>("/categories/All", {
+      const categoriesResponse = await apiRequest<RawCategory[]>("/categories/All", {
         method: "GET",
       });
       const categories = categoriesResponse.success
         ? categoriesResponse.data || []
         : [];
-      const category = categories.find(
-        (cat: any) =>
-          cat.CategoryName?.toLowerCase() ===
-          (postData.category || "").toLowerCase(),
-      );
+      const requestedCategory = (postData.category || "").trim().toLowerCase();
+      const category = categories.find((cat) => {
+        const rawName = cat.CategoryName ?? cat.categoryName ?? cat.name;
+        const categoryName =
+          typeof rawName === "string" ? rawName.trim().toLowerCase() : "";
+        return categoryName.length > 0 && categoryName === requestedCategory;
+      });
       if (category) categoryId = category.CategoryID;
     }
 
@@ -978,7 +590,7 @@ export const postsApi = {
       Area: resolvedArea,
     };
 
-    const response = await apiRequest<any>(`/posts/${postData.id}`, {
+    const response = await apiRequest<RawPost>(`/posts/${postData.id}`, {
       method: "PUT",
       body: JSON.stringify(backendPost),
     });
@@ -993,7 +605,7 @@ export const postsApi = {
         // Delete old images
         const allImages = await getAllPostImages();
         const postImages = allImages.filter(
-          (img: any) => img.PostID?.toString() === postData.id,
+          (img) => img.PostID?.toString() === postData.id,
         );
 
         for (const img of postImages) {
@@ -1048,7 +660,7 @@ export const postsApi = {
       debugLog("[deletePost] Attempting to delete post with ID:", id);
 
       // Use /posts/ route (matches backend UserPostsController route)
-      const response = await apiRequest<any>(`/posts/${id}`, {
+      const response = await apiRequest<unknown>(`/posts/${id}`, {
         method: "DELETE",
       });
 
@@ -1099,18 +711,28 @@ export const postsApi = {
    * Get posts by user ID
    */
   getUserPosts: async (userId: string): Promise<Product[]> => {
-    const response = await apiRequest<any[]>(`/posts/user/${userId}`, {
+    const response = await apiRequest<RawPost[]>(`/posts/user/${userId}`, {
       method: "GET",
     });
 
     if (response.success && response.data && Array.isArray(response.data)) {
-      const allImages = await getAllPostImages();
-      const imagesByPostId = groupImagesByPostId(allImages);
+      const imageEntries = await Promise.all(
+        response.data.map(async (post) => {
+          const postId = String(post?.PostID ?? post?.id ?? "").trim();
+          if (!postId) {
+            return [postId, []] as const;
+          }
 
-      return response.data.map((post: any, index: number) =>
+          const images = await getPostImagesByPostId(postId);
+          return [postId, images] as const;
+        }),
+      );
+      const imagesByPostId = Object.fromEntries(imageEntries);
+
+      return response.data.map((post, index) =>
         transformPostModelToProduct(
           post,
-          imagesByPostId[post.PostID?.toString() || ""] || [],
+          imagesByPostId[String(post?.PostID ?? post?.id ?? "").trim()] || [],
           index,
         ),
       );
@@ -1128,3 +750,5 @@ export const postsApi = {
   },
 
 };
+
+export { clearCaches, transformPostModelToProduct };

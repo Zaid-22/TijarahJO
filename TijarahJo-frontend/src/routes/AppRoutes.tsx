@@ -3,7 +3,6 @@ import {
   Routes,
   Route,
   useNavigate,
-  useParams,
   useLocation,
   Navigate,
 } from "react-router-dom";
@@ -20,15 +19,14 @@ import { useLocalStorage } from "../hooks/useLocalStorage";
 import {
   ROUTES_REQUIRING_MARKETPLACE_DATA,
   applyLoginUserDataToProfile,
-  buildCreatePostPayload,
-  CreatePostInput,
-  decodeCategoryParam,
   getCategoryTranslation,
   resolveCurrentUserId,
   toEditProfileFormProfile,
   toProfilePageUserProfile,
 } from "./appRoutesUtils";
-import { useProductDetailsRouteData } from "./useProductDetailsRouteData";
+import { CategoryRouteWrapper } from "./CategoryRouteWrapper";
+import { ProductDetailsRouteWrapper } from "./ProductDetailsRouteWrapper";
+import { usePostActions } from "./usePostActions";
 
 const HomePage = lazy(() =>
   import("../pages/HomePage").then((m) => ({ default: m.HomePage })),
@@ -56,11 +54,6 @@ const AllProductsPage = lazy(() =>
 const SellItemPage = lazy(() =>
   import("../pages/SellItemPage").then((m) => ({ default: m.SellItemPage })),
 );
-const ProductDetailsPage = lazy(() =>
-  import("../pages/ProductDetailsPage").then((m) => ({
-    default: m.ProductDetailsPage,
-  })),
-);
 
 const EditProfilePage = lazy(() =>
   import("../pages/EditProfilePage").then((m) => ({ default: m.EditProfilePage })),
@@ -78,9 +71,6 @@ const FAQPage = lazy(() =>
 );
 const LoginPage = lazy(() =>
   import("../pages/LoginPage").then((m) => ({ default: m.LoginPage })),
-);
-const CategoryPage = lazy(() =>
-  import("../pages/CategoryPage").then((m) => ({ default: m.CategoryPage })),
 );
 
 interface AppRoutesProps {
@@ -150,168 +140,10 @@ export function AppRoutes(props: AppRoutesProps) {
   const requireAuth = (element: ReactElement) =>
     props.isAuthenticated ? element : <Navigate to="/login" replace />;
 
-  const createPost = async (product: CreatePostInput) => {
-    const result = await api.posts.createPost(
-      buildCreatePostPayload(product, props.userProfile),
-    );
-    if (!result.success) {
-      throw new Error(result.message || "Failed to create post");
-    }
-
-    await fetchPostsFromBackend();
-    return result;
-  };
-
-  const updatePost = async (updatedProduct: {
-    id: string;
-    name: string;
-    description?: string;
-    price: number;
-    category: string;
-    status?: "ACTIVE" | "SOLD" | "DELETED";
-    images?: string[];
-  }) => {
-    await api.posts.updatePost({
-      id: updatedProduct.id,
-      title: updatedProduct.name,
-      description: updatedProduct.description,
-      price: updatedProduct.price,
-      category: updatedProduct.category,
-      status: updatedProduct.status,
-      images: updatedProduct.images || [],
-    });
-
-    await fetchPostsFromBackend();
-  };
-
-  const deletePost = async (postId: string) => {
-    await api.posts.deletePost(postId);
-    await fetchPostsFromBackend();
-  };
-
-  // Helper to handle category pages based on URL param
-  const CategoryRouteWrapper = () => {
-    const { categoryName } = useParams();
-    const decodedCategory = decodeCategoryParam(categoryName);
-
-    if (!decodedCategory) {
-      return <Navigate to="/" replace />;
-    }
-
-    return (
-      <CategoryPage
-        categoryName={decodedCategory}
-        onBack={() => navigate("/")}
-        products={availableProducts}
-        onProductClick={(id: string) => navigate(`/product/${id}`)}
-        favoriteIds={favoriteIds}
-        onFavoriteToggle={toggleFavorite}
-        language={props.language}
-        isAuthenticated={props.isAuthenticated}
-        currentUserDisplayName={props.isAuthenticated ? props.currentUserDisplayName : undefined}
-      />
-    );
-  };
-
-  const ProductDetailsRouteWrapper = () => {
-    const { id } = useParams();
-    const { resolvedProduct, isLoadingRouteProduct, isOwnProduct } =
-      useProductDetailsRouteData({
-        id,
-        availableProducts,
-        isLoadingProducts: isLoadingProductsFromRouteData,
-        isAuthenticated: props.isAuthenticated,
-        userProfile: props.userProfile,
-      });
-
-    if (isLoadingRouteProduct) {
-      return (
-        <div className="min-h-screen flex items-center justify-center text-gray-500 dark:text-gray-400">
-          Loading product...
-        </div>
-      );
-    }
-
-    if (!resolvedProduct) {
-      return (
-        <div className="p-10 text-center">
-          Product not found.{" "}
-          <button
-            onClick={() => navigate("/")}
-            className="text-blue-600 underline"
-          >
-            Go Home
-          </button>
-        </div>
-      );
-    }
-
-    return (
-      <ProductDetailsPage
-        product={resolvedProduct}
-        onBack={() => navigate(-1)}
-        allProducts={availableProducts}
-        language={props.language}
-        onProductClick={(pid: string) => navigate(`/product/${pid}`)}
-        onSellerClick={() => {
-          if (isOwnProduct) navigate("/profile");
-          else {
-            const targetSellerId = String(resolvedProduct.sellerId || "").trim();
-            if (!targetSellerId) {
-              deferredToast.error("Seller profile unavailable");
-              return;
-            }
-            navigate(`/seller/${targetSellerId}`);
-          }
-        }}
-        onChatWithSeller={() => {
-          const targetSellerId = String(resolvedProduct.sellerId || "").trim();
-          if (!targetSellerId) {
-            deferredToast.error("Seller chat unavailable");
-            return;
-          }
-
-          if (!props.isAuthenticated) {
-            navigate("/login");
-            return;
-          }
-
-          const currentUserId = resolveCurrentUserId(
-            props.userProfile,
-            localStorage.getItem("tijarahjo_token"),
-          );
-          if (currentUserId && currentUserId === targetSellerId) {
-            deferredToast.error("You cannot chat with yourself");
-            return;
-          }
-
-          navigate(`/chat/${targetSellerId}`);
-        }}
-        isOwnProduct={isOwnProduct}
-        onUpdateProduct={async (updatedProduct: any) => {
-          try {
-            await updatePost(updatedProduct);
-            deferredToast.success("Post updated");
-          } catch (e) {
-            deferredToast.error("Error updating");
-          }
-        }}
-        onDeleteProduct={async (pid: string) => {
-          try {
-            await deletePost(pid);
-            deferredToast.success("Post deleted");
-            navigate("/");
-          } catch (e) {
-            deferredToast.error("Error deleting");
-          }
-        }}
-        favoriteIds={favoriteIds}
-        onFavoriteToggle={toggleFavorite}
-        isAuthenticated={props.isAuthenticated}
-        currentUserDisplayName={props.currentUserDisplayName}
-      />
-    );
-  };
+  const { createPost, updatePost, deletePost } = usePostActions({
+    userProfile: props.userProfile,
+    fetchPostsFromBackend,
+  });
 
   // Seller logic removed for now
   // const SellerProfileRouteWrapper = () => { ... }
@@ -562,10 +394,7 @@ export function AppRoutes(props: AppRoutesProps) {
             onBack={() => navigate("/profile")}
             profile={toEditProfileFormProfile(props.userProfile)}
             onSave={async (updatedProfile) => {
-              const resolvedUserId = resolveCurrentUserId(
-                props.userProfile,
-                localStorage.getItem("tijarahjo_token"),
-              );
+              const resolvedUserId = resolveCurrentUserId(props.userProfile);
               if (!resolvedUserId) {
                 const message = "Unable to resolve account ID. Please sign in again.";
                 deferredToast.error(message);
@@ -574,6 +403,9 @@ export function AppRoutes(props: AppRoutesProps) {
 
               const trimmedFirstName = updatedProfile.firstName.trim();
               const trimmedLastName = updatedProfile.lastName.trim();
+              const trimmedPhone = updatedProfile.phone.trim();
+              const trimmedCity = updatedProfile.city.trim();
+              const trimmedArea = updatedProfile.area.trim();
               const normalizedEmail = (
                 updatedProfile.email || props.userProfile.email
               ).trim();
@@ -583,12 +415,32 @@ export function AppRoutes(props: AppRoutesProps) {
                 throw new Error(message);
               }
 
+              if (!trimmedPhone) {
+                const message = "Phone number is required to update your profile.";
+                deferredToast.error(message);
+                throw new Error(message);
+              }
+
+              if (!trimmedCity) {
+                const message = "City is required to update your profile.";
+                deferredToast.error(message);
+                throw new Error(message);
+              }
+
+              if (!trimmedArea) {
+                const message = "Area is required to update your profile.";
+                deferredToast.error(message);
+                throw new Error(message);
+              }
+
               try {
                 await api.users.updateUser(resolvedUserId, {
                   Email: normalizedEmail,
                   FirstName: trimmedFirstName,
                   LastName: trimmedLastName,
-                  Phone: updatedProfile.phone?.trim() || null,
+                  Phone: trimmedPhone,
+                  City: trimmedCity,
+                  Area: trimmedArea,
                 });
 
                 props.setUserProfile({
@@ -598,6 +450,10 @@ export function AppRoutes(props: AppRoutesProps) {
                   firstName: trimmedFirstName,
                   lastName: trimmedLastName,
                   email: normalizedEmail,
+                  phone: trimmedPhone,
+                  city: trimmedCity,
+                  area: trimmedArea,
+                  location: `${trimmedCity}, ${trimmedArea}`,
                   name:
                     `${trimmedFirstName} ${trimmedLastName}`.trim() ||
                     normalizedEmail,
@@ -622,9 +478,43 @@ export function AppRoutes(props: AppRoutesProps) {
       {/* Dynamic Routes */}
         <Route
           path="/category/:categoryName"
-          element={<CategoryRouteWrapper />}
+          element={
+            <CategoryRouteWrapper
+              language={props.language}
+              isAuthenticated={props.isAuthenticated}
+              currentUserDisplayName={props.currentUserDisplayName}
+              availableProducts={availableProducts}
+              favoriteIds={favoriteIds}
+              onFavoriteToggle={toggleFavorite}
+              onBack={() => navigate("/")}
+              onOpenProduct={(id) => navigate(`/product/${id}`)}
+            />
+          }
         />
-        <Route path="/product/:id" element={<ProductDetailsRouteWrapper />} />
+        <Route
+          path="/product/:id"
+          element={
+            <ProductDetailsRouteWrapper
+              language={props.language}
+              availableProducts={availableProducts}
+              isLoadingProducts={isLoadingProductsFromRouteData}
+              isAuthenticated={props.isAuthenticated}
+              userProfile={props.userProfile}
+              favoriteIds={favoriteIds}
+              currentUserDisplayName={props.currentUserDisplayName}
+              onFavoriteToggle={toggleFavorite}
+              onOpenProduct={(id) => navigate(`/product/${id}`)}
+              onBack={() => navigate(-1)}
+              onNavigateHome={() => navigate("/")}
+              onNavigateProfile={() => navigate("/profile")}
+              onNavigateSeller={(sellerId) => navigate(`/seller/${sellerId}`)}
+              onNavigateChat={(sellerId) => navigate(`/chat/${sellerId}`)}
+              onNavigateLogin={() => navigate("/login")}
+              onUpdateProduct={updatePost}
+              onDeleteProduct={deletePost}
+            />
+          }
+        />
 
         {/* Catch all */}
         <Route path="*" element={<Navigate to="/" replace />} />
