@@ -9,6 +9,11 @@ import {
 } from "react";
 import { User, AuthState } from "../types";
 import { api } from "../services/api";
+import {
+  asBackendUser,
+  shouldClearTokenForAuthError,
+  toUserFromBackend,
+} from "./authUtils";
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<boolean>;
@@ -22,22 +27,21 @@ interface AuthContextType extends AuthState {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const DEBUG_AUTH =
-  Boolean((import.meta as any).env?.DEV) &&
-  (import.meta as any).env?.VITE_DEBUG_AUTH === "true";
+  Boolean(import.meta.env.DEV) && import.meta.env.VITE_DEBUG_AUTH === "true";
 
-const debugAuthLog = (...args: any[]) => {
+const debugAuthLog = (...args: unknown[]) => {
   if (DEBUG_AUTH) {
     console.log(...args);
   }
 };
 
-const debugAuthWarn = (...args: any[]) => {
+const debugAuthWarn = (...args: unknown[]) => {
   if (DEBUG_AUTH) {
     console.warn(...args);
   }
 };
 
-const debugAuthError = (...args: any[]) => {
+const debugAuthError = (...args: unknown[]) => {
   if (DEBUG_AUTH) {
     console.error(...args);
   }
@@ -51,20 +55,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
   const [isGuest, setIsGuest] = useState(false);
   const [loading, setLoading] = useState(true);
-
-  // Helper to map RoleID to string role
-  const mapRole = (roleId: any): "admin" | "user" => {
-    // Support numeric IDs and explicit role strings from API payloads.
-    if (
-      roleId === 1 ||
-      roleId === "1" ||
-      (typeof roleId === "string" && roleId.toLowerCase() === "admin")
-    ) {
-      return "admin";
-    }
-    // Default to user for everything else
-    return "user";
-  };
 
   // Memoize checkAuth to prevent infinite loops
   const checkAuth = useCallback(async () => {
@@ -97,32 +87,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (response.success && response.data) {
           // Transform backend UserResponseDTO to frontend User format
-          const backendUser = response.data as any; // Type assertion needed for backend response
-          const firstName =
-            backendUser.FirstName || backendUser.firstName || "";
-          const lastName = backendUser.LastName || backendUser.lastName || "";
-          const fullName =
-            backendUser.Name || `${firstName} ${lastName}`.trim() || "";
-
-          // Use helper to map role
-          const role = mapRole(
-            backendUser.RoleID || backendUser.roleID || backendUser.Role,
-          );
-
-          const user: User = {
-            id: (
-              backendUser.Id ||
-              backendUser.UserID ||
-              backendUser.userID ||
-              ""
-            ).toString(),
-            email: backendUser.Email || backendUser.email || "",
-            firstName: firstName,
-            lastName: lastName,
-            name: fullName,
-            avatar: backendUser.Avatar || backendUser.avatar || undefined,
-            role: role,
-          };
+          const backendUser = asBackendUser(response.data);
+          if (!backendUser) {
+            throw new Error("Invalid user payload from /auth/me");
+          }
+          const user = toUserFromBackend(backendUser);
 
           setAuthState({
             isAuthenticated: true,
@@ -154,11 +123,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           error instanceof Error ? error.message : String(error);
         debugAuthWarn("[AuthContext] Error details:", errorMessage);
 
-        // Only clear token if it's an authentication error (401), not a network error
-        if (
-          errorMessage.includes("401") ||
-          errorMessage.includes("Unauthorized")
-        ) {
+        // Only clear token if it's an authentication error (401), not a network error.
+        if (shouldClearTokenForAuthError(error)) {
           debugAuthWarn(
             "[AuthContext] Token is invalid (401), clearing auth state",
           );
@@ -236,7 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         success: response.success,
         hasToken: !!response.token,
         hasUser: !!response.user,
-        message: (response as any).message,
+        message: response.message,
         user: response.user,
       });
 
@@ -244,7 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!response.success) {
         debugAuthError(
           "[AuthContext] Login failed:",
-          (response as any).message || "Unknown error",
+          response.message || "Unknown error",
         );
         return false;
       }
@@ -254,30 +220,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let user: User;
 
         if (response.user) {
-          // Ensure user has required properties
-          const firstName = response.user.firstName || "";
-          const lastName = response.user.lastName || "";
-          const fullName =
-            (response.user as any).name ||
-            `${firstName} ${lastName}`.trim() ||
-            response.user.email ||
-            "";
-
-          // Map role correctly
-          const role = mapRole(
-            (response.user as any).roleID ||
-              (response.user as any).RoleID ||
-              (response.user as any).role,
-          );
-
-          user = {
-            id: response.user.id || "",
-            email: response.user.email || "",
-            firstName,
-            lastName,
-            name: fullName,
-            role: role,
-          };
+          const userPayload = asBackendUser(response.user);
+          user = userPayload
+            ? toUserFromBackend(userPayload, {
+                email,
+                name: email,
+                role: "user",
+              })
+            : {
+                id: "",
+                email,
+                firstName: "",
+                lastName: "",
+                name: email,
+                role: "user",
+              };
         } else {
           // Create minimal user from email if user object is missing
           debugAuthWarn(
@@ -311,42 +268,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             );
             const userResponse = await api.auth.getCurrentUser();
             if (userResponse.success && userResponse.data) {
-              const backendUser = userResponse.data as any;
-              const firstName =
-                backendUser.FirstName || backendUser.firstName || "";
-              const lastName =
-                backendUser.LastName || backendUser.lastName || "";
-              const fullName =
-                backendUser.Name ||
-                `${firstName} ${lastName}`.trim() ||
-                backendUser.Email ||
-                backendUser.email ||
-                "";
-
-              const role = mapRole(
-                backendUser.RoleID || backendUser.roleID || backendUser.Role,
-              );
-
-              user = {
-                id: (
-                  backendUser.Id ||
-                  backendUser.UserID ||
-                  backendUser.userID ||
-                  user.id ||
-                  ""
-                ).toString(),
-                email:
-                  backendUser.Email || backendUser.email || user.email || "",
-                firstName: firstName,
-                lastName: lastName,
-                name: fullName,
-                avatar:
-                  backendUser.Avatar ||
-                  backendUser.avatar ||
-                  user.avatar ||
-                  undefined,
-                role: role,
-              };
+              const backendUser = asBackendUser(userResponse.data);
+              if (!backendUser) {
+                throw new Error("Invalid user payload from /auth/me");
+              }
+              user = toUserFromBackend(backendUser, user);
               debugAuthLog("[AuthContext] Fetched full user data:", user);
             }
           } catch (error) {
@@ -368,7 +294,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // If we reach here, login failed
-      const errorMessage = (response as any).message || "Login failed";
+      const errorMessage = response.message || "Login failed";
       debugAuthError(
         "[AuthContext] Login failed - success:",
         response.success,
@@ -396,7 +322,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const lastName = nameParts.slice(1).join(" ") || "";
 
       // Call register API
-      const response = await api.auth.register(
+      const response: {
+        success: boolean;
+        data?: {
+          success?: boolean;
+          token?: string;
+          user?: unknown;
+          message?: string;
+        };
+        error?: string;
+      } = await api.auth.register(
         email,
         password,
         name.trim(),
@@ -406,44 +341,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
 
       // Check response structure - api.auth.register returns { success, data } where data contains the auth response
-      const authResponse = response.success ? (response as any).data : null;
+      const authResponse = response.success ? response.data : null;
 
       if (authResponse && authResponse.success && authResponse.token) {
         // Extract user from authResponse
-        const user = authResponse.user || null;
+        const userPayload = asBackendUser(authResponse.user);
         localStorage.setItem("tijarahjo_token", authResponse.token);
         localStorage.removeItem("guestMode");
 
         // Transform user if available, otherwise create minimal user
-        let transformedUser: User;
-        if (user) {
-          const role = mapRole(
-            user.RoleID || user.roleID || user.role || user.Role,
-          );
-
-          transformedUser = {
-            id: user.id || user.Id || user.UserID || "",
-            email: user.email || user.Email || email,
-            firstName: user.firstName || user.FirstName || firstName,
-            lastName: user.lastName || user.LastName || lastName,
-            name:
-              user.name ||
-              `${user.firstName || user.FirstName || firstName} ${user.lastName || user.LastName || lastName}`.trim() ||
+        const transformedUser: User = userPayload
+          ? toUserFromBackend(userPayload, {
               email,
-            role: role,
-            avatar: user.avatar || user.Avatar || undefined,
-          };
-        } else {
-          // Create minimal user if not provided
-          transformedUser = {
-            id: "",
-            email: email,
-            firstName: firstName,
-            lastName: lastName,
-            name: name || email,
-            role: "user",
-          };
-        }
+              firstName,
+              lastName,
+              name: name || email,
+              role: "user",
+            })
+          : {
+              id: "",
+              email,
+              firstName,
+              lastName,
+              name: name || email,
+              role: "user",
+            };
 
         setAuthState({
           isAuthenticated: true,
@@ -456,7 +378,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       debugAuthError(
         "[AuthContext] Register failed:",
-        (authResponse as any)?.message || "Unknown error",
+        authResponse?.message || "Unknown error",
       );
       return false;
     } catch (error) {

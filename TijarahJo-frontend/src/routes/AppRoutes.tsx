@@ -1,16 +1,34 @@
-import { Suspense, lazy, useEffect, useState, type ReactElement } from "react";
+import { Suspense, lazy, type ReactElement } from "react";
 import {
   Routes,
   Route,
   useNavigate,
   useParams,
+  useLocation,
   Navigate,
 } from "react-router-dom";
-import { Loader2 } from "lucide-react";
-import { Product, Language, UserProfile, ViewMode } from "../types";
-import { toast } from "sonner";
+import { Language, UserProfile, ViewMode } from "../types";
 import { api } from "../services/api";
-import { APP_CONFIG } from "../constants/appConfig";
+import { deferredToast } from "../utils/toast";
+import { translations } from "../translations";
+import { DEBOUNCE_DELAY } from "../constants";
+import { useDebounce } from "../hooks/useDebounce";
+import { useProducts } from "../hooks/useProducts";
+import { useFavorites } from "../hooks/useFavorites";
+import { useInfiniteScroll } from "../hooks/useInfiniteScroll";
+import { useLocalStorage } from "../hooks/useLocalStorage";
+import {
+  ROUTES_REQUIRING_MARKETPLACE_DATA,
+  applyLoginUserDataToProfile,
+  buildCreatePostPayload,
+  CreatePostInput,
+  decodeCategoryParam,
+  getCategoryTranslation,
+  resolveCurrentUserId,
+  toEditProfileFormProfile,
+  toProfilePageUserProfile,
+} from "./appRoutesUtils";
+import { useProductDetailsRouteData } from "./useProductDetailsRouteData";
 
 const HomePage = lazy(() =>
   import("../pages/HomePage").then((m) => ({ default: m.HomePage })),
@@ -70,140 +88,77 @@ interface AppRoutesProps {
   isAuthenticated: boolean;
   userProfile: UserProfile;
   darkMode: boolean;
-
-  // Data
-  availableProducts: Product[];
-  favoriteIds: string[];
-  isLoadingProducts: boolean;
-  productsError: string | null;
-
-  // Actions
-  toggleFavorite: (id: string) => void;
-  fetchPostsFromBackend: () => Promise<void>;
   setDarkMode: (enabled: boolean) => void;
   toggleLanguage: () => void;
   logout: () => Promise<void>;
   setUserProfile: (profile: UserProfile) => void;
-
-  // HomePage specific
-  t: any;
-  isRTL: boolean;
-  displayedItems: Product[];
-  viewMode: ViewMode;
-  setViewMode: (mode: ViewMode) => void;
-  currentPage: number;
-  totalPages: number;
-  isLoading: boolean;
   currentUserDisplayName: string;
-  goToNextPage: () => void;
-  goToPreviousPage: () => void;
-  getCategoryTranslation: (key: string) => string;
-
-  // Search
   setSearchQuery: (q: string) => void;
   setActiveSearchQuery: (q: string) => void;
   activeSearchQuery: string;
   searchQuery: string;
-  setShowLoginPrompt: (show: boolean) => void;
-  setLoginRedirectAction: (action: "sell" | "profile" | null) => void;
-  showLoginPrompt: boolean;
-  loginRedirectAction: "sell" | "profile" | null;
 }
 
 export function AppRoutes(props: AppRoutesProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const normalizedPathname = location.pathname.toLowerCase().replace(/\/+$/, "");
+  const pathSegments = normalizedPathname.split("/").filter(Boolean);
+  const primarySegment = pathSegments[0] || "";
+  const shouldLoadMarketplaceData =
+    primarySegment.length === 0 ||
+    ROUTES_REQUIRING_MARKETPLACE_DATA.has(primarySegment);
+
+  const debouncedSearchQuery = useDebounce(
+    props.searchQuery,
+    DEBOUNCE_DELAY.SEARCH,
+  );
+  const [viewMode, setViewMode] = useLocalStorage<ViewMode>(
+    "tijarahjo_view_mode",
+    "grid-4",
+  );
+  const {
+    availableProducts,
+    isLoadingProducts: isLoadingProductsFromRouteData,
+    productsError,
+    filteredProducts,
+    fetchPostsFromBackend,
+  } = useProducts(debouncedSearchQuery, {
+    enabled: shouldLoadMarketplaceData,
+  });
+  const { favoriteIds, toggleFavorite } = useFavorites({
+    enabled: shouldLoadMarketplaceData,
+  });
+  const {
+    displayedItems,
+    isLoading,
+    currentPage,
+    totalPages,
+    goToNextPage,
+    goToPreviousPage,
+  } = useInfiniteScroll({
+    items: filteredProducts,
+    itemsPerPage: 12,
+  });
+
+  const t = translations[props.language];
+  const isRTL = props.language === "ar";
+  const translateCategory = (category: string) =>
+    getCategoryTranslation(category, props.language);
+
   const redirectToLogin = () => navigate("/login");
   const requireAuth = (element: ReactElement) =>
     props.isAuthenticated ? element : <Navigate to="/login" replace />;
 
-  type CreatePostInput = {
-    name: string;
-    description?: string;
-    price: number;
-    category: string;
-    location?: string;
-    area?: string;
-    image?: string;
-    images?: string[];
-  };
-
-  const decodeJwtPayload = (jwtToken: string): Record<string, unknown> | null => {
-    const payloadPart = jwtToken.split(".")[1];
-    if (!payloadPart) {
-      return null;
-    }
-
-    const base64 = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
-
-    try {
-      return JSON.parse(atob(padded)) as Record<string, unknown>;
-    } catch {
-      return null;
-    }
-  };
-
-  const resolveCurrentUserId = (): string | null => {
-    const profileId = String(props.userProfile.id || "").trim();
-    if (/^\d+$/.test(profileId)) {
-      return profileId;
-    }
-
-    const token = localStorage.getItem("tijarahjo_token");
-    if (!token) {
-      return null;
-    }
-
-    const payload = decodeJwtPayload(token);
-    const tokenUserId = String(
-      payload?.nameid ?? payload?.sub ?? payload?.id ?? "",
-    ).trim();
-    return /^\d+$/.test(tokenUserId) ? tokenUserId : null;
-  };
-
-  const resolvePostCity = (preferredCity?: string): string => {
-    const city = String(
-      preferredCity || props.userProfile.city || APP_CONFIG.defaultCity,
-    ).trim();
-    return city || APP_CONFIG.defaultCity;
-  };
-
-  const resolvePostArea = (preferredArea?: string): string =>
-    String(preferredArea || props.userProfile.area || "").trim();
-
-  const resolvePostPhone = (): string => {
-    const phone = String(
-      props.userProfile.phone || APP_CONFIG.defaultPhonePrefix,
-    ).trim();
-    return phone || APP_CONFIG.defaultPhonePrefix;
-  };
-
-  const buildCreatePostPayload = (product: CreatePostInput) => ({
-    // Ensure API receives only valid image URL strings.
-    images:
-      (product.images?.length
-        ? product.images
-        : [product.image]
-      ).filter(
-        (value): value is string =>
-          typeof value === "string" && value.trim().length > 0,
-      ),
-    title: product.name,
-    description: product.description || "",
-    price: product.price,
-    category: product.category,
-    city: resolvePostCity(product.location),
-    area: resolvePostArea(product.area),
-    phone: resolvePostPhone(),
-  });
-
   const createPost = async (product: CreatePostInput) => {
-    const result = await api.posts.createPost(buildCreatePostPayload(product));
+    const result = await api.posts.createPost(
+      buildCreatePostPayload(product, props.userProfile),
+    );
     if (!result.success) {
       throw new Error(result.message || "Failed to create post");
     }
 
-    await props.fetchPostsFromBackend();
+    await fetchPostsFromBackend();
     return result;
   };
 
@@ -226,25 +181,18 @@ export function AppRoutes(props: AppRoutesProps) {
       images: updatedProduct.images || [],
     });
 
-    await props.fetchPostsFromBackend();
+    await fetchPostsFromBackend();
   };
 
   const deletePost = async (postId: string) => {
     await api.posts.deletePost(postId);
-    await props.fetchPostsFromBackend();
+    await fetchPostsFromBackend();
   };
 
   // Helper to handle category pages based on URL param
   const CategoryRouteWrapper = () => {
     const { categoryName } = useParams();
-    let decodedCategory = String(categoryName || "").trim();
-    if (decodedCategory) {
-      try {
-        decodedCategory = decodeURIComponent(decodedCategory).trim();
-      } catch {
-        // Keep raw value if URL contains malformed encoding instead of crashing the route.
-      }
-    }
+    const decodedCategory = decodeCategoryParam(categoryName);
 
     if (!decodedCategory) {
       return <Navigate to="/" replace />;
@@ -254,10 +202,10 @@ export function AppRoutes(props: AppRoutesProps) {
       <CategoryPage
         categoryName={decodedCategory}
         onBack={() => navigate("/")}
-        products={props.availableProducts}
+        products={availableProducts}
         onProductClick={(id: string) => navigate(`/product/${id}`)}
-        favoriteIds={props.favoriteIds}
-        onFavoriteToggle={props.toggleFavorite}
+        favoriteIds={favoriteIds}
+        onFavoriteToggle={toggleFavorite}
         language={props.language}
         isAuthenticated={props.isAuthenticated}
         currentUserDisplayName={props.isAuthenticated ? props.currentUserDisplayName : undefined}
@@ -267,51 +215,16 @@ export function AppRoutes(props: AppRoutesProps) {
 
   const ProductDetailsRouteWrapper = () => {
     const { id } = useParams();
-    const isLoadingProducts = props.isLoadingProducts;
-    const product = props.availableProducts.find((p) => p.id === id);
-    const [fallbackProduct, setFallbackProduct] = useState<Product | null>(null);
-    const [isLoadingFallbackProduct, setIsLoadingFallbackProduct] =
-      useState(false);
-    const CURRENT_USER_ID = props.userProfile.id;
+    const { resolvedProduct, isLoadingRouteProduct, isOwnProduct } =
+      useProductDetailsRouteData({
+        id,
+        availableProducts,
+        isLoadingProducts: isLoadingProductsFromRouteData,
+        isAuthenticated: props.isAuthenticated,
+        userProfile: props.userProfile,
+      });
 
-    useEffect(() => {
-      let isCancelled = false;
-
-      setFallbackProduct(null);
-
-      if (!id || isLoadingProducts || product) {
-        setIsLoadingFallbackProduct(false);
-        return;
-      }
-
-      setIsLoadingFallbackProduct(true);
-
-      (async () => {
-        try {
-          const fetchedProduct = await api.posts.getPost(id);
-          if (isCancelled) {
-            return;
-          }
-          setFallbackProduct(fetchedProduct);
-        } catch {
-          if (!isCancelled) {
-            setFallbackProduct(null);
-          }
-        } finally {
-          if (!isCancelled) {
-            setIsLoadingFallbackProduct(false);
-          }
-        }
-      })();
-
-      return () => {
-        isCancelled = true;
-      };
-    }, [id, isLoadingProducts, product]);
-
-    const resolvedProduct = product || fallbackProduct;
-
-    if ((isLoadingProducts || isLoadingFallbackProduct) && !resolvedProduct) {
+    if (isLoadingRouteProduct) {
       return (
         <div className="min-h-screen flex items-center justify-center text-gray-500 dark:text-gray-400">
           Loading product...
@@ -333,23 +246,11 @@ export function AppRoutes(props: AppRoutesProps) {
       );
     }
 
-    const normalizedSellerName = String(resolvedProduct.seller || "")
-      .trim()
-      .toLowerCase();
-    const normalizedCurrentUserDisplayName = String(props.userProfile.name || "")
-      .trim()
-      .toLowerCase();
-    const isOwnProduct =
-      props.isAuthenticated &&
-      (resolvedProduct.sellerId === CURRENT_USER_ID ||
-        (normalizedSellerName.length > 0 &&
-          normalizedSellerName === normalizedCurrentUserDisplayName));
-
     return (
       <ProductDetailsPage
         product={resolvedProduct}
         onBack={() => navigate(-1)}
-        allProducts={props.availableProducts}
+        allProducts={availableProducts}
         language={props.language}
         onProductClick={(pid: string) => navigate(`/product/${pid}`)}
         onSellerClick={() => {
@@ -357,7 +258,7 @@ export function AppRoutes(props: AppRoutesProps) {
           else {
             const targetSellerId = String(resolvedProduct.sellerId || "").trim();
             if (!targetSellerId) {
-              toast.error("Seller profile unavailable");
+              deferredToast.error("Seller profile unavailable");
               return;
             }
             navigate(`/seller/${targetSellerId}`);
@@ -366,7 +267,7 @@ export function AppRoutes(props: AppRoutesProps) {
         onChatWithSeller={() => {
           const targetSellerId = String(resolvedProduct.sellerId || "").trim();
           if (!targetSellerId) {
-            toast.error("Seller chat unavailable");
+            deferredToast.error("Seller chat unavailable");
             return;
           }
 
@@ -375,9 +276,12 @@ export function AppRoutes(props: AppRoutesProps) {
             return;
           }
 
-          const currentUserId = resolveCurrentUserId();
+          const currentUserId = resolveCurrentUserId(
+            props.userProfile,
+            localStorage.getItem("tijarahjo_token"),
+          );
           if (currentUserId && currentUserId === targetSellerId) {
-            toast.error("You cannot chat with yourself");
+            deferredToast.error("You cannot chat with yourself");
             return;
           }
 
@@ -387,22 +291,22 @@ export function AppRoutes(props: AppRoutesProps) {
         onUpdateProduct={async (updatedProduct: any) => {
           try {
             await updatePost(updatedProduct);
-            toast.success("Post updated");
+            deferredToast.success("Post updated");
           } catch (e) {
-            toast.error("Error updating");
+            deferredToast.error("Error updating");
           }
         }}
         onDeleteProduct={async (pid: string) => {
           try {
             await deletePost(pid);
-            toast.success("Post deleted");
+            deferredToast.success("Post deleted");
             navigate("/");
           } catch (e) {
-            toast.error("Error deleting");
+            deferredToast.error("Error deleting");
           }
         }}
-        favoriteIds={props.favoriteIds}
-        onFavoriteToggle={props.toggleFavorite}
+        favoriteIds={favoriteIds}
+        onFavoriteToggle={toggleFavorite}
         isAuthenticated={props.isAuthenticated}
         currentUserDisplayName={props.currentUserDisplayName}
       />
@@ -416,7 +320,10 @@ export function AppRoutes(props: AppRoutesProps) {
     <Suspense
       fallback={
         <div className="min-h-screen flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 gap-3">
-          <Loader2 className="h-7 w-7 animate-spin text-blue-600" />
+          <span
+            aria-hidden="true"
+            className="h-7 w-7 rounded-full border-2 border-blue-200 border-t-blue-600 animate-spin"
+          />
           <span>Loading...</span>
         </div>
       }
@@ -428,13 +335,12 @@ export function AppRoutes(props: AppRoutesProps) {
             <HomePage
               language={props.language}
               isAuthenticated={props.isAuthenticated}
-              t={props.t}
-              isRTL={props.isRTL}
+              t={t}
+              isRTL={isRTL}
               darkMode={props.darkMode}
               searchQuery={props.searchQuery}
               setSearchQuery={props.setSearchQuery}
               setShowLoginPrompt={(show) => show && redirectToLogin()}
-              setLoginRedirectAction={props.setLoginRedirectAction}
               // Navigation Actions -> convert to Navigate
               setShowSellItem={(show) => {
                 if (!show) return;
@@ -445,25 +351,24 @@ export function AppRoutes(props: AppRoutesProps) {
                 navigate("/sell");
               }}
               setShowAllProducts={(show) => show && navigate("/products")}
-              setShowCategoryPage={() => {}} // No-op, use onCategoryClick
               setSelectedCategoryForPage={(cat) =>
                 cat && navigate(`/category/${encodeURIComponent(cat)}`)
               }
-              isLoadingProducts={props.isLoadingProducts}
-              productsError={props.productsError}
-              displayedItems={props.displayedItems}
-              viewMode={props.viewMode}
-              setViewMode={props.setViewMode}
+              isLoadingProducts={isLoadingProductsFromRouteData}
+              productsError={productsError}
+              displayedItems={displayedItems}
+              viewMode={viewMode}
+              setViewMode={setViewMode}
               onProductClick={(id) => navigate(`/product/${id}`)}
-              favoriteIds={props.favoriteIds}
-              toggleFavorite={props.toggleFavorite}
+              favoriteIds={favoriteIds}
+              toggleFavorite={toggleFavorite}
               currentUserDisplayName={props.currentUserDisplayName}
-              currentPage={props.currentPage}
-              totalPages={props.totalPages}
-              isLoading={props.isLoading}
-              goToNextPage={props.goToNextPage}
-              goToPreviousPage={props.goToPreviousPage}
-              getCategoryTranslation={props.getCategoryTranslation}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              isLoading={isLoading}
+              goToNextPage={goToNextPage}
+              goToPreviousPage={goToPreviousPage}
+              getCategoryTranslation={translateCategory}
             />
           }
         />
@@ -498,9 +403,9 @@ export function AppRoutes(props: AppRoutesProps) {
           <FavoritesPage
             onBackToMarketplace={() => navigate("/")}
             language={props.language}
-            favoriteIds={props.favoriteIds}
-            products={props.availableProducts}
-            onRemoveFavorite={props.toggleFavorite}
+            favoriteIds={favoriteIds}
+            products={availableProducts}
+            onRemoveFavorite={toggleFavorite}
             onProductClick={(id) => navigate(`/product/${id}`)}
             isAuthenticated={props.isAuthenticated}
           />,
@@ -516,14 +421,14 @@ export function AppRoutes(props: AppRoutesProps) {
             onSubmit={async (product) => {
               try {
                 await createPost(product);
-                toast.success(
+                deferredToast.success(
                   props.language === "ar"
                     ? "تم نشر المنشور!"
                     : "Post created!",
                 );
                 navigate("/");
               } catch (e) {
-                toast.error(
+                deferredToast.error(
                   e instanceof Error ? e.message : "Error creating post",
                 );
               }
@@ -541,10 +446,10 @@ export function AppRoutes(props: AppRoutesProps) {
           <AllProductsPage
             onBack={() => navigate("/")}
             language={props.language}
-            products={props.availableProducts}
+            products={availableProducts}
             onProductClick={(id) => navigate(`/product/${id}`)}
-            favoriteIds={props.favoriteIds}
-            onFavoriteToggle={props.toggleFavorite}
+            favoriteIds={favoriteIds}
+            onFavoriteToggle={toggleFavorite}
             isAuthenticated={props.isAuthenticated}
             darkMode={props.darkMode}
             currentUserDisplayName={props.currentUserDisplayName}
@@ -557,12 +462,12 @@ export function AppRoutes(props: AppRoutesProps) {
         element={
           <SearchResultsPage
             searchQuery={props.activeSearchQuery}
-            products={props.availableProducts}
+            products={availableProducts}
             onBack={() => navigate("/")}
             onProductClick={(id) => navigate(`/product/${id}`)}
             language={props.language}
-            favoriteIds={props.favoriteIds}
-            onFavoriteToggle={props.toggleFavorite}
+            favoriteIds={favoriteIds}
+            onFavoriteToggle={toggleFavorite}
             isAuthenticated={props.isAuthenticated}
             currentUserDisplayName={props.currentUserDisplayName}
             onSearch={(newQuery) => {
@@ -578,30 +483,30 @@ export function AppRoutes(props: AppRoutesProps) {
         element={requireAuth(
           <ProfilePage
             onBackToMarketplace={() => navigate("/")}
-            products={props.availableProducts}
+            products={availableProducts}
             onProductClick={(id) => navigate(`/product/${id}`)}
             onDeleteProduct={async (pid) => {
               try {
                 await deletePost(pid);
-                toast.success("Post deleted");
+                deferredToast.success("Post deleted");
               } catch (e) {
-                toast.error("Error deleting post");
+                deferredToast.error("Error deleting post");
               }
             }}
             onUpdateProduct={async (updatedProduct) => {
               try {
                 await updatePost(updatedProduct);
-                toast.success("Post updated");
+                deferredToast.success("Post updated");
               } catch (e) {
-                toast.error("Error updating post");
+                deferredToast.error("Error updating post");
               }
             }}
             onAddProduct={async (product) => {
               try {
                 await createPost(product);
-                toast.success("Post created");
+                deferredToast.success("Post created");
               } catch (e) {
-                toast.error(
+                deferredToast.error(
                   e instanceof Error ? e.message : "Error creating post",
                 );
               }
@@ -610,22 +515,9 @@ export function AppRoutes(props: AppRoutesProps) {
             onSettingsClick={() => navigate("/settings")}
             onEditProfileClick={() => navigate("/profile/edit")}
             language={props.language}
-            userProfile={{
-              id: props.userProfile.id,
-              name: props.userProfile.name,
-              firstName: props.userProfile.firstName || "",
-              lastName: props.userProfile.lastName || "",
-              email: props.userProfile.email,
-              phone: props.userProfile.phone,
-              location: props.userProfile.location,
-              city: props.userProfile.city,
-              area: props.userProfile.area,
-              bio: props.userProfile.bio,
-              avatar: props.userProfile.avatar,
-              joinedDate: props.userProfile.joinedDate,
-            }}
-            favoriteIds={props.favoriteIds}
-            onFavoriteToggle={props.toggleFavorite}
+            userProfile={toProfilePageUserProfile(props.userProfile)}
+            favoriteIds={favoriteIds}
+            onFavoriteToggle={toggleFavorite}
             isAuthenticated={props.isAuthenticated}
             currentUserDisplayName={props.currentUserDisplayName}
           />,
@@ -648,23 +540,9 @@ export function AppRoutes(props: AppRoutesProps) {
         element={
           <LoginPage
             onLogin={(userData) => {
-              const resolvedName =
-                `${userData.firstName} ${userData.lastName}`.trim() ||
-                userData.email;
-              props.setUserProfile({
-                ...props.userProfile,
-                id:
-                  userData.id ||
-                  props.userProfile.id ||
-                  userData.email,
-                name: resolvedName,
-                firstName: userData.firstName,
-                lastName: userData.lastName,
-                email: userData.email,
-                phone: userData.phone || props.userProfile.phone,
-                avatar: userData.avatar || props.userProfile.avatar,
-                joinedDate: userData.joinedDate || props.userProfile.joinedDate,
-              });
+              props.setUserProfile(
+                applyLoginUserDataToProfile(props.userProfile, userData),
+              );
               // Navigate back or to home
               if (window.history.length > 1) {
                 navigate(-1);
@@ -682,25 +560,15 @@ export function AppRoutes(props: AppRoutesProps) {
         element={requireAuth(
           <EditProfilePage
             onBack={() => navigate("/profile")}
-            profile={{
-              id: props.userProfile.id,
-              name: props.userProfile.name,
-              firstName: props.userProfile.firstName || "",
-              lastName: props.userProfile.lastName || "",
-              email: props.userProfile.email,
-              phone: props.userProfile.phone,
-              city: props.userProfile.city || "",
-              area: props.userProfile.area || "",
-              location: props.userProfile.location,
-              bio: props.userProfile.bio,
-              avatar: props.userProfile.avatar,
-              joinedDate: props.userProfile.joinedDate,
-            }}
+            profile={toEditProfileFormProfile(props.userProfile)}
             onSave={async (updatedProfile) => {
-              const resolvedUserId = resolveCurrentUserId();
+              const resolvedUserId = resolveCurrentUserId(
+                props.userProfile,
+                localStorage.getItem("tijarahjo_token"),
+              );
               if (!resolvedUserId) {
                 const message = "Unable to resolve account ID. Please sign in again.";
-                toast.error(message);
+                deferredToast.error(message);
                 throw new Error(message);
               }
 
@@ -711,7 +579,7 @@ export function AppRoutes(props: AppRoutesProps) {
               ).trim();
               if (!normalizedEmail) {
                 const message = "Email is required to update your profile.";
-                toast.error(message);
+                deferredToast.error(message);
                 throw new Error(message);
               }
 
@@ -735,14 +603,14 @@ export function AppRoutes(props: AppRoutesProps) {
                     normalizedEmail,
                 });
 
-                toast.success("Profile updated");
+                deferredToast.success("Profile updated");
                 navigate("/profile");
               } catch (error) {
                 const errorMessage =
                   error instanceof Error
                     ? error.message
                     : "Failed to update profile";
-                toast.error(errorMessage);
+                deferredToast.error(errorMessage);
                 throw error;
               }
             }}
