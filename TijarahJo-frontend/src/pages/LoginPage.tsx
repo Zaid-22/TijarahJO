@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { AlertCircle, Loader2, Lock, Mail, User } from "lucide-react";
+import { AlertCircle, Loader2, Lock, Mail, MapPin, Phone, User } from "lucide-react";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Button } from "../components/ui/button";
 import { Logo } from "../components/ui/logo";
 import { APP_CONFIG } from "../constants/appConfig";
 import { api } from "../services/api";
+import { normalizeJordanPhone } from "../utils/phone";
 import { AuthInputField } from "./login/AuthInputField";
 import {
   calculatePasswordStrength,
@@ -21,7 +22,10 @@ type LoginField =
   | "password"
   | "confirmPassword"
   | "firstName"
-  | "lastName";
+  | "lastName"
+  | "phone"
+  | "city"
+  | "area";
 
 interface LoginFormValues {
   identifier: string;
@@ -29,6 +33,9 @@ interface LoginFormValues {
   confirmPassword: string;
   firstName: string;
   lastName: string;
+  phone: string;
+  city: string;
+  area: string;
 }
 
 interface LoginFormErrors {
@@ -37,6 +44,9 @@ interface LoginFormErrors {
   confirmPassword: string;
   firstName: string;
   lastName: string;
+  phone: string;
+  city: string;
+  area: string;
 }
 
 interface LoginPageProps {
@@ -59,6 +69,9 @@ const createEmptyErrors = (): LoginFormErrors => ({
   confirmPassword: "",
   firstName: "",
   lastName: "",
+  phone: "",
+  city: "",
+  area: "",
 });
 
 const extractErrorMessage = (payload: unknown, fallback: string): string => {
@@ -108,6 +121,9 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
     confirmPassword: "",
     firstName: "",
     lastName: "",
+    phone: APP_CONFIG.defaultPhonePrefix,
+    city: "",
+    area: "",
   });
   const [errors, setErrors] = useState<LoginFormErrors>(createEmptyErrors());
 
@@ -201,6 +217,34 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
     return "";
   };
 
+  const validatePhone = (value: string): string => {
+    if (!value.trim()) {
+      return "Phone number is required";
+    }
+
+    if (!normalizeJordanPhone(value)) {
+      return "Enter a valid Jordanian phone number";
+    }
+
+    return "";
+  };
+
+  const validateCity = (value: string): string => {
+    if (!value.trim()) {
+      return "City is required";
+    }
+
+    return "";
+  };
+
+  const validateArea = (value: string): string => {
+    if (!value.trim()) {
+      return "Area is required";
+    }
+
+    return "";
+  };
+
   const validateField = (field: LoginField): string => {
     switch (field) {
       case "identifier":
@@ -213,6 +257,12 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
         return validateFirstName(values.firstName);
       case "lastName":
         return validateLastName(values.lastName);
+      case "phone":
+        return validatePhone(values.phone);
+      case "city":
+        return validateCity(values.city);
+      case "area":
+        return validateArea(values.area);
       default:
         return "";
     }
@@ -228,6 +278,9 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
       nextErrors.confirmPassword = validateConfirmPassword(values.confirmPassword);
       nextErrors.firstName = validateFirstName(values.firstName);
       nextErrors.lastName = validateLastName(values.lastName);
+      nextErrors.phone = validatePhone(values.phone);
+      nextErrors.city = validateCity(values.city);
+      nextErrors.area = validateArea(values.area);
     }
 
     return nextErrors;
@@ -257,6 +310,9 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
 
   const handleSignUp = async () => {
     const parsedIdentifier = parseAuthIdentifier(values.identifier);
+    const normalizedPhone = normalizeJordanPhone(values.phone);
+    const normalizedCity = values.city.trim();
+    const normalizedArea = values.area.trim();
 
     if (!parsedIdentifier.email && !parsedIdentifier.phone) {
       setFieldError("identifier", "Enter a valid email or Jordanian phone number");
@@ -264,13 +320,31 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
       return;
     }
 
+    if (!normalizedPhone) {
+      setFieldError("phone", "Enter a valid Jordanian phone number");
+      setGeneralError("Please enter a valid Jordanian phone number.");
+      return;
+    }
+
+    if (!normalizedCity) {
+      setFieldError("city", "City is required");
+      setGeneralError("Please enter your city.");
+      return;
+    }
+
+    if (!normalizedArea) {
+      setFieldError("area", "Area is required");
+      setGeneralError("Please enter your area.");
+      return;
+    }
+
     const response = await api.auth.register(
       parsedIdentifier.email || "",
       values.password,
       `${values.firstName.trim()} ${values.lastName.trim()}`,
-      parsedIdentifier.phone || undefined,
-      APP_CONFIG.defaultCity,
-      undefined,
+      normalizedPhone,
+      normalizedCity,
+      normalizedArea,
     );
 
     if (!response.success || !response.data) {
@@ -303,7 +377,7 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
       lastName: user?.lastName || values.lastName.trim(),
       email: user?.email || parsedIdentifier.email || values.identifier.trim(),
       token,
-      phone: user?.phone || parsedIdentifier.phone || "",
+      phone: user?.phone || normalizedPhone,
       avatar: user?.avatar,
       joinedDate: formatJoinedDateLabel(user?.joinedDate),
     });
@@ -450,6 +524,75 @@ export function LoginPage({ onLogin, onContinueAsGuest }: LoginPageProps) {
                   onBlur={() => {
                     setFocusedField(null);
                     setFieldError("lastName", validateField("lastName"));
+                  }}
+                />
+              </div>
+            )}
+
+            {isSignUp && (
+              <AuthInputField
+                id="phone"
+                name="phone"
+                label="Phone Number"
+                required
+                placeholder="+9627XXXXXXXX"
+                value={values.phone}
+                error={errors.phone}
+                disabled={isLoading}
+                type="text"
+                autoComplete="tel"
+                icon={Phone}
+                focused={focusedField === "phone"}
+                onChange={(value) => setFieldValue("phone", value)}
+                onFocus={() => setFocusedField("phone")}
+                onBlur={() => {
+                  setFocusedField(null);
+                  setFieldError("phone", validateField("phone"));
+                }}
+              />
+            )}
+
+            {isSignUp && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <AuthInputField
+                  id="city"
+                  name="city"
+                  label="City"
+                  required
+                  placeholder="City"
+                  value={values.city}
+                  error={errors.city}
+                  disabled={isLoading}
+                  type="text"
+                  autoComplete="address-level2"
+                  icon={MapPin}
+                  focused={focusedField === "city"}
+                  onChange={(value) => setFieldValue("city", value)}
+                  onFocus={() => setFocusedField("city")}
+                  onBlur={() => {
+                    setFocusedField(null);
+                    setFieldError("city", validateField("city"));
+                  }}
+                />
+
+                <AuthInputField
+                  id="area"
+                  name="area"
+                  label="Area"
+                  required
+                  placeholder="Area"
+                  value={values.area}
+                  error={errors.area}
+                  disabled={isLoading}
+                  type="text"
+                  autoComplete="address-level3"
+                  icon={MapPin}
+                  focused={focusedField === "area"}
+                  onChange={(value) => setFieldValue("area", value)}
+                  onFocus={() => setFocusedField("area")}
+                  onBlur={() => {
+                    setFocusedField(null);
+                    setFieldError("area", validateField("area"));
                   }}
                 />
               </div>
