@@ -21,8 +21,8 @@ BACKEND_PID_FILE="${BACKEND_PID_FILE:-$ROOT_DIR/.tijarahjo_backend.pid}"
 RESET_VOLUME=1
 RUN_VERIFY=1
 KEEP_BACKEND_RUNNING=0
-APPLY_DEV_SEEDS=0
-APPLY_TEST_SEEDS=0
+APPLY_DEV_SEEDS="${APPLY_DEV_SEEDS:-false}"
+APPLY_TEST_SEEDS="${APPLY_TEST_SEEDS:-false}"
 
 print_usage() {
   cat <<'EOF'
@@ -59,11 +59,11 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --with-dev-seeds)
-      APPLY_DEV_SEEDS=1
+      APPLY_DEV_SEEDS="true"
       shift
       ;;
     --with-test-seeds)
-      APPLY_TEST_SEEDS=1
+      APPLY_TEST_SEEDS="true"
       shift
       ;;
     -h|--help)
@@ -172,7 +172,7 @@ else
   echo "Warning: baseline seed bundle was not generated at $SEED_BASELINE_SQL_BUNDLE (continuing without seeds)."
 fi
 
-if [[ "$APPLY_DEV_SEEDS" -eq 1 ]]; then
+if [[ "$APPLY_DEV_SEEDS" == "1" || "$APPLY_DEV_SEEDS" == "true" ]]; then
   if [[ -f "$SEED_DEV_SQL_BUNDLE" ]]; then
     apply_sql_file "$SEED_DEV_SQL_BUNDLE"
   else
@@ -180,7 +180,7 @@ if [[ "$APPLY_DEV_SEEDS" -eq 1 ]]; then
   fi
 fi
 
-if [[ "$APPLY_TEST_SEEDS" -eq 1 ]]; then
+if [[ "$APPLY_TEST_SEEDS" == "1" || "$APPLY_TEST_SEEDS" == "true" ]]; then
   if [[ -f "$SEED_TEST_SQL_BUNDLE" ]]; then
     apply_sql_file "$SEED_TEST_SQL_BUNDLE"
   else

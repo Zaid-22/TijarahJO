@@ -133,5 +133,20 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID(N'dbo.TbMessages', N'U') IS NOT NULL
+   AND NOT EXISTS (
+        SELECT 1
+        FROM sys.indexes
+        WHERE name = N'IX_Messages_Unread'
+          AND object_id = OBJECT_ID(N'dbo.TbMessages')
+   )
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_Messages_Unread
+    ON dbo.TbMessages (ReceiverID, SenderID, IsRead);
+
+    PRINT 'Created index IX_Messages_Unread.';
+END
+GO
+
 PRINT 'Schema versioning and search index enhancements completed.';
 GO
