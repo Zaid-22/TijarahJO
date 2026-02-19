@@ -17,8 +17,8 @@ END
 GO
 
 -- Insert test user
--- Password: password123
--- Hash (SHA256 + Base64): 75K3eLr+dx6JJFuJ7LwIpEpOFmwGZZkRiB84PURz6U8=
+-- Password: intentionally removed for security (no seeded credentials)
+-- Account requires manual password reset or API creation
 MERGE dbo.TbUsers AS target
 USING
 (
@@ -31,7 +31,7 @@ USING
 ON target.Email = source.Email
 WHEN MATCHED THEN
     UPDATE SET
-        HashedPassword = '75K3eLr+dx6JJFuJ7LwIpEpOFmwGZZkRiB84PURz6U8=',
+        HashedPassword = 'DISABLED_NO_SEEDED_CREDENTIALS',
         FirstName = source.FirstName,
         LastName = source.LastName,
         JoinDate = source.JoinDate,
@@ -50,7 +50,7 @@ WHEN NOT MATCHED BY TARGET THEN
         IsDeleted
     )
     VALUES (
-        '75K3eLr+dx6JJFuJ7LwIpEpOFmwGZZkRiB84PURz6U8=',
+        'DISABLED_NO_SEEDED_CREDENTIALS',
         source.Email,
         source.FirstName,
         source.LastName,
@@ -68,9 +68,8 @@ PRINT '========================================';
 PRINT '';
 PRINT 'Login Credentials:';
 PRINT '  Email:    test@example.com';
-PRINT '  Password: password123';
+PRINT '  Password: (DISABLED - Use password reset API or create via Register endpoint)';
 PRINT '';
-PRINT 'You can use email to login.';
 PRINT '========================================';
 GO
 

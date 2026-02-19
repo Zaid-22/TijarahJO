@@ -970,50 +970,7 @@ END;
 GO
 
 -- ---------------------------------------------------------------------------
--- Legacy compatibility layer (deprecated): SP_* -> usp_*
--- ---------------------------------------------------------------------------
-DECLARE @CanonicalProc SYSNAME;
-DECLARE @LegacyProc SYSNAME;
-DECLARE @CompatSql NVARCHAR(MAX);
-
-DECLARE proc_cursor CURSOR LOCAL FAST_FORWARD FOR
-SELECT p.name
-FROM sys.procedures AS p
-WHERE p.schema_id = SCHEMA_ID(N'dbo')
-  AND p.name LIKE N'usp[_]%';
-
-OPEN proc_cursor;
-FETCH NEXT FROM proc_cursor INTO @CanonicalProc;
-
-WHILE @@FETCH_STATUS = 0
-BEGIN
-    SET @LegacyProc = N'SP_' + SUBSTRING(@CanonicalProc, 5, 128);
-
-    SET @CompatSql = N'
-IF EXISTS (
-    SELECT 1
-    FROM sys.procedures
-    WHERE name = N''' + @LegacyProc + N'''
-      AND schema_id = SCHEMA_ID(N''dbo'')
-)
-    DROP PROCEDURE dbo.' + QUOTENAME(@LegacyProc) + N';
-IF EXISTS (
-    SELECT 1
-    FROM sys.synonyms
-    WHERE name = N''' + @LegacyProc + N'''
-      AND schema_id = SCHEMA_ID(N''dbo'')
-)
-    DROP SYNONYM dbo.' + QUOTENAME(@LegacyProc) + N';
-CREATE SYNONYM dbo.' + QUOTENAME(@LegacyProc) + N' FOR dbo.' + QUOTENAME(@CanonicalProc) + N';';
-
-    EXEC sys.sp_executesql @CompatSql;
-
-    FETCH NEXT FROM proc_cursor INTO @CanonicalProc;
-END
-
-CLOSE proc_cursor;
-DEALLOCATE proc_cursor;
-GO
+-- Legacy compatibility layer (deprecated): SP_* -> usp_* removed to enforce usp_ convention
 
 PRINT 'Canonical stored procedure consolidation completed.';
 GO

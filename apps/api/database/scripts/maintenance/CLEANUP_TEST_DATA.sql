@@ -60,38 +60,27 @@ BEGIN TRY
 
     IF OBJECT_ID(N'dbo.TbFavorites', N'U') IS NOT NULL
     BEGIN
-        DELETE f
+        UPDATE f
+        SET IsDeleted = 1
         FROM dbo.TbFavorites AS f
         INNER JOIN @TargetPosts AS tp ON tp.PostID = f.PostID;
 
-        DELETE f
+        UPDATE f
+        SET IsDeleted = 1
         FROM dbo.TbFavorites AS f
         INNER JOIN @TargetUsers AS tu ON tu.UserID = f.UserID;
     END
 
-    IF OBJECT_ID(N'dbo.TbMessages', N'U') IS NOT NULL
+    IF OBJECT_ID(N'dbo.TbPostImages', N'U') IS NOT NULL
     BEGIN
-        DELETE m
-        FROM dbo.TbMessages AS m
-        INNER JOIN @TargetPosts AS tp ON tp.PostID = m.PostID;
-
-        DELETE m
-        FROM dbo.TbMessages AS m
-        INNER JOIN @TargetUsers AS tu ON tu.UserID = m.SenderID OR tu.UserID = m.ReceiverID;
+        UPDATE pi
+        SET IsDeleted = 1
+        FROM dbo.TbPostImages AS pi
+        INNER JOIN @TargetPosts AS tp ON tp.PostID = pi.PostID;
     END
 
-    IF OBJECT_ID(N'dbo.TbReviews', N'U') IS NOT NULL
-    BEGIN
-        DELETE r
-        FROM dbo.TbReviews AS r
-        INNER JOIN @TargetUsers AS tu ON tu.UserID = r.ReviewerID OR tu.UserID = r.ReviewedUserID;
-    END
-
-    DELETE pi
-    FROM dbo.TbPostImages AS pi
-    INNER JOIN @TargetPosts AS tp ON tp.PostID = pi.PostID;
-
-    DELETE p
+    UPDATE p
+    SET IsDeleted = 1
     FROM dbo.TbPosts AS p
     INNER JOIN @TargetPosts AS tp ON tp.PostID = p.PostID;
 

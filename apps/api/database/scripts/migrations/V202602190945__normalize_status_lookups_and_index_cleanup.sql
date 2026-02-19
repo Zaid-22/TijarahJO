@@ -38,7 +38,6 @@ MERGE dbo.UserStatusLookup AS target
 USING
 (
     VALUES
-        (0, N'DELETED', N'DELETED', CAST(0 AS BIT), N'Soft-deleted user account'),
         (1, N'ACTIVE', N'ACTIVE', CAST(1 AS BIT), N'Active user account'),
         (2, N'BANNED', N'BANNED', CAST(0 AS BIT), N'Banned user account'),
         (3, N'INACTIVE', N'INACTIVE', CAST(0 AS BIT), N'Inactive user account')
@@ -115,7 +114,6 @@ USING
     VALUES
         (0, N'ACTIVE', N'ACTIVE', CAST(1 AS BIT), N'Visible active listing'),
         (1, N'BANNED', N'BANNED', CAST(0 AS BIT), N'Moderated listing'),
-        (2, N'DELETED', N'DELETED', CAST(0 AS BIT), N'Soft-deleted listing'),
         (3, N'SOLD', N'SOLD', CAST(0 AS BIT), N'Sold listing')
 ) AS source (StatusID, Code, StatusName, IsVisible, Description)
 ON target.StatusID = source.StatusID
@@ -170,7 +168,7 @@ BEGIN
     FROM dbo.TbUsers AS u
     LEFT JOIN dbo.UserStatusLookup AS s
       ON s.StatusID = u.Status
-    WHERE s.StatusID IS NULL;
+    WHERE s.StatusID IS NULL OR u.Status = 0;
 
     IF EXISTS (
         SELECT 1
@@ -210,7 +208,7 @@ BEGIN
     FROM dbo.TbPosts AS p
     LEFT JOIN dbo.PostStatusLookup AS s
       ON s.StatusID = p.Status
-    WHERE s.StatusID IS NULL;
+    WHERE s.StatusID IS NULL OR p.Status = 2;
 
     IF NOT EXISTS (
         SELECT 1
