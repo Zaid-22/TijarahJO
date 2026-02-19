@@ -71,6 +71,11 @@ coverage/
 *.sqlite3
 # Generated SQL bundles (do not edit manually; regenerate via build_sql_bundles.sh)
 apps/api/database/bundles/*
+schema.sql
+migrations.sql
+procedures.sql
+indexes.sql
+master.sql
 !apps/api/database/bundles/.gitkeep
 
 # Backup files
