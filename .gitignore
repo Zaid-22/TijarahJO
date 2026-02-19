@@ -3,11 +3,13 @@ node_modules/
 package-lock.json
 
 # Keep lockfiles out by default, but track frontend lockfile for deterministic CI
-!TijarahJo-frontend/package-lock.json
+!apps/web/package-lock.json
 
 # Build outputs
 dist/
 build/
+**/dist/
+**/build/
 *.dll
 *.pdb
 *.exe
@@ -15,6 +17,8 @@ build/
 # .NET
 bin/
 obj/
+**/bin/
+**/obj/
 *.user
 *.suo
 *.cache
@@ -27,12 +31,16 @@ obj/
 .vs/
 .vscode/
 .idea/
+**/.vs/
+**/.vscode/
+**/.idea/
 *.swp
 *.swo
 *~
 
 # OS
 .DS_Store
+**/.DS_Store
 Thumbs.db
 
 # Environment
@@ -55,11 +63,15 @@ coverage/
 *.tmp
 *.temp
 .cache/
+*.pid
 
 # Database
 *.db
 *.sqlite
 *.sqlite3
+# Generated SQL bundles (do not edit manually; regenerate via build_sql_bundles.sh)
+apps/api/database/bundles/*
+!apps/api/database/bundles/.gitkeep
 
 # Backup files
 *.bak
@@ -70,4 +82,5 @@ docs/_build/
 
 # TypeScript
 *.tsbuildinfo
-TijarahJo-frontend/.unit-dist/
+apps/web/.unit-dist/
+**/.unit-dist/
