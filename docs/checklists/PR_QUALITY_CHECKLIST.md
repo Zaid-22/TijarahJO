@@ -17,14 +17,20 @@ Use this checklist before opening or merging a pull request.
 Run these first:
 
 ```bash
+make structure-check
 make backend-build
+make backend-test
 make frontend-lint
+make frontend-test
 make frontend-build
 ```
 
 Expected:
+- structure check passes
 - backend build succeeds
+- backend unit tests succeed
 - frontend lint succeeds with zero warnings
+- frontend unit tests succeed
 - frontend production build succeeds
 
 ---
@@ -40,7 +46,7 @@ make ci-backend
 This runs:
 - database bootstrap/reset
 - backend startup
-- full API regression suite (`verify_all_apis.sh`)
+- full API regression suite (`scripts/verify_all_apis.sh`)
 
 Expected:
 - verification summary reports `FAIL=0`
@@ -54,6 +60,12 @@ make smoke
 
 Expected:
 - smoke summary reports `FAIL=0`
+
+Run explicit contract checks while backend is up:
+
+```bash
+make contracts-check
+```
 
 ---
 

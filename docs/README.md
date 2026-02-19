@@ -1,146 +1,102 @@
 # TijarahJo Documentation
 
-This directory contains all project documentation organized by category.
+This folder contains the maintained project documentation.
 
-## 📁 Directory Structure
+## Directory Index
 
-```
+```text
 docs/
-├── README.md                    # This file - documentation index
-├── reports/                     # Main project reports
-├── setup/                       # Setup and installation guides
-├── troubleshooting/             # Error fixes and debugging guides
-├── architecture/                # Architecture and structure documentation
-└── checklists/                  # Launch and setup checklists
+├── README.md
+├── DOCUMENTATION_ORGANIZATION.md
+├── api/
+├── archive/
+├── backend/
+├── frontend/
+├── reports/
+│   └── archive/
+├── setup/
+├── troubleshooting/
+│   └── archive/
+├── architecture/
+│   ├── adr/
+│   └── archive/
+└── checklists/
 ```
 
----
+## Reports (`reports/`)
 
-## 📊 Reports (`reports/`)
+- `reports/FINAL_PROJECT_REPORT.md`
+- `reports/INTEGRATION_REPORT.md`
+- `reports/API_ENDPOINTS_STATUS.md`
+- `reports/FRONTEND_FILE_ASSESSMENT_2026-02-17.md`
+- `reports/archive/README.md` (historical snapshots)
 
-Main project reports and comprehensive documentation:
+Use for project summary, integration details, and endpoint status.
 
-- **FINAL_PROJECT_REPORT.md** - Complete project report covering all aspects
-- **INTEGRATION_REPORT.md** - Frontend-backend integration analysis
-- **API_ENDPOINTS_STATUS.md** - API endpoints status and documentation
+## API (`api/`)
 
-**When to use:** For comprehensive project overview, integration details, or API reference.
+API-specific documentation for contracts, endpoint conventions, and OpenAPI-related notes.
 
----
+## Backend (`backend/`)
 
-## 🚀 Setup Guides (`setup/`)
+Operational backend notes and historical fix summaries consolidated from the API repository.
 
-Installation and setup documentation:
+## Frontend (`frontend/`)
 
-- **SETUP_NEW_COMPUTER_GUIDE.md** - Complete guide for setting up on a new computer
-- **QUICK_SETUP_CHECKLIST.md** - Quick reference checklist for setup
-- **WILL_IT_WORK_ON_ANOTHER_COMPUTER.md** - Portability guide
-- **ENV_TEMPLATE.txt** - Environment variables template
-- **BACKEND_SETUP_MAC.md** - Backend setup for macOS
-- **BACKEND_SETUP_STEP_BY_STEP.md** - Step-by-step backend setup
-- **DATABASE_SETUP_CHECKLIST.md** - Database setup checklist
-- **AZURE_DATA_STUDIO_SETUP.md** - Azure Data Studio setup
+Frontend-focused implementation notes and QA matrices.
 
-**When to use:** When setting up the project for the first time or on a new computer.
+## Setup (`setup/`)
 
----
+- `setup/SETUP_NEW_COMPUTER_GUIDE.md`
+- `setup/QUICK_SETUP_CHECKLIST.md`
+- `setup/WILL_IT_WORK_ON_ANOTHER_COMPUTER.md`
+- `setup/ENV_TEMPLATE.txt`
+- `setup/BACKEND_SETUP_STEP_BY_STEP.md`
+- `setup/DATABASE_SETUP_CHECKLIST.md`
 
-## 🔧 Troubleshooting (`troubleshooting/`)
+Use for machine setup, backend setup, and environment configuration.
 
-Error fixes, debugging guides, and issue resolution:
+## Troubleshooting (`troubleshooting/`)
 
-- **ALL_ERRORS_FIXED.md** - Summary of all fixed errors
-- **COMPLETE_FIXES_SUMMARY.md** - Complete fixes summary
-- **ERRORS_FIXED_SUMMARY.md** - Errors fixed summary
-- **FIXES_APPLIED_REPORT.md** - Report of applied fixes
-- **PROFILE_SAVE_FIX.md** - Profile save issue fix
-- **PROFILE_UPDATE_FIX.md** - Profile update issue fix
-- **SIGN_IN_SIGN_UP_FIXES.md** - Sign in/up fixes
-- **CRITICAL_FIXES.md** - Critical fixes documentation
-- **DEBUGGING_GUIDE.md** - Debugging guide
-- **TESTING_GUIDE.md** - Testing guide
-- **COMPREHENSIVE_FIX_REPORT.md** - Comprehensive fix report
-- **COMPLETE_ENDPOINT_TEST_REPORT.md** - Endpoint testing report
-- **FRONTEND_VERIFICATION_REPORT.md** - Frontend verification report
+Primary active docs:
 
-**When to use:** When encountering errors or issues, or for debugging help.
+- `troubleshooting/PROFILE_UPDATE_FIX.md`
+- `troubleshooting/SIGN_IN_SIGN_UP_FIXES.md`
 
----
+Historical troubleshooting logs:
 
-## 🏗️ Architecture (`architecture/`)
+- `troubleshooting/archive/README.md`
 
-Project structure and architecture documentation:
+## Architecture (`architecture/`)
 
-- **PROJECT_STRUCTURE.md** - Project structure overview
-- **FINAL_STRUCTURE.md** - Final project structure
-- **CURRENT_STATUS.md** - Current architecture status
-- **IMPORT_MIGRATION_GUIDE.md** - Import and migration guide
-- **COMPLETE_RESTRUCTURE_GUIDE.md** - Complete restructure guide
-- **RESTRUCTURE_SUMMARY.md** - Restructure summary
-- **PROJECT_RESTRUCTURE_PLAN.md** - Restructure planning
-- **RESTRUCTURE_CHECKLIST.md** - Restructure checklist
-- **RESTRUCTURE_IMPLEMENTATION.md** - Restructure implementation
+- Canonical current structure: `architecture/CURRENT_STRUCTURE_2026.md`
+- Path ownership and boundaries: `architecture/PATH_CONVENTIONS.md`
+- Architectural decisions: `architecture/adr/README.md`
+- Historical restructure implementation artifacts:
+  - `architecture/archive/README.md`
 
-**When to use:** To understand project structure, architecture decisions, or restructuring plans.
+## Checklists (`checklists/`)
 
----
+Launch/readiness and PR quality checklists.
 
-## ✅ Checklists (`checklists/`)
+## Quick Navigation
 
-Quick reference checklists:
+- Setup project: `setup/SETUP_NEW_COMPUTER_GUIDE.md`
+- Understand project integration: `reports/INTEGRATION_REPORT.md`
+- Backend docs index: `backend/README.md`
+- Frontend docs index: `frontend/README.md`
+- View historical final report snapshot: `reports/archive/README.md`
+- Check API behavior: `reports/API_ENDPOINTS_STATUS.md`
+- View current structure: `architecture/CURRENT_STRUCTURE_2026.md`
+- Review path conventions: `architecture/PATH_CONVENTIONS.md`
+- Review archived troubleshooting history: `troubleshooting/archive/README.md`
+- Launch prep: `checklists/LAUNCH_READINESS_CHECKLIST.md`
 
-- **LAUNCH_CHECKLIST_PROGRESS.md** - Launch checklist progress
-- **LAUNCH_READINESS_CHECKLIST.md** - Launch readiness checklist
-- **QUICK_LAUNCH_CHECKLIST.md** - Quick launch checklist
-- **PR_QUALITY_CHECKLIST.md** - Pull request quality and CI gate checklist
+## Documentation Maintenance Rules
 
-**When to use:** For quick reference during deployment or launch preparation.
+1. Keep references path-accurate to actual files.
+2. Use real dates (no unresolved template strings).
+3. Prefer one canonical document per topic; link instead of duplicating.
+4. Mark legacy documents clearly when they are historical.
 
----
-
-## 🗺️ Quick Navigation
-
-### I want to...
-
-**Set up the project:**
-→ Go to `setup/SETUP_NEW_COMPUTER_GUIDE.md`
-
-**Understand the project:**
-→ Go to `reports/FINAL_PROJECT_REPORT.md`
-
-**Fix an error:**
-→ Go to `troubleshooting/` and search for your issue
-
-**Check API endpoints:**
-→ Go to `reports/INTEGRATION_REPORT.md` or `reports/API_ENDPOINTS_STATUS.md`
-
-**Understand architecture:**
-→ Go to `architecture/PROJECT_STRUCTURE.md`
-
-**Prepare for launch:**
-→ Go to `checklists/LAUNCH_READINESS_CHECKLIST.md`
-
----
-
-## 📝 Documentation Standards
-
-- All documentation is in Markdown format (`.md`)
-- Use clear, descriptive file names
-- Include table of contents for long documents
-- Keep documentation up-to-date with code changes
-
----
-
-## 🔄 Documentation Updates
-
-When adding new documentation:
-
-1. Place it in the appropriate category directory
-2. Update this README if adding a new category
-3. Use descriptive file names
-4. Include a brief description in the file header
-
----
-
-**Last Updated:** December 2024  
-**Maintained By:** Development Team
+Last Updated: 2026-02-17

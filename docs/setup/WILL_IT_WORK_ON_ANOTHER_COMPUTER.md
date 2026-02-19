@@ -9,7 +9,7 @@
 **Yes, the code will work on another computer, including the database**, but you need to:
 
 1. ✅ Install prerequisites (.NET, SQL Server, Node.js)
-2. ✅ Restore the database from backup
+2. ✅ Recreate the database from canonical SQL scripts
 3. ✅ Configure database connection
 4. ✅ Configure JWT settings
 5. ✅ Set frontend API URL
@@ -24,8 +24,7 @@
 
 **Copy these to the new computer:**
 - ✅ All source code (entire project folder)
-- ✅ Database backup: `TijarahJo-Backend/Database Backup/TijarahJoDB.bak`
-- ✅ SQL scripts: `TijarahJo-Backend/TijarahJoDBAPI/database/scripts/`
+- ✅ SQL scripts: `apps/api/database/scripts/`
 
 **Don't copy:**
 - ❌ `node_modules/` (will reinstall)
@@ -37,18 +36,11 @@
 - **SQL Server** - Express or Full version
 - **Node.js 16+** - Download from nodejs.org
 
-### 3. Restore Database
+### 3. Recreate Database
 
-**Option A: From Backup (Easiest)**
-1. Copy `TijarahJoDB.bak` to new computer
-2. Open SQL Server Management Studio
-3. Right-click "Databases" → "Restore Database"
-4. Select the `.bak` file
-5. Click "OK"
-
-**Option B: From Scripts**
 1. Create database: `CREATE DATABASE TijarahJoDB;`
-2. Run scripts from `database/scripts/setup/` in order
+2. From repo root run: `./scripts/bootstrap_db.sh` (recommended).
+3. Manual fallback: run `apps/api/database/bundles/schema.sql`, then `apps/api/database/bundles/migrations.sql`, then `apps/api/database/bundles/procedures.sql` (optional: `apps/api/database/bundles/seed_data.sql`).
 
 ### 4. Configure Backend
 
@@ -76,7 +68,7 @@ export DB_PASSWORD=YourPassword
 
 ### 5. Configure Frontend
 
-Create `.env` file in `TijarahJo-frontend/`:
+Create `.env` file in `apps/web/`:
 ```
 VITE_API_BASE_URL=http://localhost:5033/api
 ```
@@ -85,7 +77,7 @@ VITE_API_BASE_URL=http://localhost:5033/api
 
 **Backend:**
 ```bash
-cd TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI
+cd apps/api/src/Api
 dotnet restore
 dotnet build
 dotnet run
@@ -93,7 +85,7 @@ dotnet run
 
 **Frontend:**
 ```bash
-cd TijarahJo-frontend
+cd apps/web
 npm install
 npm run dev
 ```
@@ -103,7 +95,7 @@ npm run dev
 ## What's Already Portable
 
 ✅ **All source code** - No changes needed  
-✅ **Database schema** - Works on any SQL Server  
+✅ **Database schema/scripts** - Works on any SQL Server  
 ✅ **SQL scripts** - Can run on any SQL Server  
 ✅ **Configuration files** - Just need to update values  
 ✅ **Dependencies** - Automatically installed  
@@ -159,4 +151,3 @@ For quick checklist, see: **`QUICK_SETUP_CHECKLIST.md`**
 ---
 
 **Need Help?** See `SETUP_NEW_COMPUTER_GUIDE.md` for complete instructions.
-

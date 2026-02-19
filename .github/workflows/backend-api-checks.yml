@@ -4,18 +4,16 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - "bootstrap_db.sh"
-      - "verify_all_apis.sh"
-      - "docker-compose.yml"
-      - "TijarahJo-Backend/**"
+      - "scripts/**"
+      - "infra/docker-compose.yml"
+      - "apps/api/**"
   push:
     branches:
       - main
     paths:
-      - "bootstrap_db.sh"
-      - "verify_all_apis.sh"
-      - "docker-compose.yml"
-      - "TijarahJo-Backend/**"
+      - "scripts/**"
+      - "infra/docker-compose.yml"
+      - "apps/api/**"
 
 permissions:
   contents: read
@@ -31,13 +29,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
-      - name: Refresh backend submodule from upstream main
+      - name: Structure compliance check
         run: |
-          git -C ./TijarahJo-Backend fetch origin main --depth=1
-          git -C ./TijarahJo-Backend checkout --detach FETCH_HEAD
+          chmod +x ./scripts/check_structure.sh
+          ./scripts/check_structure.sh
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
@@ -46,24 +42,29 @@ jobs:
 
       - name: Validate SQL procedure dedupe guard
         run: |
-          chmod +x ./TijarahJo-Backend/TijarahJoDBAPI/database/scripts/guard_no_duplicate_procs.sh
-          ./TijarahJo-Backend/TijarahJoDBAPI/database/scripts/guard_no_duplicate_procs.sh
+          chmod +x ./apps/api/database/scripts/guard_no_duplicate_procs.sh
+          ./apps/api/database/scripts/guard_no_duplicate_procs.sh
+
+      - name: Validate SQL runtime procedure contract guard
+        run: |
+          chmod +x ./apps/api/database/scripts/guard_runtime_proc_contract.sh
+          ./apps/api/database/scripts/guard_runtime_proc_contract.sh
 
       - name: Restore backend solution
-        run: dotnet restore ./TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI.sln
+        run: dotnet restore ./apps/api/TijarahJo.sln
 
       - name: Build backend solution
-        run: dotnet build ./TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI.sln -c Release --no-restore
+        run: dotnet build ./apps/api/TijarahJo.sln -c Release --no-restore
 
       - name: Run backend unit tests
-        run: dotnet test ./TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI.Tests/TijarahJoDBAPI.Tests.csproj -c Release --verbosity normal
+        run: dotnet test ./apps/api/tests/Api.Tests/TijarahJo.Api.Tests.csproj -c Release --verbosity normal
 
       - name: Ensure scripts are executable
         run: |
-          chmod +x ./bootstrap_db.sh
-          chmod +x ./verify_all_apis.sh
-          chmod +x ./TijarahJo-Backend/TijarahJoDBAPI/tests/backend_smoke.sh
-          chmod +x ./TijarahJo-Backend/TijarahJoDBAPI/tests/backend_integration_contract.sh
+          chmod +x ./scripts/bootstrap_db.sh
+          chmod +x ./scripts/verify_all_apis.sh
+          chmod +x ./apps/api/tests/contracts/backend_smoke.sh
+          chmod +x ./apps/api/tests/contracts/backend_integration_contract.sh
 
       - name: Validate required secrets
         run: |
@@ -73,16 +74,16 @@ jobs:
           fi
 
       - name: Bootstrap DB and backend
-        run: ./bootstrap_db.sh --no-verify --keep-backend
+        run: ./scripts/bootstrap_db.sh --no-verify --keep-backend
 
       - name: Run backend smoke suite
-        run: BASE_URL=http://localhost:5033 ./TijarahJo-Backend/TijarahJoDBAPI/tests/backend_smoke.sh
+        run: BASE_URL=http://localhost:5033 ./apps/api/tests/contracts/backend_smoke.sh
 
       - name: Run backend integration contract
-        run: BASE_URL=http://localhost:5033 ./TijarahJo-Backend/TijarahJoDBAPI/tests/backend_integration_contract.sh
+        run: BASE_URL=http://localhost:5033 ./apps/api/tests/contracts/backend_integration_contract.sh
 
       - name: Run full API verification
-        run: BASE_URL=http://localhost:5033 ./verify_all_apis.sh
+        run: BASE_URL=http://localhost:5033 ./scripts/verify_all_apis.sh
 
       - name: Stop backend process
         if: always()

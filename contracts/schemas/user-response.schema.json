@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tijarahjo/contracts/schemas/user-response.schema.json",
+  "title": "UserResponse",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "userID",
+    "email",
+    "firstName",
+    "phone",
+    "joinDate",
+    "roleID",
+    "status",
+    "isDeleted"
+  ],
+  "properties": {
+    "userID": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "email": {
+      "type": "string"
+    },
+    "firstName": {
+      "type": "string"
+    },
+    "lastName": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "phone": {
+      "type": "string"
+    },
+    "joinDate": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "roleID": {
+      "type": "integer"
+    },
+    "status": {
+      "type": "integer"
+    },
+    "isDeleted": {
+      "type": "boolean"
+    }
+  }
+}

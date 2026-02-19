@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tijarahjo/contracts/schemas/post-feed-item.schema.json",
+  "title": "PostFeedItem",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "postID",
+    "userID",
+    "categoryID",
+    "postTitle",
+    "postDescription",
+    "createdAt",
+    "status",
+    "isDeleted"
+  ],
+  "properties": {
+    "postID": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "userID": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "categoryID": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "postTitle": {
+      "type": "string",
+      "minLength": 1
+    },
+    "postDescription": {
+      "type": "string"
+    },
+    "price": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "city": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "area": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "status": {
+      "type": "integer",
+      "enum": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    "isDeleted": {
+      "type": "boolean"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "views": {
+      "type": "integer"
+    },
+    "imageURLs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    }
+  }
+}

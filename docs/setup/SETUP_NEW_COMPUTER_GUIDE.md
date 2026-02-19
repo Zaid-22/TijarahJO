@@ -41,28 +41,7 @@ This guide will help you set up the TijarahJo project on a new computer, includi
    - **Authentication Mode**: Choose "Mixed Mode" (SQL Server + Windows Authentication)
    - **SA Password**: Set a strong password (you'll need this)
 
-### Step 2: Restore Database
-
-You have two options:
-
-#### Option A: Restore from Backup File (Recommended)
-
-1. Copy the backup file to the new computer:
-   - Location: `TijarahJo-Backend/Database Backup/TijarahJoDB.bak`
-
-2. Open SQL Server Management Studio (SSMS)
-
-3. Connect to your SQL Server instance
-
-4. Right-click on "Databases" → "Restore Database"
-
-5. Select "Device" → Browse → Add the `.bak` file
-
-6. Click "OK" to restore
-
-7. Verify the database `TijarahJoDB` appears in the database list
-
-#### Option B: Create Database from Scripts
+### Step 2: Create Database from Canonical Scripts
 
 1. Open SQL Server Management Studio (SSMS)
 
@@ -74,20 +53,22 @@ You have two options:
    GO
    ```
 
-4. Preferred: run the canonical bootstrap flow:
-   - From repo root run: `./bootstrap_db.sh`
-   - This applies setup + migrations in the correct order automatically.
+4. Run the canonical bootstrap flow:
+   - From repo root run: `./scripts/bootstrap_db.sh`
+   - This applies base schema + ordered migrations + canonical procedures automatically.
+   - It also applies seed data (`baseline/dev/test`).
+   - This repository does not track `.bak` backup files.
    - Manual SQL execution is only needed for troubleshooting.
 
 5. Manual alternative (if not using bootstrap):
-   - Navigate to: `TijarahJo-Backend/TijarahJoDBAPI/database/scripts/setup/`
-   - Run: `COMPLETE_DATABASE_SETUP.sql`
-   - Then apply needed scripts from `database/scripts/migrations/`
-   - Note: legacy per-procedure setup scripts were moved to `database/scripts/archive/`
+   - Run `apps/api/database/bundles/schema.sql`
+   - Then run `apps/api/database/bundles/migrations.sql`
+   - Then run `apps/api/database/bundles/procedures.sql`
+   - Optional: run `apps/api/database/bundles/seed_data.sql`
 
 6. (Optional) Add sample data:
-   - Run: `database/scripts/seeds/INSERT_SAMPLE_POSTS.sql`
-   - Run: `database/scripts/seeds/CREATE_TEST_USER.sql`
+   - Run: `apps/api/database/scripts/seeds/dev/INSERT_SAMPLE_POSTS.sql`
+   - Run: `apps/api/database/scripts/seeds/test/CREATE_TEST_USER.sql`
 
 ### Step 3: Configure Database Connection
 
@@ -110,7 +91,7 @@ Data Source=localhost;Database=TijarahJoDB;User Id=sa;Password=YourPassword123;T
 ### Step 1: Navigate to Backend Directory
 
 ```bash
-cd "TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI"
+cd "apps/api/src/Api"
 ```
 
 ### Step 2: Configure Database Connection
@@ -148,7 +129,7 @@ export DATABASE_CONNECTION_STRING="Data Source=localhost;Database=TijarahJoDB;Us
 
 #### Method 2: Edit appsettings.Development.json
 
-Edit `TijarahJoDBAPI/appsettings.Development.json`:
+Edit `apps/api/src/Api/appsettings.Development.json`:
 
 ```json
 {
@@ -162,7 +143,7 @@ Edit `TijarahJoDBAPI/appsettings.Development.json`:
 
 ### Step 3: Configure JWT Settings
 
-Edit `TijarahJoDBAPI/appsettings.Development.json`:
+Edit `apps/api/src/Api/appsettings.Development.json`:
 
 ```json
 {
@@ -210,7 +191,7 @@ The API should start on:
 ### Step 1: Navigate to Frontend Directory
 
 ```bash
-cd "TijarahJo-frontend"
+cd "apps/web"
 ```
 
 ### Step 2: Install Dependencies
@@ -398,13 +379,13 @@ $env:DB_PASSWORD="YourPassword123"
 $env:JWT_SIGNING_KEY="YourSecretKeyHere12345678901234567890"
 
 # Backend
-cd "TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI"
+cd "apps/api/src/Api"
 dotnet restore
 dotnet build
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "dotnet run"
 
 # Frontend
-cd "../../../TijarahJo-frontend"
+cd "../../../apps/web"
 npm install
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "npm run dev"
 ```
@@ -424,13 +405,13 @@ export DB_PASSWORD=YourPassword123
 export JWT_SIGNING_KEY=YourSecretKeyHere12345678901234567890
 
 # Backend
-cd "TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI"
+cd "apps/api/src/Api"
 dotnet restore
 dotnet build
 dotnet run &
 
 # Frontend
-cd "../../../TijarahJo-frontend"
+cd "../../../apps/web"
 npm install
 npm run dev
 ```
@@ -439,10 +420,10 @@ npm run dev
 
 ## 📚 Additional Resources
 
-- **Database Setup**: See `TijarahJo-Backend/TijarahJoDBAPI/database/scripts/README.md`
-- **Backend Setup**: See `docs/setup/BACKEND_SETUP_MAC.md`
+- **Database Setup**: See `apps/api/database/scripts/README.md`
+- **Backend Setup**: See `docs/setup/BACKEND_SETUP_STEP_BY_STEP.md`
 - **Troubleshooting**: See `docs/troubleshooting/`
-- **Integration Report**: See `INTEGRATION_REPORT.md`
+- **Integration Report**: See `docs/reports/INTEGRATION_REPORT.md`
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Project:** TijarahJo Marketplace Platform  
 **Status:** Pre-Launch Preparation  
-**Last Updated:** $(date)
+**Last Updated:** 2026-02-17
 
 ---
 
@@ -114,7 +114,9 @@
 
 - [ ] **Database Cleanup**
 
-  - [ ] Run `TijarahJo-Backend/TijarahJoDBAPI/database/scripts/archive/diagnostics/CHECK_AND_CLEAN_DUPLICATES.sql` to verify no duplicates
+  - [ ] Run `./scripts/bootstrap_db.sh --no-verify --keep-backend` to apply canonical schema + migration state
+  - [ ] Run `./apps/api/database/scripts/audit_sql_files.sh` to confirm active SQL has no duplicate stored procedure definitions
+  - [ ] Use `apps/api/database/scripts/archive/diagnostics/CHECK_AND_CLEAN_DUPLICATES.sql` only for legacy duplicate login/email investigations
   - [ ] Clean up any test data
   - [ ] Verify all stored procedures are working correctly
   - [ ] Check for and fix any data inconsistencies
@@ -535,5 +537,5 @@
 - Critical Items: ~35
 - Completed: Will update as work progresses
 
-**Last Review Date:** $(date)  
+**Last Review Date:** 2026-02-17  
 **Next Review Date:** Weekly until launch

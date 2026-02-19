@@ -1,6 +1,6 @@
 # Sign In / Sign Up Fixes - Complete Report
 
-**Date:** $(date)  
+**Date:** 2026-02-17  
 **Status:** ✅ All Critical Issues Fixed
 
 ## 🔧 Issues Fixed
@@ -59,17 +59,17 @@
 ## 📋 Changes Made
 
 ### Files Modified:
-1. ✅ `TijarahJo-frontend/services/api.ts`
+1. ✅ `apps/web/services/api.ts`
    - Fixed login response handling
    - Fixed signup response handling
    - Better error message extraction
 
-2. ✅ `TijarahJo-frontend/components/figma/LoginPage.tsx`
+2. ✅ `apps/web/components/figma/LoginPage.tsx`
    - Fixed duplicate variable declaration
    - Improved error handling for both login and signup
    - Better response data extraction
 
-3. ✅ `TijarahJo-frontend/contexts/AuthContext.tsx`
+3. ✅ `apps/web/contexts/AuthContext.tsx`
    - Fixed register function to properly handle API response
    - Improved user data transformation
    - Better error handling

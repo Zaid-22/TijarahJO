@@ -25,7 +25,7 @@ Use this checklist when setting up the project on a new computer.
 ## ✅ Database Setup
 
 - [ ] SQL Server is running
-- [ ] Restore database from backup OR create from scripts
+- [ ] Recreate database from canonical scripts (`./scripts/bootstrap_db.sh`)
 - [ ] Database `TijarahJoDB` exists
 - [ ] Can connect to database using SSMS
 - [ ] Test connection with credentials:
@@ -37,7 +37,7 @@ Use this checklist when setting up the project on a new computer.
 
 ## ✅ Backend Configuration
 
-- [ ] Navigate to: `TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI`
+- [ ] Navigate to: `apps/api/src/Api`
 - [ ] Configure database connection (choose one):
   - [ ] Set environment variables (DB_HOST, DB_NAME, DB_USER, DB_PASSWORD)
   - [ ] OR edit `appsettings.Development.json`
@@ -53,7 +53,7 @@ Use this checklist when setting up the project on a new computer.
 
 ## ✅ Frontend Configuration
 
-- [ ] Navigate to: `TijarahJo-frontend`
+- [ ] Navigate to: `apps/web`
 - [ ] Create `.env` file with: `VITE_API_BASE_URL=http://localhost:5033/api`
 - [ ] Run `npm install`
 - [ ] Run `npm run dev`
@@ -113,4 +113,3 @@ URL: http://localhost:5033/api
 **Setup Date:** _______________  
 **Setup By:** _______________  
 **Computer:** _______________
-
