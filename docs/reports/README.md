@@ -5,19 +5,14 @@ This directory contains comprehensive project reports and documentation.
 ## Files
 
 ### FINAL_PROJECT_REPORT.md
-**Complete project report** covering all aspects of the TijarahJo marketplace:
-- Executive summary
-- Architecture and technology stack
-- Database design
-- Backend and frontend implementation
-- Integration status
-- Features and functionality
-- Security implementation
-- Testing and quality assurance
-- Deployment configuration
-- Future enhancements
+**Condensed pointer** to the archived full final report.
 
-**Use when:** You need a complete overview of the entire project.
+Active reports now used for day-to-day work:
+- `INTEGRATION_REPORT.md`
+- `API_ENDPOINTS_STATUS.md`
+
+Full archived report:
+- `archive/FINAL_PROJECT_REPORT_FULL_2026-02-17.md`
 
 ---
 
@@ -45,15 +40,28 @@ This directory contains comprehensive project reports and documentation.
 
 ---
 
+### FRONTEND_FILE_ASSESSMENT_2026-02-17.md
+**Frontend cleanup and file assessment snapshot:**
+- Static file inventory for `apps/web/src`
+- Candidate dead-code and refactor hotspots
+- Non-src file cleanup recommendations
+
+Supporting data export:
+- `FRONTEND_FILE_ASSESSMENT_2026-02-17.csv`
+
+**Use when:** You need the Phase 4 frontend cleanup baseline.
+
+---
+
 ## Quick Reference
 
 | Report | Purpose | Best For |
 |--------|---------|----------|
-| FINAL_PROJECT_REPORT.md | Complete project overview | Project submission, comprehensive understanding |
+| FINAL_PROJECT_REPORT.md | Condensed pointer to archived full report | Historical report lookup |
 | INTEGRATION_REPORT.md | Integration details | Understanding frontend-backend connection |
 | API_ENDPOINTS_STATUS.md | API reference | API development, testing |
+| FRONTEND_FILE_ASSESSMENT_2026-02-17.md | Frontend cleanup baseline | Planning refactor/dead-code removal |
 
 ---
 
-**Last Updated:** December 2024
-
+**Last Updated:** February 17, 2026

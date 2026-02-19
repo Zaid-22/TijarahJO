@@ -1,0 +1,822 @@
+/// 					-----------		PAGINATION
+
+USE [TijarahJoDB];
+GO
+
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+
+IF OBJECT_ID('dbo.SP_GetTbPostsPaged', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.SP_GetTbPostsPaged;
+GO
+
+CREATE PROCEDURE [dbo].[SP_GetTbPostsPaged]
+(
+    @PageNumber   INT = 1,
+    @RowsPerPage  INT = 10,
+    @IncludeDeleted BIT = 0   -- 0 = only IsDeleted = 0, 1 = include all
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Safety guards
+    IF (@PageNumber < 1)
+        SET @PageNumber = 1;
+
+    IF (@RowsPerPage < 1)
+        SET @RowsPerPage = 10;
+
+    DECLARE @Offset INT; -- ايش راح يطنش
+    SET @Offset = (@PageNumber - 1) * @RowsPerPage;
+
+    ------------------------------------------------------------
+    -- 1) Paged result set
+    ------------------------------------------------------------
+    SELECT 
+        PostID, 
+        UserID, 
+        CategoryID, 
+        PostTitle, 
+        PostDescription, 
+        Price, 
+        Status, 
+        CreatedAt, 
+        IsDeleted
+    FROM dbo.TbPosts
+    WHERE (@IncludeDeleted = 1 OR IsDeleted = 0)
+    ORDER BY CreatedAt DESC, PostID DESC
+    OFFSET @Offset ROWS
+    FETCH NEXT @RowsPerPage ROWS ONLY;
+
+    ------------------------------------------------------------
+    -- 2) Total row count (for pagination UI)
+    ------------------------------------------------------------
+    SELECT 
+        COUNT(*) AS TotalRows
+    FROM dbo.TbPosts
+    WHERE (@IncludeDeleted = 1 OR IsDeleted = 0);
+END;
+GO
+
+
+
+
+
+---------------------------------			1 			---------------------
+
+-- =============================================
+-- Stored Procedures for TbRoles
+-- Database: TijarahJoDB
+-- Generated: 12/10/2025 10:33:19 PM
+-- =============================================
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_GetRoleById]    Script Date: 12/10/2025 10:33:19 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_GetRoleById]
+    @RoleID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT RoleID, RoleName, CreatedAt, IsDeleted
+    FROM TbRoles
+    WHERE RoleID = @RoleID;
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_AddRole]    Script Date: 12/10/2025 10:33:19 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_AddRole]
+    @RoleName NVARCHAR(100),
+    @CreatedAt DATETIME,
+    @IsDeleted BIT,
+    @NewRoleID INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    INSERT INTO TbRoles (RoleName, CreatedAt, IsDeleted)
+    VALUES (@RoleName, @CreatedAt, @IsDeleted);
+
+    SET @NewRoleID = SCOPE_IDENTITY();
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_UpdateRole]    Script Date: 12/10/2025 10:33:19 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_UpdateRole]
+    @RoleID INT,
+    @RoleName NVARCHAR(100),
+    @CreatedAt DATETIME,
+    @IsDeleted BIT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE TbRoles
+    SET RoleName = @RoleName,
+        CreatedAt = @CreatedAt,
+        IsDeleted = @IsDeleted
+    WHERE RoleID = @RoleID;
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_DeleteRole]    Script Date: 12/10/2025 10:33:19 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_DeleteRole]
+    @RoleID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @RowsAffected INT;
+
+    DELETE FROM TbRoles
+    WHERE RoleID = @RoleID;
+
+    SET @RowsAffected = @@ROWCOUNT;
+
+    SELECT @RowsAffected AS RowsAffected;
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_GetAllTbRoles]    Script Date: 12/10/2025 10:33:19 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_GetAllTbRoles]
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT RoleID, RoleName, CreatedAt, IsDeleted
+    FROM TbRoles;
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_DoesRoleExist]    Script Date: 12/10/2025 10:33:19 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_DoesRoleExist]
+    @RoleID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF EXISTS (SELECT 1 FROM TbRoles WHERE RoleID = @RoleID)
+        SELECT CAST(1 AS BIT) AS Found;
+    ELSE
+        SELECT CAST(0 AS BIT) AS Found;
+END;
+GO
+
+
+
+
+---------------------------------			2 			---------------------
+---------------------------------			2 			---------------------
+-- =============================================
+-- Stored Procedures for TbUsers
+-- Database: TijarahJoDB
+-- Generated: 12/10/2025 10:34:42 PM
+-- =============================================
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_GetUserById]    Script Date: 12/10/2025 10:34:42 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_GetUserById]
+    @UserID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT UserID, Login, HashedPassword, Email, FirstName, LastName, JoinDate, Status, RoleID, IsDeleted
+    FROM TbUsers
+    WHERE UserID = @UserID;
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_AddTbUser]    Script Date: 12/10/2025 10:34:42 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_AddTbUser]
+    @Login NVARCHAR(100),
+    @HashedPassword NVARCHAR(100),
+    @Email NVARCHAR(100),
+    @FirstName NVARCHAR(100),
+    @LastName NVARCHAR(100),
+    @JoinDate DATETIME,
+    @Status INT,
+    @RoleID INT,
+    @IsDeleted BIT,
+    @NewUserID INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    INSERT INTO TbUsers (Login, HashedPassword, Email, FirstName, LastName, JoinDate, Status, RoleID, IsDeleted)
+    VALUES (@Login, @HashedPassword, @Email, @FirstName, @LastName, @JoinDate, @Status, @RoleID, @IsDeleted);
+
+    SET @NewUserID = SCOPE_IDENTITY();
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_UpdateUser]    Script Date: 12/10/2025 10:34:42 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_UpdateUser]
+    @UserID INT,
+    @Login NVARCHAR(100),
+    @HashedPassword NVARCHAR(100),
+    @Email NVARCHAR(100),
+    @FirstName NVARCHAR(100),
+    @LastName NVARCHAR(100),
+    @JoinDate DATETIME,
+    @Status INT,
+    @RoleID INT,
+    @IsDeleted BIT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE TbUsers
+    SET Login = @Login,
+        HashedPassword = @HashedPassword,
+        Email = @Email,
+        FirstName = @FirstName,
+        LastName = @LastName,
+        JoinDate = @JoinDate,
+        Status = @Status,
+        RoleID = @RoleID,
+        IsDeleted = @IsDeleted
+    WHERE UserID = @UserID;
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_DeleteUser]    Script Date: 12/10/2025 10:34:42 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_DeleteUser]
+    @UserID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @RowsAffected INT;
+
+    DELETE FROM TbUsers
+    WHERE UserID = @UserID;
+
+    SET @RowsAffected = @@ROWCOUNT;
+
+    SELECT @RowsAffected AS RowsAffected;
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_GetAllTbUsers]    Script Date: 12/10/2025 10:34:42 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_GetAllTbUsers]
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT UserID, Login, HashedPassword, Email, FirstName, LastName, JoinDate, Status, RoleID, IsDeleted
+    FROM TbUsers;
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_DoesUserExist]    Script Date: 12/10/2025 10:34:42 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_DoesUserExist]
+    @UserID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF EXISTS (SELECT 1 FROM TbUsers WHERE UserID = @UserID)
+        SELECT CAST(1 AS BIT) AS Found;
+    ELSE
+        SELECT CAST(0 AS BIT) AS Found;
+END;
+GO
+
+
+
+
+---------------------------------			3 			---------------------
+---------------------------------			3 			---------------------
+-- =============================================
+-- Stored Procedures for TbItemCategories
+-- Database: TijarahJoDB
+-- Generated: 12/10/2025 10:35:02 PM
+-- =============================================
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_GetCategoryById]    Script Date: 12/10/2025 10:35:02 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_GetCategoryById]
+    @CategoryID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT CategoryID, CategoryName, CreatedAt, IsDeleted
+    FROM TbItemCategories
+    WHERE CategoryID = @CategoryID;
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_AddCategory]    Script Date: 12/10/2025 10:35:02 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_AddCategory]
+    @CategoryName NVARCHAR(100),
+    @CreatedAt DATETIME,
+    @IsDeleted BIT,
+    @NewCategoryID INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    INSERT INTO TbItemCategories (CategoryName, CreatedAt, IsDeleted)
+    VALUES (@CategoryName, @CreatedAt, @IsDeleted);
+
+    SET @NewCategoryID = SCOPE_IDENTITY();
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_UpdateCategory]    Script Date: 12/10/2025 10:35:02 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_UpdateCategory]
+    @CategoryID INT,
+    @CategoryName NVARCHAR(100),
+    @CreatedAt DATETIME,
+    @IsDeleted BIT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE TbItemCategories
+    SET CategoryName = @CategoryName,
+        CreatedAt = @CreatedAt,
+        IsDeleted = @IsDeleted
+    WHERE CategoryID = @CategoryID;
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_DeleteCategory]    Script Date: 12/10/2025 10:35:02 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_DeleteCategory]
+    @CategoryID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @RowsAffected INT;
+
+    DELETE FROM TbItemCategories
+    WHERE CategoryID = @CategoryID;
+
+    SET @RowsAffected = @@ROWCOUNT;
+
+    SELECT @RowsAffected AS RowsAffected;
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_GetAllTbItemCategories]    Script Date: 12/10/2025 10:35:02 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_GetAllTbItemCategories]
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT CategoryID, CategoryName, CreatedAt, IsDeleted
+    FROM TbItemCategories;
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_DoesCategoryExist]    Script Date: 12/10/2025 10:35:02 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_DoesCategoryExist]
+    @CategoryID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF EXISTS (SELECT 1 FROM TbItemCategories WHERE CategoryID = @CategoryID)
+        SELECT CAST(1 AS BIT) AS Found;
+    ELSE
+        SELECT CAST(0 AS BIT) AS Found;
+END;
+GO
+
+
+
+
+---------------------------------			4 			---------------------
+---------------------------------			4 			---------------------
+---------------------------------			4 			---------------------
+-- =============================================
+-- Stored Procedures for TbPosts
+-- Database: TijarahJoDB
+-- Generated: 12/10/2025 10:35:45 PM
+-- =============================================
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_GetPostById]    Script Date: 12/10/2025 10:35:45 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_GetPostById]
+    @PostID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT PostID, UserID, CategoryID, PostTitle, PostDescription, Price, Status, CreatedAt, IsDeleted
+    FROM TbPosts
+    WHERE PostID = @PostID;
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_AddPost]    Script Date: 12/10/2025 10:35:45 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_AddPost]
+    @UserID INT,
+    @CategoryID INT,
+    @PostTitle NVARCHAR(100),
+    @PostDescription NVARCHAR(100),
+    @Price DECIMAL(18,2),
+    @Status INT,
+    @CreatedAt DATETIME,
+    @IsDeleted BIT,
+    @NewPostID INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    INSERT INTO TbPosts (UserID, CategoryID, PostTitle, PostDescription, Price, Status, CreatedAt, IsDeleted)
+    VALUES (@UserID, @CategoryID, @PostTitle, @PostDescription, @Price, @Status, @CreatedAt, @IsDeleted);
+
+    SET @NewPostID = SCOPE_IDENTITY();
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_UpdatePost]    Script Date: 12/10/2025 10:35:45 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_UpdatePost]
+    @PostID INT,
+    @UserID INT,
+    @CategoryID INT,
+    @PostTitle NVARCHAR(100),
+    @PostDescription NVARCHAR(100),
+    @Price DECIMAL(18,2),
+    @Status INT,
+    @CreatedAt DATETIME,
+    @IsDeleted BIT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE TbPosts
+    SET UserID = @UserID,
+        CategoryID = @CategoryID,
+        PostTitle = @PostTitle,
+        PostDescription = @PostDescription,
+        Price = @Price,
+        Status = @Status,
+        CreatedAt = @CreatedAt,
+        IsDeleted = @IsDeleted
+    WHERE PostID = @PostID;
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_DeletePost]    Script Date: 12/10/2025 10:35:45 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_DeletePost]
+    @PostID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @RowsAffected INT;
+
+    DELETE FROM TbPosts
+    WHERE PostID = @PostID;
+
+    SET @RowsAffected = @@ROWCOUNT;
+
+    SELECT @RowsAffected AS RowsAffected;
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_GetAllTbUserPosts]    Script Date: 12/10/2025 10:35:45 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_GetAllTbUserPosts]
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT PostID, UserID, CategoryID, PostTitle, PostDescription, Price, Status, CreatedAt, IsDeleted
+    FROM TbPosts;
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_DoesPostExist]    Script Date: 12/10/2025 10:35:45 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_DoesPostExist]
+    @PostID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF EXISTS (SELECT 1 FROM TbPosts WHERE PostID = @PostID)
+        SELECT CAST(1 AS BIT) AS Found;
+    ELSE
+        SELECT CAST(0 AS BIT) AS Found;
+END;
+GO
+
+
+
+
+---------------------------------			5 			---------------------
+---------------------------------			5 			---------------------
+-- =============================================
+-- Stored Procedures for TbPostImages
+-- Database: TijarahJoDB
+-- Generated: 12/10/2025 10:36:14 PM
+-- =============================================
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_GetPostImageById]    Script Date: 12/10/2025 10:36:14 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_GetPostImageById]
+    @PostImageID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT PostImageID, PostID, PostImageURL, UploadedAt, IsDeleted
+    FROM TbPostImages
+    WHERE PostImageID = @PostImageID;
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_AddPostImage]    Script Date: 12/10/2025 10:36:14 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_AddPostImage]
+    @PostID INT,
+    @PostImageURL NVARCHAR(100),
+    @UploadedAt DATETIME,
+    @IsDeleted BIT,
+    @NewPostImageID INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    INSERT INTO TbPostImages (PostID, PostImageURL, UploadedAt, IsDeleted)
+    VALUES (@PostID, @PostImageURL, @UploadedAt, @IsDeleted);
+
+    SET @NewPostImageID = SCOPE_IDENTITY();
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_UpdatePostImage]    Script Date: 12/10/2025 10:36:14 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_UpdatePostImage]
+    @PostImageID INT,
+    @PostID INT,
+    @PostImageURL NVARCHAR(100),
+    @UploadedAt DATETIME,
+    @IsDeleted BIT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE TbPostImages
+    SET PostID = @PostID,
+        PostImageURL = @PostImageURL,
+        UploadedAt = @UploadedAt,
+        IsDeleted = @IsDeleted
+    WHERE PostImageID = @PostImageID;
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_DeletePostImage]    Script Date: 12/10/2025 10:36:14 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_DeletePostImage]
+    @PostImageID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @RowsAffected INT;
+
+    DELETE FROM TbPostImages
+    WHERE PostImageID = @PostImageID;
+
+    SET @RowsAffected = @@ROWCOUNT;
+
+    SELECT @RowsAffected AS RowsAffected;
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_GetAllTbPostImages]    Script Date: 12/10/2025 10:36:14 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_GetAllTbPostImages]
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT PostImageID, PostID, PostImageURL, UploadedAt, IsDeleted
+    FROM TbPostImages;
+END;
+GO
+
+
+USE [TijarahJoDB]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_DoesPostImageExist]    Script Date: 12/10/2025 10:36:14 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_DoesPostImageExist]
+    @PostImageID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF EXISTS (SELECT 1 FROM TbPostImages WHERE PostImageID = @PostImageID)
+        SELECT CAST(1 AS BIT) AS Found;
+    ELSE
+        SELECT CAST(0 AS BIT) AS Found;
+END;
+GO
+
+

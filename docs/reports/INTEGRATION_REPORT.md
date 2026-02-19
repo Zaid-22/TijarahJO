@@ -39,9 +39,9 @@ All major features are integrated between frontend and backend. The system uses 
 
 **Files:**
 
-- Backend: `TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI/Controllers/AuthController.cs`
-- Frontend: `TijarahJo-frontend/services/api.ts` (auth section)
-- Frontend: `TijarahJo-frontend/contexts/AuthContext.tsx`
+- Backend: `apps/api/src/Api/Controllers/AuthController.cs`
+- Frontend: `apps/web/services/api.ts` (auth section)
+- Frontend: `apps/web/contexts/AuthContext.tsx`
 
 ---
 
@@ -76,8 +76,8 @@ All major features are integrated between frontend and backend. The system uses 
 
 **Files:**
 
-- Backend: `TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI/Controllers/UsersController.cs`
-- Frontend: `TijarahJo-frontend/services/api.ts` (users section)
+- Backend: `apps/api/src/Api/Controllers/UsersController.cs`
+- Frontend: `apps/web/services/api.ts` (users section)
 
 **Recommendation:** 
 - ⚠️ **Delete User:** Consider adding account deactivation feature (soft delete) instead of hard delete
@@ -117,8 +117,8 @@ All major features are integrated between frontend and backend. The system uses 
 
 **Files:**
 
-- Backend: `TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI/Controllers/UserPostsController.cs`
-- Frontend: `TijarahJo-frontend/services/api.ts` (posts section)
+- Backend: `apps/api/src/Api/Controllers/UserPostsController.cs`
+- Frontend: `apps/web/services/api.ts` (posts section)
 
 **Note:** Post views increment endpoint exists but not currently called from frontend.
 
@@ -147,8 +147,8 @@ All major features are integrated between frontend and backend. The system uses 
 
 **Files:**
 
-- Backend: `TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI/Controllers/ItemCategoriesController.cs`
-- Frontend: `TijarahJo-frontend/services/api.ts` (categories section)
+- Backend: `apps/api/src/Api/Controllers/ItemCategoriesController.cs`
+- Frontend: `apps/web/services/api.ts` (categories section)
 
 ---
 
@@ -182,8 +182,8 @@ All major features are integrated between frontend and backend. The system uses 
 
 **Files:**
 
-- Backend: `TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI/Controllers/PostImagesController.cs`
-- Frontend: `TijarahJo-frontend/services/api.ts` (images handled in posts section)
+- Backend: `apps/api/src/Api/Controllers/PostImagesController.cs`
+- Frontend: `apps/web/services/api.ts` (images handled in posts section)
 
 **Recommendation:**
 - ⚠️ **Update/Delete Image:** Could be useful for advanced post editing (e.g., remove one image without replacing all). Consider adding if users need granular image control.
@@ -219,7 +219,7 @@ All major features are integrated between frontend and backend. The system uses 
 
 **Files:**
 
-- Backend: `TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI/Controllers/RolesController.cs`
+- Backend: `apps/api/src/Api/Controllers/RolesController.cs`
 
 **Recommendation:**
 - ⚠️ **If Admin Dashboard is Planned:** These endpoints would be needed for role management UI

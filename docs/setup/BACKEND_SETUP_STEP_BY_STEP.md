@@ -138,7 +138,7 @@ Before starting, make sure you have:
 ### Step 3: Create Tables (Run Schema Scripts)
 
 1. **Open SQL Script File:**
-   - Navigate to: `TijarahJo-Backend/TijarahJoDBAPI/DiagramsAndDocs/scripts.txt`
+   - Navigate to: `apps/api/DiagramsAndDocs/scripts.txt`
    - Open with Notepad or any text editor
 
 2. **Open New Query in SSMS:**
@@ -214,8 +214,8 @@ Before starting, make sure you have:
 
 2. **Open Solution:**
    - Click **"Open a project or solution"**
-   - Navigate to: `TijarahJo-Backend/TijarahJoDBAPI/`
-   - Select **`TijarahJoDBAPI.sln`**
+   - Navigate to: `apps/api/`
+   - Select **`TijarahJo.sln`**
    - Click **"Open"**
 
 3. **Wait for Project to Load:**
@@ -609,4 +609,3 @@ If you get stuck:
 5. Check troubleshooting section
 
 **You're ready to connect frontend and backend! 🚀**
-

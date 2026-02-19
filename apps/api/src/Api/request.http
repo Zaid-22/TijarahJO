@@ -1,0 +1,11 @@
+@baseUrl = https://localhost:5033
+ 
+###
+{{baseUrl}}/
+
+###
+GET {{baseUrl}}/api/posts/feed?page=1&limit=20&includeDeleted=false
+
+
+###
+GET {{baseUrl}}/api/search?query=phone&page=1&limit=10

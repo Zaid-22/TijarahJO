@@ -1,0 +1,31 @@
+# Visual Studio / IDE
+.vs/
+.vscode/
+.idea/
+**/.vs/
+**/.vscode/
+**/.idea/
+*.suo
+*.user
+*.vsidx
+
+# IDE local caches
+*.db
+*.db-shm
+*.db-wal
+*.v2
+
+# Build output
+bin/
+obj/
+**/bin/
+**/obj/
+
+# macOS / OS metadata
+.DS_Store
+**/.DS_Store
+Thumbs.db
+
+# Backups / temp artifacts
+*.bak
+*.backup

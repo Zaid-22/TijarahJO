@@ -1,72 +1,47 @@
-# TijarahJo - Marketplace Platform
+# TijarahJo Marketplace Platform
 
-A full-stack marketplace application for buying and selling items in Jordan.
+Full-stack marketplace application for buying and selling items in Jordan.
 
-## 📁 Project Structure
+## Repository Layout
 
+```text
+final project primary/
+├── apps/
+│   ├── web/                     # React + TypeScript + Vite app
+│   └── api/                     # ASP.NET Core API + SQL scripts
+├── contracts/                   # Shared API/openapi contract artifacts
+├── docs/                        # Project documentation index and guides
+├── infra/                       # Docker compose + infra templates
+├── scripts/                     # Operational/dev scripts
+├── README-RUN.md                # Local run/bootstrap instructions
+└── Makefile                     # Common local CI and dev commands
 ```
-tijarahjo-project/
-├── backend/          # ASP.NET Core Web API
-├── frontend/         # React + TypeScript + Vite
-└── docs/            # Documentation
-```
 
-## 🚀 Quick Start
+## Quick Start
 
-### Backend Setup
+Use `README-RUN.md` for the full local workflow.
+
+Most common commands:
+
 ```bash
-cd backend/TijarahJoDBAPI/TijarahJoDBAPI
-dotnet restore
-dotnet run
+./scripts/check_structure.sh
+./scripts/run-dev.sh
+./scripts/bootstrap_db.sh
+make ci-local
 ```
 
-### Frontend Setup
-```bash
-cd frontend
-npm install
-npm run dev
-```
+## Documentation
 
-## 📚 Documentation
+Start here:
 
-All documentation is organized in the `docs/` folder:
+- `docs/README.md`
+- `docs/architecture/CURRENT_STRUCTURE_2026.md`
+- `docs/architecture/PATH_CONVENTIONS.md`
 
-- **📊 Reports**: `docs/reports/` - Main project reports (Final Report, Integration Report, API Status)
-- **🚀 Setup Guides**: `docs/setup/` - Installation and setup instructions
-- **🔧 Troubleshooting**: `docs/troubleshooting/` - Error fixes and debugging guides
-- **🏗️ Architecture**: `docs/architecture/` - Project structure and architecture docs
-- **✅ Checklists**: `docs/checklists/` - Launch and setup checklists
-
-**📖 Start here:** See `docs/README.md` for complete documentation index and navigation guide.
-
-## 🏗️ Architecture
-
-### Backend
-- **Controllers**: API endpoints
-- **Services**: Business logic
-- **DataAccess**: Database operations
-- **BusinessLogic**: Domain logic
-- **Models**: Data models
-
-### Frontend
-- **Features**: Feature-based organization (auth, posts, profile, categories, search)
-- **Shared**: Shared components, hooks, contexts, services, types, utils
-- **App**: Application entry point
-
-## 🔧 Key Features
+## Core Features
 
 - User authentication and authorization
-- Post creation and management
-- Image upload and management
-- Category-based browsing
-- Search functionality
-- User profiles
-
-## 📝 Notes
-
-- Category data is preserved in `frontend/src/shared/constants/categoryData.ts`
-- All UI components are in `frontend/src/shared/components/ui/`
-- API services are in `frontend/src/shared/services/`
-
-For detailed structure, see `docs/architecture/PROJECT_STRUCTURE.md`
-
+- Post creation, editing, status updates, and deletion
+- Category browsing and search
+- Chat, favorites, and seller profiles
+- Frontend + backend CI workflows

@@ -1,0 +1,52 @@
+USE TijarahJoDB;
+GO
+
+DECLARE @i INT = 1;
+
+WHILE @i <= 150
+BEGIN
+    INSERT INTO dbo.TbPosts
+        (UserID,
+         CategoryID,
+         PostTitle,
+         PostDescription,
+         Price,
+         Status,
+         CreatedAt,
+         IsDeleted)
+    VALUES
+        (
+            -- Random UserID between 1 and 10
+            (ABS(CHECKSUM(NEWID())) % 10) + 1,
+
+            -- Random CategoryID between 1 and 5
+            (ABS(CHECKSUM(NEWID())) % 5) + 1,
+
+            -- PostTitle
+            N'Sample Post #' + CAST(@i AS NVARCHAR(10)),
+
+            -- PostDescription
+            N'This is a fake description for sample post #' + CAST(@i AS NVARCHAR(10))
+            + N' used for testing pagination and listing features.',
+
+            -- Random price between 0.00 and 999.99
+            CAST((ABS(CHECKSUM(NEWID())) % 100000) / 100.0 AS DECIMAL(18,2)),
+
+            -- Status pattern (mostly Active)
+            CASE 
+                WHEN @i % 15 = 0 THEN 3  -- every 15th post -> Sold
+                WHEN @i % 10 = 0 THEN 4  -- every 10th post -> Blocked
+                WHEN @i % 7  = 0 THEN 2  -- every 7th post  -> Inactive
+                ELSE 1                   -- default        -> Active
+            END,
+
+            -- CreatedAt spread over last 120 days
+            DATEADD(DAY, -(@i % 120), SYSDATETIME()),
+
+            -- IsDeleted (mostly 0)
+            CASE WHEN @i % 40 = 0 THEN 1 ELSE 0 END
+        );
+
+    SET @i += 1;
+END;
+GO

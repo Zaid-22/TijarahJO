@@ -3,30 +3,36 @@
 ## Quick Start (Using Script)
 
 ```bash
-./run-dev.sh
+./scripts/check_structure.sh
+./scripts/run-dev.sh
 ```
 
 This starts both servers and injects backend environment variables for local development.
-`./run-dev.sh` now fails fast if backend/database auth is invalid.
+`./scripts/run-dev.sh` now fails fast if backend/database auth is invalid.
 You can define local variables in `.env` using the template at `.env.example`.
 The script looks for:
 - `DATABASE_CONNECTION_STRING` (or `DB_USER` + `DB_PASSWORD`)
-- `JWT_SIGNING_KEY` (uses a local dev default if not set)
+- `JWT_SIGNING_KEY` (required)
 
 ---
 
 ## One-Command Database Bootstrap + Verification
 
 ```bash
-./bootstrap_db.sh
+./scripts/bootstrap_db.sh
 ```
 
 This script:
-- resets Docker SQL volume (`docker compose down -v` + `up -d`)
+- resets Docker SQL volume (`docker compose -f infra/docker-compose.yml down -v` + `up -d`)
 - recreates `TijarahJoDB`
-- builds and applies a consolidated SQL deployment bundle (`database/scripts/bundles/master.sql`, which includes base schema + setup + migrations)
+- builds and applies a consolidated SQL deployment bundle (`apps/api/database/bundles/master.sql`, which includes base schema + ordered migrations + canonical procedures)
+- applies `apps/api/database/bundles/seed_data.sql` (baseline/dev/test seeds)
 - starts backend on `http://localhost:5033`
-- runs `./verify_all_apis.sh`
+- runs `./scripts/verify_all_apis.sh`
+
+Required environment values for bootstrap:
+- `MSSQL_SA_PASSWORD`
+- `JWT_SIGNING_KEY`
 
 Useful flags:
 - `--no-volume-reset`
@@ -43,6 +49,9 @@ make bootstrap
 make sql-bundles
 make sql-audit
 make smoke
+make backend-integration
+make frontend-contract
+make contracts-check
 make verify
 make full-check
 make ci-local
@@ -62,10 +71,10 @@ make ci-local
 ### Terminal 1 - Backend (ASP.NET Core)
 
 ```bash
-cd TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI
+cd apps/api/src/Api
 ASPNETCORE_ENVIRONMENT=Development \
 ASPNETCORE_URLS=http://localhost:5033 \
-JWT_SIGNING_KEY='LocalDevSigningKey_ChangeMe_ButAtLeast32Chars_123456' \
+JWT_SIGNING_KEY='<your-jwt-signing-key>' \
 DATABASE_CONNECTION_STRING='Data Source=localhost,1433;Database=TijarahJoDB;User Id=sa;Password=<your-password>;TrustServerCertificate=True;Encrypt=False;' \
 dotnet run --no-launch-profile
 ```
@@ -76,7 +85,7 @@ Backend will run on: **http://localhost:5033**
 ### Terminal 2 - Frontend (Vite/React)
 
 ```bash
-cd TijarahJo-frontend
+cd apps/web
 npm run dev
 ```
 
@@ -90,15 +99,15 @@ Frontend will run on: **http://localhost:5173**
 
 ```bash
 # Start Backend in background
-cd TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI
+cd apps/api/src/Api
 ASPNETCORE_ENVIRONMENT=Development \
 ASPNETCORE_URLS=http://localhost:5033 \
-JWT_SIGNING_KEY='LocalDevSigningKey_ChangeMe_ButAtLeast32Chars_123456' \
+JWT_SIGNING_KEY='<your-jwt-signing-key>' \
 DATABASE_CONNECTION_STRING='Data Source=localhost,1433;Database=TijarahJoDB;User Id=sa;Password=<your-password>;TrustServerCertificate=True;Encrypt=False;' \
 dotnet run --no-launch-profile &
 
 # Start Frontend in background
-cd ../../../../TijarahJo-frontend
+cd ../../../web
 npm run dev &
 ```
 
@@ -106,8 +115,8 @@ npm run dev &
 
 ```bash
 # Using screen
-screen -S backend -d -m bash -c "cd TijarahJo-Backend/TijarahJoDBAPI/TijarahJoDBAPI && ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://localhost:5033 JWT_SIGNING_KEY='LocalDevSigningKey_ChangeMe_ButAtLeast32Chars_123456' DATABASE_CONNECTION_STRING='Data Source=localhost,1433;Database=TijarahJoDB;User Id=sa;Password=<your-password>;TrustServerCertificate=True;Encrypt=False;' dotnet run --no-launch-profile"
-screen -S frontend -d -m bash -c "cd TijarahJo-frontend && npm run dev"
+screen -S backend -d -m bash -c "cd apps/api/src/Api && ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=http://localhost:5033 JWT_SIGNING_KEY='<your-jwt-signing-key>' DATABASE_CONNECTION_STRING='Data Source=localhost,1433;Database=TijarahJoDB;User Id=sa;Password=<your-password>;TrustServerCertificate=True;Encrypt=False;' dotnet run --no-launch-profile"
+screen -S frontend -d -m bash -c "cd apps/web && npm run dev"
 
 # View running screens
 screen -ls
@@ -154,7 +163,7 @@ pkill -f "vite"
 
 ### Frontend
 - Node.js (v18 or higher)
-- npm packages installed: `cd TijarahJo-frontend && npm install`
+- npm packages installed: `cd apps/web && npm install`
 
 ---
 
@@ -165,8 +174,8 @@ pkill -f "vite"
 - Verify `DATABASE_CONNECTION_STRING` and `JWT_SIGNING_KEY` are set
 - Check if port 5033 is available
 - If using Docker SQL and login fails for `sa`, your persisted volume password may differ from container env:
-  - `docker compose down -v`
-  - `MSSQL_SA_PASSWORD='<new-strong-password>' docker compose up -d`
+  - `docker compose -f infra/docker-compose.yml down -v`
+  - `MSSQL_SA_PASSWORD='<new-strong-password>' docker compose -f infra/docker-compose.yml up -d`
 
 ### Frontend won't start
 - Run `npm install` in the frontend directory
@@ -179,15 +188,25 @@ pkill -f "vite"
 
 Run the full API suite:
 ```bash
-./verify_all_apis.sh
+./scripts/verify_all_apis.sh
 ```
 
 Run a quick backend smoke suite (fast sanity checks):
 ```bash
-./TijarahJo-Backend/TijarahJoDBAPI/tests/backend_smoke.sh
+./apps/api/tests/contracts/backend_smoke.sh
+```
+
+Run backend integration contract checks (auth + post lifecycle):
+```bash
+./apps/api/tests/contracts/backend_integration_contract.sh
+```
+
+Run frontend API contract checks (endpoints consumed by frontend):
+```bash
+./apps/web/tests/frontend_api_contract.sh
 ```
 
 Run focused post-delete/chat regression:
 ```bash
-./test_delete_post_with_chat.sh
+./scripts/test_delete_post_with_chat.sh
 ```

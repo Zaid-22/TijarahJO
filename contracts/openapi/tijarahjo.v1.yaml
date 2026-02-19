@@ -1,0 +1,314 @@
+openapi: 3.0.3
+info:
+  title: TijarahJo API
+  version: 1.0.0
+  description: Canonical OpenAPI contract for frontend/backend integration.
+servers:
+  - url: http://localhost:5033
+    description: Local development
+tags:
+  - name: Auth
+  - name: Posts
+  - name: Users
+paths:
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with email/phone + password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthLoginRequest"
+      responses:
+        "200":
+          description: Login succeeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Invalid credentials
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthRegisterRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: User already exists
+  /api/posts/feed:
+    get:
+      tags: [Posts]
+      summary: Get paginated posts feed
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 20
+        - in: query
+          name: includeDeleted
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Feed payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PostFeedResponse"
+        "500":
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /api/posts/{id}:
+    get:
+      tags: [Posts]
+      summary: Get post by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Post payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PostFeedItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          description: Post not found
+  /api/posts/All:
+    get:
+      tags: [Posts]
+      summary: Legacy endpoint removed
+      responses:
+        "410":
+          description: Endpoint removed; use /api/posts/feed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /api/users/{id}:
+    get:
+      tags: [Users]
+      summary: Get user by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: User payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          description: User not found
+components:
+  responses:
+    BadRequest:
+      description: Invalid request payload
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+  schemas:
+    AuthLoginRequest:
+      type: object
+      required: [login, password]
+      properties:
+        login:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+    AuthRegisterRequest:
+      type: object
+      required: [firstName, lastName, email, phone, password]
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          minLength: 3
+        password:
+          type: string
+          minLength: 6
+    AuthUser:
+      type: object
+      required: [id, firstName, lastName, email, phone, roleId]
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        roleId:
+          type: integer
+    AuthResponse:
+      type: object
+      required: [token, expiresAt, user]
+      properties:
+        token:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        user:
+          $ref: "#/components/schemas/AuthUser"
+    PostFeedItem:
+      type: object
+      required:
+        - postID
+        - userID
+        - categoryID
+        - postTitle
+        - postDescription
+        - createdAt
+        - status
+        - isDeleted
+      properties:
+        postID:
+          type: integer
+        userID:
+          type: integer
+        categoryID:
+          type: integer
+        postTitle:
+          type: string
+        postDescription:
+          type: string
+        price:
+          type: number
+          format: decimal
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        area:
+          type: string
+          nullable: true
+        status:
+          type: integer
+          enum: [0, 1, 2, 3]
+        isDeleted:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        views:
+          type: integer
+        imageURLs:
+          type: array
+          items:
+            type: string
+    PostFeedResponse:
+      type: object
+      required: [success, page, limit, totalCount, totalPages, hasNext, hasPrevious, posts]
+      properties:
+        success:
+          type: boolean
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalCount:
+          type: integer
+        totalPages:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrevious:
+          type: boolean
+        posts:
+          type: array
+          items:
+            $ref: "#/components/schemas/PostFeedItem"
+    UserResponse:
+      type: object
+      required: [userID, email, firstName, phone, joinDate, roleID, status, isDeleted]
+      properties:
+        userID:
+          type: integer
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+          nullable: true
+        phone:
+          type: string
+        joinDate:
+          type: string
+          format: date-time
+        roleID:
+          type: integer
+        status:
+          type: integer
+        isDeleted:
+          type: boolean
+    ApiError:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        traceId:
+          type: string
