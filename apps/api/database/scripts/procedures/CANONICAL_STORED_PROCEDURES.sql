@@ -8,19 +8,13 @@ GO
 PRINT 'Applying consolidated canonical stored procedures...';
 GO
 
--- ---------------------------------------------------------------------------
--- Legacy name cleanup to avoid collision with built-in sys.sp_* procedures.
--- ---------------------------------------------------------------------------
-DROP PROCEDURE IF EXISTS [dbo].[SP_AddRole];
-GO
-
-DROP PROCEDURE IF EXISTS [dbo].[SP_AddMessage];
-GO
+-- Canonical procedure names use the usp_* prefix.
+-- Legacy SP_* compatibility synonyms are created at the end of this script.
 
 -- ---------------------------------------------------------------------------
 -- Users procedures (phone-aware signatures)
 -- ---------------------------------------------------------------------------
-CREATE OR ALTER PROCEDURE [dbo].[SP_AddTbUser]
+CREATE OR ALTER PROCEDURE [dbo].[usp_AddTbUser]
     @HashedPassword NVARCHAR(255),
     @Email NVARCHAR(255),
     @FirstName NVARCHAR(100),
@@ -54,7 +48,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_UpdateUser]
+CREATE OR ALTER PROCEDURE [dbo].[usp_UpdateUser]
     @UserID INT,
     @HashedPassword NVARCHAR(255),
     @Email NVARCHAR(255),
@@ -93,7 +87,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_GetUserByID]
+CREATE OR ALTER PROCEDURE [dbo].[usp_GetUserByID]
     @UserID INT
 AS
 BEGIN
@@ -105,7 +99,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_GetAllTbUsers]
+CREATE OR ALTER PROCEDURE [dbo].[usp_GetAllTbUsers]
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -116,7 +110,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_TbUsers_Login]
+CREATE OR ALTER PROCEDURE [dbo].[usp_TbUsers_Login]
     @Login NVARCHAR(255),
     @HashedPassword NVARCHAR(255)
 AS
@@ -226,7 +220,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_DeleteUser]
+CREATE OR ALTER PROCEDURE [dbo].[usp_DeleteUser]
     @UserID INT
 AS
 BEGIN
@@ -241,7 +235,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_DoesUserExist]
+CREATE OR ALTER PROCEDURE [dbo].[usp_DoesUserExist]
     @UserID INT
 AS
 BEGIN
@@ -257,7 +251,7 @@ GO
 -- ---------------------------------------------------------------------------
 -- Categories procedures (visual fields aware)
 -- ---------------------------------------------------------------------------
-CREATE OR ALTER PROCEDURE [dbo].[SP_GetCategoryByID]
+CREATE OR ALTER PROCEDURE [dbo].[usp_GetCategoryByID]
     @CategoryID INT
 AS
 BEGIN
@@ -269,7 +263,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_AddCategory]
+CREATE OR ALTER PROCEDURE [dbo].[usp_AddCategory]
     @CategoryName NVARCHAR(100),
     @NameAr NVARCHAR(100) = NULL,
     @Icon NVARCHAR(100) = NULL,
@@ -289,7 +283,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_UpdateCategory]
+CREATE OR ALTER PROCEDURE [dbo].[usp_UpdateCategory]
     @CategoryID INT,
     @CategoryName NVARCHAR(100),
     @NameAr NVARCHAR(100) = NULL,
@@ -316,7 +310,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_DeleteCategory]
+CREATE OR ALTER PROCEDURE [dbo].[usp_DeleteCategory]
     @CategoryID INT
 AS
 BEGIN
@@ -330,7 +324,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_DoesCategoryExist]
+CREATE OR ALTER PROCEDURE [dbo].[usp_DoesCategoryExist]
     @CategoryID INT
 AS
 BEGIN
@@ -343,7 +337,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_GetAllTbItemCategories]
+CREATE OR ALTER PROCEDURE [dbo].[usp_GetAllTbItemCategories]
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -357,7 +351,7 @@ GO
 -- ---------------------------------------------------------------------------
 -- Roles procedures
 -- ---------------------------------------------------------------------------
-CREATE OR ALTER PROCEDURE [dbo].[SP_AddRole]
+CREATE OR ALTER PROCEDURE [dbo].[usp_AddRole]
     @RoleName NVARCHAR(100),
     @CreatedAt DATETIME,
     @IsDeleted BIT,
@@ -373,25 +367,7 @@ BEGIN
 END;
 GO
 
--- Backward-compatible wrapper (deprecated; use SP_AddRole).
-CREATE OR ALTER PROCEDURE [dbo].[USP_AddRole]
-    @RoleName NVARCHAR(100),
-    @CreatedAt DATETIME,
-    @IsDeleted BIT,
-    @NewRoleID INT OUTPUT
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    EXEC dbo.SP_AddRole
-        @RoleName = @RoleName,
-        @CreatedAt = @CreatedAt,
-        @IsDeleted = @IsDeleted,
-        @NewRoleID = @NewRoleID OUTPUT;
-END;
-GO
-
-CREATE OR ALTER PROCEDURE [dbo].[SP_UpdateRole]
+CREATE OR ALTER PROCEDURE [dbo].[usp_UpdateRole]
     @RoleID INT,
     @RoleName NVARCHAR(100),
     @CreatedAt DATETIME,
@@ -410,7 +386,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_GetRoleByID]
+CREATE OR ALTER PROCEDURE [dbo].[usp_GetRoleByID]
     @RoleID INT
 AS
 BEGIN
@@ -422,7 +398,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_DeleteRole]
+CREATE OR ALTER PROCEDURE [dbo].[usp_DeleteRole]
     @RoleID INT
 AS
 BEGIN
@@ -436,7 +412,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_DoesRoleExist]
+CREATE OR ALTER PROCEDURE [dbo].[usp_DoesRoleExist]
     @RoleID INT
 AS
 BEGIN
@@ -449,7 +425,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_GetAllTbRoles]
+CREATE OR ALTER PROCEDURE [dbo].[usp_GetAllTbRoles]
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -463,7 +439,7 @@ GO
 -- ---------------------------------------------------------------------------
 -- Posts and post images procedures
 -- ---------------------------------------------------------------------------
-CREATE OR ALTER PROCEDURE [dbo].[SP_AddPost]
+CREATE OR ALTER PROCEDURE [dbo].[usp_AddPost]
     @UserID INT,
     @CategoryID INT,
     @PostTitle NVARCHAR(200),
@@ -494,7 +470,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_UpdatePost]
+CREATE OR ALTER PROCEDURE [dbo].[usp_UpdatePost]
     @PostID INT,
     @UserID INT,
     @CategoryID INT,
@@ -527,7 +503,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_GetPostByID]
+CREATE OR ALTER PROCEDURE [dbo].[usp_GetPostByID]
     @PostID INT
 AS
 BEGIN
@@ -551,7 +527,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_DoesPostExist]
+CREATE OR ALTER PROCEDURE [dbo].[usp_DoesPostExist]
     @PostID INT
 AS
 BEGIN
@@ -564,7 +540,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_GetAllTbUserPosts]
+CREATE OR ALTER PROCEDURE [dbo].[usp_GetAllTbUserPosts]
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -588,7 +564,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_GetTbPostsPaged]
+CREATE OR ALTER PROCEDURE [dbo].[usp_GetTbPostsPaged]
     @PageNumber INT = 1,
     @RowsPerPage INT = 10,
     @IncludeDeleted BIT = 0
@@ -626,7 +602,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_AddPostImage]
+CREATE OR ALTER PROCEDURE [dbo].[usp_AddPostImage]
     @PostID INT,
     @PostImageURL NVARCHAR(MAX),
     @UploadedAt DATETIME2,
@@ -643,7 +619,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_UpdatePostImage]
+CREATE OR ALTER PROCEDURE [dbo].[usp_UpdatePostImage]
     @PostImageID INT,
     @PostID INT,
     @PostImageURL NVARCHAR(MAX),
@@ -664,7 +640,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_GetPostImageByID]
+CREATE OR ALTER PROCEDURE [dbo].[usp_GetPostImageByID]
     @PostImageID INT
 AS
 BEGIN
@@ -676,7 +652,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_DeletePostImage]
+CREATE OR ALTER PROCEDURE [dbo].[usp_DeletePostImage]
     @PostImageID INT
 AS
 BEGIN
@@ -691,7 +667,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_DoesPostImageExist]
+CREATE OR ALTER PROCEDURE [dbo].[usp_DoesPostImageExist]
     @PostImageID INT
 AS
 BEGIN
@@ -704,7 +680,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_GetAllTbPostImages]
+CREATE OR ALTER PROCEDURE [dbo].[usp_GetAllTbPostImages]
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -715,7 +691,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_DeletePost]
+CREATE OR ALTER PROCEDURE [dbo].[usp_DeletePost]
     @PostID INT
 AS
 BEGIN
@@ -769,7 +745,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_GetPostsByUserID]
+CREATE OR ALTER PROCEDURE [dbo].[usp_GetPostsByUserID]
     @UserID INT
 AS
 BEGIN
@@ -795,7 +771,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_GetPostsByCategoryID]
+CREATE OR ALTER PROCEDURE [dbo].[usp_GetPostsByCategoryID]
     @CategoryID INT
 AS
 BEGIN
@@ -821,7 +797,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_IncrementPostViews]
+CREATE OR ALTER PROCEDURE [dbo].[usp_IncrementPostViews]
     @PostID INT
 AS
 BEGIN
@@ -839,7 +815,7 @@ GO
 -- ---------------------------------------------------------------------------
 -- Reviews procedures
 -- ---------------------------------------------------------------------------
-CREATE OR ALTER PROCEDURE [dbo].[SP_AddReview]
+CREATE OR ALTER PROCEDURE [dbo].[usp_AddReview]
     @ReviewerID INT,
     @ReviewedUserID INT,
     @Rating INT,
@@ -857,7 +833,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_GetReviewsByUserId]
+CREATE OR ALTER PROCEDURE [dbo].[usp_GetReviewsByUserId]
     @UserID INT
 AS
 BEGIN
@@ -879,7 +855,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_HasReviewed]
+CREATE OR ALTER PROCEDURE [dbo].[usp_HasReviewed]
     @ReviewerID INT,
     @ReviewedUserID INT
 AS
@@ -896,7 +872,7 @@ GO
 -- ---------------------------------------------------------------------------
 -- Chat procedures
 -- ---------------------------------------------------------------------------
-CREATE OR ALTER PROCEDURE [dbo].[SP_AddMessage]
+CREATE OR ALTER PROCEDURE [dbo].[usp_AddMessage]
     @SenderID INT,
     @ReceiverID INT,
     @PostID INT = NULL,
@@ -915,31 +891,7 @@ BEGIN
 END;
 GO
 
--- Backward-compatible wrapper (deprecated; use SP_AddMessage).
-CREATE OR ALTER PROCEDURE [dbo].[USP_AddMessage]
-    @SenderID INT,
-    @ReceiverID INT,
-    @PostID INT = NULL,
-    @Content NVARCHAR(MAX),
-    @Timestamp DATETIME2,
-    @IsRead BIT,
-    @NewMessageID INT OUTPUT
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    EXEC dbo.SP_AddMessage
-        @SenderID = @SenderID,
-        @ReceiverID = @ReceiverID,
-        @PostID = @PostID,
-        @Content = @Content,
-        @Timestamp = @Timestamp,
-        @IsRead = @IsRead,
-        @NewMessageID = @NewMessageID OUTPUT;
-END;
-GO
-
-CREATE OR ALTER PROCEDURE [dbo].[SP_GetChatHistory]
+CREATE OR ALTER PROCEDURE [dbo].[usp_GetChatHistory]
     @UserID1 INT,
     @UserID2 INT
 AS
@@ -961,7 +913,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_GetRecentChats]
+CREATE OR ALTER PROCEDURE [dbo].[usp_GetRecentChats]
     @UserID INT
 AS
 BEGIN
@@ -1002,7 +954,7 @@ BEGIN
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[SP_MarkMessagesAsRead]
+CREATE OR ALTER PROCEDURE [dbo].[usp_MarkMessagesAsRead]
     @ReceiverID INT,
     @SenderID INT
 AS
@@ -1015,6 +967,52 @@ BEGIN
       AND SenderID = @SenderID
       AND IsRead = 0;
 END;
+GO
+
+-- ---------------------------------------------------------------------------
+-- Legacy compatibility layer (deprecated): SP_* -> usp_*
+-- ---------------------------------------------------------------------------
+DECLARE @CanonicalProc SYSNAME;
+DECLARE @LegacyProc SYSNAME;
+DECLARE @CompatSql NVARCHAR(MAX);
+
+DECLARE proc_cursor CURSOR LOCAL FAST_FORWARD FOR
+SELECT p.name
+FROM sys.procedures AS p
+WHERE p.schema_id = SCHEMA_ID(N'dbo')
+  AND p.name LIKE N'usp[_]%';
+
+OPEN proc_cursor;
+FETCH NEXT FROM proc_cursor INTO @CanonicalProc;
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    SET @LegacyProc = N'SP_' + SUBSTRING(@CanonicalProc, 5, 128);
+
+    SET @CompatSql = N'
+IF EXISTS (
+    SELECT 1
+    FROM sys.procedures
+    WHERE name = N''' + @LegacyProc + N'''
+      AND schema_id = SCHEMA_ID(N''dbo'')
+)
+    DROP PROCEDURE dbo.' + QUOTENAME(@LegacyProc) + N';
+IF EXISTS (
+    SELECT 1
+    FROM sys.synonyms
+    WHERE name = N''' + @LegacyProc + N'''
+      AND schema_id = SCHEMA_ID(N''dbo'')
+)
+    DROP SYNONYM dbo.' + QUOTENAME(@LegacyProc) + N';
+CREATE SYNONYM dbo.' + QUOTENAME(@LegacyProc) + N' FOR dbo.' + QUOTENAME(@CanonicalProc) + N';';
+
+    EXEC sys.sp_executesql @CompatSql;
+
+    FETCH NEXT FROM proc_cursor INTO @CanonicalProc;
+END
+
+CLOSE proc_cursor;
+DEALLOCATE proc_cursor;
 GO
 
 PRINT 'Canonical stored procedure consolidation completed.';
