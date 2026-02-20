@@ -6,6 +6,7 @@ import { Send, User } from "lucide-react";
 import { ScrollArea } from "../../../shared/ui/scroll-area";
 import { cn } from "@/shared/ui/utils";
 import { api } from "../../../services/api";
+import { ChatPresence } from "../../../types";
 
 interface ChatWindowProps {
   otherUserId: number;
@@ -24,7 +25,7 @@ export function ChatWindow({
 }: ChatWindowProps) {
   const { messages, isLoading, sendMessage } = useChat(otherUserId);
   const [inputText, setInputText] = useState("");
-  const [isOtherUserOnline, setIsOtherUserOnline] = useState(false);
+  const [presence, setPresence] = useState<ChatPresence>({ isOnline: false });
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom
@@ -41,11 +42,11 @@ export function ChatWindow({
       try {
         const isOnline = await api.chat.getPresence(otherUserId);
         if (!isCancelled) {
-          setIsOtherUserOnline(isOnline);
+          setPresence(isOnline);
         }
       } catch {
         if (!isCancelled) {
-          setIsOtherUserOnline(false);
+          setPresence({ isOnline: false });
         }
       }
     };
@@ -65,6 +66,12 @@ export function ChatWindow({
       setInputText("");
     }
   };
+
+  const presenceLabel = presence.isOnline
+    ? "Online"
+    : presence.lastSeenAtUtc
+      ? `Last seen ${new Date(presence.lastSeenAtUtc).toLocaleString()}`
+      : "Offline";
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
@@ -88,12 +95,12 @@ export function ChatWindow({
           <p
             className={cn(
               "text-xs",
-              isOtherUserOnline
+              presence.isOnline
                 ? "text-green-500"
                 : "text-gray-500 dark:text-gray-400",
             )}
           >
-            {isOtherUserOnline ? "Online" : "Offline"}
+            {presence.statusText || presenceLabel}
           </p>
         </div>
       </div>

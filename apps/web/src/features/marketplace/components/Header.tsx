@@ -22,15 +22,22 @@ import {
   ArrowLeft,
   Search,
   Heart,
+  MessageCircle,
   User,
   Plus,
   // Languages,
   Settings,
+  Shield,
   LogOut,
   Menu,
 } from "lucide-react";
 import { useState } from "react";
-import { categoryData } from "../../../data/categoryData";
+import { useCatalogCategories } from "../../../shared/hooks/useCatalogCategories";
+import {
+  resolveCategoryColor,
+  resolveCategoryIcon,
+  resolveCategoryName,
+} from "../../../shared/lib/categoryVisuals";
 
 interface HeaderProps {
   language: Language;
@@ -47,13 +54,17 @@ interface HeaderProps {
   onSearchSubmit?: () => void;
   onBack?: () => void;
   onShowFavorites?: () => void;
+  onShowMessages?: () => void;
   onShowProfile?: () => void;
   onShowSettings?: () => void;
+  onShowAdminDashboard?: () => void;
   onShowSellItem?: () => void;
   onLogout?: () => void;
   // onToggleLanguage?: () => void;
   onCategoryClick?: (categoryName: string) => void;
   darkMode?: boolean;
+  isAdmin?: boolean;
+  unreadMessagesCount?: number;
 }
 
 export function Header({
@@ -71,17 +82,23 @@ export function Header({
   onSearchSubmit,
   onBack,
   onShowFavorites,
+  onShowMessages,
   onShowProfile,
   onShowSettings,
+  onShowAdminDashboard,
   onShowSellItem,
   onLogout,
   // onToggleLanguage,
   onCategoryClick,
   darkMode = false,
+  isAdmin = false,
+  unreadMessagesCount = 0,
 }: HeaderProps) {
   const t = translations[language];
   const isRTL = language === "ar";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { categories } = useCatalogCategories();
+  const normalizedUnreadMessagesCount = Math.max(0, Math.floor(unreadMessagesCount));
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && searchQuery.trim() && onSearchSubmit) {
@@ -184,6 +201,26 @@ export function Header({
                               type="button"
                               onClick={() => {
                                 setIsMobileMenuOpen(false);
+                                onShowMessages?.();
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                            >
+                              <MessageCircle className="w-5 h-5 text-primary dark:text-secondary" />
+                              <span className="text-gray-700 dark:text-gray-300">
+                                {language === "ar" ? "الرسائل" : "Messages"}
+                              </span>
+                              {normalizedUnreadMessagesCount > 0 && (
+                                <span className="ml-auto inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-semibold text-white">
+                                  {normalizedUnreadMessagesCount > 99
+                                    ? "99+"
+                                    : normalizedUnreadMessagesCount}
+                                </span>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsMobileMenuOpen(false);
                                 onShowSettings?.();
                               }}
                               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors"
@@ -193,6 +230,21 @@ export function Header({
                                 {language === "ar" ? "الإعدادات" : "Settings"}
                               </span>
                             </button>
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsMobileMenuOpen(false);
+                                  onShowAdminDashboard?.();
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                              >
+                                <Shield className="w-5 h-5 text-primary dark:text-secondary" />
+                                <span className="text-gray-700 dark:text-gray-300">
+                                  {language === "ar" ? "لوحة الإدارة" : "Admin Dashboard"}
+                                </span>
+                              </button>
+                            )}
                             <div className="h-px bg-gray-200 dark:bg-gray-800 my-2" />
                             <button
                               type="button"
@@ -233,15 +285,13 @@ export function Header({
                           {language === "ar" ? "التصنيفات" : "Categories"}
                         </h3>
                         <div className="space-y-1">
-                          {categoryData.map((category) => {
-                            const CategoryIcon = category.icon;
-                            const categoryName =
-                              language === "ar"
-                                ? category.nameAr
-                                : category.name;
+                          {categories.map((category) => {
+                            const CategoryIcon = resolveCategoryIcon(category.icon);
+                            const categoryColor = resolveCategoryColor(category.color);
+                            const categoryName = resolveCategoryName(category, language);
                             return (
                               <button
-                                key={category.name}
+                                key={String(category.id || category.name)}
                                 type="button"
                                 onClick={() =>
                                   handleCategoryClick(category.name)
@@ -250,7 +300,7 @@ export function Header({
                               >
                                 <CategoryIcon
                                   className="w-5 h-5"
-                                  style={{ color: category.color }}
+                                  style={{ color: categoryColor }}
                                 />
                                 <span className="text-gray-700 dark:text-gray-300">
                                   {categoryName}
@@ -312,6 +362,25 @@ export function Header({
           <div className="flex items-center gap-1 sm:gap-2">
             {isAuthenticated && (
               <Button
+                variant="ghost"
+                size="sm"
+                className="relative h-9 sm:h-10 w-9 sm:w-10 p-0 text-primary hover:bg-gray-100 dark:hover:bg-gray-800"
+                onClick={onShowMessages}
+                aria-label={language === "ar" ? "الرسائل" : "Messages"}
+              >
+                <MessageCircle className="w-5 h-5" />
+                {normalizedUnreadMessagesCount > 0 && (
+                  <span className="absolute -top-1 -right-1 inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white">
+                    {normalizedUnreadMessagesCount > 99
+                      ? "99+"
+                      : normalizedUnreadMessagesCount}
+                  </span>
+                )}
+              </Button>
+            )}
+
+            {isAuthenticated && (
+              <Button
                 size="sm"
                 className="hover:opacity-90 shadow-sm dark:shadow-primary/20 h-9 sm:h-10 px-2 sm:px-4 bg-primary text-white"
                 onClick={onShowSellItem}
@@ -358,12 +427,28 @@ export function Header({
                     {language === "ar" ? "المفضلة" : "Favorites"}
                   </DropdownMenuItem>
                   <DropdownMenuItem
+                    onClick={onShowMessages}
+                    className="cursor-pointer dark:hover:bg-gray-800 dark:text-white"
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    {language === "ar" ? "الرسائل" : "Messages"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
                     onClick={onShowSettings}
                     className="cursor-pointer dark:hover:bg-gray-800 dark:text-white"
                   >
                     <Settings className="w-4 h-4 mr-2" />
                     {language === "ar" ? "الإعدادات" : "Settings"}
                   </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem
+                      onClick={onShowAdminDashboard}
+                      className="cursor-pointer dark:hover:bg-gray-800 dark:text-white"
+                    >
+                      <Shield className="w-4 h-4 mr-2" />
+                      {language === "ar" ? "لوحة الإدارة" : "Admin Dashboard"}
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator className="dark:bg-gray-800" />
                   <DropdownMenuItem
                     onClick={onLogout}

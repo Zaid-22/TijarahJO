@@ -9,6 +9,7 @@ import { categoriesApi } from "./api/categories";
 import { chatApi } from "./api/chat";
 import { debugError } from "./api/client";
 import { favoritesApi } from "./api/favorites";
+import { notificationsApi } from "./api/notifications";
 import { postsApi } from "./api/posts";
 import { reviewsApi } from "./api/reviews";
 import { rolesApi } from "./api/roles";
@@ -26,6 +27,7 @@ export const api = {
   users: usersApi,
   reviews: reviewsApi,
   chat: chatApi,
+  notifications: notificationsApi,
   search: searchApi,
   admin: {
     getStats: async () => {

@@ -4,11 +4,11 @@ import {
   HubConnectionState,
   LogLevel,
 } from "@microsoft/signalr";
-import { Message } from "../types";
+import { AppNotification, Message } from "../types";
 import { APP_CONFIG } from "../constants/appConfig";
 import { toPositiveIntegerId } from "../utils/idValidation";
 import { chatApi } from "./api/chat";
-import { normalizeChatMessage } from "./api/chatNormalization";
+import { normalizeChatMessage, RawChatMessage } from "./api/chatNormalization";
 import { logger } from "../shared/lib/logger";
 
 const API_BASE_URL = APP_CONFIG.apiBaseUrl;
@@ -31,6 +31,98 @@ class ChatService {
   private connection: HubConnection | null = null;
   private currentUserId: number | null = null;
   private messageCallbacks: ((message: Message) => void)[] = [];
+  private notificationCallbacks: ((notification: AppNotification) => void)[] = [];
+
+  private mapRealtimePayload(args: unknown[]): RawChatMessage | null {
+    if (args.length === 0) {
+      return null;
+    }
+
+    if (args.length === 1 && args[0] && typeof args[0] === "object") {
+      return args[0] as RawChatMessage;
+    }
+
+    const [senderId, second, third, fourth, fifth] = args;
+    const fallbackPayload: RawChatMessage = {
+      senderId,
+      receiverId: this.currentUserId ?? undefined,
+      isRead: false,
+    };
+
+    if (typeof second === "number" && typeof third === "string") {
+      // Legacy backend shape: senderId, conversationId, content, postId, timestamp
+      fallbackPayload.conversationId = second;
+      fallbackPayload.content = third;
+      fallbackPayload.postId = fourth;
+      fallbackPayload.timestamp = fifth;
+      return fallbackPayload;
+    }
+
+    // Older shape: senderId, content, postId, timestamp
+    fallbackPayload.content = second;
+    fallbackPayload.postId = third;
+    fallbackPayload.timestamp = fourth;
+    return fallbackPayload;
+  }
+
+  private mapNotificationPayload(args: unknown[]): AppNotification | null {
+    const payload = args.length === 1 && args[0] && typeof args[0] === "object"
+      ? (args[0] as Record<string, unknown>)
+      : null;
+
+    if (!payload) {
+      return null;
+    }
+
+    const notificationId = toPositiveIntegerId(
+      payload.NotificationId ?? payload.notificationId,
+    );
+    const notificationType = String(
+      payload.NotificationType ?? payload.notificationType ?? "",
+    ).trim();
+    const title = String(payload.Title ?? payload.title ?? "").trim();
+    const body = String(payload.Body ?? payload.body ?? "").trim();
+    const createdAtValue = payload.CreatedAt ?? payload.createdAt;
+    const createdAtDate =
+      createdAtValue instanceof Date ? createdAtValue : new Date(String(createdAtValue ?? ""));
+    if (
+      !notificationId ||
+      !notificationType ||
+      !title ||
+      !body ||
+      Number.isNaN(createdAtDate.getTime())
+    ) {
+      return null;
+    }
+
+    const readAtValue = payload.ReadAt ?? payload.readAt;
+    const readAtDate =
+      readAtValue === undefined || readAtValue === null || String(readAtValue).trim() === ""
+        ? undefined
+        : new Date(String(readAtValue));
+
+    return {
+      notificationId,
+      notificationType,
+      title,
+      body,
+      senderUserId: toPositiveIntegerId(payload.SenderUserId ?? payload.senderUserId),
+      conversationId: toPositiveIntegerId(
+        payload.ConversationId ?? payload.conversationId,
+      ),
+      messageId: toPositiveIntegerId(payload.MessageId ?? payload.messageId),
+      routeUrl:
+        typeof (payload.RouteUrl ?? payload.routeUrl) === "string"
+          ? String(payload.RouteUrl ?? payload.routeUrl)
+          : undefined,
+      isRead: Boolean(payload.IsRead ?? payload.isRead ?? false),
+      createdAt: createdAtDate.toISOString(),
+      readAt:
+        readAtDate && !Number.isNaN(readAtDate.getTime())
+          ? readAtDate.toISOString()
+          : undefined,
+    };
+  }
 
   public async connect(currentUserId: number) {
     const normalizedCurrentUserId = toPositiveIntegerId(currentUserId);
@@ -65,22 +157,20 @@ class ChatService {
       })
       .build();
 
-    connection.on(
-      "ReceiveMessage",
-      (senderId, content, postId, timestamp) => {
-        const normalizedMessage = normalizeChatMessage({
-          senderId,
-          receiverId: this.currentUserId,
-          content,
-          postId,
-          timestamp,
-          isRead: false,
-        });
-        if (normalizedMessage) {
-          this.notifyListeners(normalizedMessage);
-        }
-      },
-    );
+    connection.on("ReceiveMessage", (...args: unknown[]) => {
+      const payload = this.mapRealtimePayload(args);
+      const normalizedMessage = normalizeChatMessage(payload);
+      if (normalizedMessage) {
+        this.notifyListeners(normalizedMessage);
+      }
+    });
+
+    connection.on("ReceiveNotification", (...args: unknown[]) => {
+      const notification = this.mapNotificationPayload(args);
+      if (notification) {
+        this.notifyNotificationListeners(notification);
+      }
+    });
 
     connection.onclose(() => {
       this.connection = null;
@@ -131,6 +221,7 @@ class ChatService {
     const localEchoMessage: Message = {
       senderId: this.currentUserId,
       receiverId: normalizedReceiverId,
+      conversationId: undefined,
       content: trimmedContent,
       postId: normalizedPostId,
       timestamp: new Date().toISOString(),
@@ -187,6 +278,19 @@ class ChatService {
 
   private notifyListeners(message: Message) {
     this.messageCallbacks.forEach((cb) => cb(message));
+  }
+
+  public onNotificationReceived(callback: (notification: AppNotification) => void) {
+    this.notificationCallbacks.push(callback);
+    return () => {
+      this.notificationCallbacks = this.notificationCallbacks.filter(
+        (cb) => cb !== callback,
+      );
+    };
+  }
+
+  private notifyNotificationListeners(notification: AppNotification) {
+    this.notificationCallbacks.forEach((cb) => cb(notification));
   }
 }
 
