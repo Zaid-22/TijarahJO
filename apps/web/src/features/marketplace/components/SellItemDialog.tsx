@@ -16,6 +16,7 @@ import { UserProfile } from "../../../types";
 import { Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../../services/api";
+import { logger } from "../../../shared/lib/logger";
 
 interface SellItemDialogProps {
   language: Language;
@@ -119,7 +120,7 @@ export function SellItemDialogContent({
           setCategories(categoryNames);
         }
       } catch (error) {
-        console.warn(
+        logger.warn(
           "[SellItemDialog] Failed to load categories from backend, using defaults.",
           error,
         );
@@ -338,7 +339,7 @@ export function SellItemDialogContent({
             <div className="grid grid-cols-3 gap-3">
               {selectedImages.map((image, index) => (
                 <div
-                  key={index}
+                  key={`${image}-${index}`}
                   className="relative aspect-square rounded-lg overflow-hidden border-2 border-gray-200 group"
                 >
                   <img
@@ -347,18 +348,18 @@ export function SellItemDialogContent({
                     className="w-full h-full object-cover"
                   />
                   {index === 0 && (
-                    <div
-                      className="absolute top-2 left-2 px-2 py-1 rounded text-xs"
-                      style={{
-                        backgroundColor: "#0A4ABF",
-                        color: "white",
-                      }}
-                    >
+                    <div className="absolute top-2 left-2 px-2 py-1 rounded text-xs bg-[#0A4ABF] text-white">
                       {language === "ar" ? "غلاف" : "Cover"}
                     </div>
                   )}
                   <button
+                    type="button"
                     onClick={() => removeImage(index)}
+                    aria-label={
+                      language === "ar"
+                        ? `إزالة الصورة ${index + 1}`
+                        : `Remove image ${index + 1}`
+                    }
                     className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <X className="w-4 h-4" />
@@ -372,20 +373,13 @@ export function SellItemDialogContent({
           {selectedImages.length < 5 && (
             <label
               htmlFor="image-upload"
-              className="flex flex-col items-center justify-center gap-2 p-8 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-              style={{ borderColor: "#0A4ABF" }}
+              className="flex flex-col items-center justify-center gap-2 p-8 border-2 border-dashed border-[#0A4ABF] rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
             >
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: "#0A4ABF" + "15" }}
-              >
-                <Upload className="w-6 h-6" style={{ color: "#0A4ABF" }} />
+              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-[#0A4ABF26]">
+                <Upload className="w-6 h-6 text-[#0A4ABF]" />
               </div>
               <div className="text-center">
-                <div
-                  className="mb-1 font-bold text-base"
-                  style={{ color: "#0A4ABF" }}
-                >
+                <div className="mb-1 font-bold text-base text-[#0A4ABF]">
                   {t.uploadImages || "Upload Images"}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -432,11 +426,7 @@ export function SellItemDialogContent({
       </div>
 
       <Button
-        className="w-full font-semibold text-base"
-        style={{
-          backgroundColor: "#0A4ABF",
-          color: "white",
-        }}
+        className="w-full font-semibold text-base bg-[#0A4ABF] text-white hover:bg-[#083a95]"
         onClick={handleSubmit}
         type="button"
       >

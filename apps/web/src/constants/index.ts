@@ -4,7 +4,7 @@ export const STORAGE_KEYS = {
   LANGUAGE: "tijarahjo_language",
   DARK_MODE: "tijarahjo_dark_mode",
   USER_PROFILE: "tijarahjo_user_profile",
-  AUTH_TOKEN: "tijarahjo_auth_token",
+  SETTINGS_PREFERENCES: "tijarahjo_settings_preferences",
 } as const;
 
 // Debounce Delays

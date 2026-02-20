@@ -45,6 +45,19 @@ export function ProductCard({
     onFavoriteToggle?.(product.id);
   };
 
+  const openProduct = () => {
+    onProductClick?.(product.id);
+  };
+
+  const handleCardKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    openProduct();
+  };
+
   // Determine ownership primarily by user ID, with display-name fallback for legacy data.
   const normalizedCurrentUserId = String(currentUserId || "").trim();
   const normalizedSellerId = String(product.sellerId || "").trim();
@@ -70,7 +83,11 @@ export function ProductCard({
     return (
       <div
         className="group bg-white dark:bg-gray-800/80 dark:border dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-[0_12px_28px_rgba(10,74,191,0.15)] dark:hover:shadow-primary/20 animate-fade-in flex flex-col sm:flex-row backdrop-blur-sm shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
-        onClick={() => onProductClick?.(product.id)}
+        onClick={openProduct}
+        onKeyDown={handleCardKeyDown}
+        tabIndex={0}
+        role="button"
+        aria-label={`View details for ${product.name}`}
       >
         {/* Product Image - Smaller in list view */}
         <div className="relative w-full sm:w-64 aspect-square overflow-hidden flex-shrink-0">
@@ -79,7 +96,6 @@ export function ProductCard({
             alt={product.name}
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             // onLoad={() => setIsImageLoaded(true)}
-            style={{ objectFit: "cover" }}
           />
 
           {/* Category Badge */}
@@ -97,13 +113,7 @@ export function ProductCard({
               className={`absolute ${!hideCategoryBadge && isAuthenticated ? "top-[4rem]" : "top-3"} right-3 z-10`}
             >
               <Badge
-                className="backdrop-blur-md px-3 py-1 shadow-sm"
-                style={{
-                  backgroundColor: "rgba(156, 163, 175, 0.95)",
-                  color: "white",
-                  border: "none",
-                  fontWeight: "600",
-                }}
+                className="backdrop-blur-md px-3 py-1 shadow-sm bg-gray-400/95 text-white border-none font-semibold"
               >
                 SOLD OUT
               </Badge>
@@ -144,17 +154,11 @@ export function ProductCard({
                   type="button"
                   onClick={handleFavoriteClick}
                   className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                  style={{
-                    backgroundColor: "transparent",
-                  }}
                 >
                   <Heart
-                    className="w-5 h-5 transition-all duration-200"
-                    style={{
-                      color: "#EF4444",
-                      fill: isFavorite ? "#EF4444" : "none",
-                      strokeWidth: 2,
-                    }}
+                    className={`w-5 h-5 transition-all duration-200 text-red-500 stroke-2 ${
+                      isFavorite ? "fill-red-500" : "fill-none"
+                    }`}
                   />
                 </button>
               )}
@@ -176,7 +180,7 @@ export function ProductCard({
               className="hover:opacity-90 transition-all duration-300 shadow-md hover:shadow-lg px-8 bg-primary text-white"
               onClick={(e) => {
                 e.stopPropagation();
-                onProductClick?.(product.id);
+                openProduct();
               }}
             >
               <Eye className="w-4 h-4 mr-2" />
@@ -192,19 +196,19 @@ export function ProductCard({
   return (
     <div
       className="group bg-white dark:bg-gray-800/80 dark:border dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-[0_12px_28px_rgba(10,74,191,0.15)] dark:hover:shadow-primary/20 hover:-translate-y-1 animate-fade-in backdrop-blur-sm flex flex-col h-full shadow-[0_2px_8px_rgba(0,0,0,0.08)] transform"
-      onClick={() => onProductClick?.(product.id)}
+      onClick={openProduct}
+      onKeyDown={handleCardKeyDown}
+      tabIndex={0}
+      role="button"
+      aria-label={`View details for ${product.name}`}
     >
       {/* Product Image - Fixed aspect ratio 4:3 for better balance */}
-      <div
-        className="relative w-full overflow-hidden flex-shrink-0"
-        style={{ aspectRatio: "4/3" }}
-      >
+      <div className="relative w-full overflow-hidden flex-shrink-0 aspect-[4/3]">
         <ImageWithFallback
           src={product.image}
           alt={product.name}
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
           // onLoad={() => setIsImageLoaded(true)}
-          style={{ objectFit: "cover" }}
         />
 
         {/* Favorite Button */}
@@ -212,18 +216,12 @@ export function ProductCard({
           <button
             type="button"
             onClick={handleFavoriteClick}
-            className="absolute top-3 right-3 w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-200 backdrop-blur-md hover:bg-gray-100/80 dark:hover:bg-gray-800/80 z-10"
-            style={{
-              backgroundColor: "rgba(255, 255, 255, 0.9)",
-            }}
+            className="absolute top-3 right-3 w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-200 backdrop-blur-md hover:bg-gray-100/80 dark:hover:bg-gray-800/80 z-10 bg-white/90"
           >
             <Heart
-              className="w-4 h-4 sm:w-5 sm:h-5 transition-all duration-200"
-              style={{
-                color: "#EF4444",
-                fill: isFavorite ? "#EF4444" : "none",
-                strokeWidth: 2,
-              }}
+              className={`w-4 h-4 sm:w-5 sm:h-5 transition-all duration-200 text-red-500 stroke-2 ${
+                isFavorite ? "fill-red-500" : "fill-none"
+              }`}
             />
           </button>
         )}
@@ -243,13 +241,7 @@ export function ProductCard({
             className={`absolute ${!hideCategoryBadge && isAuthenticated ? "top-[3.5rem]" : "top-3"} right-3 z-10`}
           >
             <Badge
-              className="backdrop-blur-md px-2.5 py-1 sm:px-3 sm:py-1 text-xs sm:text-sm shadow-sm"
-              style={{
-                backgroundColor: "rgba(156, 163, 175, 0.95)",
-                color: "white",
-                border: "none",
-                fontWeight: "600",
-              }}
+              className="backdrop-blur-md px-2.5 py-1 sm:px-3 sm:py-1 text-xs sm:text-sm shadow-sm bg-gray-400/95 text-white border-none font-semibold"
             >
               SOLD OUT
             </Badge>
@@ -266,8 +258,7 @@ export function ProductCard({
             <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
               <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-700 flex-shrink-0">
                 <MapPin
-                  className="w-2.5 h-2.5 sm:w-3 sm:h-3"
-                  style={{ color: "#0A4ABF" }}
+                  className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#0A4ABF]"
                 />
               </div>
               <span className="truncate">
@@ -278,8 +269,7 @@ export function ProductCard({
             <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
               <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-700 flex-shrink-0">
                 <User
-                  className="w-2.5 h-2.5 sm:w-3 sm:h-3"
-                  style={{ color: "#0A4ABF" }}
+                  className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#0A4ABF]"
                 />
               </div>
               <span className="truncate">{product.seller}</span>
@@ -303,7 +293,7 @@ export function ProductCard({
             className="hover:opacity-90 transition-all duration-300 shadow-md hover:shadow-lg px-3 sm:px-4 md:px-6 text-xs sm:text-sm flex-shrink-0 bg-primary text-white"
             onClick={(e) => {
               e.stopPropagation();
-              onProductClick?.(product.id);
+              openProduct();
             }}
           >
             <span className="hidden sm:inline">View</span>

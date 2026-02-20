@@ -28,12 +28,6 @@ export interface SignUpRequest {
   avatar?: string;
 }
 
-export interface AuthResponse {
-  success: boolean;
-  user?: User;
-  message?: string;
-}
-
 export interface User {
   id: string;
   firstName: string;

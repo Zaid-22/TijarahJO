@@ -39,7 +39,7 @@ export function usePostActions({
 
   const updatePost = useCallback(
     async (updatedProduct: UpdateProductInput) => {
-      await api.posts.updatePost({
+      const response = await api.posts.updatePost({
         id: updatedProduct.id,
         title: updatedProduct.name,
         description: updatedProduct.description,
@@ -49,6 +49,10 @@ export function usePostActions({
         images: updatedProduct.images || [],
       });
 
+      if (!response.success) {
+        throw new Error(response.message || "Failed to update post");
+      }
+
       await fetchPostsFromBackend();
     },
     [fetchPostsFromBackend],
@@ -56,7 +60,11 @@ export function usePostActions({
 
   const deletePost = useCallback(
     async (postId: string) => {
-      await api.posts.deletePost(postId);
+      const response = await api.posts.deletePost(postId);
+      if (!response.success) {
+        throw new Error(response.error || "Failed to delete post");
+      }
+
       await fetchPostsFromBackend();
     },
     [fetchPostsFromBackend],

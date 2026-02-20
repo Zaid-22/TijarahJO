@@ -32,15 +32,17 @@ export function ChatList({
           </div>
         ) : (
           chats.map((chat) => (
-            <div
+            <button
+              type="button"
               key={chat.userId}
               onClick={() => onSelectUser(chat.userId)}
               className={cn(
-                "flex items-center p-4 cursor-pointer transition-colors border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50",
+                "w-full text-left flex items-center p-4 transition-colors border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800",
                 selectedUserId === chat.userId
                   ? "bg-blue-50 dark:bg-blue-900/20"
                   : "",
               )}
+              aria-label={`Open chat with ${chat.displayName}`}
             >
               <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center mr-3 flex-shrink-0">
                 <User className="w-6 h-6 text-gray-500 dark:text-gray-400" />
@@ -75,7 +77,7 @@ export function ChatList({
               {!chat.isRead && (
                 <div className="w-3 h-3 bg-blue-600 rounded-full ml-2"></div>
               )}
-            </div>
+            </button>
           ))
         )}
       </div>

@@ -7,9 +7,10 @@ import { useInfiniteScroll } from "../../shared/hooks/useInfiniteScroll";
 import { useLocalStorage } from "../../shared/hooks/useLocalStorage";
 import { translations } from "../../translations";
 import {
-  ROUTES_REQUIRING_MARKETPLACE_DATA,
   getCategoryTranslation,
   resolveCurrentUserId,
+  shouldLoadFavoritesForPath,
+  shouldLoadProductsForPath,
 } from "./appRoutesUtils";
 
 interface UseMarketplaceRouteStateParams {
@@ -25,12 +26,8 @@ export function useMarketplaceRouteState({
   language,
   userProfile,
 }: UseMarketplaceRouteStateParams) {
-  const normalizedPathname = pathname.toLowerCase().replace(/\/+$/, "");
-  const pathSegments = normalizedPathname.split("/").filter(Boolean);
-  const primarySegment = pathSegments[0] || "";
-  const shouldLoadMarketplaceData =
-    primarySegment.length === 0 ||
-    ROUTES_REQUIRING_MARKETPLACE_DATA.has(primarySegment);
+  const shouldLoadProductsData = shouldLoadProductsForPath(pathname);
+  const shouldLoadFavoritesData = shouldLoadFavoritesForPath(pathname);
 
   const debouncedSearchQuery = useDebounce(
     searchQuery,
@@ -49,11 +46,11 @@ export function useMarketplaceRouteState({
     filteredProducts,
     fetchPostsFromBackend,
   } = useProducts(debouncedSearchQuery, {
-    enabled: shouldLoadMarketplaceData,
+    enabled: shouldLoadProductsData,
   });
 
   const { favoriteIds, toggleFavorite } = useFavorites({
-    enabled: shouldLoadMarketplaceData,
+    enabled: shouldLoadFavoritesData,
   });
 
   const {
@@ -75,7 +72,8 @@ export function useMarketplaceRouteState({
   const currentUserId = resolveCurrentUserId(userProfile) || undefined;
 
   return {
-    shouldLoadMarketplaceData,
+    shouldLoadProductsData,
+    shouldLoadFavoritesData,
     availableProducts,
     isLoadingProductsFromRouteData,
     productsError,

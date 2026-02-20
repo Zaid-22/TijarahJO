@@ -1,12 +1,7 @@
 import { apiRequest } from "../client";
 import { toPositiveIntegerId } from "../../../utils/idValidation";
 import { getUserDisplayName, getUserIdentifier } from "./mappers";
-import {
-  RawCategory,
-  RawPost,
-  RawPostImage,
-  RawUserLookup,
-} from "./types";
+import { RawCategory, RawPost, RawPostImage, RawUserLookup } from "./types";
 
 export const POST_IMAGES_ENDPOINT = "/post-images";
 const USERS_ENDPOINT = "/users";
@@ -14,14 +9,14 @@ const USERS_ENDPOINT = "/users";
 let categoriesCache: Record<string, string> | null = null;
 let categoryIdByNameCache: Record<string, number> | null = null;
 let usersCache: Record<string, string> | null = null;
-let postImagesCache: RawPostImage[] | null = null;
+
 let postImageRowsByPostIdCache: Record<
   string,
   { rows: RawPostImage[]; updatedAt: number }
 > = {};
 let categoriesCacheUpdatedAt = 0;
 let usersCacheUpdatedAt = 0;
-let postImagesCacheUpdatedAt = 0;
+
 let usersAllEndpointAccessible: boolean | null = null;
 
 const LOOKUP_CACHE_TTL_MS = 60_000;
@@ -70,32 +65,7 @@ function mapPostImageRowsToUrls(imageRows: RawPostImage[]): string[] {
 }
 
 export function invalidatePostImagesCache() {
-  postImagesCache = null;
   postImageRowsByPostIdCache = {};
-  postImagesCacheUpdatedAt = 0;
-}
-
-export async function getAllPostImages(
-  forceRefresh: boolean = false,
-): Promise<RawPostImage[]> {
-  if (!forceRefresh && postImagesCache && isCacheFresh(postImagesCacheUpdatedAt)) {
-    return postImagesCache;
-  }
-
-  const imagesResponse = await apiRequest<RawPostImage[]>(
-    POST_IMAGES_ENDPOINT,
-    {
-      method: "GET",
-    },
-  );
-
-  if (imagesResponse.success && Array.isArray(imagesResponse.data)) {
-    postImagesCache = imagesResponse.data;
-    postImagesCacheUpdatedAt = Date.now();
-    return postImagesCache;
-  }
-
-  return postImagesCache || [];
 }
 
 export async function getPostImagesByPostId(
@@ -141,7 +111,11 @@ export async function getPostImageRowsByPostId(
 async function ensureCategoriesCache(
   forceRefresh: boolean = false,
 ): Promise<Record<string, string>> {
-  if (!forceRefresh && categoriesCache && isCacheFresh(categoriesCacheUpdatedAt)) {
+  if (
+    !forceRefresh &&
+    categoriesCache &&
+    isCacheFresh(categoriesCacheUpdatedAt)
+  ) {
     return categoriesCache;
   }
 
@@ -157,7 +131,8 @@ async function ensureCategoriesCache(
       const categoryId = toPositiveIntegerId(
         cat?.CategoryID ?? cat?.categoryID ?? cat?.id,
       );
-      const rawCategoryName = cat?.CategoryName ?? cat?.categoryName ?? cat?.name;
+      const rawCategoryName =
+        cat?.CategoryName ?? cat?.categoryName ?? cat?.name;
       const categoryName =
         typeof rawCategoryName === "string" ? rawCategoryName.trim() : "";
 
@@ -258,9 +233,12 @@ async function ensureUsersCache(
   if (missingUserIds.length > 0) {
     await Promise.all(
       missingUserIds.map(async (userId) => {
-        const userResponse = await apiRequest<RawUserLookup>(`/users/${userId}`, {
-          method: "GET",
-        });
+        const userResponse = await apiRequest<RawUserLookup>(
+          `/users/${userId}`,
+          {
+            method: "GET",
+          },
+        );
 
         if (userResponse.success && userResponse.data) {
           const resolvedUserId = getUserIdentifier(userResponse.data) || userId;

@@ -35,8 +35,7 @@ export function ProductDetailsHeader({
             <Button
               variant="ghost"
               onClick={onBack}
-              style={{ color: "#0A4ABF" }}
-              className="hover:bg-blue-50 transition-all duration-200 hover:scale-105 -ml-2 rounded-xl h-9 sm:h-10 px-2 sm:px-4"
+              className="text-[#0A4ABF] hover:bg-blue-50 transition-all duration-200 hover:scale-105 -ml-2 rounded-xl h-9 sm:h-10 px-2 sm:px-4"
             >
               <ArrowLeft
                 className={`w-4 h-4 sm:w-5 sm:h-5 ${
@@ -55,6 +54,7 @@ export function ProductDetailsHeader({
               onClick={onBack}
               className="cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 hidden sm:flex items-center px-3 py-2 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-transparent"
               title="Return to Home"
+              aria-label="Return to home"
             >
               <Logo size="md" />
             </button>
@@ -72,8 +72,7 @@ export function ProductDetailsHeader({
               onClick={() => shareProduct(product, language)}
             >
               <Share2
-                className="w-4 h-4 sm:w-5 sm:h-5"
-                style={{ color: "#0A4ABF" }}
+                className="w-4 h-4 sm:w-5 sm:h-5 text-[#0A4ABF]"
               />
             </Button>
 
@@ -84,12 +83,20 @@ export function ProductDetailsHeader({
                 className="hover:bg-white dark:hover:bg-gray-700 transition-all duration-200 hover:scale-110 hover:shadow-sm rounded-lg h-9 w-9 sm:h-10 sm:w-10 p-0"
                 onClick={() => onFavoriteToggle?.(product.id)}
                 title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+                aria-label={
+                  isFavorited
+                    ? language === "ar"
+                      ? "إزالة من المفضلة"
+                      : "Remove from favorites"
+                    : language === "ar"
+                      ? "إضافة إلى المفضلة"
+                      : "Add to favorites"
+                }
               >
                 <Heart
-                  className={`w-4 h-4 sm:w-5 sm:h-5 transition-all duration-300 ${
+                  className={`w-4 h-4 sm:w-5 sm:h-5 transition-all duration-300 text-red-500 ${
                     isFavorited ? "fill-current scale-110" : ""
                   }`}
-                  style={{ color: "#EF4444" }}
                 />
               </Button>
             )}

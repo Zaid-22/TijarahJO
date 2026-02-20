@@ -9,6 +9,7 @@ import { APP_CONFIG } from "../constants/appConfig";
 import { toPositiveIntegerId } from "../utils/idValidation";
 import { chatApi } from "./api/chat";
 import { normalizeChatMessage } from "./api/chatNormalization";
+import { logger } from "../shared/lib/logger";
 
 const API_BASE_URL = APP_CONFIG.apiBaseUrl;
 const DEBUG_CHAT =
@@ -16,7 +17,7 @@ const DEBUG_CHAT =
 
 const debugChatLog = (...args: unknown[]) => {
   if (DEBUG_CHAT) {
-    console.log(...args);
+    logger.info(...args);
   }
 };
 
@@ -51,7 +52,7 @@ class ChatService {
       try {
         await this.connection.stop();
       } catch (stopError) {
-        console.warn("SignalR stop before reconnect failed:", stopError);
+        logger.warn("SignalR stop before reconnect failed:", stopError);
       }
       this.connection = null;
     }
@@ -91,7 +92,7 @@ class ChatService {
       await connection.start();
       debugChatLog("SignalR Connected");
     } catch (err) {
-      console.error("SignalR Connection Error: ", err);
+      logger.error("SignalR Connection Error: ", err);
       this.connection = null;
       throw err;
     }
@@ -160,7 +161,7 @@ class ChatService {
       );
       return localEchoMessage;
     } catch (err) {
-      console.error("SendMessage Error. Falling back to REST:", err);
+      logger.warn("SendMessage Error. Falling back to REST:", err);
       const fallbackMessage = await chatApi.sendMessage(
         normalizedReceiverId,
         trimmedContent,

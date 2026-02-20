@@ -47,62 +47,59 @@ export function Logo({
     finalVariant = "light";
   }
 
-  const sizes = {
-    sm: { width: 140, iconSize: 32, fontSize: "1.25rem" },
-    md: {
-      width: 200,
-      iconSize: 40,
-      iconSizeMobile: 32,
-      fontSize: "1.5rem",
-      fontSizeMobile: "1.25rem",
+  const sizes: Record<
+    NonNullable<LogoProps["size"]>,
+    { iconClassName: string; textClassName: string; gapClassName: string }
+  > = {
+    sm: {
+      iconClassName: "h-8 w-8",
+      textClassName: "text-xl",
+      gapClassName: "gap-2",
     },
-    lg: { width: 260, iconSize: 48, fontSize: "2rem" },
+    md: {
+      iconClassName: "h-8 w-8 sm:h-10 sm:w-10",
+      textClassName: "text-lg sm:text-2xl",
+      gapClassName: "gap-2 sm:gap-3",
+    },
+    lg: {
+      iconClassName: "h-12 w-12",
+      textClassName: "text-3xl",
+      gapClassName: "gap-3",
+    },
   };
 
   const currentSize = sizes[size];
   const isLight = finalVariant === "light";
   const isIconOnly = finalVariant === "icon";
 
-  // Use TijarahJo brand color #0A4ABF instead of generic blue
-  // In dark mode, use light blue #3E7EFF for better visibility
-  const blueColor = isLight ? "#3E7EFF" : "#0A4ABF";
-  const textColor = isLight ? "#ffffff" : isDarkMode ? "#ffffff" : "#000000";
+  const brandColorClass = isLight ? "text-[#3E7EFF]" : "text-[#0A4ABF]";
+  const textColorClass = isLight || isDarkMode ? "text-white" : "text-black";
+  const glyphColorClass = isDarkMode ? "text-[#3E7EFF]" : brandColorClass;
 
   if (isIconOnly) {
     return (
-      <div
-        className={className}
-        style={{
-          width: currentSize.iconSize,
-          height: currentSize.iconSize,
-        }}
-      >
+      <div className={`${currentSize.iconClassName} ${className}`.trim()}>
         <svg
           viewBox="0 0 100 100"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          style={{ width: "100%", height: "100%" }}
+          className={`h-full w-full ${brandColorClass}`}
         >
-          <rect x="20" y="32" width="60" height="56" rx="6" fill={blueColor} />
+          <rect x="20" y="32" width="60" height="56" rx="6" className="fill-current" />
           <path
             d="M32 32V24C32 17.373 37.373 12 44 12H56C62.627 12 68 17.373 68 24V32"
-            stroke={blueColor}
+            className="stroke-current"
             strokeWidth="6"
             strokeLinecap="round"
             fill="none"
           />
-          <circle
-            cx="50"
-            cy="58"
-            r="12"
-            fill={isDarkMode ? "#1a1a1a" : "white"}
-          />
+          <circle cx="50" cy="58" r="12" className={isDarkMode ? "fill-[#1a1a1a]" : "fill-white"} />
           <text
             x="50"
             y="64"
             fontSize="18"
             fontWeight="700"
-            fill={isDarkMode ? "#3E7EFF" : blueColor}
+            className={`fill-current ${glyphColorClass}`}
             textAnchor="middle"
           >
             T
@@ -114,41 +111,30 @@ export function Logo({
 
   return (
     <div
-      className={`flex items-center gap-2 sm:gap-3 ${className}`}
-      style={{ width: "fit-content" }}
+      className={`flex w-fit items-center ${currentSize.gapClassName} ${className}`.trim()}
     >
-      <div
-        className="w-8 h-8 sm:w-10 sm:h-10"
-        style={{
-          flexShrink: 0,
-        }}
-      >
+      <div className={`${currentSize.iconClassName} shrink-0`.trim()}>
         <svg
           viewBox="0 0 100 100"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          style={{ width: "100%", height: "100%" }}
+          className={`h-full w-full ${brandColorClass}`}
         >
-          <rect x="20" y="32" width="60" height="56" rx="6" fill={blueColor} />
+          <rect x="20" y="32" width="60" height="56" rx="6" className="fill-current" />
           <path
             d="M32 32V24C32 17.373 37.373 12 44 12H56C62.627 12 68 17.373 68 24V32"
-            stroke={blueColor}
+            className="stroke-current"
             strokeWidth="6"
             strokeLinecap="round"
             fill="none"
           />
-          <circle
-            cx="50"
-            cy="58"
-            r="12"
-            fill={isDarkMode ? "#1a1a1a" : "white"}
-          />
+          <circle cx="50" cy="58" r="12" className={isDarkMode ? "fill-[#1a1a1a]" : "fill-white"} />
           <text
             x="50"
             y="64"
             fontSize="18"
             fontWeight="700"
-            fill={isDarkMode ? "#3E7EFF" : blueColor}
+            className={`fill-current ${glyphColorClass}`}
             textAnchor="middle"
           >
             T
@@ -157,21 +143,10 @@ export function Logo({
       </div>
 
       {finalShowText && (
-        <div
-          className="text-lg sm:text-2xl"
-          style={{
-            lineHeight: 1,
-          }}
-        >
-          <div
-            style={{
-              color: textColor,
-              letterSpacing: "-0.02em",
-              fontWeight: 700,
-            }}
-          >
+        <div className={`${currentSize.textClassName} leading-none`}>
+          <div className={`${textColorClass} tracking-[-0.02em] font-bold`}>
             Tijarah
-            <span style={{ color: isDarkMode ? "#3E7EFF" : blueColor }}>
+            <span className={glyphColorClass}>
               Jo
             </span>
           </div>

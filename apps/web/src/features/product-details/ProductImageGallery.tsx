@@ -109,20 +109,18 @@ export function ProductImageGallery({ product, language }: ProductImageGalleryPr
           <div className="flex gap-2 justify-center py-3 bg-white dark:bg-gray-800/80">
             {displayImages.map((_, index) => (
               <button
-                key={index}
+                key={`gallery-dot-${displayImages[index] || "image"}-${index}`}
                 type="button"
                 onClick={() => setSelectedImage(index)}
                 className="rounded-full transition-all hover:scale-125 active:scale-110 p-2"
                 aria-label={`Go to image ${index + 1}`}
               >
                 <span
-                  className="block rounded-full transition-all"
-                  style={{
-                    width: index === selectedImage ? "32px" : "12px",
-                    height: "12px",
-                    backgroundColor:
-                      index === selectedImage ? "#0A4ABF" : "#D1D5DB",
-                  }}
+                  className={`block rounded-full transition-all h-3 ${
+                    index === selectedImage
+                      ? "w-8 bg-[#0A4ABF]"
+                      : "w-3 bg-gray-300"
+                  }`}
                 />
               </button>
             ))}
@@ -133,17 +131,17 @@ export function ProductImageGallery({ product, language }: ProductImageGalleryPr
           <div className="flex gap-2 p-4 bg-gray-50 dark:bg-gray-800/50 overflow-x-auto border-t dark:border-gray-700">
             {displayImages.map((img, index) => (
               <button
-                key={index}
+                key={`gallery-thumb-${img || "image"}-${index}`}
                 type="button"
                 onClick={() => {
                   setSelectedImage(index);
                   setImageDialogOpen(true);
                 }}
-                className="w-20 h-20 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 hover:scale-105 active:scale-95 cursor-pointer"
-                style={{
-                  borderColor:
-                    index === selectedImage ? "#0A4ABF" : "transparent",
-                }}
+                className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 hover:scale-105 active:scale-95 cursor-pointer ${
+                  index === selectedImage
+                    ? "border-[#0A4ABF]"
+                    : "border-transparent"
+                }`}
                 aria-label={`View image ${index + 1}`}
               >
                 <ImageWithFallback
@@ -182,6 +180,7 @@ export function ProductImageGallery({ product, language }: ProductImageGalleryPr
                     size="sm"
                     className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white"
                     onClick={prevImage}
+                    aria-label={language === "ar" ? "الصورة السابقة" : "Previous image"}
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
@@ -190,6 +189,7 @@ export function ProductImageGallery({ product, language }: ProductImageGalleryPr
                     size="sm"
                     className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white"
                     onClick={nextImage}
+                    aria-label={language === "ar" ? "الصورة التالية" : "Next image"}
                   >
                     <ChevronRight className="w-4 h-4" />
                   </Button>
@@ -197,16 +197,15 @@ export function ProductImageGallery({ product, language }: ProductImageGalleryPr
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
                     {displayImages.map((_, index) => (
                       <button
-                        key={index}
+                        key={`dialog-dot-${displayImages[index] || "image"}-${index}`}
                         type="button"
                         onClick={() => setSelectedImage(index)}
-                        className="w-2 h-2 rounded-full transition-all"
-                        style={{
-                          backgroundColor:
-                            index === selectedImage
-                              ? "#0A4ABF"
-                              : "rgba(255, 255, 255, 0.5)",
-                        }}
+                        className={`w-2 h-2 rounded-full transition-all ${
+                          index === selectedImage
+                            ? "bg-[#0A4ABF]"
+                            : "bg-white/50"
+                        }`}
+                        aria-label={`Open image ${index + 1}`}
                       />
                     ))}
                   </div>

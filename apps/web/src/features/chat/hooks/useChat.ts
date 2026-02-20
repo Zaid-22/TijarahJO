@@ -4,6 +4,7 @@ import { Message } from "../../../types";
 import { useAuth } from "../../../contexts/AuthContext";
 import { api } from "../../../services/api";
 import { toPositiveIntegerId } from "../../../utils/idValidation";
+import { logger } from "../../../shared/lib/logger";
 
 export function useChat(otherUserId?: number) {
   const { user, isAuthenticated } = useAuth();
@@ -15,7 +16,7 @@ export function useChat(otherUserId?: number) {
   useEffect(() => {
     if (!isAuthenticated) {
       chatService.disconnect().catch((disconnectError) => {
-        console.warn("[useChat] SignalR disconnect failed:", disconnectError);
+        logger.warn("[useChat] SignalR disconnect failed:", disconnectError);
       });
       setError(null);
       return;
@@ -35,7 +36,7 @@ export function useChat(otherUserId?: number) {
       .catch((err) => {
         const errorMessage =
           err instanceof Error ? err.message : String(err || "Unknown error");
-        console.error("[useChat] SignalR connection failed:", err);
+        logger.error("[useChat] SignalR connection failed:", err);
         setError("Connection failed: " + errorMessage);
       });
 
@@ -74,7 +75,7 @@ export function useChat(otherUserId?: number) {
       setMessages(sortedHistory);
       setError(null);
     } catch (err) {
-      console.error(err);
+      logger.warn("[useChat] Failed to load history", err);
       setError("Failed to load history");
     } finally {
       setIsLoading(false);
@@ -104,7 +105,7 @@ export function useChat(otherUserId?: number) {
       setMessages((prev) => [...prev, sentMessage]);
       setError(null);
     } catch (err) {
-      console.error(err);
+      logger.warn("[useChat] Failed to send message", err);
       setError("Failed to send message.");
     }
   };

@@ -95,7 +95,7 @@ export function ProductActionDialogs({
                 }
                 setShowDeleteDialog(false);
               }}
-              style={{ backgroundColor: "#EF4444", color: "white" }}
+              className="bg-red-500 text-white hover:bg-red-600"
             >
               {language === "ar" ? "حذف" : "Delete"}
             </AlertDialogAction>
@@ -115,10 +115,9 @@ export function ProductActionDialogs({
           </DialogDescription>
           <div className="flex flex-col items-center justify-center space-y-6 p-4">
             <div
-              className="w-16 h-16 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: "rgba(10, 74, 191, 0.1)" }}
+              className="w-16 h-16 rounded-full flex items-center justify-center bg-[#0A4ABF1A]"
             >
-              <Phone className="w-8 h-8" style={{ color: "#0A4ABF" }} />
+              <Phone className="w-8 h-8 text-[#0A4ABF]" />
             </div>
             <div className="text-center space-y-2">
               <h3 className="text-2xl font-bold">
@@ -132,8 +131,7 @@ export function ProductActionDialogs({
             </div>
             <a
               href={`tel:${sellerPhone || product.phone || "962700000000"}`}
-              className="text-3xl font-semibold tracking-wide hover:opacity-80 transition-opacity"
-              style={{ color: "#0A4ABF" }}
+              className="text-3xl font-semibold tracking-wide hover:opacity-80 transition-opacity text-[#0A4ABF]"
             >
               {sellerPhone || product.phone || "+962 7 0000 0000"}
             </a>
@@ -143,11 +141,7 @@ export function ProductActionDialogs({
                 className="flex-1"
               >
                 <Button
-                  className="w-full"
-                  style={{
-                    backgroundColor: "#0A4ABF",
-                    color: "white",
-                  }}
+                  className="w-full bg-[#0A4ABF] text-white hover:bg-[#083a99]"
                 >
                   <Phone className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
                   {language === "ar" ? "اتصل الآن" : "Call Now"}
@@ -191,8 +185,7 @@ export function ProductActionDialogs({
                 }
                 setShowMarkAsSoldDialog(false);
               }}
-              className="transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
-              style={{ backgroundColor: "#0A4ABF", color: "white" }}
+              className="transition-all duration-300 hover:scale-[1.02] hover:shadow-lg bg-[#0A4ABF] text-white hover:bg-[#083a99]"
             >
               {language === "ar" ? "تأكيد البيع" : "Mark as Sold"}
             </AlertDialogAction>
@@ -223,8 +216,7 @@ export function ProductActionDialogs({
                 }
                 setShowRelistDialog(false);
               }}
-              className="transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
-              style={{ backgroundColor: "#0A4ABF", color: "white" }}
+              className="transition-all duration-300 hover:scale-[1.02] hover:shadow-lg bg-[#0A4ABF] text-white hover:bg-[#083a99]"
             >
               {language === "ar" ? "إعادة الإداج" : "Re-list Post"}
             </AlertDialogAction>

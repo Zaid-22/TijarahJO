@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { UserProfile } from "../../../types";
 import { useAuth } from "../../../contexts/AuthContext";
 import { api } from "../../../services/api";
+import { logger } from "../../../shared/lib/logger";
 
 function formatJoinedDate(value: unknown, fallback: string): string {
   if (value !== null && value !== undefined && value !== "") {
@@ -100,7 +101,7 @@ export function useUserProfile() {
           ),
         }));
       } catch (error) {
-        console.warn("[useUserProfile] Failed to fetch extended profile:", error);
+        logger.warn("[useUserProfile] Failed to fetch extended profile:", error);
       }
     };
 

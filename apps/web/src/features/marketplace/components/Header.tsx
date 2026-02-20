@@ -109,6 +109,7 @@ export function Header({
                 size="sm"
                 onClick={onBack}
                 className="hover:bg-gray-100 dark:hover:bg-gray-800 p-1 sm:p-2 flex-shrink-0 text-primary"
+                aria-label={language === "ar" ? "رجوع" : "Go back"}
               >
                 <ArrowLeft
                   className={`w-5 h-5 sm:w-6 sm:h-6 ${isRTL ? "rotate-180" : ""}`}
@@ -125,6 +126,7 @@ export function Header({
                       variant="ghost"
                       size="sm"
                       className="md:hidden p-1 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0 text-primary"
+                      aria-label={language === "ar" ? "فتح القائمة" : "Open menu"}
                     >
                       <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
                     </Button>
@@ -282,8 +284,10 @@ export function Header({
                 />
                 {searchQuery && (
                   <button
+                    type="button"
                     onClick={() => onSearchChange?.("")}
                     className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors`}
+                    aria-label={language === "ar" ? "مسح البحث" : "Clear search"}
                   >
                     <svg
                       className="w-5 h-5"
@@ -397,6 +401,28 @@ export function Header({
                 onKeyDown={handleKeyPress}
                 className={`${isRTL ? "pr-12" : "pl-12"} h-11 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-primary dark:focus:border-secondary rounded-full dark:text-white dark:placeholder:text-gray-500`}
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => onSearchChange?.("")}
+                  className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors`}
+                  aria-label={language === "ar" ? "مسح البحث" : "Clear search"}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
         )}

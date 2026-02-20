@@ -41,8 +41,7 @@ export function FavoritesPage({
               <Button
                 variant="ghost"
                 onClick={onBackToMarketplace}
-                style={{ color: "#0A4ABF" }}
-                className="hover:bg-blue-50 -ml-2"
+                className="text-[#0A4ABF] hover:bg-blue-50 -ml-2"
               >
                 <ArrowLeft className={`w-5 h-5 ${isRTL ? "ml-2" : "mr-2"}`} />
                 <span className="hidden sm:inline">
@@ -56,6 +55,7 @@ export function FavoritesPage({
                 onClick={onBackToMarketplace}
                 className="cursor-pointer hidden sm:block"
                 title="Return to Home"
+                aria-label="Return to home"
               >
                 <Logo />
               </button>
@@ -69,16 +69,11 @@ export function FavoritesPage({
         {/* Page Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-3">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{
-                background: "linear-gradient(135deg, #0A4ABF 0%, #3E7EFF 100%)",
-              }}
-            >
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-[#0A4ABF] to-[#3E7EFF]">
               <Heart className="w-6 h-6 text-white fill-white" />
             </div>
             <div>
-              <h1 style={{ color: "#000000" }}>
+              <h1 className="text-black dark:text-white">
                 {t.favorites || "My Favorites"}
               </h1>
             </div>
@@ -103,13 +98,10 @@ export function FavoritesPage({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div
-              className="w-24 h-24 rounded-full flex items-center justify-center mb-6"
-              style={{ backgroundColor: "#E5EDFF" }}
-            >
-              <Heart className="w-12 h-12" style={{ color: "#0A4ABF" }} />
+            <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6 bg-[#E5EDFF]">
+              <Heart className="w-12 h-12 text-[#0A4ABF]" />
             </div>
-            <h2 className="mb-3" style={{ color: "#000000" }}>
+            <h2 className="mb-3 text-black dark:text-white">
               {t.noFavorites || "No Favorites Yet"}
             </h2>
             <p className="text-gray-600 mb-6 max-w-md">
@@ -118,10 +110,7 @@ export function FavoritesPage({
             </p>
             <Button
               onClick={onBackToMarketplace}
-              style={{
-                backgroundColor: "#0A4ABF",
-                color: "white",
-              }}
+              className="bg-[#0A4ABF] text-white hover:bg-[#083a95]"
             >
               <ShoppingBag className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
               {t.browseListing || "Browse Listings"}

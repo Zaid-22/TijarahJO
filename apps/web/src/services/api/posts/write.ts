@@ -5,7 +5,7 @@ import {
 } from "../../../types/api";
 import { toPositiveIntegerId } from "../../../utils/idValidation";
 import { authApi } from "../auth";
-import { apiRequest, debugError, debugLog, debugWarn } from "../client";
+import { apiRequest, debugError, debugWarn } from "../client";
 import { toIsoStringOrNow } from "../shared";
 import { transformPostModelToProduct } from "./mappers";
 import { resolveStatusValue, toStatusNumber } from "./status";
@@ -73,7 +73,6 @@ async function resolveCurrentUserId(): Promise<number | undefined> {
   try {
     const currentUserResponse = await authApi.getCurrentUser();
     if (!currentUserResponse.success || !currentUserResponse.data) {
-      debugWarn("[createPost] Failed to get current user from /auth/me");
       return undefined;
     }
 
@@ -81,7 +80,6 @@ async function resolveCurrentUserId(): Promise<number | undefined> {
     const userId = toPositiveIntegerId(
       user.Id ?? user.id ?? user.UserID ?? user.userID,
     );
-    debugLog("[createPost] Got user ID from /auth/me:", userId);
     return userId;
   } catch (error) {
     debugError("[createPost] Error getting current user:", error);
@@ -94,16 +92,8 @@ async function createPostImages(
   imageUrls: readonly string[],
 ): Promise<string[]> {
   if (imageUrls.length === 0) {
-    debugLog("[createPost] No images to create");
     return [];
   }
-
-  debugLog(
-    "[createPost] Creating",
-    imageUrls.length,
-    "images for post",
-    postId,
-  );
 
   const creationResults = await Promise.all(
     imageUrls.map(async (imageUrl, index) => {
@@ -119,9 +109,6 @@ async function createPostImages(
         });
 
         if (imageResponse.success) {
-          debugLog(
-            `[createPost] Image ${index + 1} created successfully`,
-          );
           return true;
         }
 
@@ -141,9 +128,6 @@ async function createPostImages(
   );
 
   const savedImageUrls = imageUrls.filter((_, index) => creationResults[index]);
-  debugLog(
-    `[createPost] Successfully created ${savedImageUrls.length} out of ${imageUrls.length} images`,
-  );
 
   if (savedImageUrls.length > 0) {
     invalidatePostImagesCache();
@@ -266,7 +250,6 @@ export async function createPost(
         message: "Post created but response did not include a valid PostID.",
       };
     }
-    debugLog("[createPost] Post created with ID:", postId);
 
     const sanitizedImageUrls = sanitizeImageUrls(postData.images);
     const savedImageUrls = await createPostImages(postId, sanitizedImageUrls);
@@ -425,22 +408,11 @@ export async function deletePost(
   }
 
   try {
-    debugLog("[deletePost] Attempting to delete post with ID:", normalizedPostId);
-
     const response = await apiRequest<unknown>(`/posts/${normalizedPostId}`, {
       method: "DELETE",
     });
 
-    debugLog("[deletePost] Full response object:", response);
-    debugLog("[deletePost] Response success:", response.success);
-    if (!response.success) {
-      debugLog("[deletePost] Response error:", response.error);
-    } else {
-      debugLog("[deletePost] Response data:", response.data);
-    }
-
     if (response.success) {
-      debugLog("[deletePost] Delete successful!");
       invalidatePostImagesCache();
       return { success: true };
     }
@@ -452,13 +424,6 @@ export async function deletePost(
         response.error.message || `Error ${response.error.code || "unknown"}`;
     }
 
-    debugError("[deletePost] Delete failed!");
-    debugError("[deletePost] Error message:", errorMessage);
-    debugError(
-      "[deletePost] Full response JSON:",
-      JSON.stringify(response, null, 2),
-    );
-
     return { success: false, error: errorMessage };
   } catch (error) {
     const errorMessage =
@@ -466,7 +431,6 @@ export async function deletePost(
         ? error.message
         : "An error occurred while deleting the post";
     debugError("[deletePost] Exception caught:", error);
-    debugError("[deletePost] Error details:", errorMessage);
     return { success: false, error: errorMessage };
   }
 }

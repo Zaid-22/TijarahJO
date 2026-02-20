@@ -9,6 +9,7 @@ import { useDebounce } from "../shared/hooks/useDebounce";
 import { api } from "../services/api";
 import { isActiveProduct, rankProductsBySearch } from "../lib/searchRanking";
 import { APP_CONFIG } from "../constants/appConfig";
+import { runSearchPipeline } from "../features/marketplace/search/searchPipeline";
 import {
   Search,
   Grid3x3,
@@ -55,6 +56,7 @@ export function SearchResultsPage({
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const debouncedSearchQuery = useDebounce(localSearchQuery, 300);
+  const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
 
   useEffect(() => {
     setLocalSearchQuery(initialSearchQuery);
@@ -75,48 +77,29 @@ export function SearchResultsPage({
     setSearchError(null);
 
     void (async () => {
-      try {
-        const response = await api.search.search({
-          query,
-          status: "ACTIVE",
-          page: 1,
-          limit: APP_CONFIG.search.searchResultsLimit,
-          sortBy: "date",
-          sortOrder: "desc",
-        });
+      const { products: nextResults, error } = await runSearchPipeline({
+        request: () =>
+          api.search.search({
+            query,
+            status: "ACTIVE",
+            page: 1,
+            limit: APP_CONFIG.search.searchResultsLimit,
+            sortBy: "date",
+            sortOrder: "desc",
+          }),
+        buildFallbackProducts: () => rankProductsBySearch(products, query),
+        fallbackErrorMessage: "Search failed",
+        transformRemoteProducts: (remoteProducts) =>
+          rankProductsBySearch(remoteProducts, query),
+      });
 
-        if (cancelled) {
-          return;
-        }
-
-        if (response.success) {
-          setSearchResults(rankProductsBySearch(response.posts, query));
-          setSearchError(null);
-          return;
-        }
-
-        const fallbackResults = rankProductsBySearch(products, query);
-        setSearchResults(fallbackResults);
-        setSearchError(
-          fallbackResults.length > 0
-            ? null
-            : response.error?.message || "Search failed",
-        );
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-        console.error("Search request failed:", error);
-        const fallbackResults = rankProductsBySearch(products, query);
-        setSearchResults(fallbackResults);
-        setSearchError(
-          fallbackResults.length > 0 ? null : "Search request failed",
-        );
-      } finally {
-        if (!cancelled) {
-          setIsSearching(false);
-        }
+      if (cancelled) {
+        return;
       }
+
+      setSearchResults(nextResults);
+      setSearchError(error);
+      setIsSearching(false);
     })();
 
     return () => {
@@ -141,8 +124,7 @@ export function SearchResultsPage({
           <Button
             variant="ghost"
             onClick={onBack}
-            style={{ color: "#0A4ABF" }}
-            className="hover:bg-blue-50 transition-all duration-200 hover:scale-105 -ml-2 rounded-xl h-10 px-3"
+            className="text-[#0A4ABF] hover:bg-blue-50 transition-all duration-200 hover:scale-105 -ml-2 rounded-xl h-10 px-3"
           >
             <ArrowLeft
               className={`w-5 h-5 ${language === "ar" ? "ml-2 rotate-180" : "mr-2"}`}
@@ -181,6 +163,7 @@ export function SearchResultsPage({
               onClick={() => setViewMode("grid-4")}
               className={`h-9 w-9 p-0 ${viewMode === "grid-4" ? "bg-gray-100 dark:bg-gray-700" : ""}`}
               title="4 columns"
+              aria-label="4 columns"
             >
               <Grid3x3 className="w-4 h-4" />
             </Button>
@@ -190,6 +173,7 @@ export function SearchResultsPage({
               onClick={() => setViewMode("grid-3")}
               className={`h-9 w-9 p-0 ${viewMode === "grid-3" ? "bg-gray-100 dark:bg-gray-700" : ""}`}
               title="3 columns"
+              aria-label="3 columns"
             >
               <LayoutGrid className="w-4 h-4" />
             </Button>
@@ -199,6 +183,7 @@ export function SearchResultsPage({
               onClick={() => setViewMode("grid-2")}
               className={`h-9 w-9 p-0 ${viewMode === "grid-2" ? "bg-gray-100 dark:bg-gray-700" : ""}`}
               title="2 columns"
+              aria-label="2 columns"
             >
               <Columns className="w-4 h-4" />
             </Button>
@@ -208,6 +193,7 @@ export function SearchResultsPage({
               onClick={() => setViewMode("list")}
               className={`h-9 w-9 p-0 ${viewMode === "list" ? "bg-gray-100 dark:bg-gray-700" : ""}`}
               title="List view"
+              aria-label="List view"
             >
               <List className="w-4 h-4" />
             </Button>
@@ -243,8 +229,7 @@ export function SearchResultsPage({
                   onSearch("");
                   onBack();
                 }}
-                className="mt-4"
-                style={{ backgroundColor: "#0A4ABF", color: "white" }}
+                className="mt-4 bg-[#0A4ABF] text-white hover:bg-[#083a95]"
               >
                 {language === "ar" ? "العودة إلى السوق" : "Back to Marketplace"}
               </Button>
@@ -256,7 +241,7 @@ export function SearchResultsPage({
                 product={product}
                 onProductClick={onProductClick}
                 viewMode={viewMode}
-                isFavorite={favoriteIds.includes(product.id)}
+                isFavorite={favoriteIdSet.has(product.id)}
                 onFavoriteToggle={onFavoriteToggle}
                 isAuthenticated={isAuthenticated}
                 currentUserId={isAuthenticated ? currentUserId : undefined}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   User,
@@ -14,218 +14,21 @@ import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
 import { ProductCard } from "../features/marketplace/components/ProductCard";
 import { Textarea } from "../shared/ui/textarea";
-import { Product } from "../types";
-import { normalizeSellerDisplayName } from "../utils/sellerDisplayName";
-import { transformPostModelToProduct } from "../services/api/posts/mappers";
-import type { RawPost } from "../services/api/posts/types";
-import { resolveUserDisplayName } from "../utils/userDisplayName";
 import { toPositiveIntegerId } from "../utils/idValidation";
-
-function normalizeListingToProduct(
-  post: unknown,
-  fallbackIndex: number,
-  sellerName: string,
-  sellerId: string,
-  fallbackLocation: string,
-): Product {
-  const normalized = transformPostModelToProduct(
-    post as RawPost,
-    [],
-    fallbackIndex,
-  );
-  const normalizedSeller = String(normalized.seller || "").trim();
-  const normalizedSellerId = String(normalized.sellerId || "").trim();
-  const normalizedLocation = String(normalized.location || "").trim();
-
-  return {
-    ...normalized,
-    seller: normalizedSeller.length > 0 ? normalizedSeller : sellerName,
-    sellerId: normalizedSellerId.length > 0 ? normalizedSellerId : sellerId,
-    location: normalizedLocation.length > 0 ? normalizedLocation : fallbackLocation,
-  };
-}
-
-function toRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object"
-    ? (value as Record<string, unknown>)
-    : {};
-}
-
-function isActiveListing(post: unknown): boolean {
-  const row = toRecord(post);
-  const status = String(row.status ?? row.Status ?? "").toUpperCase();
-  const isDeleted = Boolean(row.isDeleted ?? row.IsDeleted ?? false);
-  return status === "ACTIVE" && !isDeleted;
-}
-
-interface SellerReview {
-  reviewID: number | string;
-  reviewerID: number;
-  reviewerName: string;
-  rating: number;
-  comment: string;
-  timestamp: string;
-}
-
-interface SellerProfileState {
-  name: string;
-  joinDate: string;
-  location: string;
-  avatar?: string;
-}
+import { useSellerProfileData } from "../features/seller-profile/hooks/useSellerProfileData";
+import { Product } from "../types";
 
 export function SellerProfilePage() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-
-  // const [seller, setSeller] = useState<any>(null);
-  const [activeListings, setActiveListings] = useState<Product[]>([]);
-  const [reviews, setReviews] = useState<SellerReview[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [sellerProfile, setSellerProfile] = useState<SellerProfileState | null>(
-    null,
-  );
+  const { activeListings, reviews, isLoading, sellerProfile, reload } =
+    useSellerProfileData(userId);
 
   // Review Form
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-
-  const loadData = useCallback(async () => {
-    if (!userId) {
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    setActiveListings([]);
-    setReviews([]);
-    setSellerProfile(null);
-    try {
-      const sellerResponse = await api.sellers.getSellerProfile(String(userId));
-      if (sellerResponse?.seller) {
-        const seller = sellerResponse.seller;
-        const city = seller?.city;
-        const area = seller?.area;
-        const location = [area, city].filter(Boolean).join(", ") || "Amman, Jordan";
-        const sellerName = normalizeSellerDisplayName(
-          seller.name,
-          String(seller?.id || userId),
-        );
-
-        setSellerProfile({
-          name: sellerName,
-          joinDate: seller.joinedDate || "2024",
-          location,
-          avatar: seller.avatar,
-        });
-
-        const activePosts = (sellerResponse.posts || [])
-          .filter(isActiveListing)
-          .map((post, index: number) =>
-            normalizeListingToProduct(
-              post,
-              index,
-              sellerName,
-              String(seller?.id || userId),
-              location,
-            ),
-          );
-        setActiveListings(activePosts);
-      } else {
-        const sellerUser = await api.users.getUser(String(userId));
-        let fallbackSellerName = `User ${userId}`;
-        let fallbackLocation = "Amman, Jordan";
-        if (sellerUser) {
-          const sellerRow = toRecord(sellerUser);
-          const city = String(sellerRow.city ?? sellerRow.City ?? "").trim();
-          const area = String(sellerRow.area ?? sellerRow.Area ?? "").trim();
-          const location = [area, city].filter(Boolean).join(", ") || "Amman, Jordan";
-
-          fallbackSellerName = normalizeSellerDisplayName(
-            resolveUserDisplayName(sellerRow, String(userId)),
-            String(userId),
-          );
-          fallbackLocation = location;
-          setSellerProfile({
-            name: fallbackSellerName,
-            joinDate: String(sellerRow.joinedAt ?? "2024"),
-            location,
-            avatar: String(sellerRow.avatar ?? ""),
-          });
-        }
-
-        const userPosts = await api.posts.getUserPosts(String(userId));
-        const activePosts = userPosts
-          .filter(isActiveListing)
-          .map((post: Product, index: number) =>
-            normalizeListingToProduct(
-              post,
-              index,
-              fallbackSellerName,
-              String(userId),
-              fallbackLocation,
-            ),
-          );
-        setActiveListings(activePosts);
-      }
-
-      // Fetch Reviews
-      const reviewList = await api.reviews.getUserReviews(String(userId));
-      const normalizedReviews = reviewList.map((review: unknown, index: number) => {
-        const reviewRow = toRecord(review);
-        const reviewIdRaw = reviewRow.ReviewID ?? reviewRow.reviewID;
-        const reviewId =
-          typeof reviewIdRaw === "number" && Number.isFinite(reviewIdRaw)
-            ? Math.trunc(reviewIdRaw)
-            : typeof reviewIdRaw === "string" && reviewIdRaw.trim().length > 0
-              ? reviewIdRaw.trim()
-              : `review-${index}`;
-        const reviewerId =
-          toPositiveIntegerId(reviewRow.ReviewerID ?? reviewRow.reviewerID) ?? 0;
-        const rawRating = Number(reviewRow.Rating ?? reviewRow.rating ?? 0);
-        const safeRating =
-          Number.isFinite(rawRating) && rawRating > 0
-            ? Math.min(5, Math.max(1, Math.round(rawRating)))
-            : 0;
-        const rawTimestamp = reviewRow.Timestamp ?? reviewRow.timestamp;
-        const parsedTimestamp =
-          typeof rawTimestamp === "string" ||
-          typeof rawTimestamp === "number" ||
-          rawTimestamp instanceof Date
-            ? new Date(rawTimestamp)
-            : null;
-        const timestamp =
-          parsedTimestamp && !Number.isNaN(parsedTimestamp.getTime())
-            ? parsedTimestamp.toISOString()
-            : new Date().toISOString();
-
-        return {
-          reviewID: reviewId,
-          reviewerID: reviewerId,
-          reviewerName: resolveUserDisplayName(
-            {
-              name: reviewRow.ReviewerName ?? reviewRow.reviewerName,
-              email: reviewRow.ReviewerEmail ?? reviewRow.reviewerEmail,
-            },
-            reviewerId,
-          ),
-          rating: safeRating,
-          comment: String(reviewRow.Comment ?? reviewRow.comment ?? ""),
-          timestamp,
-        };
-      });
-      setReviews(normalizedReviews);
-    } catch (e) {
-      toast.error("Failed to load seller profile");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userId]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
 
   const submitReview = async () => {
     if (!isAuthenticated) return toast.error("Please login to review");
@@ -248,7 +51,7 @@ export function SellerProfilePage() {
       if (response.success) {
         toast.success("Review submitted!");
         setComment("");
-        loadData(); // Refresh reviews
+        reload();
       } else {
         toast.error(response.message || "Failed to submit review");
       }
@@ -280,8 +83,7 @@ export function SellerProfilePage() {
       <Button
         variant="ghost"
         onClick={() => navigate(-1)}
-        style={{ color: "#0A4ABF" }}
-        className="mb-4 hover:bg-blue-50 transition-all duration-200 hover:scale-105 -ml-2 rounded-xl h-10 px-3"
+        className="mb-4 hover:bg-blue-50 transition-all duration-200 hover:scale-105 -ml-2 rounded-xl h-10 px-3 text-[#0A4ABF]"
       >
         <ArrowLeft className="w-5 h-5 mr-2" />
         <span className="font-semibold">Back</span>
@@ -289,12 +91,7 @@ export function SellerProfilePage() {
       {/* Profile Header */}
       <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden mb-8">
         {/* Banner */}
-        <div
-          className="h-32 sm:h-48 w-full relative"
-          style={{
-            background: "linear-gradient(135deg, #0A4ABF 0%, #3E7EFF 100%)",
-          }}
-        >
+        <div className="h-32 sm:h-48 w-full relative bg-gradient-to-br from-[#0A4ABF] to-[#3E7EFF]">
           <div className="absolute inset-0 bg-black/10" />
         </div>
 
@@ -356,8 +153,7 @@ export function SellerProfilePage() {
             <div className="flex gap-3 mb-2">
               <Button
                 onClick={() => navigate(`/chat/${userId}`)}
-                className="shadow-sm hover:shadow-md transition-all rounded-xl"
-                style={{ backgroundColor: "#0A4ABF" }}
+                className="shadow-sm hover:shadow-md transition-all rounded-xl bg-[#0A4ABF] hover:bg-[#083a99]"
               >
                 <MessageSquare className="w-4 h-4 mr-2" />
                 Chat with Seller
@@ -407,6 +203,7 @@ export function SellerProfilePage() {
                     key={star}
                     onClick={() => setRating(star)}
                     type="button"
+                    aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
                   >
                     <Star
                       className={`w-5 h-5 ${star <= rating ? "text-yellow-400 fill-current" : "text-gray-300"}`}

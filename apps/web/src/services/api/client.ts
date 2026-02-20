@@ -1,5 +1,6 @@
 import { APP_CONFIG } from "../../constants/appConfig";
 import { ApiResponse } from "../../types/api";
+import { logger } from "../../shared/lib/logger";
 
 // Vite uses import.meta.env instead of process.env
 const API_BASE_URL = APP_CONFIG.apiBaseUrl;
@@ -42,19 +43,19 @@ function isUnsafeMethod(method: string): boolean {
 
 export const debugLog = (...args: unknown[]) => {
   if (DEBUG_API) {
-    console.log(...args);
+    logger.info(...args);
   }
 };
 
 export const debugWarn = (...args: unknown[]) => {
   if (DEBUG_API) {
-    console.warn(...args);
+    logger.warn(...args);
   }
 };
 
 export const debugError = (...args: unknown[]) => {
   if (DEBUG_API) {
-    console.error(...args);
+    logger.error(...args);
   }
 };
 

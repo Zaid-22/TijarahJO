@@ -7,6 +7,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { toPositiveIntegerId } from "../utils/idValidation";
 import { resolveUserDisplayName } from "../utils/userDisplayName";
+import { logger } from "../shared/lib/logger";
 
 interface ChatSummary {
   userId: number;
@@ -112,7 +113,7 @@ export function ChatPage() {
           })),
         );
       } catch (error) {
-        console.error("Failed to load chats", error);
+        logger.warn("Failed to load chats", error);
         setChats([]);
         setUserDisplayNamesById({});
       } finally {

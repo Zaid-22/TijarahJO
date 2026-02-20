@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Users, ShoppingBag, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../shared/ui/card";
 import { api } from "../../../services/api";
+import { logger } from "../../../shared/lib/logger";
 
 interface DashboardStats {
   totalUsers: number;
@@ -34,7 +35,7 @@ export function AdminDashboard() {
           totalRevenue: statsData.totalRevenue,
         });
       } catch (error) {
-        console.error("Failed to fetch dashboard stats", error);
+        logger.warn("Failed to fetch dashboard stats", error);
         setLoadError("Failed to load dashboard stats.");
       } finally {
         setIsLoading(false);

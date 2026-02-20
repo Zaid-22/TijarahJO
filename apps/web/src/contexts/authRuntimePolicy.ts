@@ -4,12 +4,13 @@ export const AUTH_REVALIDATE_BASE_THROTTLE_MS = 5_000;
 export const AUTH_REVALIDATE_MAX_THROTTLE_MS = 60_000;
 export const AUTH_ERROR_EMIT_COOLDOWN_MS = 12_000;
 export const AUTH_MAX_CONSECUTIVE_NETWORK_FAILURES = 8;
+
 export const OFFLINE_SESSION_MESSAGE =
   "You are offline. Session verification will resume when connection is restored.";
 
-export type AuthCheckOutcome = "success" | "auth_error" | "network_error";
+type AuthCheckOutcome = "success" | "auth_error" | "network_error";
 
-export type ErrorEmissionState = {
+type ErrorEmissionState = {
   message: string;
   emittedAt: number;
 };
@@ -28,13 +29,6 @@ export function getNetworkRetryDelayMs(consecutiveFailures: number): number {
   return Math.min(AUTH_NETWORK_RETRY_MAX_DELAY_MS, delay);
 }
 
-export function getRevalidateThrottleMs(consecutiveFailures: number): number {
-  const normalizedFailures = normalizeFailureCount(consecutiveFailures);
-  const exponent = Math.max(0, normalizedFailures - 1);
-  const throttle = AUTH_REVALIDATE_BASE_THROTTLE_MS * 2 ** exponent;
-  return Math.min(AUTH_REVALIDATE_MAX_THROTTLE_MS, throttle);
-}
-
 export function getNextConsecutiveNetworkFailures(
   previousFailures: number,
   outcome: AuthCheckOutcome,
@@ -48,6 +42,13 @@ export function getNextConsecutiveNetworkFailures(
     AUTH_MAX_CONSECUTIVE_NETWORK_FAILURES,
     normalizedPrevious + 1,
   );
+}
+
+export function getRevalidateThrottleMs(consecutiveFailures: number): number {
+  const normalizedFailures = normalizeFailureCount(consecutiveFailures);
+  const exponent = Math.max(0, normalizedFailures - 1);
+  const throttle = AUTH_REVALIDATE_BASE_THROTTLE_MS * 2 ** exponent;
+  return Math.min(AUTH_REVALIDATE_MAX_THROTTLE_MS, throttle);
 }
 
 export function canRevalidateSession(

@@ -28,6 +28,35 @@ module.exports = {
       "error",
       { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
     ],
+    "no-console": "error",
+    "no-alert": "error",
+    "no-restricted-properties": [
+      "error",
+      {
+        object: "window",
+        property: "confirm",
+        message:
+          "Use the shared ConfirmActionDialog instead of window.confirm.",
+      },
+      {
+        object: "window",
+        property: "alert",
+        message:
+          "Use the shared toast/dialog primitives instead of window.alert.",
+      },
+    ],
+    "max-lines": [
+      "error",
+      { max: 450, skipBlankLines: true, skipComments: true },
+    ],
     "react-refresh/only-export-components": "off",
   },
+  overrides: [
+    {
+      files: ["src/shared/lib/logger.ts"],
+      rules: {
+        "no-console": "off",
+      },
+    },
+  ],
 };
