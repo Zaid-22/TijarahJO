@@ -1,6 +1,7 @@
 import { toast } from "sonner";
+import { logger } from "../shared/lib/logger";
 
-export interface ShareData {
+interface ShareData {
   title: string;
   text: string;
   url: string;
@@ -10,9 +11,9 @@ export interface ShareData {
  * Share content using native share API or fallback to clipboard
  * Works on all platforms (desktop and mobile)
  */
-export const shareContent = async (
+const shareContent = async (
   data: ShareData,
-  language: "en" | "ar" = "en"
+  language: "en" | "ar" = "en",
 ): Promise<boolean> => {
   try {
     // Check if native share is available (mobile browsers and some desktop browsers)
@@ -22,18 +23,19 @@ export const shareContent = async (
     } else {
       // Desktop fallback - copy to clipboard
       await navigator.clipboard.writeText(data.url);
-      
+
       // Show success toast
       toast.success(
         language === "ar" ? "تم نسخ الرابط" : "Link copied to clipboard",
         {
-          description: language === "ar" 
-            ? "يمكنك الآن لصق الرابط في أي مكان"
-            : "You can now paste the link anywhere",
+          description:
+            language === "ar"
+              ? "يمكنك الآن لصق الرابط في أي مكان"
+              : "You can now paste the link anywhere",
           duration: 3000,
-        }
+        },
       );
-      
+
       return true;
     }
   } catch (error) {
@@ -42,30 +44,27 @@ export const shareContent = async (
       // User cancelled the share - this is normal, don't show error
       return false;
     }
-    
+
     // Handle other errors
-    console.error("Share failed:", error);
-    
+    logger.warn("Share failed:", error);
+
     // Fallback: try to copy to clipboard again
     try {
       await navigator.clipboard.writeText(data.url);
-      toast.success(
-        language === "ar" ? "تم نسخ الرابط" : "Link copied",
-        {
-          duration: 2000,
-        }
-      );
+      toast.success(language === "ar" ? "تم نسخ الرابط" : "Link copied", {
+        duration: 2000,
+      });
       return true;
     } catch (clipboardError) {
       // Final fallback - show manual copy prompt
       toast.error(
-        language === "ar" 
+        language === "ar"
           ? "فشلت المشاركة. يرجى نسخ الرابط يدوياً"
           : "Share failed. Please copy the link manually",
         {
           description: data.url,
           duration: 5000,
-        }
+        },
       );
       return false;
     }
@@ -75,7 +74,7 @@ export const shareContent = async (
 /**
  * Generate share URL for a product
  */
-export const getProductShareUrl = (productId: string): string => {
+const getProductShareUrl = (productId: string): string => {
   // In production, this would be the actual domain
   const baseUrl = window.location.origin;
   return `${baseUrl}?product=${productId}`;
@@ -84,7 +83,7 @@ export const getProductShareUrl = (productId: string): string => {
 /**
  * Generate share data for a product
  */
-export const getProductShareData = (product: {
+const getProductShareData = (product: {
   id: string;
   name: string;
   price: number;
@@ -94,7 +93,7 @@ export const getProductShareData = (product: {
   const url = getProductShareUrl(product.id);
   const title = `${product.name} - TijarahJo`;
   const text = `Check out this ${product.category} for ${product.price} JOD in ${product.location} on TijarahJo!\n\n${product.name}`;
-  
+
   return { title, text, url };
 };
 
@@ -109,7 +108,7 @@ export const shareProduct = async (
     category: string;
     location: string;
   },
-  language: "en" | "ar" = "en"
+  language: "en" | "ar" = "en",
 ): Promise<boolean> => {
   const shareData = getProductShareData(product);
   return shareContent(shareData, language);

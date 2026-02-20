@@ -46,6 +46,43 @@ function normalizePostImages(rawImages: readonly unknown[]): string[] {
   return normalized;
 }
 
+function buildDeterministicFallbackPostId(
+  postModel: RawPost,
+  fallbackIndex?: number,
+): string {
+  const seedParts = [
+    postModel.PostTitle,
+    postModel.name,
+    postModel.PostDescription,
+    postModel.description,
+    postModel.UserID,
+    postModel.UserId,
+    postModel.SellerID,
+    postModel.sellerId,
+    postModel.CreatedAt,
+    postModel.createdAt,
+  ]
+    .map((value) => String(value ?? "").trim())
+    .filter((value) => value.length > 0);
+
+  if (seedParts.length === 0) {
+    return fallbackIndex !== undefined
+      ? `post-unknown-${fallbackIndex}`
+      : "post-unknown";
+  }
+
+  const seed = seedParts.join("|").toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+  }
+
+  const hashPart = Math.abs(hash).toString(36);
+  return fallbackIndex !== undefined
+    ? `post-${hashPart}-${fallbackIndex}`
+    : `post-${hashPart}`;
+}
+
 export function getUserIdentifier(user: RawUserLookup): string {
   const userId = user?.UserID ?? user?.userID ?? user?.Id ?? user?.id;
   return userId === null || userId === undefined ? "" : String(userId);
@@ -93,10 +130,7 @@ export function transformPostModelToProduct(
         ? postModel.id
         : "";
   const uniqueId =
-    postId ||
-    (fallbackIndex !== undefined
-      ? `post-${fallbackIndex}`
-      : `post-${Date.now()}-${Math.random()}`);
+    postId || buildDeterministicFallbackPostId(postModel, fallbackIndex);
 
   const name =
     typeof postModel.PostTitle === "string"

@@ -1,9 +1,5 @@
 import * as React from "react";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  MoreHorizontalIcon,
-} from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 import { cn } from "./utils";
 import { Button, buttonVariants } from "./button";
@@ -58,7 +54,8 @@ function PaginationLink({
           variant: isActive ? "default" : "ghost",
           size,
         }),
-        isActive && "bg-[#0A4ABF] text-white hover:bg-[#0A4ABF]/90 dark:bg-[#3E7EFF] dark:hover:bg-[#3E7EFF]/90",
+        isActive &&
+          "bg-[#0A4ABF] text-white hover:bg-[#0A4ABF]/90 dark:bg-[#3E7EFF] dark:hover:bg-[#3E7EFF]/90",
         !isActive && "hover:bg-gray-100 dark:hover:bg-gray-800",
         "min-w-[40px] h-10",
         className,
@@ -80,7 +77,7 @@ function PaginationPrevious({
       className={cn(
         "gap-1 px-3 sm:px-4",
         disabled && "opacity-50 cursor-not-allowed pointer-events-none",
-        className
+        className,
       )}
       disabled={disabled}
       {...props}
@@ -103,7 +100,7 @@ function PaginationNext({
       className={cn(
         "gap-1 px-3 sm:px-4",
         disabled && "opacity-50 cursor-not-allowed pointer-events-none",
-        className
+        className,
       )}
       disabled={disabled}
       {...props}
@@ -114,23 +111,6 @@ function PaginationNext({
   );
 }
 
-function PaginationEllipsis({
-  className,
-  ...props
-}: React.ComponentProps<"span">) {
-  return (
-    <span
-      aria-hidden
-      data-slot="pagination-ellipsis"
-      className={cn("flex size-10 items-center justify-center", className)}
-      {...props}
-    >
-      <MoreHorizontalIcon className="size-4" />
-      <span className="sr-only">More pages</span>
-    </span>
-  );
-}
-
 export {
   Pagination,
   PaginationContent,
@@ -138,5 +118,4 @@ export {
   PaginationItem,
   PaginationPrevious,
   PaginationNext,
-  PaginationEllipsis,
 };

@@ -1,6 +1,7 @@
 import { toPositiveIntegerId } from "../../utils/idValidation";
 import { apiRequest, debugError, debugLog } from "./client";
-import { toIsoStringOrNow } from "./shared";
+import { readString, toIntegerOrDefault, toRecord } from "./normalizers";
+import { parseUserSchema, parseUsersCollection } from "./schemas/userSchema";
 
 type RawUser = {
   Id?: unknown;
@@ -35,7 +36,7 @@ type RawUser = {
   isDeleted?: unknown;
 };
 
-export type UserProfileRecord = {
+type UserProfileRecord = {
   id: string;
   userId?: number;
   email: string;
@@ -79,135 +80,61 @@ type DeleteUserResponse = {
 const DEFAULT_ACTIVE_STATUS = 1;
 const DEFAULT_USER_ROLE_ID = 2;
 
-function readString(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function toIntegerOrDefault(
-  value: unknown,
-  fallback: number,
-  minimumValue: number = Number.MIN_SAFE_INTEGER,
-): number {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < minimumValue) {
-    return fallback;
-  }
-  return parsed;
-}
-
 function normalizeUserId(userId: string): number | undefined {
   return toPositiveIntegerId(userId);
-}
-
-function resolveRawUserId(user: RawUser, fallbackId: string): string {
-  const candidates = [user.Id, user.id, user.UserID, user.userID, fallbackId];
-  for (const candidate of candidates) {
-    const normalized = readString(candidate);
-    if (normalized) {
-      return normalized;
-    }
-  }
-  return "";
-}
-
-function resolveJoinDate(user: RawUser): string {
-  return (
-    readString(user.JoinedDate) ||
-    readString(user.joinedDate) ||
-    readString(user.JoinDate) ||
-    readString(user.joinDate) ||
-    new Date().toISOString()
-  );
-}
-
-function toRecord(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object") {
-    return {};
-  }
-  return value as Record<string, unknown>;
 }
 
 function normalizeUserProfile(
   user: RawUser,
   fallbackUserId: string,
 ): UserProfileRecord | null {
-  const resolvedId = resolveRawUserId(user, fallbackUserId);
-  if (!resolvedId) {
+  const parsedUser = parseUserSchema(user, fallbackUserId);
+  if (!parsedUser) {
     return null;
   }
 
-  const joinedDate = resolveJoinDate(user);
-  const firstName = readString(user.FirstName ?? user.firstName);
-  const lastName = readString(user.LastName ?? user.lastName);
-  const email = readString(user.Email ?? user.email);
-  const numericUserId =
-    toPositiveIntegerId(resolvedId) ?? toPositiveIntegerId(fallbackUserId);
-  const status = toIntegerOrDefault(
-    user.Status ?? user.status,
-    DEFAULT_ACTIVE_STATUS,
-  );
-  const roleId = toIntegerOrDefault(
-    user.RoleID ?? user.roleID,
-    DEFAULT_USER_ROLE_ID,
-    1,
-  );
-
   return {
-    id: resolvedId,
-    userId: numericUserId,
-    email,
-    firstName,
-    lastName,
-    phone: readString(user.Phone ?? user.phone),
-    city: readString(user.City ?? user.city),
-    area: readString(user.Area ?? user.area),
-    bio: readString(user.Bio ?? user.bio),
-    avatar: readString(user.Avatar ?? user.avatar) || undefined,
-    joinedAt: toIsoStringOrNow(joinedDate),
-    status,
-    roleId,
-    isDeleted: Boolean(user.IsDeleted ?? user.isDeleted ?? false),
-    name: `${firstName} ${lastName}`.trim(),
+    id: parsedUser.id,
+    userId: parsedUser.userId,
+    email: parsedUser.email,
+    firstName: parsedUser.firstName,
+    lastName: parsedUser.lastName,
+    phone: parsedUser.phone,
+    city: parsedUser.city,
+    area: parsedUser.area,
+    bio: parsedUser.bio,
+    avatar: parsedUser.avatar,
+    joinedAt: parsedUser.joinedAt,
+    status: parsedUser.status,
+    roleId: parsedUser.roleId,
+    isDeleted: parsedUser.isDeleted,
+    name: `${parsedUser.firstName} ${parsedUser.lastName}`.trim(),
   };
 }
 
 function normalizeAdminUser(user: RawUser): AdminUserRecord | null {
-  const resolvedId = resolveRawUserId(user, "");
-  if (!resolvedId) {
+  const parsedUser = parseUserSchema(user);
+  if (!parsedUser) {
     return null;
   }
 
-  const firstName = readString(user.FirstName ?? user.firstName);
-  const lastName = readString(user.LastName ?? user.lastName);
-  const email = readString(user.Email ?? user.email);
-  const roleId = toIntegerOrDefault(
-    user.RoleID ?? user.roleID,
-    DEFAULT_USER_ROLE_ID,
-    1,
-  );
-  const rawStatus = toIntegerOrDefault(
-    user.Status ?? user.status,
-    DEFAULT_ACTIVE_STATUS,
-  );
-  const isDeleted = Boolean(user.IsDeleted ?? user.isDeleted ?? false);
-  const joinedDate = resolveJoinDate(user);
-
   return {
-    rawStatus,
-    isDeleted,
-    id: resolvedId,
-    name: `${firstName} ${lastName}`.trim(),
-    email,
-    role: roleId === 1 ? "admin" : "user",
-    status: rawStatus === 1 && !isDeleted ? "active" : "banned",
-    joinedDate,
-    joinedAt: joinedDate,
-    firstName,
-    lastName,
-    phone: readString(user.Phone ?? user.phone),
-    city: readString(user.City ?? user.city),
-    avatar: readString(user.Avatar ?? user.avatar) || undefined,
-    raw: user,
+    rawStatus: parsedUser.status,
+    isDeleted: parsedUser.isDeleted,
+    id: parsedUser.id,
+    name: `${parsedUser.firstName} ${parsedUser.lastName}`.trim(),
+    email: parsedUser.email,
+    role: parsedUser.roleId === 1 ? "admin" : "user",
+    status:
+      parsedUser.status === 1 && !parsedUser.isDeleted ? "active" : "banned",
+    joinedDate: parsedUser.joinedDate,
+    joinedAt: parsedUser.joinedAt,
+    firstName: parsedUser.firstName,
+    lastName: parsedUser.lastName,
+    phone: parsedUser.phone,
+    city: parsedUser.city,
+    avatar: parsedUser.avatar,
+    raw: parsedUser.raw as RawUser,
   };
 }
 
@@ -326,14 +253,17 @@ export const usersApi = {
   /**
    * Get all users (Admin only)
    */
-  getAllUsers: async (): Promise<{ success: boolean; users: AdminUserRecord[] }> => {
+  getAllUsers: async (): Promise<{
+    success: boolean;
+    users: AdminUserRecord[];
+  }> => {
     const response = await apiRequest<RawUser[]>("/users", {
       method: "GET",
     });
 
     if (response.success && Array.isArray(response.data)) {
-      const users = response.data
-        .map((user) => normalizeAdminUser(user))
+      const users = parseUsersCollection(response.data)
+        .map((user) => normalizeAdminUser(user.raw as RawUser))
         .filter((user): user is AdminUserRecord => user !== null);
 
       return { success: true, users };
@@ -421,7 +351,9 @@ export const usersApi = {
   /**
    * Delete user (self or admin)
    */
-  deleteUser: async (userId: string): Promise<{ success: boolean; message?: string }> => {
+  deleteUser: async (
+    userId: string,
+  ): Promise<{ success: boolean; message?: string }> => {
     const normalizedUserId = normalizeUserId(userId);
     if (!normalizedUserId) {
       return {
@@ -430,9 +362,12 @@ export const usersApi = {
       };
     }
 
-    const response = await apiRequest<DeleteUserResponse>(`/users/${normalizedUserId}`, {
-      method: "DELETE",
-    });
+    const response = await apiRequest<DeleteUserResponse>(
+      `/users/${normalizedUserId}`,
+      {
+        method: "DELETE",
+      },
+    );
 
     if (response.success) {
       const messageCandidate = readString(
@@ -459,9 +394,12 @@ export const usersApi = {
       return false;
     }
 
-    const response = await apiRequest<boolean>(`/users/Exists/${normalizedUserId}`, {
-      method: "GET",
-    });
+    const response = await apiRequest<boolean>(
+      `/users/Exists/${normalizedUserId}`,
+      {
+        method: "GET",
+      },
+    );
     return response.success ? Boolean(response.data) : false;
   },
 

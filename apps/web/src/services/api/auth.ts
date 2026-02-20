@@ -11,77 +11,25 @@ import {
   debugError,
   debugLog,
 } from "./client";
-import { toIsoStringOrNow } from "./shared";
+import { asRecord, readString, type UnknownRecord } from "./normalizers";
+import { parseAuthEnvelope, ParsedAuthUser } from "./schemas/authSchema";
 
 type AuthApiError = {
   code: string;
   message: string;
 };
 
-export type AuthApiUser = ApiUser & {
+type AuthApiUser = ApiUser & {
   roleID?: number;
   isDeleted?: boolean;
 };
 
-export type AuthApiResponse = {
+type AuthApiResponse = {
   success: boolean;
   user?: AuthApiUser;
   message?: string;
   error?: AuthApiError;
 };
-
-type BackendUserPayload = {
-  Id?: unknown;
-  id?: unknown;
-  FirstName?: unknown;
-  firstName?: unknown;
-  LastName?: unknown;
-  lastName?: unknown;
-  Email?: unknown;
-  email?: unknown;
-  Phone?: unknown;
-  phone?: unknown;
-  City?: unknown;
-  city?: unknown;
-  Area?: unknown;
-  area?: unknown;
-  Bio?: unknown;
-  bio?: unknown;
-  Avatar?: unknown;
-  avatar?: unknown;
-  JoinedDate?: unknown;
-  joinedDate?: unknown;
-  RoleID?: unknown;
-  roleID?: unknown;
-  IsDeleted?: unknown;
-  isDeleted?: unknown;
-};
-
-type BackendAuthPayload = {
-  Success?: unknown;
-  success?: unknown;
-  Message?: unknown;
-  message?: unknown;
-  User?: unknown;
-  user?: unknown;
-};
-
-type UnknownRecord = Record<string, unknown>;
-
-function asRecord(value: unknown): UnknownRecord | null {
-  if (typeof value === "object" && value !== null) {
-    return value as UnknownRecord;
-  }
-  return null;
-}
-
-function readString(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function toBoolean(value: unknown, fallback = false): boolean {
-  return typeof value === "boolean" ? value : fallback;
-}
 
 function normalizeLoginIdentifier(value: string): string {
   const trimmed = value.trim();
@@ -97,13 +45,6 @@ function normalizeLoginIdentifier(value: string): string {
   return trimmed.toLowerCase();
 }
 
-function normalizeRoleId(value: unknown): number {
-  const numericRoleId = Number(value);
-  return Number.isInteger(numericRoleId) && numericRoleId > 0
-    ? numericRoleId
-    : 2;
-}
-
 function toAuthFailure(code: string, message: string): AuthApiResponse {
   return {
     success: false,
@@ -115,26 +56,23 @@ function toAuthFailure(code: string, message: string): AuthApiResponse {
   };
 }
 
-function mapBackendUser(userPayload: BackendUserPayload): AuthApiUser {
-  const joinedDate = toIsoStringOrNow(
-    userPayload.JoinedDate ?? userPayload.joinedDate,
-  );
-
+function mapParsedAuthUser(userPayload: ParsedAuthUser): AuthApiUser {
+  const joinedDate = userPayload.joinedDate;
   return {
-    id: String(userPayload.Id ?? userPayload.id ?? ""),
-    firstName: readString(userPayload.FirstName ?? userPayload.firstName),
-    lastName: readString(userPayload.LastName ?? userPayload.lastName),
-    email: readString(userPayload.Email ?? userPayload.email),
-    phone: readString(userPayload.Phone ?? userPayload.phone),
-    city: readString(userPayload.City ?? userPayload.city),
-    area: readString(userPayload.Area ?? userPayload.area),
-    bio: readString(userPayload.Bio ?? userPayload.bio),
-    avatar: readString(userPayload.Avatar ?? userPayload.avatar) || undefined,
+    id: String(userPayload.id || ""),
+    firstName: userPayload.firstName,
+    lastName: userPayload.lastName,
+    email: userPayload.email,
+    phone: userPayload.phone,
+    city: userPayload.city,
+    area: userPayload.area,
+    bio: userPayload.bio,
+    avatar: userPayload.avatar,
     joinedDate,
     createdAt: joinedDate,
     updatedAt: new Date().toISOString(),
-    roleID: normalizeRoleId(userPayload.RoleID ?? userPayload.roleID),
-    isDeleted: toBoolean(userPayload.IsDeleted ?? userPayload.isDeleted, false),
+    roleID: userPayload.roleID,
+    isDeleted: userPayload.isDeleted,
   };
 }
 
@@ -178,9 +116,13 @@ function resolveAuthFailureMessage<T>(
     return fallbackMessage;
   }
 
-  const messageFromDetails = extractMessageFromErrorDetails(response.error?.details);
+  const messageFromDetails = extractMessageFromErrorDetails(
+    response.error?.details,
+  );
   const baseMessage =
-    messageFromDetails || readString(response.error?.message) || fallbackMessage;
+    messageFromDetails ||
+    readString(response.error?.message) ||
+    fallbackMessage;
 
   if (response.error?.code === "CONNECTION_REFUSED") {
     return BACKEND_CONNECTION_SHORT_MESSAGE;
@@ -193,45 +135,26 @@ function resolveAuthFailureMessage<T>(
   return baseMessage;
 }
 
-function resolveBackendAuthPayload(payload: unknown): BackendAuthPayload | null {
-  const payloadRecord = asRecord(payload);
-  if (!payloadRecord) {
-    return null;
-  }
-
-  return payloadRecord as BackendAuthPayload;
-}
-
-function resolveBackendUser(payload: BackendAuthPayload): AuthApiUser | null {
-  const userRecord = asRecord(payload.User ?? payload.user);
-  if (!userRecord) {
-    return null;
-  }
-
-  return mapBackendUser(userRecord as BackendUserPayload);
-}
-
 function handleAuthSuccessPayload(
   payload: unknown,
   failureCode: string,
   failureMessage: string,
   successFallbackMessage: string,
 ): AuthApiResponse {
-  const backendPayload = resolveBackendAuthPayload(payload);
-  if (!backendPayload) {
+  const parsedPayload = parseAuthEnvelope(payload);
+  if (!parsedPayload) {
     debugError("Invalid auth response structure:", payload);
     return toAuthFailure("INVALID_RESPONSE", failureMessage);
   }
 
-  const successFlag = backendPayload.Success ?? backendPayload.success;
-  const backendMessage = readString(backendPayload.Message ?? backendPayload.message);
-
-  if (successFlag === false) {
-    const errorMessage = backendMessage || failureMessage;
+  if (parsedPayload.successFlag === false) {
+    const errorMessage = parsedPayload.message || failureMessage;
     return toAuthFailure(failureCode, errorMessage);
   }
 
-  const backendUser = resolveBackendUser(backendPayload);
+  const backendUser = parsedPayload.user
+    ? mapParsedAuthUser(parsedPayload.user)
+    : null;
   if (backendUser) {
     return {
       success: true,
@@ -239,14 +162,10 @@ function handleAuthSuccessPayload(
     };
   }
 
-  if (successFlag !== false) {
-    return {
-      success: true,
-      message: backendMessage || successFallbackMessage,
-    };
-  }
-
-  return toAuthFailure("INVALID_RESPONSE", failureMessage);
+  return {
+    success: true,
+    message: parsedPayload.message || successFallbackMessage,
+  };
 }
 
 // Authentication API

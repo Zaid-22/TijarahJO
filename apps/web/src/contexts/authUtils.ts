@@ -1,6 +1,6 @@
 import { User } from "../types";
 
-export type BackendUserPayload = {
+type BackendUserPayload = {
   Id?: string | number;
   id?: string | number;
   UserID?: string | number;
@@ -25,7 +25,7 @@ type UserFallback = Partial<User> & {
   email: string;
 };
 
-export function asBackendUser(value: unknown): BackendUserPayload | null {
+function asBackendUser(value: unknown): BackendUserPayload | null {
   if (typeof value !== "object" || value === null) {
     return null;
   }
@@ -33,7 +33,7 @@ export function asBackendUser(value: unknown): BackendUserPayload | null {
   return value as BackendUserPayload;
 }
 
-export function mapRole(roleId: unknown): "admin" | "user" {
+function mapRole(roleId: unknown): "admin" | "user" {
   if (
     roleId === 1 ||
     roleId === "1" ||
@@ -45,12 +45,14 @@ export function mapRole(roleId: unknown): "admin" | "user" {
   return "user";
 }
 
-export function toUserFromBackend(
+function toUserFromBackend(
   backendUser: BackendUserPayload,
   fallback: Partial<User> = {},
 ): User {
-  const firstName = backendUser.FirstName || backendUser.firstName || fallback.firstName || "";
-  const lastName = backendUser.LastName || backendUser.lastName || fallback.lastName || "";
+  const firstName =
+    backendUser.FirstName || backendUser.firstName || fallback.firstName || "";
+  const lastName =
+    backendUser.LastName || backendUser.lastName || fallback.lastName || "";
   const fullName =
     backendUser.Name ||
     backendUser.name ||
@@ -78,11 +80,7 @@ export function toUserFromBackend(
         fallback.id ||
         "",
     ),
-    email:
-      backendUser.Email ||
-      backendUser.email ||
-      fallback.email ||
-      "",
+    email: backendUser.Email || backendUser.email || fallback.email || "",
     firstName,
     lastName,
     name: fullName,
@@ -120,64 +118,6 @@ export function resolveUserFromAuthPayload(
   }
 
   return toUserFromBackend(backendUser, safeFallback);
-}
-
-export function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  const payloadPart = token.split(".")[1];
-  if (!payloadPart) {
-    return null;
-  }
-
-  const base64 = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = base64.padEnd(
-    base64.length + ((4 - (base64.length % 4)) % 4),
-    "=",
-  );
-
-  try {
-    return JSON.parse(atob(padded)) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
-export function getTokenExpiryMs(token: string): number | null {
-  const payload = decodeJwtPayload(token);
-  if (!payload) {
-    return null;
-  }
-
-  const expRaw = payload.exp;
-  const expSeconds =
-    typeof expRaw === "number"
-      ? expRaw
-      : typeof expRaw === "string"
-        ? Number(expRaw)
-        : NaN;
-
-  if (!Number.isFinite(expSeconds)) {
-    return null;
-  }
-
-  return expSeconds * 1000;
-}
-
-export function getMsUntilTokenExpiry(token: string, nowMs = Date.now()): number | null {
-  const expiryMs = getTokenExpiryMs(token);
-  if (expiryMs === null) {
-    return null;
-  }
-
-  return expiryMs - nowMs;
-}
-
-export function isTokenExpired(token: string, leewaySeconds = 30): boolean {
-  const remainingMs = getMsUntilTokenExpiry(token);
-  if (remainingMs === null) {
-    return true;
-  }
-
-  return remainingMs <= leewaySeconds * 1000;
 }
 
 export const shouldClearTokenForAuthError = (error: unknown): boolean => {

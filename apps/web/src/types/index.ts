@@ -55,39 +55,11 @@ export interface AuthState {
   user: User | null;
 }
 
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
-}
-
 export type Language = "en" | "ar";
 
 export type ViewMode = "grid-4" | "grid-3" | "grid-2" | "list";
 
 // Additional entity types with unique IDs
-
-export interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  icon?: string;
-  color?: string;
-  image?: string;
-  description?: string;
-}
-
-export interface Location {
-  id: string;
-  name: string;
-  city: string;
-  country: string;
-  coordinates?: {
-    lat: number;
-    lng: number;
-  };
-}
 
 export interface Message {
   messageId?: number;

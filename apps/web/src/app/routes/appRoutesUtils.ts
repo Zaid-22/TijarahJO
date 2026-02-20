@@ -1,16 +1,24 @@
 import { APP_CONFIG } from "../../constants/appConfig";
 import { categoryNameToArabic } from "../../data/categoryTranslations";
 import { Language, Product, UserProfile } from "../../types";
+import type {
+  EditProfileFormProfile,
+  ProfilePageUserProfile,
+} from "../../features/profile/types";
 
-export const ROUTES_REQUIRING_MARKETPLACE_DATA = new Set([
-  "favorites",
-  "sell",
-  "products",
-  "search",
-  "profile",
-  "category",
-  "product",
-]);
+const PRODUCT_DATA_ROUTE_PATTERNS = [
+  /^\/$/,
+  /^\/favorites$/,
+  /^\/products$/,
+  /^\/search$/,
+  /^\/profile$/,
+  /^\/category\/[^/]+$/,
+];
+
+const FAVORITES_DATA_ROUTE_PATTERNS = [
+  ...PRODUCT_DATA_ROUTE_PATTERNS,
+  /^\/product\/[^/]+$/,
+];
 
 export type CreatePostInput = {
   name: string;
@@ -23,7 +31,7 @@ export type CreatePostInput = {
   images?: string[];
 };
 
-export interface LoginUserData {
+interface LoginUserData {
   id?: string;
   firstName: string;
   lastName: string;
@@ -31,6 +39,32 @@ export interface LoginUserData {
   phone?: string;
   avatar?: string;
   joinedDate?: string;
+}
+
+function normalizePathname(pathname: string): string {
+  const normalized = pathname.trim().toLowerCase().replace(/\/+$/, "");
+  return normalized || "/";
+}
+
+function matchesAnyRoutePattern(
+  pathname: string,
+  patterns: RegExp[],
+): boolean {
+  return patterns.some((pattern) => pattern.test(pathname));
+}
+
+export function shouldLoadProductsForPath(pathname: string): boolean {
+  return matchesAnyRoutePattern(
+    normalizePathname(pathname),
+    PRODUCT_DATA_ROUTE_PATTERNS,
+  );
+}
+
+export function shouldLoadFavoritesForPath(pathname: string): boolean {
+  return matchesAnyRoutePattern(
+    normalizePathname(pathname),
+    FAVORITES_DATA_ROUTE_PATTERNS,
+  );
 }
 
 export const getCategoryTranslation = (
@@ -44,7 +78,9 @@ export const getCategoryTranslation = (
   return category;
 };
 
-export const decodeCategoryParam = (categoryName: string | undefined): string => {
+export const decodeCategoryParam = (
+  categoryName: string | undefined,
+): string => {
   const raw = String(categoryName || "").trim();
   if (!raw) {
     return "";
@@ -67,7 +103,10 @@ export const resolveCurrentUserId = (
   return null;
 };
 
-const resolvePostCity = (userProfile: UserProfile, preferredCity?: string): string => {
+const resolvePostCity = (
+  userProfile: UserProfile,
+  preferredCity?: string,
+): string => {
   const city = String(
     preferredCity || userProfile.city || APP_CONFIG.defaultCity,
   ).trim();
@@ -128,7 +167,9 @@ export const isOwnProductForUser = (
   );
 };
 
-export const toProfilePageUserProfile = (userProfile: UserProfile) => ({
+export const toProfilePageUserProfile = (
+  userProfile: UserProfile,
+): ProfilePageUserProfile => ({
   id: userProfile.id,
   name: userProfile.name,
   firstName: userProfile.firstName || "",
@@ -143,10 +184,13 @@ export const toProfilePageUserProfile = (userProfile: UserProfile) => ({
   joinedDate: userProfile.joinedDate,
 });
 
-export const toEditProfileFormProfile = (userProfile: UserProfile) => ({
+export const toEditProfileFormProfile = (
+  userProfile: UserProfile,
+): EditProfileFormProfile => ({
   id: userProfile.id,
   name: userProfile.name,
   firstName: userProfile.firstName || "",
+  middleName: userProfile.middleName || "",
   lastName: userProfile.lastName || "",
   email: userProfile.email,
   phone: userProfile.phone,

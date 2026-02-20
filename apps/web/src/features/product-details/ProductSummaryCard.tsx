@@ -32,32 +32,21 @@ export function ProductSummaryCard({
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-3">
               <Badge
-                className="backdrop-blur-md px-3 py-1 font-semibold text-sm"
-                style={{
-                  backgroundColor: "rgba(255, 255, 255, 0.95)",
-                  color: "#0A4ABF",
-                  border: "none",
-                }}
+                className="backdrop-blur-md px-3 py-1 font-semibold text-sm bg-white/95 text-[#0A4ABF] border-0"
               >
                 {product.category}
               </Badge>
 
               {product.status === "SOLD" && (
                 <Badge
-                  className="backdrop-blur-md px-3 py-1"
-                  style={{
-                    backgroundColor: "rgba(156, 163, 175, 0.95)",
-                    color: "white",
-                    border: "none",
-                    fontWeight: "600",
-                  }}
+                  className="backdrop-blur-md px-3 py-1 bg-gray-400/95 text-white border-0 font-semibold"
                 >
                   {labels.soldOut || "SOLD OUT"}
                 </Badge>
               )}
             </div>
 
-            <h1 className="mb-2 text-2xl sm:text-3xl font-bold" style={{ color: "#000000" }}>
+            <h1 className="mb-2 text-2xl sm:text-3xl font-bold text-black dark:text-white">
               {product.name}
             </h1>
 
@@ -96,7 +85,7 @@ export function ProductSummaryCard({
         {product.description && (
           <>
             <div>
-              <h3 className="mb-3 text-lg font-bold" style={{ color: "#000000" }}>
+              <h3 className="mb-3 text-lg font-bold text-black dark:text-white">
                 {labels.descriptionTitle}
               </h3>
               <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap font-normal">

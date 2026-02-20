@@ -14,6 +14,7 @@ import { Product, Language } from "../types";
 import { translations } from "../translations";
 import { api } from "../services/api";
 import { normalizeSellerDisplayName } from "../utils/sellerDisplayName";
+import { logger } from "../shared/lib/logger";
 
 interface ProductDetailsPageProps {
   product: Product;
@@ -176,7 +177,7 @@ export function ProductDetailsPage({
           setSellerArea(String(area));
         }
       } catch (error) {
-        console.warn("[ProductDetailsPage] Failed to fetch seller data:", error);
+        logger.warn("[ProductDetailsPage] Failed to fetch seller data:", error);
       }
     };
 

@@ -21,6 +21,7 @@ import { Language } from "../../../translations";
 import { categoryData } from "../../../data/categoryData";
 import { Upload, X } from "lucide-react";
 import { Product } from "../../../types";
+import { deferredToast } from "../../../utils/toast";
 
 interface EditProductDialogProps {
   product: Product;
@@ -99,7 +100,7 @@ export function EditProductDialog({
     e.preventDefault();
 
     if (!name || !price || !category || !location) {
-      alert(
+      deferredToast.error(
         language === "ar"
           ? "يرجى ملء جميع الحقول المطلوبة"
           : "Please fill in all required fields",
@@ -110,7 +111,7 @@ export function EditProductDialog({
     // Validate price is at least 0.01 JOD
     const priceValue = parseFloat(price);
     if (priceValue < 0.01) {
-      alert(
+      deferredToast.error(
         language === "ar"
           ? "السعر يجب أن يكون 0.01 دينار على الأقل"
           : "Price must be at least 0.01 JOD",
@@ -272,7 +273,7 @@ export function EditProductDialog({
             <div className="grid grid-cols-3 gap-3">
               {images.map((img, index) => (
                 <div
-                  key={index}
+                  key={`${img}-${index}`}
                   className="relative aspect-square rounded-lg overflow-hidden border-2 border-gray-200 group"
                 >
                   <img
@@ -281,19 +282,18 @@ export function EditProductDialog({
                     className="w-full h-full object-cover"
                   />
                   {index === 0 && (
-                    <div
-                      className="absolute top-2 left-2 px-2 py-1 rounded text-xs"
-                      style={{
-                        backgroundColor: "#0A4ABF",
-                        color: "white",
-                      }}
-                    >
+                    <div className="absolute top-2 left-2 px-2 py-1 rounded text-xs bg-[#0A4ABF] text-white">
                       {language === "ar" ? "غلاف" : "Cover"}
                     </div>
                   )}
                   <button
                     type="button"
                     onClick={() => removeImage(index)}
+                    aria-label={
+                      language === "ar"
+                        ? `إزالة الصورة ${index + 1}`
+                        : `Remove image ${index + 1}`
+                    }
                     className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <X className="w-4 h-4" />
@@ -307,17 +307,13 @@ export function EditProductDialog({
           {images.length < 5 && (
             <label
               htmlFor="edit-image-upload"
-              className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-              style={{ borderColor: "#0A4ABF" }}
+              className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-[#0A4ABF] rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
             >
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: "#0A4ABF" + "15" }}
-              >
-                <Upload className="w-5 h-5" style={{ color: "#0A4ABF" }} />
+              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[#0A4ABF26]">
+                <Upload className="w-5 h-5 text-[#0A4ABF]" />
               </div>
               <div className="text-center">
-                <div className="text-sm" style={{ color: "#0A4ABF" }}>
+                <div className="text-sm text-[#0A4ABF]">
                   {language === "ar" ? "رفع صور جديدة" : "Upload More Images"}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
@@ -370,7 +366,7 @@ export function EditProductDialog({
           </Button>
           <Button
             type="submit"
-            style={{ backgroundColor: "#0A4ABF", color: "white" }}
+            className="bg-[#0A4ABF] text-white hover:bg-[#083a95]"
           >
             {language === "ar" ? "حفظ التغييرات" : "Save Changes"}
           </Button>

@@ -67,7 +67,7 @@ export function ProductSellerSidebar({
               {sellerAvatar && <AvatarImage src={sellerAvatar} alt={publicSellerName} />}
               <AvatarFallback>{publicSellerName.charAt(0)}</AvatarFallback>
             </Avatar>
-            <h3 className="mb-1 text-lg font-bold" style={{ color: "#000000" }}>
+            <h3 className="mb-1 text-lg font-bold text-gray-900 dark:text-white">
               {publicSellerName}
             </h3>
           </div>
@@ -106,11 +106,7 @@ export function ProductSellerSidebar({
               <>
                 {product.status === "SOLD" ? (
                   <Button
-                    className="w-full transition-transform duration-150 font-semibold text-base"
-                    style={{
-                      backgroundColor: "#F97316",
-                      color: "white",
-                    }}
+                    className="w-full transition-transform duration-150 font-semibold text-base bg-orange-500 text-white hover:bg-orange-600"
                     type="button"
                     onClick={onShowRelistDialog}
                   >
@@ -118,11 +114,7 @@ export function ProductSellerSidebar({
                   </Button>
                 ) : (
                   <Button
-                    className="w-full transition-transform duration-150 font-semibold text-base"
-                    style={{
-                      backgroundColor: "#10B981",
-                      color: "white",
-                    }}
+                    className="w-full transition-transform duration-150 font-semibold text-base bg-emerald-500 text-white hover:bg-emerald-600"
                     type="button"
                     onClick={onShowMarkAsSoldDialog}
                   >
@@ -149,11 +141,7 @@ export function ProductSellerSidebar({
                 ) : (
                   <>
                     <Button
-                      className="w-full transition-transform duration-150 font-semibold text-base"
-                      style={{
-                        backgroundColor: "#0A4ABF",
-                        color: "white",
-                      }}
+                      className="w-full transition-transform duration-150 font-semibold text-base bg-[#0A4ABF] text-white hover:bg-[#083a99]"
                       type="button"
                       onClick={onShowPhoneDialog}
                     >
@@ -163,12 +151,7 @@ export function ProductSellerSidebar({
 
                     <Button
                       variant="outline"
-                      className="w-full hover:opacity-90 font-semibold text-base"
-                      style={{
-                        backgroundColor: "#1D4ED8",
-                        borderColor: "#1D4ED8",
-                        color: "white",
-                      }}
+                      className="w-full hover:opacity-90 font-semibold text-base bg-blue-700 border-blue-700 text-white hover:bg-blue-800"
                       onClick={onChatWithSeller}
                     >
                       <MessageSquare className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
@@ -192,8 +175,8 @@ export function ProductSellerSidebar({
 
       <Card>
         <CardContent className="pt-6">
-          <h3 className="mb-3 flex items-center gap-2 text-base font-bold" style={{ color: "#000000" }}>
-            <MapPin className="w-5 h-5" style={{ color: "#0A4ABF" }} />
+          <h3 className="mb-3 flex items-center gap-2 text-base font-bold text-gray-900 dark:text-white">
+            <MapPin className="w-5 h-5 text-[#0A4ABF]" />
             {labels.locationTitle}
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
@@ -203,30 +186,22 @@ export function ProductSellerSidebar({
       </Card>
 
       {hasOwnerActions && (
-        <Card className="overflow-hidden border-2" style={{ borderColor: "#0A4ABF20" }}>
+        <Card className="overflow-hidden border-2 border-[#0A4ABF20]">
           <CardContent className="pt-6 space-y-3">
             {product.status === "SOLD" && (
               <div className="p-4 bg-gray-50 rounded-lg text-center mb-3">
-                <Badge
-                  className="backdrop-blur-md px-4 py-2 text-base"
-                  style={{
-                    backgroundColor: "rgba(156, 163, 175, 0.95)",
-                    color: "white",
-                    border: "none",
-                    fontWeight: "600",
-                  }}
-                >
+                <Badge className="bg-gray-400/95 text-white border-none font-semibold backdrop-blur-md px-4 py-2 text-base">
                   🏷️ {labels.soldOut || "SOLD OUT"}
                 </Badge>
               </div>
             )}
 
             <Button
-              className="w-full group transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:opacity-90"
-              style={{
-                backgroundColor: product.status === "SOLD" ? "#9CA3AF" : "#0A4ABF",
-                color: "white",
-              }}
+              className={`w-full group transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:opacity-90 text-white ${
+                product.status === "SOLD"
+                  ? "bg-gray-400 hover:bg-gray-500"
+                  : "bg-[#0A4ABF] hover:bg-[#083a99]"
+              }`}
               onClick={onShowEditDialog}
               disabled={product.status === "SOLD"}
             >
@@ -239,11 +214,7 @@ export function ProductSellerSidebar({
             </Button>
 
             <Button
-              className="w-full group transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:opacity-90 font-semibold text-base"
-              style={{
-                backgroundColor: "#EF4444",
-                color: "white",
-              }}
+              className="w-full group transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:opacity-90 font-semibold text-base bg-red-500 text-white hover:bg-red-600"
               onClick={onShowDeleteDialog}
             >
               <Trash2

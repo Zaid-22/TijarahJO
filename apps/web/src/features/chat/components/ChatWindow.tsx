@@ -166,6 +166,7 @@ export function ChatWindow({
           <Button
             onClick={handleSend}
             size="icon"
+            aria-label="Send message"
             className="bg-blue-600 hover:bg-blue-700"
           >
             <Send className="w-5 h-5" />

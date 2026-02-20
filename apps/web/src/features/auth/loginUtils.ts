@@ -1,11 +1,11 @@
 import { normalizeJordanPhone } from "../../utils/phone";
 
-export interface ParsedAuthIdentifier {
+interface ParsedAuthIdentifier {
   email: string | null;
   phone: string | null;
 }
 
-export interface PasswordStrength {
+interface PasswordStrength {
   score: number;
   label: string;
   color: string;
@@ -20,7 +20,7 @@ export interface PasswordStrength {
 
 type UnknownRecord = Record<string, unknown>;
 
-export function asRecord(value: unknown): UnknownRecord | null {
+function asRecord(value: unknown): UnknownRecord | null {
   if (typeof value === "object" && value !== null) {
     return value as UnknownRecord;
   }
@@ -36,7 +36,7 @@ function asNonEmptyString(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-export const isValidEmail = (email: string): boolean => {
+const isValidEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 };
@@ -73,7 +73,9 @@ export const formatJoinedDateLabel = (value?: unknown): string => {
   });
 };
 
-export const calculatePasswordStrength = (password: string): PasswordStrength => {
+export const calculatePasswordStrength = (
+  password: string,
+): PasswordStrength => {
   const requirements = {
     minLength: password.length >= 8,
     hasUpperCase: /[A-Z]/.test(password),
@@ -152,7 +154,6 @@ export const extractApiCode = (payload: unknown): string | null => {
   }
 
   return (
-    asNonEmptyString(errorRecord.code) ??
-    asNonEmptyString(errorRecord.Code)
+    asNonEmptyString(errorRecord.code) ?? asNonEmptyString(errorRecord.Code)
   );
 };

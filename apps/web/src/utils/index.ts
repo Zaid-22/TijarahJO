@@ -1,10 +1,12 @@
+import { logger } from "../shared/lib/logger";
+
 export const storage = {
   get: <T>(key: string, defaultValue: T): T => {
     try {
       const item = localStorage.getItem(key);
       return item ? JSON.parse(item) : defaultValue;
     } catch (error) {
-      console.error(`Error reading from localStorage (${key}):`, error);
+      logger.error(`Error reading from localStorage (${key}):`, error);
       return defaultValue;
     }
   },
@@ -13,7 +15,7 @@ export const storage = {
     try {
       localStorage.setItem(key, JSON.stringify(value));
     } catch (error) {
-      console.error(`Error writing to localStorage (${key}):`, error);
+      logger.error(`Error writing to localStorage (${key}):`, error);
     }
   },
 
@@ -21,7 +23,7 @@ export const storage = {
     try {
       localStorage.removeItem(key);
     } catch (error) {
-      console.error(`Error removing from localStorage (${key}):`, error);
+      logger.error(`Error removing from localStorage (${key}):`, error);
     }
   },
 
@@ -29,7 +31,7 @@ export const storage = {
     try {
       localStorage.clear();
     } catch (error) {
-      console.error("Error clearing localStorage:", error);
+      logger.error("Error clearing localStorage:", error);
     }
   },
 };

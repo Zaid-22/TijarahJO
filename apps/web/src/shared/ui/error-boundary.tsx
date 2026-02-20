@@ -1,4 +1,5 @@
 import { Component, ReactNode, type ErrorInfo } from "react";
+import { logger } from "../lib/logger";
 
 interface Props {
   children: ReactNode;
@@ -21,7 +22,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("ErrorBoundary caught an error:", error, errorInfo);
+    logger.error("ErrorBoundary caught an error:", error, errorInfo);
   }
 
   handleReset = () => {
@@ -85,8 +86,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <button
                 onClick={() => window.location.reload()}
                 type="button"
-                style={{ backgroundColor: "#0A4ABF", color: "white" }}
-                className="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-opacity hover:opacity-90"
+                className="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium bg-[#0A4ABF] text-white hover:bg-[#083a95]"
               >
                 Refresh Page
               </button>

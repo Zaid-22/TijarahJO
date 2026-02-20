@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Eye, EyeOff } from "lucide-react";
 import { Input } from "../../shared/ui/input";
@@ -52,14 +51,16 @@ export function AuthInputField({
   onToggleValue,
   preventClipboardActions = false,
 }: AuthInputFieldProps) {
-  const iconStyle: CSSProperties = {
-    color: focused || value ? "#0A4ABF" : "#9CA3AF",
-  };
-
-  const inputStyle: CSSProperties = {
-    borderColor: error ? "#EF4444" : focused ? "#0A4ABF" : "#E5E7EB",
-    boxShadow: focused ? "0 0 0 4px rgba(10, 74, 191, 0.08)" : "none",
-  };
+  const isActive = focused || value.length > 0;
+  const iconContainerClassName = isActive
+    ? "bg-[#0A4ABF1A]"
+    : "bg-[#F5F6FA] dark:bg-gray-700/60";
+  const iconClassName = isActive ? "text-[#0A4ABF]" : "text-gray-400";
+  const inputStateClassName = error
+    ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-100"
+    : focused
+      ? "border-[#0A4ABF] shadow-[0_0_0_4px_rgba(10,74,191,0.08)] focus-visible:border-[#0A4ABF]"
+      : "border-gray-200";
 
   const inputType = showToggle ? (showValue ? "text" : "password") : type;
 
@@ -70,13 +71,8 @@ export function AuthInputField({
       </label>
 
       <div className="relative">
-        <div
-          className={FIELD_ICON_CONTAINER_BASE}
-          style={{
-            backgroundColor: focused || value ? "rgba(10, 74, 191, 0.1)" : "#F5F6FA",
-          }}
-        >
-          <Icon className="w-4 h-4 sm:w-5 sm:h-5 transition-colors duration-300" style={iconStyle} />
+        <div className={`${FIELD_ICON_CONTAINER_BASE} ${iconContainerClassName}`}>
+          <Icon className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors duration-300 ${iconClassName}`} />
         </div>
 
         <Input
@@ -92,8 +88,7 @@ export function AuthInputField({
           onCopy={preventClipboardActions ? (event) => event.stopPropagation() : undefined}
           onCut={preventClipboardActions ? (event) => event.stopPropagation() : undefined}
           onPaste={preventClipboardActions ? (event) => event.stopPropagation() : undefined}
-          className={`${INPUT_BASE_CLASS} ${showToggle ? "pr-12 sm:pr-14" : ""}`}
-          style={inputStyle}
+          className={`${INPUT_BASE_CLASS} ${showToggle ? "pr-12 sm:pr-14" : ""} ${inputStateClassName}`}
           disabled={disabled}
         />
 

@@ -1,7 +1,7 @@
 import { toPositiveIntegerId } from "../../utils/idValidation";
 import { apiRequest } from "./client";
 
-export type RawReview = {
+type RawReview = {
   ReviewID?: unknown;
   reviewID?: unknown;
   ReviewerID?: unknown;
@@ -16,7 +16,7 @@ export type RawReview = {
   timestamp?: unknown;
 };
 
-export type AddReviewResult = {
+type AddReviewResult = {
   success: boolean;
   message?: string;
   data?: RawReview;
@@ -64,7 +64,10 @@ export const reviewsApi = {
       };
     }
 
-    const normalizedRating = Math.max(1, Math.min(5, Math.round(payload.rating)));
+    const normalizedRating = Math.max(
+      1,
+      Math.min(5, Math.round(payload.rating)),
+    );
 
     const response = await apiRequest<RawReview>("/reviews", {
       method: "POST",

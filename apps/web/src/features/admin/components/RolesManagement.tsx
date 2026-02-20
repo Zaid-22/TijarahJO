@@ -23,6 +23,8 @@ import {
 import { Label } from "../../../shared/ui/label";
 import { toast } from "sonner";
 import { api } from "../../../services/api";
+import { ConfirmActionDialog } from "../../../shared/ui/confirm-action-dialog";
+import { logger } from "../../../shared/lib/logger";
 
 type RoleRecord = {
   id: string;
@@ -76,6 +78,9 @@ export function RolesManagement() {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedRole, setSelectedRole] = useState<RoleRecord | null>(null);
   const [formData, setFormData] = useState(initialFormData);
+  const [pendingDeleteRole, setPendingDeleteRole] = useState<RoleRecord | null>(
+    null,
+  );
 
   const fetchRoles = async () => {
     try {
@@ -90,7 +95,7 @@ export function RolesManagement() {
         toast.error("Failed to fetch roles");
       }
     } catch (error) {
-      console.error(error);
+      logger.warn("[RolesManagement] Failed to fetch roles", error);
       toast.error("Error fetching roles");
     }
   };
@@ -173,7 +178,7 @@ export function RolesManagement() {
         }
       }
     } catch (error) {
-      console.error(error);
+      logger.warn("[RolesManagement] Failed to save role", error);
       toast.error("An error occurred");
     } finally {
       setFormData(initialFormData);
@@ -207,12 +212,6 @@ export function RolesManagement() {
       return;
     }
 
-    if (
-      !window.confirm(`Are you sure you want to delete the role "${role.name}"?`)
-    ) {
-      return;
-    }
-
     try {
       const stillExists = await ensureRoleExists(role.id);
       if (!stillExists) {
@@ -227,7 +226,7 @@ export function RolesManagement() {
         toast.error(response.message || "Failed to delete role");
       }
     } catch (error) {
-      console.error(error);
+      logger.warn("[RolesManagement] Failed to delete role", error);
       toast.error("Error deleting role");
     }
   };
@@ -337,6 +336,7 @@ export function RolesManagement() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          aria-label={`Edit role ${role.name}`}
                           onClick={() => openEdit(role)}
                           disabled={isSystemRole}
                           title={isSystemRole ? "System roles cannot be edited" : "Edit role"}
@@ -346,7 +346,8 @@ export function RolesManagement() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => deleteRole(role)}
+                          aria-label={`Delete role ${role.name}`}
+                          onClick={() => setPendingDeleteRole(role)}
                           disabled={isSystemRole}
                           className="hover:text-red-600 hover:bg-red-50"
                           title={isSystemRole ? "System roles cannot be deleted" : "Delete role"}
@@ -399,6 +400,30 @@ export function RolesManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmActionDialog
+        open={pendingDeleteRole !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingDeleteRole(null);
+          }
+        }}
+        title="Delete role?"
+        description={
+          pendingDeleteRole
+            ? `Are you sure you want to delete the role "${pendingDeleteRole.name}"?`
+            : ""
+        }
+        confirmLabel="Delete"
+        onConfirm={() => {
+          if (!pendingDeleteRole) {
+            return;
+          }
+
+          void deleteRole(pendingDeleteRole);
+          setPendingDeleteRole(null);
+        }}
+      />
     </div>
   );
 }

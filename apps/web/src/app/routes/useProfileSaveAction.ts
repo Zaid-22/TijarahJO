@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import type { NavigateFunction } from "react-router-dom";
 import type { UserProfile } from "../../types";
-import type { UserProfile as EditProfileFormProfile } from "../../pages/EditProfilePage";
+import type { EditProfileFormProfile } from "../../features/profile/types";
 import { api } from "../../services/api";
 import { deferredToast } from "../../utils/toast";
 import { resolveCurrentUserId } from "./appRoutesUtils";

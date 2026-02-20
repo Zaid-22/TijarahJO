@@ -1,5 +1,4 @@
 import { Product } from "../types";
-
 type SearchIntent = {
   queryTerms: string[];
   categoryTerms: string[];
@@ -16,11 +15,12 @@ type QueryContext = {
   wantsPremium: boolean;
 };
 
-const ARABIC_DIACRITICS_REGEX = /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]/g;
+const ARABIC_DIACRITICS_REGEX =
+  /[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]/g;
 const NON_SEARCH_CHAR_REGEX = /[^a-z0-9\u0600-\u06FF\s]/g;
 const WHITESPACE_REGEX = /\s+/g;
 
-export function normalizeSearchText(value: string): string {
+function normalizeSearchText(value: string): string {
   return value
     .toLowerCase()
     .normalize("NFKD")
@@ -32,7 +32,6 @@ export function normalizeSearchText(value: string): string {
     .replace(WHITESPACE_REGEX, " ")
     .trim();
 }
-
 function tokenize(value: string): string[] {
   if (!value) {
     return [];
@@ -44,7 +43,9 @@ function tokenize(value: string): string[] {
 }
 
 function normalizeTerms(terms: string[]): string[] {
-  return [...new Set(terms.map((term) => normalizeSearchText(term)).filter(Boolean))];
+  return [
+    ...new Set(terms.map((term) => normalizeSearchText(term)).filter(Boolean)),
+  ];
 }
 
 const SEARCH_INTENTS: SearchIntent[] = [
@@ -271,8 +272,11 @@ function includesAnyIntentTerm(
 }
 
 function listingQualityBoost(product: Product): number {
-  const descriptionLength = normalizeSearchText(product.description || "").length;
-  const imageCount = product.images?.filter(Boolean).length || (product.image ? 1 : 0);
+  const descriptionLength = normalizeSearchText(
+    product.description || "",
+  ).length;
+  const imageCount =
+    product.images?.filter(Boolean).length || (product.image ? 1 : 0);
 
   let score = 0;
 
@@ -391,7 +395,10 @@ function scoreProduct(product: Product, context: QueryContext): number {
   score += listingQualityBoost(product);
 
   if (wantsPremium) {
-    score += Math.min(10, Math.log10(Math.max(0, Number(product.views || 0)) + 1) * 4);
+    score += Math.min(
+      10,
+      Math.log10(Math.max(0, Number(product.views || 0)) + 1) * 4,
+    );
   }
 
   return score;
@@ -401,7 +408,10 @@ export function isActiveProduct(product: Product): boolean {
   return product.status !== "SOLD" && product.status !== "DELETED";
 }
 
-export function rankProductsBySearch(products: Product[], query: string): Product[] {
+export function rankProductsBySearch(
+  products: Product[],
+  query: string,
+): Product[] {
   const activeProducts = products.filter(isActiveProduct);
   const context = buildQueryContext(query);
 

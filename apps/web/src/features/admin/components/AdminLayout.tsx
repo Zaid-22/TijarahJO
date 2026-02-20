@@ -50,6 +50,7 @@ export function AdminLayout() {
               variant="ghost"
               size="icon"
               className="md:hidden"
+              aria-label="Close admin sidebar"
               onClick={() => setSidebarOpen(false)}
             >
               <X className="w-5 h-5" />
@@ -104,6 +105,7 @@ export function AdminLayout() {
           <Button
             variant="ghost"
             size="icon"
+            aria-label="Open admin sidebar"
             onClick={() => setSidebarOpen(true)}
           >
             <Menu className="w-6 h-6" />

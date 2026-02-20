@@ -1,9 +1,9 @@
 import { ProductStatus } from "./types";
 
-export const POST_STATUS_ACTIVE = 0;
-export const POST_STATUS_BLOCKED = 1;
-export const POST_STATUS_INACTIVE = 2;
-export const POST_STATUS_SOLD = 3;
+const POST_STATUS_ACTIVE = 0;
+const POST_STATUS_BLOCKED = 1;
+const POST_STATUS_INACTIVE = 2;
+const POST_STATUS_SOLD = 3;
 
 export function normalizeProductStatus(rawStatus: unknown): ProductStatus {
   if (typeof rawStatus === "string") {
