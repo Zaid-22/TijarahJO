@@ -65,8 +65,29 @@ export interface Message {
   messageId?: number;
   senderId: number;
   receiverId: number;
+  conversationId?: number;
   postId?: number;
   content: string;
   timestamp: string;
   isRead: boolean;
+}
+
+export interface ChatPresence {
+  isOnline: boolean;
+  lastSeenAtUtc?: string;
+  statusText?: string;
+}
+
+export interface AppNotification {
+  notificationId: number;
+  notificationType: string;
+  title: string;
+  body: string;
+  senderUserId?: number;
+  conversationId?: number;
+  messageId?: number;
+  routeUrl?: string;
+  isRead: boolean;
+  createdAt: string;
+  readAt?: string;
 }

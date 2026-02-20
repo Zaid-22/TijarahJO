@@ -2,38 +2,197 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.HttpLogging;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Net;
 using System.Text;
+using System.Threading.RateLimiting;
 using System.Threading.Tasks;
-using TijarahJoDB_DataAccess;
-using TijarahJoDB.DAL;
-using TijarahJoDB.Application.Abstractions.DataAccess;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Services;
+using TijarahJoDB.Bootstrap;
+using TijarahJoDBAPI.Common.Authorization;
+using TijarahJoDBAPI.Common.Filters;
+using TijarahJoDBAPI.Common.Health;
 using TijarahJoDBAPI.Common.Configuration;
 using TijarahJoDBAPI.Common.Services;
-using TijarahJoDB.DAL.Persistence;
-using TijarahJoDB.DAL.Queries;
 
 var builder = WebApplication.CreateBuilder(args);
 
+FeatureFlagsOptions featureFlags = builder.Configuration
+    .GetSection("FeatureFlags")
+    .Get<FeatureFlagsOptions>()
+    ?? new FeatureFlagsOptions();
+builder.Services.AddSingleton(featureFlags);
+builder.Services.Configure<WebPushOptions>(builder.Configuration.GetSection("WebPush"));
+
+string[] configuredKnownProxies = builder.Configuration
+    .GetSection("ForwardedHeaders:KnownProxies")
+    .Get<string[]>()
+    ?? Array.Empty<string>();
+string[] configuredKnownNetworks = builder.Configuration
+    .GetSection("ForwardedHeaders:KnownNetworks")
+    .Get<string[]>()
+    ?? Array.Empty<string>();
+bool hasExplicitForwardedHeaderTrust = configuredKnownProxies.Length > 0 || configuredKnownNetworks.Length > 0;
+
+static bool TryParseKnownNetwork(string rawValue, out Microsoft.AspNetCore.HttpOverrides.IPNetwork network)
+{
+    network = default!;
+    if (string.IsNullOrWhiteSpace(rawValue))
+    {
+        return false;
+    }
+
+    string[] segments = rawValue.Split('/', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+    if (segments.Length != 2 || !IPAddress.TryParse(segments[0], out IPAddress? address))
+    {
+        return false;
+    }
+
+    if (!int.TryParse(segments[1], out int prefixLength))
+    {
+        return false;
+    }
+
+    int maxPrefix = address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork ? 32 : 128;
+    if (prefixLength < 0 || prefixLength > maxPrefix)
+    {
+        return false;
+    }
+
+    network = new Microsoft.AspNetCore.HttpOverrides.IPNetwork(address, prefixLength);
+    return true;
+}
+
 // Configure JSON serialization to preserve PascalCase (matching frontend expectations)
-builder.Services.AddControllers().AddJsonOptions(options =>
+builder.Services.AddScoped<ProblemDetailsResultFilter>();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<ProblemDetailsResultFilter>();
+}).AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.PropertyNamingPolicy = null; // Preserve PascalCase
 });
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var problem = new ValidationProblemDetails(context.ModelState)
+        {
+            Status = StatusCodes.Status400BadRequest,
+            Title = "Request validation failed.",
+            Detail = "One or more validation errors occurred.",
+            Type = "https://httpstatuses.com/400",
+            Instance = context.HttpContext.Request.Path
+        };
+        problem.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
+
+        return new BadRequestObjectResult(problem)
+        {
+            ContentTypes = { "application/problem+json" }
+        };
+    };
+});
 
 builder.Services.AddAntiforgery(options =>
 {
     options.HeaderName = "X-CSRF-Token";
     options.Cookie.Name = "tj-csrf";
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
+    options.Cookie.SameSite = builder.Environment.IsDevelopment()
+        ? SameSiteMode.Lax
+        : SameSiteMode.None;
 });
+
+builder.Services.AddMemoryCache();
+
+if (featureFlags.EnableHttpLogging)
+{
+    builder.Services.AddHttpLogging(options =>
+    {
+        options.LoggingFields =
+            HttpLoggingFields.RequestMethod |
+            HttpLoggingFields.RequestPath |
+            HttpLoggingFields.ResponseStatusCode |
+            HttpLoggingFields.Duration;
+    });
+}
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+    if (!hasExplicitForwardedHeaderTrust)
+    {
+        // Keep framework defaults (loopback trust only) unless explicit trusted proxy/networks are configured.
+        return;
+    }
+
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+
+    foreach (string configuredProxy in configuredKnownProxies)
+    {
+        if (!IPAddress.TryParse(configuredProxy, out IPAddress? proxyAddress))
+        {
+            throw new InvalidOperationException(
+                $"Invalid ForwardedHeaders:KnownProxies entry '{configuredProxy}'. Expected an IP address."
+            );
+        }
+
+        options.KnownProxies.Add(proxyAddress);
+    }
+
+    foreach (string configuredNetwork in configuredKnownNetworks)
+    {
+        if (!TryParseKnownNetwork(configuredNetwork, out Microsoft.AspNetCore.HttpOverrides.IPNetwork network))
+        {
+            throw new InvalidOperationException(
+                $"Invalid ForwardedHeaders:KnownNetworks entry '{configuredNetwork}'. Expected CIDR notation like '10.0.0.0/8'."
+            );
+        }
+
+        options.KnownNetworks.Add(network);
+    }
+});
+
+if (featureFlags.EnableHealthChecks)
+{
+    builder.Services.AddHealthChecks()
+        .AddCheck<DatabaseConnectivityHealthCheck>("database_connectivity");
+}
+
+if (featureFlags.EnableRateLimiting)
+{
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        {
+            string partition = httpContext.User?.Identity?.Name
+                ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                ?? "unknown";
+
+            return RateLimitPartition.GetFixedWindowLimiter(partition, _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 120,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            });
+        });
+    });
+}
 
 // Configure JWT Options from appsettings with environment variable override
 var jwtOptions = builder.Configuration.GetSection("JWT").Get<JwtOptions>();
@@ -55,16 +214,12 @@ if (string.IsNullOrEmpty(jwtOptions.SigningKey))
     throw new InvalidOperationException("JWT SigningKey is not configured. Set it in appsettings.json or JWT_SIGNING_KEY environment variable.");
 }
 
-// Fail fast if database configuration is missing. Without this, app starts and fails later on first DB request.
-try
-{
-    _ = DataAccessSettings.ConnectionString;
-}
-catch (Exception ex)
+const int minimumJwtSigningKeyBytes = 32;
+int signingKeyBytes = Encoding.UTF8.GetByteCount(jwtOptions.SigningKey);
+if (signingKeyBytes < minimumJwtSigningKeyBytes)
 {
     throw new InvalidOperationException(
-        "Database connection is not configured. Set DATABASE_CONNECTION_STRING or DB_USER and DB_PASSWORD environment variables.",
-        ex
+        $"JWT SigningKey is too short. It must be at least {minimumJwtSigningKeyBytes} bytes (current: {signingKeyBytes})."
     );
 }
 
@@ -78,27 +233,20 @@ builder.Services.AddSingleton(jwtOptions);
 // Register TokenService as scoped
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<PostsFeedService>();
-builder.Services.AddScoped<PostListingQueryService>();
-builder.Services.AddDbContext<TijarahJoDbContext>(options =>
-    options.UseSqlServer(DataAccessSettings.ConnectionString));
-builder.Services.AddScoped<IUserDataAccess, UserDataAccessAdapter>();
-builder.Services.AddScoped<ICategoryDataAccess, CategoryDataAccessAdapter>();
-builder.Services.AddScoped<IRoleDataAccess, RoleDataAccessAdapter>();
-builder.Services.AddScoped<IPostDataAccess, PostDataAccessAdapter>();
-builder.Services.AddScoped<IPostImageDataAccess, PostImageDataAccessAdapter>();
-builder.Services.AddScoped<IFavoriteDataAccess, FavoriteDataAccessAdapter>();
-builder.Services.AddScoped<IMessageDataAccess, MessageDataAccessAdapter>();
-builder.Services.AddScoped<IReviewDataAccess, ReviewDataAccessAdapter>();
+builder.Services.AddTijarahJoInfrastructure();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IPostService, PostService>();
+builder.Services.AddScoped<IPostStatusTransitionService, PostStatusTransitionService>();
 builder.Services.AddScoped<IPostImageService, PostImageService>();
+builder.Services.AddScoped<IPostImageCommandService, PostImageCommandService>();
 builder.Services.AddScoped<IFavoriteService, FavoriteService>();
+builder.Services.AddScoped<IFavoriteCommandService, FavoriteCommandService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
-builder.Services.AddScoped<ISearchReadService, SearchReadService>();
-builder.Services.AddScoped<ISellerReadService, SellerReadService>();
+builder.Services.AddScoped<IReviewSubmissionService, ReviewSubmissionService>();
 
 // Configure Swagger with JWT support
 builder.Services.AddSwaggerGen(c =>
@@ -187,6 +335,15 @@ builder.Services.AddAuthentication(options =>
             };
        });
 
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(AuthorizationPolicies.AdminOnly, policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireRole(AppRoles.Admin);
+    });
+});
+
 // Configure CORS based on environment
 builder.Services.AddCors(options =>
 {
@@ -218,9 +375,35 @@ builder.Services.AddCors(options =>
     }
     else
     {
-        // Production: Get allowed origins from environment variable or configuration
-        var allowedOrigins = builder.Configuration["CORS:AllowedOrigins"]?.Split(',') 
-            ?? new[] { builder.Configuration["FrontendUrl"] ?? "https://your-frontend-domain.com" };
+        // Production: require explicit allowed origins and validate them.
+        var allowedOrigins = builder.Configuration["CORS:AllowedOrigins"]?
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            ?? Array.Empty<string>();
+
+        if (allowedOrigins.Length == 0)
+        {
+            string? frontendUrl = builder.Configuration["FrontendUrl"]?.Trim();
+            if (!string.IsNullOrWhiteSpace(frontendUrl))
+            {
+                allowedOrigins = new[] { frontendUrl };
+            }
+        }
+
+        if (allowedOrigins.Length == 0)
+        {
+            throw new InvalidOperationException(
+                "CORS allowed origins are not configured for production. Set CORS:AllowedOrigins or FrontendUrl."
+            );
+        }
+
+        foreach (string origin in allowedOrigins)
+        {
+            if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) ||
+                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            {
+                throw new InvalidOperationException($"Invalid CORS origin configured: '{origin}'.");
+            }
+        }
         
         options.AddPolicy("AllowAll",
             policy =>
@@ -238,6 +421,28 @@ builder.Services.AddCors(options =>
 builder.Services.AddSignalR();
 
 var app = builder.Build();
+
+bool shouldUseForwardedHeaders = app.Environment.IsDevelopment() || hasExplicitForwardedHeaderTrust;
+if (shouldUseForwardedHeaders)
+{
+    app.UseForwardedHeaders();
+}
+else
+{
+    app.Logger.LogWarning(
+        "Forwarded headers middleware is disabled. Configure ForwardedHeaders:KnownProxies or ForwardedHeaders:KnownNetworks for non-development environments behind a reverse proxy."
+    );
+}
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
+
+if (featureFlags.EnableHttpLogging)
+{
+    app.UseHttpLogging();
+}
 
 app.UseExceptionHandler(errorApp =>
 {
@@ -258,21 +463,18 @@ app.UseExceptionHandler(errorApp =>
         }
 
         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-        context.Response.ContentType = "application/json";
-        if (isDevelopment)
+        context.Response.ContentType = "application/problem+json";
+        var problem = new ProblemDetails
         {
-            await context.Response.WriteAsJsonAsync(new
-            {
-                message = "An internal server error occurred.",
-                detail = exceptionFeature?.Error?.Message
-            });
-            return;
-        }
+            Status = StatusCodes.Status500InternalServerError,
+            Title = ReasonPhrases.GetReasonPhrase(StatusCodes.Status500InternalServerError),
+            Detail = isDevelopment ? exceptionFeature?.Error?.Message : "An internal server error occurred.",
+            Type = "https://httpstatuses.com/500",
+            Instance = exceptionFeature?.Path ?? context.Request.Path
+        };
+        problem.Extensions["traceId"] = context.TraceIdentifier;
 
-        await context.Response.WriteAsJsonAsync(new
-        {
-            message = "An internal server error occurred."
-        });
+        await context.Response.WriteAsJsonAsync(problem);
     });
 });
 
@@ -292,6 +494,11 @@ if (urls.Contains("https", StringComparison.OrdinalIgnoreCase))
 
 // Done - CORS must be before UseAuthentication and UseAuthorization
 app.UseCors("AllowAll");
+
+if (featureFlags.EnableRateLimiting)
+{
+    app.UseRateLimiter();
+}
 
 app.UseAuthentication();
 
@@ -361,12 +568,17 @@ app.Use(async (context, next) =>
         {
             logger.LogWarning(ex, "CSRF validation failed for {Method} {Path}", context.Request.Method, context.Request.Path);
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            context.Response.ContentType = "application/json";
-            await context.Response.WriteAsJsonAsync(new
+            context.Response.ContentType = "application/problem+json";
+            var problem = new ProblemDetails
             {
-                success = false,
-                message = "CSRF validation failed."
-            });
+                Status = StatusCodes.Status403Forbidden,
+                Title = ReasonPhrases.GetReasonPhrase(StatusCodes.Status403Forbidden),
+                Detail = "CSRF validation failed.",
+                Type = "https://httpstatuses.com/403",
+                Instance = context.Request.Path
+            };
+            problem.Extensions["traceId"] = context.TraceIdentifier;
+            await context.Response.WriteAsJsonAsync(problem);
             return;
         }
     }
@@ -376,7 +588,39 @@ app.Use(async (context, next) =>
 
 app.UseAuthorization();
 
+app.UseStatusCodePages(async statusCodeContext =>
+{
+    HttpContext httpContext = statusCodeContext.HttpContext;
+    HttpResponse response = httpContext.Response;
+    if (response.HasStarted || response.StatusCode < 400)
+    {
+        return;
+    }
+
+    if (response.ContentLength.HasValue && response.ContentLength.Value > 0)
+    {
+        return;
+    }
+
+    var problem = new ProblemDetails
+    {
+        Status = response.StatusCode,
+        Title = ReasonPhrases.GetReasonPhrase(response.StatusCode),
+        Type = $"https://httpstatuses.com/{response.StatusCode}",
+        Instance = httpContext.Request.Path
+    };
+    problem.Extensions["traceId"] = httpContext.TraceIdentifier;
+
+    response.ContentType = "application/problem+json";
+    await response.WriteAsJsonAsync(problem);
+});
+
 app.MapControllers();
+if (featureFlags.EnableHealthChecks)
+{
+    app.MapHealthChecks("/health/live");
+    app.MapHealthChecks("/health/ready");
+}
 // Map ChatHub
 app.MapHub<TijarahJoDBAPI.Hubs.ChatHub>("/chatHub");
 

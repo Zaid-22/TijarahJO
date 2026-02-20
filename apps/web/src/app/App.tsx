@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useLayoutEffect, useRef } from "react";
+import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { COLORS } from "../constants/colors";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -9,7 +9,11 @@ import { useLocalStorage } from "../shared/hooks/useLocalStorage";
 import { useAuth } from "../contexts/AuthContext";
 import { useUserProfile } from "../features/auth/hooks/useUserProfile";
 import { useAppTheme } from "../hooks/useAppTheme";
+import { api } from "../services/api";
+import { chatService } from "../services/chatService";
+import { logger } from "../shared/lib/logger";
 import { deferredToast } from "../utils/toast";
+import { toPositiveIntegerId } from "../utils/idValidation";
 
 const Header = lazy(() =>
   import("../features/marketplace/components/Header").then((m) => ({ default: m.Header })),
@@ -33,12 +37,14 @@ const ROUTES_WITH_LOCAL_HEADER = new Set([
   "seller",
 ]);
 const AUTH_TOAST_COOLDOWN_MS = 12_000;
+const UNREAD_COUNT_REFRESH_MS = 30_000;
 
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const {
     isAuthenticated,
+    user,
     loading: authLoading,
     logout,
     authError,
@@ -56,6 +62,7 @@ export default function App() {
   const isAuthRoute = primarySegment === "login";
   const hasLocalPageHeader = ROUTES_WITH_LOCAL_HEADER.has(primarySegment);
   const shouldShowGlobalHeader = !isAuthRoute && !hasLocalPageHeader;
+  const isChatRoute = normalizedPathname === "/chat" || normalizedPathname.startsWith("/chat/");
 
   // Custom Hooks
   const { userProfile, setUserProfile, currentUserDisplayName } = useUserProfile();
@@ -75,6 +82,7 @@ export default function App() {
     "tijarahjo_active_search_query",
     "",
   );
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
   // Effects
   useLayoutEffect(() => {
@@ -114,6 +122,109 @@ export default function App() {
 
     clearAuthError();
   }, [authError, clearAuthError]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      chatService.disconnect().catch((error) => {
+        logger.warn("[App] SignalR disconnect failed:", error);
+      });
+      setUnreadNotificationsCount(0);
+      return;
+    }
+
+    const currentUserId = toPositiveIntegerId(user?.id);
+    if (!currentUserId) {
+      return;
+    }
+
+    chatService.connect(currentUserId).catch((error) => {
+      logger.warn("[App] SignalR connect failed:", error);
+    });
+  }, [isAuthenticated, user?.id]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setUnreadNotificationsCount(0);
+      return;
+    }
+
+    let isCancelled = false;
+    const refreshUnreadCount = async () => {
+      try {
+        const unreadCount = await api.notifications.getUnreadCount();
+        if (!isCancelled) {
+          setUnreadNotificationsCount(unreadCount);
+        }
+      } catch (error) {
+        logger.warn("[App] Failed to load unread notifications count:", error);
+      }
+    };
+
+    void refreshUnreadCount();
+    const intervalId = window.setInterval(refreshUnreadCount, UNREAD_COUNT_REFRESH_MS);
+
+    return () => {
+      isCancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    return chatService.onNotificationReceived((notification) => {
+      const inChatWithSender = isChatRoute
+        && typeof notification.senderUserId === "number"
+        && normalizedPathname.endsWith(`/${notification.senderUserId}`);
+
+      if (!inChatWithSender) {
+        deferredToast.info(`${notification.title}: ${notification.body}`);
+      }
+
+      if (
+        typeof window !== "undefined" &&
+        "Notification" in window &&
+        Notification.permission === "granted" &&
+        document.visibilityState !== "visible"
+      ) {
+        const nativeNotification = new Notification(notification.title, {
+          body: notification.body,
+          tag: `notif-${notification.notificationId}`,
+        });
+        nativeNotification.onclick = () => {
+          window.focus();
+          navigate(notification.routeUrl || "/chat");
+          nativeNotification.close();
+        };
+      }
+
+      void api.notifications.getUnreadCount().then((count) => {
+        setUnreadNotificationsCount(count);
+      }).catch((error) => {
+        logger.warn("[App] Failed to refresh unread count after realtime notification:", error);
+      });
+    });
+  }, [isAuthenticated, isChatRoute, navigate, normalizedPathname]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !isChatRoute) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void api.notifications.getUnreadCount().then((count) => {
+        setUnreadNotificationsCount(count);
+      }).catch((error) => {
+        logger.warn("[App] Failed to refresh unread count on chat route:", error);
+      });
+    }, 1200);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isAuthenticated, isChatRoute, location.pathname]);
 
   useEffect(() => {
     document.title = "TijarahJo - Jordan's Marketplace";
@@ -158,15 +269,19 @@ export default function App() {
           navigate("/search");
         }}
         onShowFavorites={() => navigate("/favorites")}
+        onShowMessages={() => navigate("/chat")}
         onShowProfile={() => {
           if (isAuthenticated) navigate("/profile");
           else navigate("/login");
         }}
         onShowSettings={() => navigate("/settings")}
+        onShowAdminDashboard={() => navigate("/admin")}
         onShowSellItem={() => navigate("/sell")}
         onLogout={logout}
         onCategoryClick={(cat) => navigate(`/category/${encodeURIComponent(cat)}`)}
         darkMode={darkMode}
+        isAdmin={user?.role === "admin"}
+        unreadMessagesCount={unreadNotificationsCount}
       />
     </Suspense>
   ) : null;
