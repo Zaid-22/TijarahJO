@@ -7,33 +7,19 @@ DB_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUNDLES_DIR="$DB_DIR/bundles"
 GUARD_SCRIPT="$SCRIPT_DIR/guard_no_duplicate_procs.sh"
 RUNTIME_GUARD_SCRIPT="$SCRIPT_DIR/guard_runtime_proc_contract.sh"
+ATOMICITY_GUARD_SCRIPT="$SCRIPT_DIR/guard_migration_atomicity.sh"
+CHECKSUM_GUARD_SCRIPT="$SCRIPT_DIR/guard_migration_checksums.sh"
 
 BASE_SCHEMA_SOURCE="$DB_DIR/schema/BASE_SCHEMA.sql"
-PROCEDURES_SOURCE="$SCRIPT_DIR/procedures/CANONICAL_STORED_PROCEDURES.sql"
 
-MIGRATION_FILES=(
-  "migrations/V202602190900__add_views_and_location_to_posts.sql"
-  "migrations/V202602190905__add_phone_to_users.sql"
-  "migrations/V202602190907__add_user_profile_fields.sql"
-  "migrations/V202602190910__drop_username_from_users.sql"
-  "migrations/V202602190915__add_category_visual_fields.sql"
-  "migrations/V202602190920__add_favorites_table.sql"
-  "migrations/V202602190925__fix_post_image_url_size.sql"
-  "migrations/V202602190930__add_chat_review_tables_and_indexes.sql"
-  "migrations/V202602190935__enhance_database_performance_and_integrity.sql"
-  "migrations/V202602190940__add_schema_versioning_and_search_indexes.sql"
-  "migrations/V202602190945__normalize_status_lookups_and_index_cleanup.sql"
-  "migrations/V202602191000__standardize_utc_default_constraints.sql"
-  "migrations/V202602191010__enforce_user_status_constraint.sql"
-  "migrations/V202602191020__add_normalized_search_columns_and_indexes.sql"
-)
+MIGRATION_FILES=()
 
 SEED_BASELINE_FILES=(
   "seeds/baseline/BASELINE_REFERENCE_DATA.sql"
 )
 
 SEED_DEV_FILES=(
-  "seeds/dev/FIX_DEFAULT_USER_CREDENTIALS.sql"
+  "seeds/dev/INSERT_DEV_SEED_USER.sql"
   "seeds/dev/INSERT_SAMPLE_POSTS.sql"
   "seeds/dev/INSERT_DUMMY_IMAGES.sql"
 )
@@ -76,14 +62,31 @@ EOT
   printf "\n\n" >> "$destination"
 }
 
+collect_migration_files() {
+  local migration_dir="$SCRIPT_DIR/migrations"
+  local -a canonical_files=()
+  local relative=""
+
+  if [[ -d "$migration_dir" ]]; then
+    while IFS= read -r file; do
+      relative="${file#"$SCRIPT_DIR"/}"
+      canonical_files+=("$relative")
+    done < <(find "$migration_dir" -maxdepth 1 -type f -name 'V*.sql' | sort)
+  fi
+
+  if [[ ${#canonical_files[@]} -gt 0 ]]; then
+    MIGRATION_FILES=("${canonical_files[@]}")
+    return
+  fi
+
+  echo "Missing active canonical migrations under $migration_dir (expected top-level V*.sql files)." >&2
+  echo "Legacy migrations under $DB_DIR/archive/migrations-legacy are intentionally excluded from bundles." >&2
+  exit 1
+}
+
 validate_sources() {
   if [[ ! -f "$BASE_SCHEMA_SOURCE" ]]; then
     echo "Missing base schema source: $BASE_SCHEMA_SOURCE" >&2
-    exit 1
-  fi
-
-  if [[ ! -f "$PROCEDURES_SOURCE" ]]; then
-    echo "Missing procedures source: $PROCEDURES_SOURCE" >&2
     exit 1
   fi
 
@@ -94,6 +97,16 @@ validate_sources() {
 
   if [[ ! -x "$RUNTIME_GUARD_SCRIPT" ]]; then
     echo "Missing or non-executable runtime contract guard script: $RUNTIME_GUARD_SCRIPT" >&2
+    exit 1
+  fi
+
+  if [[ ! -x "$ATOMICITY_GUARD_SCRIPT" ]]; then
+    echo "Missing or non-executable migration atomicity guard script: $ATOMICITY_GUARD_SCRIPT" >&2
+    exit 1
+  fi
+
+  if [[ ! -x "$CHECKSUM_GUARD_SCRIPT" ]]; then
+    echo "Missing or non-executable migration checksum guard script: $CHECKSUM_GUARD_SCRIPT" >&2
     exit 1
   fi
 
@@ -124,12 +137,6 @@ build_migrations_bundle() {
   for file in "${MIGRATION_FILES[@]}"; do
     append_source_sql "$destination" "$SCRIPT_DIR/$file"
   done
-}
-
-build_procedures_bundle() {
-  local destination="$BUNDLES_DIR/procedures.sql"
-  write_header "$destination" "Stored Procedures Bundle"
-  append_source_sql "$destination" "$PROCEDURES_SOURCE"
 }
 
 append_seed_group() {
@@ -173,7 +180,7 @@ build_seed_test_bundle() {
 
 build_master_bundle() {
   local destination="$BUNDLES_DIR/master.sql"
-  write_header "$destination" "Master Deployment Bundle (Base Schema + Migrations + Procedures)"
+  write_header "$destination" "Master Deployment Bundle (Base Schema + Migrations)"
 
   append_source_sql "$destination" "$BASE_SCHEMA_SOURCE"
 
@@ -181,22 +188,23 @@ build_master_bundle() {
   for file in "${MIGRATION_FILES[@]}"; do
     append_source_sql "$destination" "$SCRIPT_DIR/$file"
   done
-
-  append_source_sql "$destination" "$PROCEDURES_SOURCE"
 }
 
 main() {
   mkdir -p "$BUNDLES_DIR"
+  collect_migration_files
   validate_sources
   "$GUARD_SCRIPT"
   "$RUNTIME_GUARD_SCRIPT"
+  "$CHECKSUM_GUARD_SCRIPT"
+  "$ATOMICITY_GUARD_SCRIPT"
 
   rm -f "$BUNDLES_DIR/seed.sql" "$BUNDLES_DIR/views.sql" \
-    "$BUNDLES_DIR/indexes.sql" "$BUNDLES_DIR/seed_dev.sql" "$BUNDLES_DIR/seed_test.sql"
+    "$BUNDLES_DIR/indexes.sql" "$BUNDLES_DIR/procedures.sql" \
+    "$BUNDLES_DIR/seed_dev.sql" "$BUNDLES_DIR/seed_test.sql"
 
   build_schema_bundle
   build_migrations_bundle
-  build_procedures_bundle
   build_seed_bundle
   build_seed_dev_bundle
   build_seed_test_bundle
@@ -205,7 +213,6 @@ main() {
   echo "SQL bundles generated:"
   echo "  $BUNDLES_DIR/schema.sql"
   echo "  $BUNDLES_DIR/migrations.sql"
-  echo "  $BUNDLES_DIR/procedures.sql"
   echo "  $BUNDLES_DIR/seed_data.sql"
   echo "  $BUNDLES_DIR/seed_dev.sql"
   echo "  $BUNDLES_DIR/seed_test.sql"
