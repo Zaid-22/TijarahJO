@@ -1,69 +1,17 @@
 using Microsoft.Data.SqlClient;
+using System.Data;
+using System.Text;
+using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Common;
 using TijarahJoDB_DataAccess;
 
 namespace TijarahJoDB.DAL.Queries;
 
-public enum PostListingVisibilityMode
+public sealed class PostListingQueryService : IPostListingQueryService
 {
-    PublicVisible,
-    All,
-    ActiveOnly,
-    SoldOnly,
-    DeletedOnly
-}
+    private const char ImageSeparator = '\u001F';
 
-public enum PostListingSortField
-{
-    CreatedAt,
-    Price,
-    Views
-}
-
-public sealed class PostListingQuery
-{
-    public int Page { get; init; } = 1;
-    public int Limit { get; init; } = 20;
-    public PostListingVisibilityMode Visibility { get; init; } = PostListingVisibilityMode.PublicVisible;
-    public PostListingSortField SortField { get; init; } = PostListingSortField.CreatedAt;
-    public bool SortAscending { get; init; }
-    public string? SearchTerm { get; init; }
-    public int? CategoryId { get; init; }
-    public string? CategoryNameLike { get; init; }
-    public string? CityLike { get; init; }
-    public decimal? MinPrice { get; init; }
-    public decimal? MaxPrice { get; init; }
-}
-
-public sealed class PostListingRow
-{
-    public int PostId { get; init; }
-    public int UserId { get; init; }
-    public int CategoryId { get; init; }
-    public string PostTitle { get; init; } = string.Empty;
-    public string PostDescription { get; init; } = string.Empty;
-    public decimal Price { get; init; }
-    public string City { get; init; } = string.Empty;
-    public string Area { get; init; } = string.Empty;
-    public string SellerName { get; init; } = string.Empty;
-    public string CategoryName { get; init; } = string.Empty;
-    public DateTime CreatedAt { get; init; }
-    public int Views { get; init; }
-    public string ClientStatus { get; init; } = "ACTIVE";
-    public IReadOnlyList<string> Images { get; init; } = Array.Empty<string>();
-}
-
-public sealed class PostListingPageResult
-{
-    public int Page { get; init; }
-    public int Limit { get; init; }
-    public int TotalPosts { get; init; }
-    public IReadOnlyList<PostListingRow> Posts { get; init; } = Array.Empty<PostListingRow>();
-}
-
-public sealed class PostListingQueryService
-{
-    public PostListingPageResult Query(PostListingQuery query)
+    public async Task<PostListingPageResult> QueryAsync(PostListingQuery query, CancellationToken cancellationToken = default)
     {
         int page = query.Page < 1 ? 1 : query.Page;
         int limit = query.Limit < 1 ? 20 : query.Limit;
@@ -77,59 +25,92 @@ public sealed class PostListingQueryService
 
         using var connection = new SqlConnection(DataAccessSettings.ConnectionString);
         using var command = connection.CreateCommand();
-        command.Parameters.AddWithValue("@ActiveStatus", PostStatusPolicy.Active);
-        command.Parameters.AddWithValue("@BlockedStatus", PostStatusPolicy.Blocked);
-        command.Parameters.AddWithValue("@DeletedStatus", PostStatusPolicy.Deleted);
-        command.Parameters.AddWithValue("@SoldStatus", PostStatusPolicy.Sold);
+        await connection.OpenAsync(cancellationToken);
+
+        bool postsFullTextAvailable = await HasPostsFullTextIndexAsync(connection, cancellationToken);
+
+        AddIntParameter(command.Parameters, "@ActiveStatus", PostStatusPolicy.Active);
+        AddIntParameter(command.Parameters, "@SoldStatus", PostStatusPolicy.Sold);
 
         if (!string.IsNullOrWhiteSpace(query.SearchTerm))
         {
-            filters.Add(@"(
+            string searchPrefix = BuildPrefixPattern(query.SearchTerm);
+            string? fullTextCondition = postsFullTextAvailable
+                ? BuildFullTextSearchCondition(query.SearchTerm)
+                : null;
+
+            if (!string.IsNullOrWhiteSpace(fullTextCondition))
+            {
+                filters.Add(@"(
+CONTAINS((p.PostTitle, p.PostDescription), @SearchContains) OR
+c.SearchCategoryNameNormalized LIKE @SearchPrefix ESCAPE '\' OR
+u.SearchFirstNameNormalized LIKE @SearchPrefix ESCAPE '\' OR
+u.SearchLastNameNormalized LIKE @SearchPrefix ESCAPE '\' OR
+u.SearchFullNameNormalized LIKE @SearchPrefix ESCAPE '\' OR
+ct.CityName LIKE @SearchPrefix ESCAPE '\' OR
+a.AreaName LIKE @SearchPrefix ESCAPE '\'
+)");
+                AddNVarCharParameter(command.Parameters, "@SearchContains", 4000, fullTextCondition);
+                AddNVarCharParameter(command.Parameters, "@SearchPrefix", 450, searchPrefix);
+            }
+            else
+            {
+                filters.Add(@"(
 p.SearchTitleNormalized LIKE @SearchPrefix ESCAPE '\' OR
 p.SearchDescriptionPrefixNormalized LIKE @SearchPrefix ESCAPE '\' OR
 c.SearchCategoryNameNormalized LIKE @SearchPrefix ESCAPE '\' OR
 u.SearchFirstNameNormalized LIKE @SearchPrefix ESCAPE '\' OR
 u.SearchLastNameNormalized LIKE @SearchPrefix ESCAPE '\' OR
 u.SearchFullNameNormalized LIKE @SearchPrefix ESCAPE '\' OR
-p.SearchCityNormalized LIKE @SearchPrefix ESCAPE '\' OR
-p.SearchAreaNormalized LIKE @SearchPrefix ESCAPE '\'
+ct.CityName LIKE @SearchPrefix ESCAPE '\' OR
+a.AreaName LIKE @SearchPrefix ESCAPE '\'
 )");
-            command.Parameters.AddWithValue("@SearchPrefix", BuildPrefixPattern(query.SearchTerm));
+                AddNVarCharParameter(command.Parameters, "@SearchPrefix", 450, searchPrefix);
+            }
         }
 
         if (query.CategoryId.HasValue && query.CategoryId.Value > 0)
         {
             filters.Add("p.CategoryID = @CategoryID");
-            command.Parameters.AddWithValue("@CategoryID", query.CategoryId.Value);
+            AddIntParameter(command.Parameters, "@CategoryID", query.CategoryId.Value);
         }
         else if (!string.IsNullOrWhiteSpace(query.CategoryNameLike))
         {
             filters.Add("c.SearchCategoryNameNormalized LIKE @CategoryPrefix ESCAPE '\\'");
-            command.Parameters.AddWithValue("@CategoryPrefix", BuildPrefixPattern(query.CategoryNameLike));
+            AddNVarCharParameter(command.Parameters, "@CategoryPrefix", 100, BuildPrefixPattern(query.CategoryNameLike));
         }
 
         if (!string.IsNullOrWhiteSpace(query.CityLike))
         {
-            filters.Add("p.SearchCityNormalized LIKE @CityPrefix ESCAPE '\\'");
-            command.Parameters.AddWithValue("@CityPrefix", BuildPrefixPattern(query.CityLike));
+            filters.Add("ct.CityName LIKE @CityPrefix ESCAPE '\\'");
+            AddNVarCharParameter(command.Parameters, "@CityPrefix", 100, BuildPrefixPattern(query.CityLike));
         }
 
         if (query.MinPrice.HasValue)
         {
             filters.Add("p.Price >= @MinPrice");
-            command.Parameters.AddWithValue("@MinPrice", query.MinPrice.Value);
+            AddDecimalParameter(command.Parameters, "@MinPrice", query.MinPrice.Value);
         }
 
         if (query.MaxPrice.HasValue)
         {
             filters.Add("p.Price <= @MaxPrice");
-            command.Parameters.AddWithValue("@MaxPrice", query.MaxPrice.Value);
+            AddDecimalParameter(command.Parameters, "@MaxPrice", query.MaxPrice.Value);
+        }
+
+        if (query.UserId.HasValue && query.UserId.Value > 0)
+        {
+            filters.Add("p.UserID = @UserID");
+            AddIntParameter(command.Parameters, "@UserID", query.UserId.Value);
         }
 
         switch (query.Visibility)
         {
             case PostListingVisibilityMode.All:
                 filters.Add("1 = 1");
+                break;
+            case PostListingVisibilityMode.NonDeletedAnyStatus:
+                filters.Add("p.IsDeleted = 0");
                 break;
             case PostListingVisibilityMode.ActiveOnly:
                 filters.Add("p.IsDeleted = 0 AND p.Status = @ActiveStatus");
@@ -138,7 +119,7 @@ p.SearchAreaNormalized LIKE @SearchPrefix ESCAPE '\'
                 filters.Add("p.IsDeleted = 0 AND p.Status = @SoldStatus");
                 break;
             case PostListingVisibilityMode.DeletedOnly:
-                filters.Add("(p.IsDeleted = 1 OR p.Status IN (@BlockedStatus, @DeletedStatus))");
+                filters.Add("p.IsDeleted = 1");
                 break;
             default:
                 filters.Add("p.IsDeleted = 0 AND p.Status IN (@ActiveStatus, @SoldStatus)");
@@ -147,8 +128,8 @@ p.SearchAreaNormalized LIKE @SearchPrefix ESCAPE '\'
 
         string orderByClause = BuildOrderByClause(query.SortField, query.SortAscending);
 
-        command.Parameters.AddWithValue("@Offset", offset);
-        command.Parameters.AddWithValue("@Limit", limit);
+        AddIntParameter(command.Parameters, "@Offset", offset);
+        AddIntParameter(command.Parameters, "@Limit", limit);
 
         command.CommandText = $@"
 WITH FilteredPosts AS
@@ -160,8 +141,8 @@ WITH FilteredPosts AS
         ISNULL(p.PostTitle, '') AS PostTitle,
         ISNULL(p.PostDescription, '') AS PostDescription,
         ISNULL(p.Price, 0) AS Price,
-        ISNULL(p.City, '') AS City,
-        ISNULL(p.Area, '') AS Area,
+        ISNULL(ct.CityName, '') AS City,
+        ISNULL(a.AreaName, '') AS Area,
         p.CreatedAt,
         ISNULL(p.Views, 0) AS Views,
         ISNULL(c.CategoryName, '') AS CategoryName,
@@ -172,13 +153,16 @@ WITH FilteredPosts AS
         ) AS SellerName,
         ISNULL(img.ImageURLs, '') AS ImageURLs,
         {PostStatusPolicy.ToSqlCaseExpression("p")} AS ClientStatus
-    FROM dbo.TbPosts AS p
-    LEFT JOIN dbo.TbItemCategories AS c ON c.CategoryID = p.CategoryID
-    LEFT JOIN dbo.TbUsers AS u ON u.UserID = p.UserID
+    FROM dbo.Posts AS p
+    LEFT JOIN dbo.Categories AS c ON c.CategoryID = p.CategoryID
+    LEFT JOIN dbo.Users AS u ON u.UserID = p.UserID
+    LEFT JOIN dbo.Cities AS ct ON ct.CityID = p.CityID
+    LEFT JOIN dbo.Areas AS a ON a.AreaID = p.AreaID
     OUTER APPLY
     (
-        SELECT STRING_AGG(pi.PostImageURL, ',') AS ImageURLs
-        FROM dbo.TbPostImages AS pi
+        SELECT STRING_AGG(pi.PostImageURL, NCHAR(31))
+               WITHIN GROUP (ORDER BY pi.UploadedAt, pi.PostImageID) AS ImageURLs
+        FROM dbo.PostImages AS pi
         WHERE pi.PostID = p.PostID
           AND ISNULL(pi.IsDeleted, 0) = 0
     ) AS img
@@ -204,13 +188,11 @@ FROM FilteredPosts AS fp
 ORDER BY {orderByClause}
 OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY;";
 
-        connection.Open();
-
         var posts = new List<PostListingRow>();
         int totalPosts = 0;
 
-        using SqlDataReader reader = command.ExecuteReader();
-        while (reader.Read())
+        using SqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
         {
             int total = reader.GetInt32(reader.GetOrdinal("TotalCount"));
             if (total > totalPosts)
@@ -232,9 +214,9 @@ OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY;";
                 SellerName = reader.GetString(reader.GetOrdinal("SellerName")),
                 CategoryName = reader.GetString(reader.GetOrdinal("CategoryName")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                Views = reader.GetInt32(reader.GetOrdinal("Views")),
+                Views = reader.GetInt64(reader.GetOrdinal("Views")),
                 ClientStatus = reader.GetString(reader.GetOrdinal("ClientStatus")),
-                Images = ParseCsvImageUrls(imageCsv)
+                Images = ParseAggregatedImageUrls(imageCsv)
             });
         }
 
@@ -245,6 +227,26 @@ OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY;";
             TotalPosts = totalPosts,
             Posts = posts
         };
+    }
+
+    private static void AddIntParameter(SqlParameterCollection parameters, string name, int value)
+    {
+        parameters.Add(new SqlParameter(name, SqlDbType.Int) { Value = value });
+    }
+
+    private static void AddDecimalParameter(SqlParameterCollection parameters, string name, decimal value)
+    {
+        parameters.Add(new SqlParameter(name, SqlDbType.Decimal)
+        {
+            Precision = 18,
+            Scale = 2,
+            Value = value
+        });
+    }
+
+    private static void AddNVarCharParameter(SqlParameterCollection parameters, string name, int size, string value)
+    {
+        parameters.Add(new SqlParameter(name, SqlDbType.NVarChar, size) { Value = value });
     }
 
     private static string BuildOrderByClause(PostListingSortField sortField, bool ascending)
@@ -263,24 +265,79 @@ OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY;";
         };
     }
 
-    private static List<string> ParseCsvImageUrls(string csv)
+    private static List<string> ParseAggregatedImageUrls(string imagePayload)
     {
-        if (string.IsNullOrWhiteSpace(csv))
+        if (string.IsNullOrWhiteSpace(imagePayload))
         {
             return new List<string>();
         }
 
-        var uniqueImages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (string value in csv.Split(',', StringSplitOptions.RemoveEmptyEntries))
+        string[] parsedSegments = imagePayload.Contains(ImageSeparator)
+            ? imagePayload.Split(ImageSeparator, StringSplitOptions.RemoveEmptyEntries)
+            : ParseLegacyCommaDelimitedImages(imagePayload);
+
+        var orderedUniqueImages = new List<string>(parsedSegments.Length);
+        var seenImages = new HashSet<string>(StringComparer.Ordinal);
+        foreach (string value in parsedSegments)
         {
             string normalized = value.Trim();
-            if (!string.IsNullOrWhiteSpace(normalized))
+            if (string.IsNullOrWhiteSpace(normalized))
             {
-                uniqueImages.Add(normalized);
+                continue;
             }
+
+            if (!seenImages.Add(normalized))
+            {
+                continue;
+            }
+
+            orderedUniqueImages.Add(normalized);
         }
 
-        return new List<string>(uniqueImages);
+        return orderedUniqueImages;
+    }
+
+    private static string[] ParseLegacyCommaDelimitedImages(string imagePayload)
+    {
+        string[] rawSegments = imagePayload.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        if (rawSegments.Length == 0)
+        {
+            return Array.Empty<string>();
+        }
+
+        var mergedSegments = new List<string>(rawSegments.Length);
+        for (int i = 0; i < rawSegments.Length; i++)
+        {
+            string current = rawSegments[i].Trim();
+            if (string.IsNullOrWhiteSpace(current))
+            {
+                continue;
+            }
+
+            bool looksLikeSplitDataPrefix =
+                current.StartsWith("data:", StringComparison.OrdinalIgnoreCase) &&
+                current.Contains(";base64", StringComparison.OrdinalIgnoreCase) &&
+                !current.Contains(',');
+
+            if (looksLikeSplitDataPrefix && i + 1 < rawSegments.Length)
+            {
+                string payload = rawSegments[i + 1].Trim();
+                if (!string.IsNullOrWhiteSpace(payload) &&
+                    !payload.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                    !payload.StartsWith("https://", StringComparison.OrdinalIgnoreCase) &&
+                    !payload.StartsWith("data:", StringComparison.OrdinalIgnoreCase) &&
+                    !payload.StartsWith("blob:", StringComparison.OrdinalIgnoreCase))
+                {
+                    mergedSegments.Add($"{current},{payload}");
+                    i += 1;
+                    continue;
+                }
+            }
+
+            mergedSegments.Add(current);
+        }
+
+        return mergedSegments.ToArray();
     }
 
     private static string BuildPrefixPattern(string rawValue)
@@ -296,5 +353,66 @@ OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY;";
             .Replace("%", "\\%", StringComparison.Ordinal)
             .Replace("_", "\\_", StringComparison.Ordinal)
             .Replace("[", "\\[", StringComparison.Ordinal);
+    }
+
+    private static async Task<bool> HasPostsFullTextIndexAsync(SqlConnection connection, CancellationToken cancellationToken)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = @"
+SELECT CASE
+           WHEN CAST(ISNULL(SERVERPROPERTY('IsFullTextInstalled'), 0) AS INT) = 1
+                AND EXISTS (
+                    SELECT 1
+                    FROM sys.fulltext_indexes
+                    WHERE object_id = OBJECT_ID(N'dbo.Posts')
+                )
+           THEN 1
+           ELSE 0
+       END;";
+
+        object? scalar = await command.ExecuteScalarAsync(cancellationToken);
+        return scalar != null && Convert.ToInt32(scalar) == 1;
+    }
+
+    private static string? BuildFullTextSearchCondition(string rawValue)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var tokens = new List<string>();
+
+        foreach (string part in rawValue.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            string sanitized = SanitizeFullTextToken(part);
+            if (sanitized.Length < 2 || !seen.Add(sanitized))
+            {
+                continue;
+            }
+
+            tokens.Add($"\"{sanitized}*\"");
+            if (tokens.Count >= 8)
+            {
+                break;
+            }
+        }
+
+        if (tokens.Count == 0)
+        {
+            return null;
+        }
+
+        return string.Join(" AND ", tokens);
+    }
+
+    private static string SanitizeFullTextToken(string value)
+    {
+        var builder = new StringBuilder(value.Length);
+        foreach (char c in value)
+        {
+            if (char.IsLetterOrDigit(c))
+            {
+                builder.Append(char.ToUpperInvariant(c));
+            }
+        }
+
+        return builder.ToString();
     }
 }
