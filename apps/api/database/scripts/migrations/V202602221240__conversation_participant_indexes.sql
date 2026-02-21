@@ -25,7 +25,7 @@ BEGIN TRY
         BEGIN
             CREATE NONCLUSTERED INDEX IX_Conversations_User1_Conversation
             ON dbo.Conversations (User1ID, ConversationID)
-            INCLUDE (User2ID, PostID, CreatedAt);
+            INCLUDE (User2ID, PostID);
         END
 
         IF NOT EXISTS
@@ -38,7 +38,7 @@ BEGIN TRY
         BEGIN
             CREATE NONCLUSTERED INDEX IX_Conversations_User2_Conversation
             ON dbo.Conversations (User2ID, ConversationID)
-            INCLUDE (User1ID, PostID, CreatedAt);
+            INCLUDE (User1ID, PostID);
         END
     END
 
