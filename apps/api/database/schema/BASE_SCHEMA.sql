@@ -170,7 +170,7 @@ BEGIN
         SearchTitleNormalized AS CONVERT(NVARCHAR(200), UPPER(LTRIM(RTRIM(ISNULL(PostTitle, N''))))) PERSISTED,
         SearchDescriptionPrefixNormalized AS CONVERT(NVARCHAR(450), UPPER(LEFT(LTRIM(RTRIM(ISNULL(PostDescription, N''))), 450))) PERSISTED,
         CONSTRAINT CK_Posts_Price    CHECK (Price IS NULL OR Price >= 0),
-        CONSTRAINT CK_Posts_Status   CHECK (Status IN (0, 1, 2, 3)),
+        CONSTRAINT CK_Posts_Status   CHECK (Status IN (0, 1, 3)),
         CONSTRAINT CK_Posts_Views_NonNegative CHECK (Views >= 0),
         CONSTRAINT CK_Posts_AreaRequiresCity CHECK (AreaID IS NULL OR CityID IS NOT NULL),
         CONSTRAINT FK_Posts_UserID   FOREIGN KEY (UserID)      REFERENCES dbo.Users(UserID),

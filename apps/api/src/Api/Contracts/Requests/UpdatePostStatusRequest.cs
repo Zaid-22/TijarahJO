@@ -1,6 +1,13 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace TijarahJoDBAPI.Contracts.Requests;
 
 public class UpdatePostStatusRequest
 {
-    public string Status { get; set; } = "ACTIVE"; // ACTIVE, BLOCKED, DELETED, SOLD (INACTIVE accepted as alias)
+    [Required(AllowEmptyStrings = false)]
+    [RegularExpression(
+        "^(?i)(ACTIVE|BLOCKED|SOLD)$",
+        ErrorMessage = "Status must be one of: ACTIVE, BLOCKED, SOLD."
+    )]
+    public string Status { get; set; } = "ACTIVE"; // ACTIVE, BLOCKED, SOLD
 }
