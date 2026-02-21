@@ -84,6 +84,27 @@ collect_migration_files() {
   exit 1
 }
 
+enforce_runtime_tree_boundaries() {
+  local -a stale_runtime_sources=()
+  local file=""
+
+  while IFS= read -r file; do
+    stale_runtime_sources+=("$file")
+  done < <(find "$SCRIPT_DIR/bundles" "$SCRIPT_DIR/archive" -type f -name '*.sql' 2>/dev/null | sort)
+
+  if [[ ${#stale_runtime_sources[@]} -eq 0 ]]; then
+    return
+  fi
+
+  echo "Error: stale SQL sources were found under runtime-adjacent paths." >&2
+  echo "Move historical SQL to apps/api/database/archive/* and keep generated output in apps/api/database/bundles/* only." >&2
+  echo "Offending files:" >&2
+  for file in "${stale_runtime_sources[@]}"; do
+    echo "  - ${file#"$DB_DIR"/}" >&2
+  done
+  exit 1
+}
+
 validate_sources() {
   if [[ ! -f "$BASE_SCHEMA_SOURCE" ]]; then
     echo "Missing base schema source: $BASE_SCHEMA_SOURCE" >&2
@@ -192,6 +213,7 @@ build_master_bundle() {
 
 main() {
   mkdir -p "$BUNDLES_DIR"
+  enforce_runtime_tree_boundaries
   collect_migration_files
   validate_sources
   "$GUARD_SCRIPT"
