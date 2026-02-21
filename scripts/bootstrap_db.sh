@@ -40,6 +40,9 @@ Environment:
   MSSQL_SA_PASSWORD   SQL sa password (required; set in shell or .env)
   JWT_SIGNING_KEY     Backend JWT key (required; set in shell or .env)
   ASPNETCORE_URLS     Backend URL (default: http://localhost:5033)
+  DB_RUNTIME_PRINCIPAL Runtime DB principal for backend connection: app|sa (default: app)
+  DB_APP_LOGIN        App DB login when DB_RUNTIME_PRINCIPAL=app (default: tijarahjo_app)
+  DB_APP_PASSWORD     App DB password when DB_RUNTIME_PRINCIPAL=app (required; no fallback)
   ADMIN_TOKEN         Optional token passed through to verify_all_apis.sh
 EOF
 }
@@ -100,6 +103,22 @@ fi
 SA_PASSWORD="$MSSQL_SA_PASSWORD"
 JWT_SIGNING_KEY="$JWT_SIGNING_KEY"
 BACKEND_URL="${ASPNETCORE_URLS:-http://localhost:5033}"
+DB_RUNTIME_PRINCIPAL="${DB_RUNTIME_PRINCIPAL:-app}"
+DB_APP_LOGIN="${DB_APP_LOGIN:-tijarahjo_app}"
+DB_APP_PASSWORD="${DB_APP_PASSWORD:-}"
+RUNTIME_DB_USER="sa"
+RUNTIME_DB_PASSWORD="$SA_PASSWORD"
+
+if [[ "$DB_RUNTIME_PRINCIPAL" != "app" && "$DB_RUNTIME_PRINCIPAL" != "sa" ]]; then
+  echo "Error: DB_RUNTIME_PRINCIPAL must be either 'app' or 'sa' (got '$DB_RUNTIME_PRINCIPAL')." >&2
+  exit 1
+fi
+
+if [[ "$DB_RUNTIME_PRINCIPAL" == "app" && -z "${DB_APP_PASSWORD:-}" ]]; then
+  echo "Error: DB_APP_PASSWORD must be set when DB_RUNTIME_PRINCIPAL=app." >&2
+  echo "Use a secret manager or CI secret and inject DB_APP_PASSWORD at runtime." >&2
+  exit 1
+fi
 
 for required_cmd in docker dotnet curl jq awk sed lsof; do
   if ! command -v "$required_cmd" >/dev/null 2>&1; then
@@ -152,8 +171,136 @@ docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" -S localhost -U sa -P "$
 
 apply_sql_file() {
   local file_path="$1"
-  echo "==> Applying $(basename "$file_path")..."
-  cat "$file_path" | docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" -S localhost -U sa -P "$SA_PASSWORD" -C -b -I >/dev/null
+  cat "$file_path" | docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" -S localhost -U sa -P "$SA_PASSWORD" -C -b -I
+}
+
+configure_runtime_db_principal() {
+  if [[ "$DB_RUNTIME_PRINCIPAL" == "sa" ]]; then
+    RUNTIME_DB_USER="sa"
+    RUNTIME_DB_PASSWORD="$SA_PASSWORD"
+    echo "==> Runtime DB principal: sa (explicit override)."
+    return
+  fi
+
+  if [[ ! "$DB_APP_LOGIN" =~ ^[A-Za-z][A-Za-z0-9_]{2,63}$ ]]; then
+    echo "Error: DB_APP_LOGIN must match ^[A-Za-z][A-Za-z0-9_]{2,63}$ (got '$DB_APP_LOGIN')." >&2
+    exit 1
+  fi
+
+  local escaped_app_password
+  escaped_app_password="$(printf "%s" "$DB_APP_PASSWORD" | sed "s/'/''/g")"
+
+  cat <<SQL | docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" -S localhost -U sa -P "$SA_PASSWORD" -C -b -I >/dev/null
+USE master;
+IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = N'${DB_APP_LOGIN}')
+BEGIN
+    CREATE LOGIN [${DB_APP_LOGIN}] WITH PASSWORD = N'${escaped_app_password}', CHECK_POLICY = ON, CHECK_EXPIRATION = OFF;
+END
+ELSE
+BEGIN
+    ALTER LOGIN [${DB_APP_LOGIN}] WITH PASSWORD = N'${escaped_app_password}';
+END
+GO
+
+USE TijarahJoDB;
+IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'${DB_APP_LOGIN}')
+BEGIN
+    CREATE USER [${DB_APP_LOGIN}] FOR LOGIN [${DB_APP_LOGIN}];
+END
+GO
+
+GRANT CONNECT TO [${DB_APP_LOGIN}];
+
+IF EXISTS
+(
+    SELECT 1
+    FROM sys.database_role_members AS rm
+    INNER JOIN sys.database_principals AS r ON r.principal_id = rm.role_principal_id
+    INNER JOIN sys.database_principals AS m ON m.principal_id = rm.member_principal_id
+    WHERE r.name = N'db_datareader' AND m.name = N'${DB_APP_LOGIN}'
+)
+BEGIN
+    ALTER ROLE db_datareader DROP MEMBER [${DB_APP_LOGIN}];
+END
+
+IF EXISTS
+(
+    SELECT 1
+    FROM sys.database_role_members AS rm
+    INNER JOIN sys.database_principals AS r ON r.principal_id = rm.role_principal_id
+    INNER JOIN sys.database_principals AS m ON m.principal_id = rm.member_principal_id
+    WHERE r.name = N'db_datawriter' AND m.name = N'${DB_APP_LOGIN}'
+)
+BEGIN
+    ALTER ROLE db_datawriter DROP MEMBER [${DB_APP_LOGIN}];
+END
+
+IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'tijarahjo_app_runtime' AND type = N'R')
+BEGIN
+    CREATE ROLE [tijarahjo_app_runtime] AUTHORIZATION [dbo];
+END
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM sys.database_role_members AS rm
+    INNER JOIN sys.database_principals AS r ON r.principal_id = rm.role_principal_id
+    INNER JOIN sys.database_principals AS m ON m.principal_id = rm.member_principal_id
+    WHERE r.name = N'tijarahjo_app_runtime' AND m.name = N'${DB_APP_LOGIN}'
+)
+BEGIN
+    ALTER ROLE [tijarahjo_app_runtime] ADD MEMBER [${DB_APP_LOGIN}];
+END
+
+-- Reset legacy schema-level grants before applying least-privilege grants.
+REVOKE SELECT, INSERT, UPDATE, DELETE ON SCHEMA::dbo TO [tijarahjo_app_runtime];
+
+-- Runtime principal is data-access only: block destructive/DDL paths.
+DENY DELETE ON SCHEMA::dbo TO [tijarahjo_app_runtime];
+DENY ALTER ON SCHEMA::dbo TO [tijarahjo_app_runtime];
+DENY CONTROL ON SCHEMA::dbo TO [tijarahjo_app_runtime];
+DENY REFERENCES ON SCHEMA::dbo TO [tijarahjo_app_runtime];
+
+GRANT SELECT ON dbo.Users TO [tijarahjo_app_runtime];
+GRANT SELECT ON dbo.Roles TO [tijarahjo_app_runtime];
+GRANT SELECT ON dbo.Categories TO [tijarahjo_app_runtime];
+GRANT SELECT ON dbo.Posts TO [tijarahjo_app_runtime];
+GRANT SELECT ON dbo.PostImages TO [tijarahjo_app_runtime];
+GRANT SELECT ON dbo.Favorites TO [tijarahjo_app_runtime];
+GRANT SELECT ON dbo.Reviews TO [tijarahjo_app_runtime];
+GRANT SELECT ON dbo.Conversations TO [tijarahjo_app_runtime];
+GRANT SELECT ON dbo.Messages TO [tijarahjo_app_runtime];
+GRANT SELECT ON dbo.Notifications TO [tijarahjo_app_runtime];
+GRANT SELECT ON dbo.PushSubscriptions TO [tijarahjo_app_runtime];
+GRANT SELECT ON dbo.Cities TO [tijarahjo_app_runtime];
+GRANT SELECT ON dbo.Areas TO [tijarahjo_app_runtime];
+GRANT SELECT ON dbo.UserStatusLookup TO [tijarahjo_app_runtime];
+GRANT SELECT ON dbo.PostStatusLookup TO [tijarahjo_app_runtime];
+
+GRANT INSERT, UPDATE ON dbo.Users TO [tijarahjo_app_runtime];
+GRANT INSERT, UPDATE ON dbo.Roles TO [tijarahjo_app_runtime];
+GRANT INSERT, UPDATE ON dbo.Categories TO [tijarahjo_app_runtime];
+GRANT INSERT, UPDATE ON dbo.Posts TO [tijarahjo_app_runtime];
+GRANT INSERT, UPDATE ON dbo.PostImages TO [tijarahjo_app_runtime];
+GRANT INSERT, UPDATE ON dbo.Favorites TO [tijarahjo_app_runtime];
+GRANT INSERT, UPDATE ON dbo.Reviews TO [tijarahjo_app_runtime];
+GRANT INSERT, UPDATE ON dbo.Conversations TO [tijarahjo_app_runtime];
+GRANT INSERT, UPDATE ON dbo.Messages TO [tijarahjo_app_runtime];
+GRANT INSERT, UPDATE ON dbo.Notifications TO [tijarahjo_app_runtime];
+GRANT INSERT, UPDATE ON dbo.PushSubscriptions TO [tijarahjo_app_runtime];
+
+-- Explicitly keep reference/metadata tables read-only for runtime.
+DENY INSERT, UPDATE, DELETE ON dbo.UserStatusLookup TO [tijarahjo_app_runtime];
+DENY INSERT, UPDATE, DELETE ON dbo.PostStatusLookup TO [tijarahjo_app_runtime];
+DENY INSERT, UPDATE, DELETE ON dbo.Cities TO [tijarahjo_app_runtime];
+DENY INSERT, UPDATE, DELETE ON dbo.Areas TO [tijarahjo_app_runtime];
+DENY INSERT, UPDATE, DELETE ON dbo.SchemaMigrations TO [tijarahjo_app_runtime];
+GO
+SQL
+
+  RUNTIME_DB_USER="$DB_APP_LOGIN"
+  RUNTIME_DB_PASSWORD="$DB_APP_PASSWORD"
+  echo "==> Runtime DB principal: app login '$DB_APP_LOGIN' (explicit object-level least privilege)."
 }
 
 echo "==> Building consolidated SQL bundles..."
@@ -188,20 +335,29 @@ if [[ "$APPLY_TEST_SEEDS" == "1" || "$APPLY_TEST_SEEDS" == "true" ]]; then
   fi
 fi
 
+configure_runtime_db_principal
+
 echo "==> Starting backend..."
 if lsof -ti tcp:5033 >/dev/null 2>&1; then
   lsof -ti tcp:5033 | xargs kill -9 || true
 fi
 
 if [[ "$KEEP_BACKEND_RUNNING" -eq 1 ]]; then
+  BACKEND_DLL_PATH="$BACKEND_DIR/bin/Debug/net8.0/TijarahJo.Api.dll"
   (
     cd "$BACKEND_DIR"
+    # Build once, then run the compiled app directly so PID tracking stays stable.
+    dotnet build --nologo >/dev/null
+    if [[ ! -f "$BACKEND_DLL_PATH" ]]; then
+      echo "Error: backend build output not found at $BACKEND_DLL_PATH" >&2
+      exit 1
+    fi
     nohup env \
       ASPNETCORE_ENVIRONMENT=Development \
       ASPNETCORE_URLS="$BACKEND_URL" \
       JWT_SIGNING_KEY="$JWT_SIGNING_KEY" \
-      DATABASE_CONNECTION_STRING="Data Source=localhost,1433;Database=TijarahJoDB;User Id=sa;Password=${SA_PASSWORD};Encrypt=True;TrustServerCertificate=True;" \
-      dotnet run --no-launch-profile >>"$BACKEND_LOG_FILE" 2>&1 < /dev/null &
+      DATABASE_CONNECTION_STRING="Data Source=localhost,1433;Database=TijarahJoDB;User Id=${RUNTIME_DB_USER};Password=${RUNTIME_DB_PASSWORD};Encrypt=True;TrustServerCertificate=True;" \
+      dotnet "$BACKEND_DLL_PATH" >>"$BACKEND_LOG_FILE" 2>&1 < /dev/null &
     echo $! > "$BACKEND_PID_FILE"
   )
   BACKEND_PID="$(cat "$BACKEND_PID_FILE")"
@@ -211,7 +367,7 @@ else
     ASPNETCORE_ENVIRONMENT=Development \
     ASPNETCORE_URLS="$BACKEND_URL" \
     JWT_SIGNING_KEY="$JWT_SIGNING_KEY" \
-    DATABASE_CONNECTION_STRING="Data Source=localhost,1433;Database=TijarahJoDB;User Id=sa;Password=${SA_PASSWORD};Encrypt=True;TrustServerCertificate=True;" \
+    DATABASE_CONNECTION_STRING="Data Source=localhost,1433;Database=TijarahJoDB;User Id=${RUNTIME_DB_USER};Password=${RUNTIME_DB_PASSWORD};Encrypt=True;TrustServerCertificate=True;" \
     dotnet run --no-launch-profile >"$BACKEND_LOG_FILE" 2>&1
   ) &
   BACKEND_PID=$!
