@@ -26,15 +26,26 @@ const AppRoutes = lazy(() =>
 );
 
 const ROUTES_WITH_LOCAL_HEADER = new Set([
+  "admin",
   "profile",
   "settings",
   "products",
   "favorites",
+  "chat",
   "sell",
   "faq",
+  "help",
+  "terms",
+  "privacy",
   "product",
   "category",
   "seller",
+]);
+const KNOWN_PRIMARY_SEGMENTS = new Set([
+  "",
+  "login",
+  "admin",
+  ...Array.from(ROUTES_WITH_LOCAL_HEADER),
 ]);
 const AUTH_TOAST_COOLDOWN_MS = 12_000;
 const UNREAD_COUNT_REFRESH_MS = 30_000;
@@ -61,7 +72,10 @@ export default function App() {
   const primarySegment = pathSegments[0] || "";
   const isAuthRoute = primarySegment === "login";
   const hasLocalPageHeader = ROUTES_WITH_LOCAL_HEADER.has(primarySegment);
-  const shouldShowGlobalHeader = !isAuthRoute && !hasLocalPageHeader;
+  const isUnknownPrimarySegment =
+    primarySegment !== "" && !KNOWN_PRIMARY_SEGMENTS.has(primarySegment);
+  const shouldShowGlobalHeader =
+    !isAuthRoute && !hasLocalPageHeader && !isUnknownPrimarySegment;
   const isChatRoute = normalizedPathname === "/chat" || normalizedPathname.startsWith("/chat/");
 
   // Custom Hooks
@@ -175,11 +189,18 @@ export default function App() {
     }
 
     return chatService.onNotificationReceived((notification) => {
+      const routeConversationId = toPositiveIntegerId(
+        new URLSearchParams(location.search).get("conversationId"),
+      );
       const inChatWithSender = isChatRoute
         && typeof notification.senderUserId === "number"
         && normalizedPathname.endsWith(`/${notification.senderUserId}`);
+      const inSameConversation =
+        !notification.conversationId ||
+        !routeConversationId ||
+        notification.conversationId === routeConversationId;
 
-      if (!inChatWithSender) {
+      if (!inChatWithSender || !inSameConversation) {
         deferredToast.info(`${notification.title}: ${notification.body}`);
       }
 
@@ -206,7 +227,7 @@ export default function App() {
         logger.warn("[App] Failed to refresh unread count after realtime notification:", error);
       });
     });
-  }, [isAuthenticated, isChatRoute, navigate, normalizedPathname]);
+  }, [isAuthenticated, isChatRoute, location.search, navigate, normalizedPathname]);
 
   useEffect(() => {
     if (!isAuthenticated || !isChatRoute) {
@@ -288,7 +309,7 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#1a1a1a] flex flex-col">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
         {globalHeader}
         <div className="flex-1 flex items-center justify-center">
           <span
@@ -301,10 +322,16 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#1a1a1a] flex flex-col">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-3 focus:py-2 focus:rounded-md focus:bg-primary focus:text-white"
+      >
+        {language === "ar" ? "تخطي إلى المحتوى الرئيسي" : "Skip to main content"}
+      </a>
       {globalHeader}
 
-      <div className="flex-1">
+      <main id="main-content" className="flex-1">
         <Suspense
           fallback={
             <div className="min-h-[40vh] flex items-center justify-center">
@@ -331,7 +358,7 @@ export default function App() {
             searchQuery={searchQuery}
           />
         </Suspense>
-      </div>
+      </main>
 
       {!isAuthRoute && (
         <Suspense fallback={null}>
