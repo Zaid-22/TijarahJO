@@ -6,14 +6,29 @@ Audit snapshot: see `AUDIT_SUMMARY.md`.
 
 ## Active Migration Chain
 
-Active canonical migrations are intentionally small and target canonical table names only:
+Active canonical migrations (current order):
 
 - `V202602200900__canonical_schema_consistency.sql`
 - `V202602200910__canonical_indexes.sql`
-- `V202602201000__add_fulltext_search.sql` (safe no-op when SQL Server Full-Text is unavailable)
+- `V202602201000__add_fulltext_search.sql`
 - `V202602201100__message_integrity_and_login_index_hardening.sql`
+- `V202602201200__add_notifications_and_push_subscriptions.sql`
+- `V202602211300__push_subscription_endpoint_hash_unique.sql`
+- `V202602211310__messages_read_path_index.sql`
+- `V202602221200__unify_post_soft_delete_semantics.sql`
+- `V202602221230__fulltext_support_audit_note.sql`
+- `V202602221240__conversation_participant_indexes.sql`
+- `V202602221250__align_post_status_lookup_with_soft_delete.sql`
+- `V202602221260__rationalize_conversation_indexes.sql`
 
 Legacy `Tb*` migration scripts were moved under `../archive/migrations-legacy/` and are excluded from bootstrap bundles.
+
+## Migration Policy
+
+- Migrations are forward-only and immutable after commit.
+- Migrations from `V202602201100` onward must be transactional (`XACT_ABORT ON`, `TRY/CATCH`, `BEGIN/COMMIT/ROLLBACK TRANSACTION`).
+- Pre-atomic baseline migrations (`V202602200900`, `V202602200910`, `V202602201000`) are marked with `ATOMICITY_EXCEPTION`.
+  - Operational rule: if one of these fails in a shared environment, do a full database reset and re-apply the canonical chain from baseline.
 
 ## Canonical Runtime Path
 
@@ -92,6 +107,7 @@ Run migration atomicity standards guard:
 Notes:
 - The atomicity guard is forward-looking and enforced for canonical migrations `>= V202602201100`.
 - Older immutable migrations remain unchanged for history integrity.
+- Full-text policy is optional capability: migration chain must succeed even when SQL Server Full-Text is unavailable.
 
 Refresh migration checksum lock file intentionally (e.g., after adding a new migration file):
 
