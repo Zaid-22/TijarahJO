@@ -300,8 +300,6 @@ public sealed class TijarahJoDbContext : DbContext
             entity.HasIndex("UserID", "EndpointHash")
                 .IsUnique()
                 .HasDatabaseName("UQ_PushSubscriptions_User_EndpointHash");
-            entity.HasIndex(e => new { e.UserID, e.Endpoint })
-                .HasDatabaseName("IX_PushSubscriptions_User_EndpointLookup");
             entity.HasIndex(e => new { e.UserID, e.IsActive })
                 .HasDatabaseName("IX_PushSubscriptions_User_IsActive");
 

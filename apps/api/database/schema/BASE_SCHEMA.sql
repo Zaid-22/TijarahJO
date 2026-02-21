@@ -402,19 +402,6 @@ BEGIN
 END
 GO
 
-IF NOT EXISTS (
-    SELECT 1
-    FROM sys.indexes
-    WHERE object_id = OBJECT_ID(N'dbo.PushSubscriptions')
-      AND name = N'IX_PushSubscriptions_User_EndpointLookup'
-)
-BEGIN
-    CREATE NONCLUSTERED INDEX IX_PushSubscriptions_User_EndpointLookup
-    ON dbo.PushSubscriptions (UserID, Endpoint)
-    INCLUDE (PushSubscriptionID, IsActive, UpdatedAt);
-END
-GO
-
 -- ---------------------------------------------------------------------------
 -- Schema Migrations tracking table
 -- ---------------------------------------------------------------------------

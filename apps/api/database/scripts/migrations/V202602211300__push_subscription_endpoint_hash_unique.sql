@@ -43,16 +43,15 @@ BEGIN TRY
             ON dbo.PushSubscriptions (UserID, EndpointHash);
         END
 
-        IF NOT EXISTS (
+        IF EXISTS (
             SELECT 1
             FROM sys.indexes
             WHERE object_id = OBJECT_ID(N'dbo.PushSubscriptions')
               AND name = N'IX_PushSubscriptions_User_EndpointLookup'
         )
         BEGIN
-            CREATE NONCLUSTERED INDEX IX_PushSubscriptions_User_EndpointLookup
-            ON dbo.PushSubscriptions (UserID, Endpoint)
-            INCLUDE (PushSubscriptionID, IsActive, UpdatedAt);
+            DROP INDEX IX_PushSubscriptions_User_EndpointLookup
+            ON dbo.PushSubscriptions;
         END
     END
 
