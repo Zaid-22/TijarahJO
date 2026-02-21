@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TijarahJoDB.DAL.Entities;
 
 namespace TijarahJoDB.DAL.Persistence;
 
@@ -15,34 +16,89 @@ public sealed class TijarahJoDbContext : DbContext
     public DbSet<CategoryEntity> Categories => Set<CategoryEntity>();
     public DbSet<PostImageEntity> PostImages => Set<PostImageEntity>();
     public DbSet<FavoriteEntity> Favorites => Set<FavoriteEntity>();
+    public DbSet<ConversationEntity> Conversations => Set<ConversationEntity>();
     public DbSet<MessageEntity> Messages => Set<MessageEntity>();
     public DbSet<ReviewEntity> Reviews => Set<ReviewEntity>();
+    public DbSet<NotificationEntity> Notifications => Set<NotificationEntity>();
+    public DbSet<PushSubscriptionEntity> PushSubscriptions => Set<PushSubscriptionEntity>();
+    public DbSet<UserStatusLookupEntity> UserStatuses => Set<UserStatusLookupEntity>();
+    public DbSet<PostStatusLookupEntity> PostStatuses => Set<PostStatusLookupEntity>();
+    public DbSet<CityEntity> Cities => Set<CityEntity>();
+    public DbSet<AreaEntity> Areas => Set<AreaEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<UserStatusLookupEntity>(entity =>
+        {
+            entity.ToTable("UserStatusLookup");
+            entity.HasKey(e => e.StatusID);
+            entity.Property(e => e.StatusID).ValueGeneratedNever();
+            entity.Property(e => e.Code).HasMaxLength(50);
+            entity.Property(e => e.StatusName).HasMaxLength(50);
+            entity.Property(e => e.Description).HasMaxLength(200);
+        });
+
+        modelBuilder.Entity<PostStatusLookupEntity>(entity =>
+        {
+            entity.ToTable("PostStatusLookup");
+            entity.HasKey(e => e.StatusID);
+            entity.Property(e => e.StatusID).ValueGeneratedNever();
+            entity.Property(e => e.Code).HasMaxLength(50);
+            entity.Property(e => e.StatusName).HasMaxLength(50);
+            entity.Property(e => e.Description).HasMaxLength(200);
+        });
+
+        modelBuilder.Entity<CityEntity>(entity =>
+        {
+            entity.ToTable("Cities");
+            entity.HasKey(e => e.CityID);
+            entity.Property(e => e.CityName).HasMaxLength(100).IsRequired();
+            entity.HasIndex(e => e.CityName).IsUnique().HasDatabaseName("UQ_Cities_CityName");
+        });
+
+        modelBuilder.Entity<AreaEntity>(entity =>
+        {
+            entity.ToTable("Areas");
+            entity.HasKey(e => e.AreaID);
+            entity.Property(e => e.AreaName).HasMaxLength(100).IsRequired();
+            entity.HasIndex(new[] { "CityID", "AreaName" }).IsUnique().HasDatabaseName("UQ_Areas_City_Area");
+            entity.HasOne(e => e.City)
+                  .WithMany(c => c.Areas)
+                  .HasForeignKey(e => e.CityID)
+                  .HasConstraintName("FK_Areas_Cities")
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<UserEntity>(entity =>
         {
-            entity.ToTable("TbUsers");
+            entity.ToTable("Users");
             entity.HasKey(e => e.UserID);
             entity.Property(e => e.UserID).ValueGeneratedOnAdd();
-            entity.Property(e => e.HashedPassword).HasMaxLength(255);
+            entity.Property(e => e.HashedPassword).HasMaxLength(500);
             entity.Property(e => e.Email).HasMaxLength(255);
             entity.Property(e => e.FirstName).HasMaxLength(100);
             entity.Property(e => e.LastName).HasMaxLength(100);
             entity.Property(e => e.Phone).HasMaxLength(20);
-            entity.Property(e => e.City).HasMaxLength(100);
-            entity.Property(e => e.Area).HasMaxLength(100);
+            entity.Property(e => e.CityID);
+            entity.Property(e => e.AreaID);
             entity.Property(e => e.Bio).HasMaxLength(1000);
             entity.Property(e => e.JoinDate).HasColumnType("datetime2");
+            entity.Property(e => e.SearchFirstNameNormalized).ValueGeneratedOnAddOrUpdate().HasMaxLength(100);
+            entity.Property(e => e.SearchLastNameNormalized).ValueGeneratedOnAddOrUpdate().HasMaxLength(100);
+            entity.Property(e => e.SearchFullNameNormalized).ValueGeneratedOnAddOrUpdate().HasMaxLength(201);
             entity.HasOne<RoleEntity>()
                 .WithMany()
                 .HasForeignKey(e => e.RoleID)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.StatusLookup)
+                .WithMany()
+                .HasForeignKey(e => e.Status)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<RoleEntity>(entity =>
         {
-            entity.ToTable("TbRoles");
+            entity.ToTable("Roles");
             entity.HasKey(e => e.RoleID);
             entity.Property(e => e.RoleID).ValueGeneratedOnAdd();
             entity.Property(e => e.RoleName).HasMaxLength(50);
@@ -51,14 +107,18 @@ public sealed class TijarahJoDbContext : DbContext
 
         modelBuilder.Entity<PostEntity>(entity =>
         {
-            entity.ToTable("TbPosts");
+            entity.ToTable("Posts");
             entity.HasKey(e => e.PostID);
             entity.Property(e => e.PostID).ValueGeneratedOnAdd();
             entity.Property(e => e.PostTitle).HasMaxLength(200);
             entity.Property(e => e.Price).HasColumnType("decimal(18,2)");
             entity.Property(e => e.CreatedAt).HasColumnType("datetime2");
-            entity.Property(e => e.City).HasMaxLength(100);
-            entity.Property(e => e.Area).HasMaxLength(100);
+            entity.Property(e => e.Views).HasColumnType("bigint");
+            entity.Property(e => e.CityID);
+            entity.Property(e => e.AreaID);
+            
+            entity.Property(e => e.SearchTitleNormalized).ValueGeneratedOnAddOrUpdate().HasMaxLength(200);
+            entity.Property(e => e.SearchDescriptionPrefixNormalized).ValueGeneratedOnAddOrUpdate().HasMaxLength(450);
             entity.HasOne<UserEntity>()
                 .WithMany()
                 .HasForeignKey(e => e.UserID)
@@ -67,11 +127,15 @@ public sealed class TijarahJoDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.CategoryID)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.StatusLookup)
+                .WithMany()
+                .HasForeignKey(e => e.Status)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<CategoryEntity>(entity =>
         {
-            entity.ToTable("TbItemCategories");
+            entity.ToTable("Categories");
             entity.HasKey(e => e.CategoryID);
             entity.Property(e => e.CategoryID).ValueGeneratedOnAdd();
             entity.Property(e => e.CategoryName).HasMaxLength(100);
@@ -80,11 +144,12 @@ public sealed class TijarahJoDbContext : DbContext
             entity.Property(e => e.Color).HasMaxLength(20);
             entity.Property(e => e.Image).HasMaxLength(1000);
             entity.Property(e => e.CreatedAt).HasColumnType("datetime2");
+            entity.Property(e => e.SearchCategoryNameNormalized).ValueGeneratedOnAddOrUpdate().HasMaxLength(100);
         });
 
         modelBuilder.Entity<PostImageEntity>(entity =>
         {
-            entity.ToTable("TbPostImages");
+            entity.ToTable("PostImages");
             entity.HasKey(e => e.PostImageID);
             entity.Property(e => e.PostImageID).ValueGeneratedOnAdd();
             entity.Property(e => e.PostImageURL).HasColumnType("nvarchar(max)");
@@ -97,7 +162,7 @@ public sealed class TijarahJoDbContext : DbContext
 
         modelBuilder.Entity<FavoriteEntity>(entity =>
         {
-            entity.ToTable("TbFavorites");
+            entity.ToTable("Favorites");
             entity.HasKey(e => e.FavoriteID);
             entity.Property(e => e.FavoriteID).ValueGeneratedOnAdd();
             entity.Property(e => e.CreatedAt).HasColumnType("datetime2");
@@ -113,29 +178,59 @@ public sealed class TijarahJoDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
-        modelBuilder.Entity<MessageEntity>(entity =>
+        // Conversations table — introduced in V202602191110__chat_conversations.sql
+        modelBuilder.Entity<ConversationEntity>(entity =>
         {
-            entity.ToTable("TbMessages");
-            entity.HasKey(e => e.MessageID);
-            entity.Property(e => e.MessageID).ValueGeneratedOnAdd();
-            entity.Property(e => e.Timestamp).HasColumnName("Timestamp").HasColumnType("datetime2");
+            entity.ToTable("Conversations");
+            entity.HasKey(e => e.ConversationID);
+            entity.Property(e => e.ConversationID).ValueGeneratedOnAdd();
+
+            // Ensures no duplicate thread exists for the same user-pair + post
+            entity.HasIndex(e => new { e.User1ID, e.User2ID, e.PostID })
+                  .IsUnique()
+                  .HasDatabaseName("UQ_Conversations_Pair");
+
             entity.HasOne<UserEntity>()
                 .WithMany()
-                .HasForeignKey(e => e.SenderID)
+                .HasForeignKey(e => e.User1ID)
                 .OnDelete(DeleteBehavior.Restrict);
+
             entity.HasOne<UserEntity>()
                 .WithMany()
-                .HasForeignKey(e => e.ReceiverID)
+                .HasForeignKey(e => e.User2ID)
                 .OnDelete(DeleteBehavior.Restrict);
+
             entity.HasOne<PostEntity>()
                 .WithMany()
                 .HasForeignKey(e => e.PostID)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
+        // Messages — post V1110: ReceiverID and PostID removed; ConversationID added
+        modelBuilder.Entity<MessageEntity>(entity =>
+        {
+            entity.ToTable("Messages", tableBuilder =>
+            {
+                tableBuilder.HasTrigger("TR_Messages_SenderMustBeConversationParticipant");
+            });
+            entity.HasKey(e => e.MessageID);
+            entity.Property(e => e.MessageID).ValueGeneratedOnAdd();
+            entity.Property(e => e.Timestamp).HasColumnName("Timestamp").HasColumnType("datetime2");
+
+            entity.HasOne<UserEntity>()
+                .WithMany()
+                .HasForeignKey(e => e.SenderID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Conversation)
+                .WithMany()
+                .HasForeignKey(e => e.ConversationID)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<ReviewEntity>(entity =>
         {
-            entity.ToTable("TbReviews");
+            entity.ToTable("Reviews");
             entity.HasKey(e => e.ReviewID);
             entity.Property(e => e.ReviewID).ValueGeneratedOnAdd();
             entity.Property(e => e.Timestamp).HasColumnName("Timestamp").HasColumnType("datetime2");
@@ -149,98 +244,73 @@ public sealed class TijarahJoDbContext : DbContext
                 .HasForeignKey(e => e.ReviewedUserID)
                 .OnDelete(DeleteBehavior.Restrict);
         });
+
+        modelBuilder.Entity<NotificationEntity>(entity =>
+        {
+            entity.ToTable("Notifications");
+            entity.HasKey(e => e.NotificationID);
+            entity.Property(e => e.NotificationID).ValueGeneratedOnAdd();
+            entity.Property(e => e.NotificationType).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Title).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Body).HasMaxLength(1000).IsRequired();
+            entity.Property(e => e.RouteUrl).HasMaxLength(300);
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime2");
+            entity.Property(e => e.ReadAt).HasColumnType("datetime2");
+            entity.HasIndex(e => new { e.UserID, e.IsRead, e.CreatedAt })
+                .HasDatabaseName("IX_Notifications_UserID_IsRead_CreatedAt");
+            entity.HasIndex(e => new { e.UserID, e.NotificationType, e.ConversationID, e.IsRead })
+                .HasDatabaseName("IX_Notifications_User_Conversation_Read");
+
+            entity.HasOne<UserEntity>()
+                .WithMany()
+                .HasForeignKey(e => e.UserID)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<UserEntity>()
+                .WithMany()
+                .HasForeignKey(e => e.SenderUserID)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<ConversationEntity>()
+                .WithMany()
+                .HasForeignKey(e => e.ConversationID)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<MessageEntity>()
+                .WithMany()
+                .HasForeignKey(e => e.MessageID)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PushSubscriptionEntity>(entity =>
+        {
+            entity.ToTable("PushSubscriptions");
+            entity.HasKey(e => e.PushSubscriptionID);
+            entity.Property(e => e.PushSubscriptionID).ValueGeneratedOnAdd();
+            entity.Property(e => e.Endpoint).HasMaxLength(1000).IsRequired();
+            entity.Property<byte[]>("EndpointHash")
+                .HasColumnType("binary(32)")
+                .HasComputedColumnSql("CONVERT(BINARY(32), HASHBYTES('SHA2_256', LOWER(LTRIM(RTRIM([Endpoint])))))", stored: true);
+            entity.Property(e => e.P256DH).HasMaxLength(255).IsRequired();
+            entity.Property(e => e.Auth).HasMaxLength(255).IsRequired();
+            entity.Property(e => e.UserAgent).HasMaxLength(500);
+            entity.Property(e => e.LastFailureReason).HasMaxLength(400);
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime2");
+            entity.Property(e => e.UpdatedAt).HasColumnType("datetime2");
+            entity.Property(e => e.LastSuccessAt).HasColumnType("datetime2");
+            entity.Property(e => e.LastFailureAt).HasColumnType("datetime2");
+
+            entity.HasIndex("UserID", "EndpointHash")
+                .IsUnique()
+                .HasDatabaseName("UQ_PushSubscriptions_User_EndpointHash");
+            entity.HasIndex(e => new { e.UserID, e.Endpoint })
+                .HasDatabaseName("IX_PushSubscriptions_User_EndpointLookup");
+            entity.HasIndex(e => new { e.UserID, e.IsActive })
+                .HasDatabaseName("IX_PushSubscriptions_User_IsActive");
+
+            entity.HasOne<UserEntity>()
+                .WithMany()
+                .HasForeignKey(e => e.UserID)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
     }
 }
 
-public sealed class UserEntity
-{
-    public int UserID { get; set; }
-    public string HashedPassword { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-    public string FirstName { get; set; } = string.Empty;
-    public string? LastName { get; set; }
-    public string? Phone { get; set; }
-    public string? City { get; set; }
-    public string? Area { get; set; }
-    public string? Bio { get; set; }
-    public string? Avatar { get; set; }
-    public DateTime JoinDate { get; set; }
-    public int Status { get; set; }
-    public int RoleID { get; set; }
-    public bool IsDeleted { get; set; }
-}
-
-public sealed class RoleEntity
-{
-    public int RoleID { get; set; }
-    public string RoleName { get; set; } = string.Empty;
-    public DateTime CreatedAt { get; set; }
-    public bool IsDeleted { get; set; }
-}
-
-public sealed class PostEntity
-{
-    public int PostID { get; set; }
-    public int UserID { get; set; }
-    public int CategoryID { get; set; }
-    public string PostTitle { get; set; } = string.Empty;
-    public string? PostDescription { get; set; }
-    public decimal? Price { get; set; }
-    public int Status { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public bool IsDeleted { get; set; }
-    public int Views { get; set; }
-    public string? City { get; set; }
-    public string? Area { get; set; }
-}
-
-public sealed class CategoryEntity
-{
-    public int CategoryID { get; set; }
-    public string CategoryName { get; set; } = string.Empty;
-    public string? NameAr { get; set; }
-    public string? Icon { get; set; }
-    public string? Color { get; set; }
-    public string? Image { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public bool IsDeleted { get; set; }
-}
-
-public sealed class PostImageEntity
-{
-    public int PostImageID { get; set; }
-    public int PostID { get; set; }
-    public string PostImageURL { get; set; } = string.Empty;
-    public bool IsDeleted { get; set; }
-    public DateTime UploadedAt { get; set; }
-}
-
-public sealed class FavoriteEntity
-{
-    public int FavoriteID { get; set; }
-    public int UserID { get; set; }
-    public int PostID { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public bool IsDeleted { get; set; }
-}
-
-public sealed class MessageEntity
-{
-    public int MessageID { get; set; }
-    public int SenderID { get; set; }
-    public int ReceiverID { get; set; }
-    public int? PostID { get; set; }
-    public string Content { get; set; } = string.Empty;
-    public DateTime Timestamp { get; set; }
-    public bool IsRead { get; set; }
-}
-
-public sealed class ReviewEntity
-{
-    public int ReviewID { get; set; }
-    public int ReviewerID { get; set; }
-    public int ReviewedUserID { get; set; }
-    public int Rating { get; set; }
-    public string Comment { get; set; } = string.Empty;
-    public DateTime Timestamp { get; set; }
-}
+// Extracted entities to Domain/Entities
