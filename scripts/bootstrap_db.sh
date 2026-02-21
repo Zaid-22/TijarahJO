@@ -21,8 +21,8 @@ BACKEND_PID_FILE="${BACKEND_PID_FILE:-$ROOT_DIR/.tijarahjo_backend.pid}"
 RESET_VOLUME=1
 RUN_VERIFY=1
 KEEP_BACKEND_RUNNING=0
-APPLY_DEV_SEEDS="${APPLY_DEV_SEEDS:-false}"
-APPLY_TEST_SEEDS="${APPLY_TEST_SEEDS:-false}"
+ENABLE_DEV_SEEDS=0
+ENABLE_TEST_SEEDS=0
 
 print_usage() {
   cat <<'EOF'
@@ -62,11 +62,11 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --with-dev-seeds)
-      APPLY_DEV_SEEDS="true"
+      ENABLE_DEV_SEEDS=1
       shift
       ;;
     --with-test-seeds)
-      APPLY_TEST_SEEDS="true"
+      ENABLE_TEST_SEEDS=1
       shift
       ;;
     -h|--help)
@@ -278,7 +278,6 @@ GRANT SELECT ON dbo.UserStatusLookup TO [tijarahjo_app_runtime];
 GRANT SELECT ON dbo.PostStatusLookup TO [tijarahjo_app_runtime];
 
 GRANT INSERT, UPDATE ON dbo.Users TO [tijarahjo_app_runtime];
-GRANT INSERT, UPDATE ON dbo.Roles TO [tijarahjo_app_runtime];
 GRANT INSERT, UPDATE ON dbo.Categories TO [tijarahjo_app_runtime];
 GRANT INSERT, UPDATE ON dbo.Posts TO [tijarahjo_app_runtime];
 GRANT INSERT, UPDATE ON dbo.PostImages TO [tijarahjo_app_runtime];
@@ -290,6 +289,7 @@ GRANT INSERT, UPDATE ON dbo.Notifications TO [tijarahjo_app_runtime];
 GRANT INSERT, UPDATE ON dbo.PushSubscriptions TO [tijarahjo_app_runtime];
 
 -- Explicitly keep reference/metadata tables read-only for runtime.
+DENY INSERT, UPDATE, DELETE ON dbo.Roles TO [tijarahjo_app_runtime];
 DENY INSERT, UPDATE, DELETE ON dbo.UserStatusLookup TO [tijarahjo_app_runtime];
 DENY INSERT, UPDATE, DELETE ON dbo.PostStatusLookup TO [tijarahjo_app_runtime];
 DENY INSERT, UPDATE, DELETE ON dbo.Cities TO [tijarahjo_app_runtime];
@@ -319,7 +319,7 @@ else
   echo "Warning: baseline seed bundle was not generated at $SEED_BASELINE_SQL_BUNDLE (continuing without seeds)."
 fi
 
-if [[ "$APPLY_DEV_SEEDS" == "1" || "$APPLY_DEV_SEEDS" == "true" ]]; then
+if [[ "$ENABLE_DEV_SEEDS" -eq 1 ]]; then
   if [[ -f "$SEED_DEV_SQL_BUNDLE" ]]; then
     apply_sql_file "$SEED_DEV_SQL_BUNDLE"
   else
@@ -327,7 +327,7 @@ if [[ "$APPLY_DEV_SEEDS" == "1" || "$APPLY_DEV_SEEDS" == "true" ]]; then
   fi
 fi
 
-if [[ "$APPLY_TEST_SEEDS" == "1" || "$APPLY_TEST_SEEDS" == "true" ]]; then
+if [[ "$ENABLE_TEST_SEEDS" -eq 1 ]]; then
   if [[ -f "$SEED_TEST_SQL_BUNDLE" ]]; then
     apply_sql_file "$SEED_TEST_SQL_BUNDLE"
   else
