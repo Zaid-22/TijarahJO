@@ -29,17 +29,8 @@ if [[ -z "${DATABASE_CONNECTION_STRING:-}" ]]; then
   if [[ -n "${DB_USER:-}" && -n "${DB_PASSWORD:-}" ]]; then
     DB_HOST_VALUE="${DB_HOST:-localhost,1433}"
     DB_NAME_VALUE="${DB_NAME:-TijarahJoDB}"
-    DATABASE_CONNECTION_STRING="Data Source=${DB_HOST_VALUE};Database=${DB_NAME_VALUE};User Id=${DB_USER};Password=${DB_PASSWORD};TrustServerCertificate=True;Encrypt=False;"
+    DATABASE_CONNECTION_STRING="Data Source=${DB_HOST_VALUE};Database=${DB_NAME_VALUE};User Id=${DB_USER};Password=${DB_PASSWORD};TrustServerCertificate=True;Encrypt=True;"
     DATABASE_CONNECTION_SOURCE="DB_USER/DB_PASSWORD"
-  elif [[ -n "${MSSQL_SA_PASSWORD:-}" ]]; then
-    DATABASE_CONNECTION_STRING="Data Source=localhost,1433;Database=TijarahJoDB;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=False;"
-    DATABASE_CONNECTION_SOURCE="MSSQL_SA_PASSWORD"
-  elif command -v docker >/dev/null 2>&1 && docker ps --format '{{.Names}}' 2>/dev/null | grep -qx "tijarahjo-db"; then
-    SA_PASSWORD="$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' tijarahjo-db 2>/dev/null | awk -F= '/^MSSQL_SA_PASSWORD=/{sub(/^MSSQL_SA_PASSWORD=/,""); print; exit}')"
-    if [[ -n "$SA_PASSWORD" ]]; then
-      DATABASE_CONNECTION_STRING="Data Source=localhost,1433;Database=TijarahJoDB;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;Encrypt=False;"
-      DATABASE_CONNECTION_SOURCE="docker inspect (tijarahjo-db)"
-    fi
   fi
 else
   DATABASE_CONNECTION_SOURCE="DATABASE_CONNECTION_STRING"
@@ -51,7 +42,6 @@ Error: DATABASE_CONNECTION_STRING is not configured.
 Set one of:
   1) DATABASE_CONNECTION_STRING
   2) DB_USER + DB_PASSWORD (+ optional DB_HOST/DB_NAME)
-  3) MSSQL_SA_PASSWORD
 You can place values in $ROOT_DIR/.env
 EOF
   exit 1
@@ -105,9 +95,6 @@ if command -v sqlcmd >/dev/null 2>&1 && [[ -n "$DB_DATA_SOURCE" && -n "$DB_USER_
   if ! sqlcmd -S "$DB_DATA_SOURCE" -U "$DB_USER_FROM_CONN" -P "$DB_PASSWORD_FROM_CONN" -C -l 5 -Q "SELECT 1" >/dev/null 2>&1 \
     && ! sqlcmd -S "$DB_DATA_SOURCE" -U "$DB_USER_FROM_CONN" -P "$DB_PASSWORD_FROM_CONN" -l 5 -Q "SELECT 1" >/dev/null 2>&1; then
     echo "Error: database login preflight failed for source '$DATABASE_CONNECTION_SOURCE'."
-    if [[ "$DATABASE_CONNECTION_SOURCE" == "docker inspect (tijarahjo-db)" ]]; then
-      echo "Detected Docker metadata password source; this may not match persisted SQL volume credentials."
-    fi
     print_db_fix_instructions
     exit 1
   fi
@@ -152,9 +139,6 @@ fi
 if [[ "$BACKEND_HEALTH_CODE" =~ ^5 ]]; then
   echo "Error: backend returned HTTP $BACKEND_HEALTH_CODE for /api/categories/All."
   echo "Database/auth config is not healthy (source: $DATABASE_CONNECTION_SOURCE)."
-  if [[ "$DATABASE_CONNECTION_SOURCE" == "docker inspect (tijarahjo-db)" ]]; then
-    echo "Docker container env password may not match the persisted SQL volume password."
-  fi
   print_db_fix_instructions
   exit 1
 fi
