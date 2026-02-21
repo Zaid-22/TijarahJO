@@ -123,4 +123,4 @@ Generated files:
 - Baseline-only seed data: apply `apps/api/database/bundles/seed_data.sql`
 - Optional development seed data: apply `apps/api/database/bundles/seed_dev.sql`
 - Optional test seed data: apply `apps/api/database/bundles/seed_test.sql`
-- Maintenance cleanup: run `maintenance/CLEANUP_TEST_DATA.sql` manually when needed
+- Maintenance cleanup (dev/test only): run `apps/api/database/ops/dev-only/CLEANUP_TEST_DATA.sql` with `sqlcmd -v ALLOW_DEV_DATA_CLEANUP=1`
