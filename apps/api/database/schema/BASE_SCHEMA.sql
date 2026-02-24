@@ -6,6 +6,14 @@
 -- - Uses canonical table names only (no Tb-prefixed objects).
 -- - Active bootstrap migrations are canonical-only.
 -- - Legacy Tb-prefixed migration history is archived under archive/migrations-legacy.
+--
+-- Last corrected: V202602221300__schema_corrections.sql
+--   - CK_Users_Status / CK_Posts_Status removed (FK is the constraint authority)
+--   - [Timestamp] renamed to CreatedAt in Messages and Reviews
+--   - Status 2=DELETED removed from PostStatusLookup (IsDeleted is canonical)
+--   - IsDeleted added to Reviews, Messages, Conversations
+--   - UpdatedAt added to Users and Posts
+--   - LastMessageAt added to Conversations
 -- =============================================================================
 
 IF DB_ID(N'TijarahJoDB') IS NULL
@@ -45,6 +53,8 @@ BEGIN
         StatusName  NVARCHAR(50)  NOT NULL CONSTRAINT UQ_UserStatusLookup_StatusName UNIQUE,
         IsActive    BIT           NOT NULL,
         Description NVARCHAR(200) NULL
+        -- Values: 1=ACTIVE, 2=BANNED, 3=INACTIVE
+        -- Authority: this table. Do NOT add a CHECK constraint on Users.Status.
     );
 END
 GO
@@ -58,6 +68,9 @@ BEGIN
         StatusName  NVARCHAR(50)  NOT NULL CONSTRAINT UQ_PostStatusLookup_StatusName UNIQUE,
         IsVisible   BIT           NOT NULL,
         Description NVARCHAR(200) NULL
+        -- Values: 0=ACTIVE, 1=BLOCKED, 3=SOLD
+        -- Deletion is handled by IsDeleted BIT on Posts, NOT by a DELETED status value.
+        -- Authority: this table. Do NOT add a CHECK constraint on Posts.Status.
     );
 END
 GO
@@ -107,6 +120,7 @@ BEGIN
         Bio            NVARCHAR(1000) NULL,
         Avatar         NVARCHAR(1000) NULL,
         JoinDate       DATETIME2     NOT NULL CONSTRAINT DF_Users_JoinDate DEFAULT SYSUTCDATETIME(),
+        UpdatedAt      DATETIME2     NOT NULL CONSTRAINT DF_Users_UpdatedAt DEFAULT SYSUTCDATETIME(),
         Status         INT           NOT NULL,
         RoleID         INT           NOT NULL,
         IsDeleted      BIT           NOT NULL CONSTRAINT DF_Users_IsDeleted DEFAULT 0,
@@ -121,8 +135,31 @@ BEGIN
         CONSTRAINT FK_Users_AreaCity_Consistency FOREIGN KEY (AreaID, CityID) REFERENCES dbo.Areas(AreaID, CityID),
         CONSTRAINT CK_Users_Email_NotBlank CHECK (LEN(LTRIM(RTRIM(Email))) > 0),
         CONSTRAINT CK_Users_FirstName_NotBlank CHECK (LEN(LTRIM(RTRIM(FirstName))) > 0),
-        CONSTRAINT CK_Users_AreaRequiresCity CHECK (AreaID IS NULL OR CityID IS NOT NULL),
-        CONSTRAINT CK_Users_Status CHECK (Status IN (1, 2, 3))
+        CONSTRAINT CK_Users_AreaRequiresCity CHECK (AreaID IS NULL OR CityID IS NOT NULL)
+        -- NOTE: No CK_Users_Status — FK_Users_StatusLookup is the authority
+    );
+END
+GO
+
+-- ---------------------------------------------------------------------------
+-- User External Identities
+-- ---------------------------------------------------------------------------
+IF OBJECT_ID(N'dbo.UserExternalIdentities', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.UserExternalIdentities
+    (
+        UserExternalIdentityID INT           IDENTITY(1,1) CONSTRAINT PK_UserExternalIdentities PRIMARY KEY,
+        UserID                 INT           NOT NULL,
+        Provider               NVARCHAR(50)  NOT NULL,
+        ProviderSubject        NVARCHAR(255) NOT NULL,
+        ProviderEmail          NVARCHAR(255) NULL,
+        CreatedAt              DATETIME2     NOT NULL CONSTRAINT DF_UserExternalIdentities_CreatedAt DEFAULT SYSUTCDATETIME(),
+        UpdatedAt              DATETIME2     NOT NULL CONSTRAINT DF_UserExternalIdentities_UpdatedAt DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT FK_UserExternalIdentities_UserID FOREIGN KEY (UserID) REFERENCES dbo.Users(UserID),
+        CONSTRAINT UQ_UserExternalIdentities_Provider_Subject UNIQUE (Provider, ProviderSubject),
+        CONSTRAINT UQ_UserExternalIdentities_User_Provider UNIQUE (UserID, Provider),
+        CONSTRAINT CK_UserExternalIdentities_Provider_NotBlank CHECK (LEN(LTRIM(RTRIM(Provider))) > 0),
+        CONSTRAINT CK_UserExternalIdentities_Subject_NotBlank CHECK (LEN(LTRIM(RTRIM(ProviderSubject))) > 0)
     );
 END
 GO
@@ -161,8 +198,9 @@ BEGIN
         PostTitle       NVARCHAR(200) NOT NULL,
         PostDescription NVARCHAR(MAX) NULL,
         Price           DECIMAL(18,2) NULL,
-        Status          INT           NOT NULL,
+        Status          INT           NOT NULL,    -- 0=ACTIVE, 1=BLOCKED, 3=SOLD (no 2=DELETED; use IsDeleted)
         CreatedAt       DATETIME2     NOT NULL CONSTRAINT DF_Posts_CreatedAt DEFAULT SYSUTCDATETIME(),
+        UpdatedAt       DATETIME2     NOT NULL CONSTRAINT DF_Posts_UpdatedAt DEFAULT SYSUTCDATETIME(),
         IsDeleted       BIT           NOT NULL CONSTRAINT DF_Posts_IsDeleted DEFAULT 0,
         Views           BIGINT        NOT NULL CONSTRAINT DF_Posts_Views DEFAULT 0,  -- BIGINT: no overflow for popular listings
         CityID          INT           NULL,
@@ -170,7 +208,6 @@ BEGIN
         SearchTitleNormalized AS CONVERT(NVARCHAR(200), UPPER(LTRIM(RTRIM(ISNULL(PostTitle, N''))))) PERSISTED,
         SearchDescriptionPrefixNormalized AS CONVERT(NVARCHAR(450), UPPER(LEFT(LTRIM(RTRIM(ISNULL(PostDescription, N''))), 450))) PERSISTED,
         CONSTRAINT CK_Posts_Price    CHECK (Price IS NULL OR Price >= 0),
-        CONSTRAINT CK_Posts_Status   CHECK (Status IN (0, 1, 3)),
         CONSTRAINT CK_Posts_Views_NonNegative CHECK (Views >= 0),
         CONSTRAINT CK_Posts_AreaRequiresCity CHECK (AreaID IS NULL OR CityID IS NOT NULL),
         CONSTRAINT FK_Posts_UserID   FOREIGN KEY (UserID)      REFERENCES dbo.Users(UserID),
@@ -179,6 +216,7 @@ BEGIN
         CONSTRAINT FK_Posts_Cities   FOREIGN KEY (CityID)      REFERENCES dbo.Cities(CityID),
         CONSTRAINT FK_Posts_Areas    FOREIGN KEY (AreaID)      REFERENCES dbo.Areas(AreaID),
         CONSTRAINT FK_Posts_AreaCity_Consistency FOREIGN KEY (AreaID, CityID) REFERENCES dbo.Areas(AreaID, CityID)
+        -- NOTE: No CK_Posts_Status — FK_Posts_StatusLookup is the authority
     );
 END
 GO
@@ -231,7 +269,8 @@ BEGIN
         ReviewedUserID INT           NOT NULL,
         Rating         INT           NOT NULL CONSTRAINT CK_Reviews_Rating CHECK (Rating BETWEEN 1 AND 5),
         Comment        NVARCHAR(MAX) NULL,   -- NULL allowed: a star rating without comment is valid UX
-        [Timestamp]    DATETIME2     NOT NULL CONSTRAINT DF_Reviews_Timestamp DEFAULT SYSUTCDATETIME(),
+        CreatedAt      DATETIME2     NOT NULL CONSTRAINT DF_Reviews_CreatedAt DEFAULT SYSUTCDATETIME(),
+        IsDeleted      BIT           NOT NULL CONSTRAINT DF_Reviews_IsDeleted DEFAULT 0,
         CONSTRAINT FK_Reviews_ReviewerID     FOREIGN KEY (ReviewerID)     REFERENCES dbo.Users(UserID),
         CONSTRAINT FK_Reviews_ReviewedUserID FOREIGN KEY (ReviewedUserID) REFERENCES dbo.Users(UserID),
         CONSTRAINT CK_Reviews_NoSelfReview CHECK (ReviewerID <> ReviewedUserID),
@@ -247,10 +286,12 @@ IF OBJECT_ID(N'dbo.Conversations', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.Conversations
     (
-        ConversationID INT NOT NULL IDENTITY(1,1) CONSTRAINT PK_Conversations PRIMARY KEY,
-        User1ID        INT NOT NULL,   -- Always the lower UserID
-        User2ID        INT NOT NULL,   -- Always the higher UserID
-        PostID         INT NULL,       -- Optional: post the conversation was initiated about
+        ConversationID INT       NOT NULL IDENTITY(1,1) CONSTRAINT PK_Conversations PRIMARY KEY,
+        User1ID        INT       NOT NULL,   -- Always the lower UserID
+        User2ID        INT       NOT NULL,   -- Always the higher UserID
+        PostID         INT       NULL,       -- Optional: post the conversation was initiated about
+        LastMessageAt  DATETIME2 NULL,       -- Updated when a message is sent; enables inbox sort without JOIN
+        IsDeleted      BIT       NOT NULL CONSTRAINT DF_Conversations_IsDeleted DEFAULT 0,
         CONSTRAINT FK_Conversations_User1 FOREIGN KEY (User1ID) REFERENCES dbo.Users(UserID),
         CONSTRAINT FK_Conversations_User2 FOREIGN KEY (User2ID) REFERENCES dbo.Users(UserID),
         CONSTRAINT FK_Conversations_Posts FOREIGN KEY (PostID) REFERENCES dbo.Posts(PostID),
@@ -271,8 +312,9 @@ BEGIN
         SenderID       INT           NOT NULL,
         ConversationID INT           NOT NULL,
         Content        NVARCHAR(MAX) NOT NULL,
-        [Timestamp]    DATETIME2     NOT NULL CONSTRAINT DF_Messages_Timestamp DEFAULT SYSUTCDATETIME(),
+        CreatedAt      DATETIME2     NOT NULL CONSTRAINT DF_Messages_CreatedAt DEFAULT SYSUTCDATETIME(),
         IsRead         BIT           NOT NULL CONSTRAINT DF_Messages_IsRead DEFAULT 0,
+        IsDeleted      BIT           NOT NULL CONSTRAINT DF_Messages_IsDeleted DEFAULT 0,
         CONSTRAINT FK_Messages_Sender        FOREIGN KEY (SenderID)       REFERENCES dbo.Users(UserID),
         CONSTRAINT FK_Messages_Conversations FOREIGN KEY (ConversationID) REFERENCES dbo.Conversations(ConversationID)
     );
