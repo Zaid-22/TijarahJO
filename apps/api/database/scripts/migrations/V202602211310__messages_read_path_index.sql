@@ -21,9 +21,24 @@ BEGIN TRY
               AND name = N'IX_Messages_Conversation_IsRead_Sender'
        )
     BEGIN
-        CREATE NONCLUSTERED INDEX IX_Messages_Conversation_IsRead_Sender
-        ON dbo.Messages (ConversationID, IsRead, SenderID)
-        INCLUDE (MessageID, [Timestamp]);
+        IF COL_LENGTH(N'dbo.Messages', N'Timestamp') IS NOT NULL
+        BEGIN
+            CREATE NONCLUSTERED INDEX IX_Messages_Conversation_IsRead_Sender
+            ON dbo.Messages (ConversationID, IsRead, SenderID)
+            INCLUDE (MessageID, [Timestamp]);
+        END
+        ELSE IF COL_LENGTH(N'dbo.Messages', N'CreatedAt') IS NOT NULL
+        BEGIN
+            CREATE NONCLUSTERED INDEX IX_Messages_Conversation_IsRead_Sender
+            ON dbo.Messages (ConversationID, IsRead, SenderID)
+            INCLUDE (MessageID, CreatedAt);
+        END
+        ELSE
+        BEGIN
+            CREATE NONCLUSTERED INDEX IX_Messages_Conversation_IsRead_Sender
+            ON dbo.Messages (ConversationID, IsRead, SenderID)
+            INCLUDE (MessageID);
+        END
     END
 
     IF OBJECT_ID(N'dbo.SchemaMigrations', N'U') IS NOT NULL
