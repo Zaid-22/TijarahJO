@@ -75,7 +75,10 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.Reviews            TO tijarahjo_app_
 GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.Notifications      TO tijarahjo_app_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.PushSubscriptions  TO tijarahjo_app_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.Roles              TO tijarahjo_app_role;
-GRANT SELECT, INSERT              ON dbo.AuditLog              TO tijarahjo_app_role;
+IF OBJECT_ID(N'dbo.AuditLog', N'U') IS NOT NULL
+BEGIN
+    GRANT SELECT, INSERT ON dbo.AuditLog TO tijarahjo_app_role;
+END
 
 -- SELECT only on lookup / reference tables (app reads these, never writes)
 GRANT SELECT ON dbo.UserStatusLookup  TO tijarahjo_app_role;
@@ -87,7 +90,6 @@ GRANT SELECT ON dbo.SchemaMigrations  TO tijarahjo_app_role;
 -- Explicitly deny DDL operations
 DENY ALTER  ON SCHEMA::dbo TO tijarahjo_app_role;
 DENY CREATE TABLE TO tijarahjo_app_role;
-DENY DROP TABLE   TO tijarahjo_app_role;
 GO
 
 -- ---------------------------------------------------------------------------
@@ -104,7 +106,10 @@ GRANT SELECT ON dbo.Reviews           TO tijarahjo_readonly_role;
 GRANT SELECT ON dbo.Notifications     TO tijarahjo_readonly_role;
 GRANT SELECT ON dbo.PushSubscriptions TO tijarahjo_readonly_role;
 GRANT SELECT ON dbo.Roles             TO tijarahjo_readonly_role;
-GRANT SELECT ON dbo.AuditLog          TO tijarahjo_readonly_role;
+IF OBJECT_ID(N'dbo.AuditLog', N'U') IS NOT NULL
+BEGIN
+    GRANT SELECT ON dbo.AuditLog TO tijarahjo_readonly_role;
+END
 GRANT SELECT ON dbo.UserStatusLookup  TO tijarahjo_readonly_role;
 GRANT SELECT ON dbo.PostStatusLookup  TO tijarahjo_readonly_role;
 GRANT SELECT ON dbo.Cities            TO tijarahjo_readonly_role;
