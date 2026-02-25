@@ -2,198 +2,30 @@ import {
   CreatePostRequest,
   PostResponse,
   UpdatePostRequest,
+  UpdatePostStatusRequest,
 } from "../../../types/api";
 import { toPositiveIntegerId } from "../../../utils/idValidation";
-import { authApi } from "../auth";
-import { apiRequest, debugError, debugWarn } from "../client";
+import { apiRequest, debugError } from "../client";
+import { parseRawPost } from "../schemas/postSchema";
 import { toIsoStringOrNow } from "../shared";
-import { transformPostModelToProduct } from "./mappers";
+import { transformPostModelToPost } from "./mappers";
 import { resolveStatusValue, toStatusNumber } from "./status";
-import { RawPost } from "./types";
 import {
   enrichPostsWithCategoryAndSeller,
-  getPostImageRowsByPostId,
   invalidatePostImagesCache,
-  POST_IMAGES_ENDPOINT,
+  resolveAreaId,
   resolveCategoryId,
+  resolveCityId,
 } from "./lookups";
-
-const DEFAULT_CITY = "Jordan";
-
-function sanitizeImageUrls(images: readonly string[] | undefined): string[] {
-  if (!images || images.length === 0) {
-    return [];
-  }
-
-  const deduplicatedImages: string[] = [];
-  const seenImages = new Set<string>();
-  images.forEach((imageUrl) => {
-    const normalized = imageUrl.trim();
-    if (normalized.length === 0 || seenImages.has(normalized)) {
-      return;
-    }
-
-    deduplicatedImages.push(normalized);
-    seenImages.add(normalized);
-  });
-
-  return deduplicatedImages;
-}
-
-function resolveCity(cityValue: unknown): string {
-  if (typeof cityValue !== "string") {
-    return DEFAULT_CITY;
-  }
-
-  const normalizedCity = cityValue.trim();
-  return normalizedCity.length > 0 ? normalizedCity : DEFAULT_CITY;
-}
-
-function resolveArea(areaValue: unknown): string | null {
-  if (typeof areaValue !== "string") {
-    return null;
-  }
-
-  const normalizedArea = areaValue.trim();
-  return normalizedArea.length > 0 ? normalizedArea : null;
-}
-
-function resolvePostOwnerId(post: RawPost): number | undefined {
-  return toPositiveIntegerId(
-    post.UserID ??
-      post.userID ??
-      post.UserId ??
-      post.SellerID ??
-      post.SellerId ??
-      post.sellerId,
-  );
-}
-
-async function resolveCurrentUserId(): Promise<number | undefined> {
-  try {
-    const currentUserResponse = await authApi.getCurrentUser();
-    if (!currentUserResponse.success || !currentUserResponse.data) {
-      return undefined;
-    }
-
-    const user = currentUserResponse.data as Record<string, unknown>;
-    const userId = toPositiveIntegerId(
-      user.Id ?? user.id ?? user.UserID ?? user.userID,
-    );
-    return userId;
-  } catch (error) {
-    debugError("[createPost] Error getting current user:", error);
-    return undefined;
-  }
-}
-
-async function createPostImages(
-  postId: number,
-  imageUrls: readonly string[],
-): Promise<string[]> {
-  if (imageUrls.length === 0) {
-    return [];
-  }
-
-  const creationResults = await Promise.all(
-    imageUrls.map(async (imageUrl, index) => {
-      try {
-        const imageResponse = await apiRequest<unknown>(POST_IMAGES_ENDPOINT, {
-          method: "POST",
-          body: JSON.stringify({
-            PostID: postId,
-            PostImageURL: imageUrl,
-            UploadedAt: new Date().toISOString(),
-            IsDeleted: false,
-          }),
-        });
-
-        if (imageResponse.success) {
-          return true;
-        }
-
-        debugError(
-          `[createPost] Failed to create image ${index + 1}:`,
-          imageResponse.error?.message || "Unknown error",
-        );
-        return false;
-      } catch (error) {
-        debugError(
-          `[createPost] Error creating image ${index + 1}:`,
-          error,
-        );
-        return false;
-      }
-    }),
-  );
-
-  const savedImageUrls = imageUrls.filter((_, index) => creationResults[index]);
-
-  if (savedImageUrls.length > 0) {
-    invalidatePostImagesCache();
-  }
-
-  return savedImageUrls;
-}
-
-async function replacePostImages(
-  postId: number,
-  imageUrls: readonly string[],
-): Promise<void> {
-  const existingImages = await getPostImageRowsByPostId(String(postId), true);
-  const existingImageIds = Array.from(
-    new Set(
-      existingImages
-        .map((image) => toPositiveIntegerId(image.PostImageID))
-        .filter((imageId): imageId is number => imageId !== undefined),
-    ),
-  );
-
-  if (existingImageIds.length > 0) {
-    await Promise.all(
-      existingImageIds.map(async (imageId) => {
-        const deleteResponse = await apiRequest(
-          `${POST_IMAGES_ENDPOINT}/${imageId}`,
-          {
-            method: "DELETE",
-          },
-        );
-        if (!deleteResponse.success) {
-          debugWarn(
-            `[updatePost] Failed to delete image ${imageId}:`,
-            deleteResponse.error?.message || "Unknown error",
-          );
-        }
-      }),
-    );
-  }
-
-  if (imageUrls.length > 0) {
-    await Promise.all(
-      imageUrls.map(async (imageUrl) => {
-        const createResponse = await apiRequest(POST_IMAGES_ENDPOINT, {
-          method: "POST",
-          body: JSON.stringify({
-            PostID: postId,
-            PostImageURL: imageUrl,
-            UploadedAt: new Date().toISOString(),
-            IsDeleted: false,
-          }),
-        });
-        if (!createResponse.success) {
-          debugWarn(
-            "[updatePost] Failed to create updated post image:",
-            createResponse.error?.message || "Unknown error",
-          );
-        }
-      }),
-    );
-  }
-
-  if (existingImageIds.length > 0 || imageUrls.length > 0) {
-    invalidatePostImagesCache();
-  }
-}
+import {
+  createPostImages,
+  replacePostImages,
+  resolveArea,
+  resolveCity,
+  resolveCurrentUserId,
+  resolvePostOwnerId,
+  sanitizeImageInputs,
+} from "./writeHelpers";
 
 export async function createPost(
   postData: CreatePostRequest,
@@ -220,8 +52,17 @@ export async function createPost(
     };
   }
 
+  // Frontend locations might be strings (like 'Amman')
+  // but backend needs integer IDs for Post creation
+  const cityId = await resolveCityId(postData.location ?? postData.city);
+  const areaId = cityId
+    ? await resolveAreaId(cityId, postData.area)
+    : undefined;
+
+  // Keep string resolutions for enriching the local object
   const resolvedCity = resolveCity(postData.location ?? postData.city);
   const resolvedArea = resolveArea(postData.area);
+
   const backendPost = {
     PostID: null,
     UserID: userId,
@@ -232,17 +73,19 @@ export async function createPost(
     Status: 0,
     CreatedAt: new Date().toISOString(),
     IsDeleted: false,
-    City: resolvedCity,
-    Area: resolvedArea,
+    CityId: cityId,
+    AreaId: areaId,
   };
 
-  const response = await apiRequest<RawPost>("/posts", {
+  const response = await apiRequest<unknown>("/posts", {
     method: "POST",
     body: JSON.stringify(backendPost),
   });
 
-  if (response.success && response.data) {
-    const postIdValue = response.data.PostID ?? response.data.postID ?? response.data.id;
+  const createdPost = response.success ? parseRawPost(response.data) : null;
+  if (createdPost) {
+    const postIdValue =
+      createdPost.PostID ?? createdPost.postID ?? createdPost.id;
     const postId = toPositiveIntegerId(postIdValue);
     if (!postId) {
       return {
@@ -251,24 +94,25 @@ export async function createPost(
       };
     }
 
-    const sanitizedImageUrls = sanitizeImageUrls(postData.images);
-    const savedImageUrls = await createPostImages(postId, sanitizedImageUrls);
+    const sanitizedImageInputs = sanitizeImageInputs(postData.images);
+    const fallbackImageUrls = sanitizedImageInputs.filter(
+      (entry): entry is string => typeof entry === "string",
+    );
+    const savedImageUrls = await createPostImages(postId, sanitizedImageInputs);
 
-    const enrichedPost = await enrichPostsWithCategoryAndSeller([
-      response.data,
-    ]);
-    const enrichedPostData = enrichedPost[0] || response.data;
+    const enrichedPost = await enrichPostsWithCategoryAndSeller([createdPost]);
+    const enrichedPostData = enrichedPost[0] || createdPost;
 
     enrichedPostData.Location = resolvedCity;
     enrichedPostData.Area = resolvedArea;
 
-    const product = transformPostModelToProduct(
+    const post = transformPostModelToPost(
       enrichedPostData,
-      savedImageUrls.length > 0 ? savedImageUrls : sanitizedImageUrls,
+      savedImageUrls.length > 0 ? savedImageUrls : fallbackImageUrls,
     );
     return {
       success: true,
-      post: product,
+      post: post,
     };
   }
 
@@ -292,30 +136,47 @@ export async function updatePost(
     return { success: false, message: "Invalid post ID" };
   }
 
-  const currentPostResponse = await apiRequest<RawPost>(
+  const currentPostResponse = await apiRequest<unknown>(
     `/posts/${normalizedPostId}`,
     {
       method: "GET",
     },
   );
-  if (!currentPostResponse.success || !currentPostResponse.data) {
+  const currentPost = currentPostResponse.success
+    ? parseRawPost(currentPostResponse.data)
+    : null;
+  if (!currentPost) {
     return { success: false, message: "Post not found" };
   }
-
-  const currentPost = currentPostResponse.data;
   const resolvedDescriptionRaw =
     postData.description !== undefined
       ? postData.description
       : currentPost.PostDescription;
   const resolvedDescription =
     typeof resolvedDescriptionRaw === "string" ? resolvedDescriptionRaw : "";
-  const resolvedCity = resolveCity(
-    postData.location ?? postData.city ?? currentPost.City,
-  );
-  const resolvedArea =
-    postData.area !== undefined
-      ? resolveArea(postData.area)
-      : resolveArea(currentPost.Area);
+
+  // Resolve CityId and AreaId for the backend request
+  const fallbackCityIdRaw = currentPost.CityId ?? currentPost.cityId;
+  const fallbackCityId =
+    typeof fallbackCityIdRaw === "number" ? fallbackCityIdRaw : undefined;
+
+  const requestedCityId =
+    (postData.location ?? postData.city) !== undefined
+      ? await resolveCityId(postData.location ?? postData.city)
+      : undefined;
+
+  const finalCityId = requestedCityId ?? fallbackCityId;
+
+  const fallbackAreaIdRaw = currentPost.AreaId ?? currentPost.areaId;
+  const fallbackAreaId =
+    typeof fallbackAreaIdRaw === "number" ? fallbackAreaIdRaw : undefined;
+
+  const requestedAreaId =
+    postData.area !== undefined && finalCityId
+      ? await resolveAreaId(finalCityId, postData.area)
+      : undefined;
+
+  const finalAreaId = requestedAreaId ?? fallbackAreaId;
   const fallbackStatus = toStatusNumber(currentPost.Status);
   const resolvedStatus = resolveStatusValue(postData.status, fallbackStatus);
 
@@ -331,7 +192,8 @@ export async function updatePost(
   if (!categoryId) {
     return {
       success: false,
-      message: "Cannot update post: selected category is invalid or unavailable.",
+      message:
+        "Cannot update post: selected category is invalid or unavailable.",
     };
   }
 
@@ -349,7 +211,9 @@ export async function updatePost(
     postData.price !== undefined ? postData.price : Number(currentPost.Price);
   const resolvedPrice =
     typeof priceRaw === "number" && Number.isFinite(priceRaw) ? priceRaw : 0;
-  const createdAt = toIsoStringOrNow(currentPost.CreatedAt ?? currentPost.createdAt);
+  const createdAt = toIsoStringOrNow(
+    currentPost.CreatedAt ?? currentPost.createdAt,
+  );
 
   const backendPost = {
     PostID: normalizedPostId,
@@ -361,37 +225,70 @@ export async function updatePost(
     Status: resolvedStatus,
     CreatedAt: createdAt,
     IsDeleted: Boolean(currentPost.IsDeleted ?? false),
-    City: resolvedCity,
-    Area: resolvedArea,
+    CityId: finalCityId,
+    AreaId: finalAreaId,
   };
 
-  const response = await apiRequest<RawPost>(`/posts/${normalizedPostId}`, {
+  const response = await apiRequest<unknown>(`/posts/${normalizedPostId}`, {
     method: "PUT",
     body: JSON.stringify(backendPost),
   });
 
-  if (response.success && response.data) {
-    const sanitizedImages =
+  const updatedPost = response.success ? parseRawPost(response.data) : null;
+  if (updatedPost) {
+    const sanitizedImageInputs =
       postData.images !== undefined
-        ? sanitizeImageUrls(postData.images)
+        ? sanitizeImageInputs(postData.images)
         : undefined;
-    if (sanitizedImages) {
-      await replacePostImages(normalizedPostId, sanitizedImages);
-    }
+    const replacedImageUrls = sanitizedImageInputs
+      ? await replacePostImages(normalizedPostId, sanitizedImageInputs)
+      : undefined;
 
-    const product = transformPostModelToProduct(
-      response.data,
-      sanitizedImages || [],
-    );
+    const post = transformPostModelToPost(updatedPost, replacedImageUrls || []);
     return {
       success: true,
-      post: product,
+      post: post,
     };
   }
 
   const errorMessage = !response.success
     ? response.error?.message || "Failed to update post"
     : "Failed to update post";
+
+  return {
+    success: false,
+    message: errorMessage,
+  };
+}
+
+export async function updatePostStatus(
+  postData: UpdatePostStatusRequest,
+): Promise<PostResponse> {
+  const normalizedPostId = toPositiveIntegerId(postData.id);
+  if (!normalizedPostId) {
+    return { success: false, message: "Invalid post ID" };
+  }
+
+  const response = await apiRequest<unknown>(
+    `/posts/${normalizedPostId}/status`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ Status: postData.status || "ACTIVE" }),
+    },
+  );
+
+  const updatedPost = response.success ? parseRawPost(response.data) : null;
+  if (updatedPost) {
+    const post = transformPostModelToPost(updatedPost, []);
+    return {
+      success: true,
+      post: post,
+    };
+  }
+
+  const errorMessage = !response.success
+    ? response.error?.message || "Failed to update post status"
+    : "Failed to update post status";
 
   return {
     success: false,

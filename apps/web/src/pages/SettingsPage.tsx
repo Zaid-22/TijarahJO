@@ -1,5 +1,5 @@
-import { Button } from "../shared/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { useState } from "react";
+import { Settings2 } from "lucide-react";
 import { Language } from "../translations";
 import { settingsTranslations } from "../translations/settings";
 import { STORAGE_KEYS } from "../constants";
@@ -9,6 +9,15 @@ import {
   SettingsPreferences,
 } from "../features/settings/types";
 import { SettingsContent } from "../features/settings/SettingsContent";
+import { SubpageHeader } from "../shared/ui/subpage-header";
+import { PageShell } from "../shared/ui/page-shell";
+import { InfoPageIntroCard } from "../shared/ui/info-page";
+import { Button } from "../shared/ui/button";
+import { usePushNotificationsPreference } from "../features/settings/usePushNotificationsPreference";
+import { useSettingsNotifications } from "../features/settings/useSettingsNotifications";
+import { useTwoFactorSettings } from "../features/settings/useTwoFactorSettings";
+import { TwoFactorDialog } from "../features/settings/TwoFactorDialog";
+import { DeleteAccountDialog } from "../features/settings/DeleteAccountDialog";
 
 interface UserProfile {
   name: string;
@@ -24,8 +33,14 @@ interface SettingsPageProps {
   onDarkModeChange?: (enabled: boolean) => void;
   onLanguageChange?: () => void;
   onLogout?: () => void;
+  onDeleteAccount?: () => void | Promise<void>;
   userProfile: UserProfile;
   onEditProfileClick?: () => void;
+  onOpenHelpCenter?: () => void;
+  onContactSupport?: () => void;
+  onReportIssue?: () => void;
+  onOpenTerms?: () => void;
+  onOpenPrivacy?: () => void;
 }
 
 export function SettingsPage({
@@ -35,8 +50,14 @@ export function SettingsPage({
   onDarkModeChange,
   onLanguageChange,
   onLogout,
+  onDeleteAccount,
   userProfile,
   onEditProfileClick,
+  onOpenHelpCenter,
+  onContactSupport,
+  onReportIssue,
+  onOpenTerms,
+  onOpenPrivacy,
 }: SettingsPageProps) {
   const isRTL = language === "ar";
   const [settingsPreferences, setSettingsPreferences] =
@@ -44,12 +65,56 @@ export function SettingsPage({
       STORAGE_KEYS.SETTINGS_PREFERENCES,
       defaultSettingsPreferences,
     );
+  const [isDeleteAccountDialogOpen, setIsDeleteAccountDialogOpen] = useState(false);
+  const [isDeleteAccountPending, setIsDeleteAccountPending] = useState(false);
 
   const displayName = userProfile.name || "-";
   const displayEmail = userProfile.email || "-";
   const displayPhone = userProfile.phone || "-";
   const displayLocation = userProfile.location || "-";
   const text = settingsTranslations[language];
+  const introDescription = language === "ar"
+    ? "تحكم في إعدادات الحساب، الإشعارات، والخصوصية من لوحة واحدة."
+    : "Manage account preferences, notifications, and privacy from one place.";
+  const {
+    isPushStatusLoading,
+    isPushUpdatePending,
+    isPushToggleAvailable,
+    handlePushNotificationsToggle,
+  } = usePushNotificationsPreference({
+    language,
+    setSettingsPreferences,
+  });
+  const {
+    notifications,
+    isNotificationsLoading,
+    isNotificationsMutationPending,
+    handleMarkNotificationAsRead,
+    handleMarkAllNotificationsAsRead,
+  } = useSettingsNotifications({
+    language,
+  });
+  const {
+    copy: twoFactorCopy,
+    twoFactorDescription,
+    twoFactorActionLabel,
+    isActionDisabled: isTwoFactorActionDisabled,
+    isDialogOpen: isTwoFactorDialogOpen,
+    dialogMode: twoFactorDialogMode,
+    secretKey: twoFactorSecretKey,
+    otpAuthUri: twoFactorOtpAuthUri,
+    code: twoFactorCode,
+    error: twoFactorError,
+    isMutationPending: isTwoFactorMutationPending,
+    onTwoFactorAction: handleTwoFactorAction,
+    onConfirmDialog: handleConfirmTwoFactorDialog,
+    onCodeChange: handleTwoFactorCodeChange,
+    onCopyText: handleTwoFactorCopyText,
+    onDialogOpenChange: handleTwoFactorDialogOpenChange,
+    onCancelDialog: handleCancelTwoFactorDialog,
+  } = useTwoFactorSettings({
+    language,
+  });
 
   const updatePreference =
     (key: keyof SettingsPreferences) => (value: boolean) => {
@@ -59,28 +124,45 @@ export function SettingsPage({
       }));
     };
 
-  return (
-    <div className="min-h-screen bg-[#F5F6FA] dark:bg-[#1a1a1a]">
-      <header className="sticky top-0 z-50 shadow-sm bg-[#0A4ABF] dark:bg-[#111111]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16 gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onBackToMarketplace}
-              className="text-white hover:bg-white/10 px-2 sm:px-4"
-            >
-              <ArrowLeft
-                className={`w-5 h-5 ${isRTL ? "rotate-180 mr-2" : "mr-2"}`}
-              />
-              <span className="hidden sm:inline">{text.settings}</span>
-            </Button>
-            <h1 className="text-white text-lg sm:text-xl">{text.settings}</h1>
-          </div>
-        </div>
-      </header>
+  const handleConfirmDeleteAccount = async () => {
+    if (!onDeleteAccount) {
+      setIsDeleteAccountDialogOpen(false);
+      return;
+    }
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    setIsDeleteAccountPending(true);
+    try {
+      await onDeleteAccount();
+      setIsDeleteAccountDialogOpen(false);
+    } finally {
+      setIsDeleteAccountPending(false);
+    }
+  };
+  const handleDeleteAccountDialogOpenChange = (open: boolean) => {
+    if (isDeleteAccountPending) {
+      return;
+    }
+    setIsDeleteAccountDialogOpen(open);
+  };
+
+  return (
+    <PageShell tone="account">
+      <SubpageHeader
+        onBack={onBackToMarketplace}
+        isRTL={isRTL}
+        backLabel={text.settings}
+        showLogo={false}
+        title={text.settings}
+      />
+
+      <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <InfoPageIntroCard
+          icon={Settings2}
+          title={text.settings}
+          description={introDescription}
+          className="mb-6"
+        />
+
         <SettingsContent
           language={language}
           isRTL={isRTL}
@@ -89,15 +171,73 @@ export function SettingsPage({
           onLanguageChange={onLanguageChange}
           onLogout={onLogout}
           onEditProfileClick={onEditProfileClick}
+          onOpenHelpCenter={onOpenHelpCenter}
+          onContactSupport={onContactSupport}
+          onReportIssue={onReportIssue}
+          onOpenTerms={onOpenTerms}
+          onOpenPrivacy={onOpenPrivacy}
           text={text}
           settingsPreferences={settingsPreferences}
           updatePreference={updatePreference}
+          onPushNotificationsChange={handlePushNotificationsToggle}
+          isPushNotificationsDisabled={
+            isPushStatusLoading || isPushUpdatePending || !isPushToggleAvailable
+          }
+          notifications={notifications}
+          isNotificationsLoading={isNotificationsLoading}
+          isNotificationsMutationPending={isNotificationsMutationPending}
+          onMarkNotificationAsRead={handleMarkNotificationAsRead}
+          onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead}
           displayName={displayName}
           displayEmail={displayEmail}
           displayPhone={displayPhone}
           displayLocation={displayLocation}
+          onDeleteAccount={
+            onDeleteAccount
+              ? () => setIsDeleteAccountDialogOpen(true)
+              : undefined
+          }
+          twoFactorDescription={twoFactorDescription}
+          twoFactorControl={(
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-primary border-primary"
+              disabled={isTwoFactorActionDisabled}
+              onClick={handleTwoFactorAction}
+            >
+              {twoFactorActionLabel}
+            </Button>
+          )}
+        />
+
+        <TwoFactorDialog
+          language={language}
+          open={isTwoFactorDialogOpen}
+          onOpenChange={handleTwoFactorDialogOpenChange}
+          mode={twoFactorDialogMode}
+          copy={twoFactorCopy}
+          secretKey={twoFactorSecretKey}
+          otpAuthUri={twoFactorOtpAuthUri}
+          code={twoFactorCode}
+          error={twoFactorError}
+          isPending={isTwoFactorMutationPending}
+          onCopyText={handleTwoFactorCopyText}
+          onCodeChange={handleTwoFactorCodeChange}
+          onCancel={handleCancelTwoFactorDialog}
+          onConfirm={handleConfirmTwoFactorDialog}
+        />
+
+        <DeleteAccountDialog
+          language={language}
+          open={isDeleteAccountDialogOpen}
+          pending={isDeleteAccountPending}
+          cancelLabel={text.cancel}
+          onOpenChange={handleDeleteAccountDialogOpenChange}
+          onCancel={() => setIsDeleteAccountDialogOpen(false)}
+          onConfirm={handleConfirmDeleteAccount}
         />
       </div>
-    </div>
+    </PageShell>
   );
 }

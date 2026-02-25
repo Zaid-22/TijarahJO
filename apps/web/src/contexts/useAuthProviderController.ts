@@ -74,7 +74,10 @@ export function useAuthProviderController(): AuthContextType {
   }, []);
 
   const emitAuthError = useCallback((message: string) => {
-    const normalizedMessage = normalizeMessage(message, BACKEND_UNAVAILABLE_MESSAGE);
+    const normalizedMessage = normalizeMessage(
+      message,
+      BACKEND_UNAVAILABLE_MESSAGE,
+    );
     const now = Date.now();
     const previous = lastAuthErrorEmissionRef.current;
     if (
@@ -282,8 +285,18 @@ export function useAuthProviderController(): AuthContextType {
     } else if (currentUserResult.status === "auth_error") {
       consecutiveNetworkFailuresRef.current = 0;
       debugAuthWarn("[AuthContext] No valid authenticated session");
+
+      const wasAuthenticated =
+        authState.isAuthenticated ||
+        AUTH_LEGACY_KEYS.some((k) => localStorage.getItem(k) !== null);
+
       clearAuthStorage();
-      setSignedOutState(currentUserResult.message);
+
+      if (wasAuthenticated) {
+        setSignedOutState(currentUserResult.message);
+      } else {
+        setSignedOutState();
+      }
     } else {
       consecutiveNetworkFailuresRef.current = getNextConsecutiveNetworkFailures(
         consecutiveNetworkFailuresRef.current,
@@ -308,6 +321,7 @@ export function useAuthProviderController(): AuthContextType {
       setLoading(false);
     }
   }, [
+    authState.isAuthenticated,
     authState.user?.email,
     clearAuthStorage,
     emitAuthError,
