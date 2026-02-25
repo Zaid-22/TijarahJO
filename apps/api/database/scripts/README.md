@@ -121,6 +121,14 @@ Run SQL query performance baseline threshold gate:
 MSSQL_SA_PASSWORD='<sa-password>' ./apps/api/database/scripts/diagnostics/run_performance_baseline.sh
 ```
 
+The performance baseline includes feed, search, top-sellers, and chat-history probes.
+
+Capture SQL query plans for hot listing/seller paths:
+
+```bash
+MSSQL_SA_PASSWORD='<sa-password>' ./apps/api/database/scripts/diagnostics/capture_query_plans.sh
+```
+
 Generated files:
 - `apps/api/database/bundles/schema.sql`: base table/constraint schema bundle
 - `apps/api/database/bundles/migrations.sql`: ordered migration bundle

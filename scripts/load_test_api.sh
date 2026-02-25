@@ -6,12 +6,16 @@ BASE_URL="${BASE_URL:-http://localhost:5033}"
 # Defaults tuned for local CI/dev machine capacity.
 # Increase via env vars for higher-pressure profiling.
 CONCURRENCY="${CONCURRENCY:-10}"
-REQUESTS_PER_PROBE="${REQUESTS_PER_PROBE:-40}"
+# Three probes run sequentially; keep default volume below typical fixed-window limits.
+REQUESTS_PER_PROBE="${REQUESTS_PER_PROBE:-30}"
+WARMUP_REQUESTS="${WARMUP_REQUESTS:-5}"
 LOAD_MIN_SUCCESS_RATE="${LOAD_MIN_SUCCESS_RATE:-0.98}"
 LOAD_MAX_P95_FEED_MS="${LOAD_MAX_P95_FEED_MS:-800}"
 LOAD_MAX_P95_SEARCH_MS="${LOAD_MAX_P95_SEARCH_MS:-1000}"
+LOAD_MAX_P95_TOP_SELLERS_MS="${LOAD_MAX_P95_TOP_SELLERS_MS:-900}"
 FEED_PROBE_PATH="${FEED_PROBE_PATH:-/api/v1/posts/feed?page=1&limit=20}"
 SEARCH_PROBE_PATH="${SEARCH_PROBE_PATH:-/api/v1/search?query=a&page=1&limit=20}"
+TOP_SELLERS_PROBE_PATH="${TOP_SELLERS_PROBE_PATH:-/api/v1/sellers/top?take=10}"
 REPORT_FILE="${REPORT_FILE:-/tmp/tijarahjo_api_load_report.json}"
 
 TMP_DIR="$(mktemp -d)"
@@ -29,6 +33,11 @@ fi
 
 if ! [[ "$REQUESTS_PER_PROBE" =~ ^[0-9]+$ ]] || [ "$REQUESTS_PER_PROBE" -lt 1 ]; then
   echo "Error: REQUESTS_PER_PROBE must be a positive integer." >&2
+  exit 1
+fi
+
+if ! [[ "$WARMUP_REQUESTS" =~ ^[0-9]+$ ]]; then
+  echo "Error: WARMUP_REQUESTS must be a non-negative integer." >&2
   exit 1
 fi
 
@@ -72,8 +81,10 @@ get_probe_p95_threshold() {
   local probe_name="$1"
   if [ "$probe_name" = "feed" ]; then
     printf '%s' "$LOAD_MAX_P95_FEED_MS"
-  else
+  elif [ "$probe_name" = "search" ]; then
     printf '%s' "$LOAD_MAX_P95_SEARCH_MS"
+  else
+    printf '%s' "$LOAD_MAX_P95_TOP_SELLERS_MS"
   fi
 }
 
@@ -84,6 +95,12 @@ run_probe() {
   local output_file="$TMP_DIR/${probe_name}.csv"
   local sorted_ms_file="$TMP_DIR/${probe_name}.ms.sorted"
   local target_url="${BASE_URL}${probe_path}"
+
+  if [ "$WARMUP_REQUESTS" -gt 0 ]; then
+    for _ in $(seq 1 "$WARMUP_REQUESTS"); do
+      curl -sS -o /dev/null "$target_url" || true
+    done
+  fi
 
   seq "$REQUESTS_PER_PROBE" | xargs -P "$CONCURRENCY" -I{} sh -c '
     curl -sS -o /dev/null -w "%{http_code},%{time_total}\n" "$1" || printf "000,0\n"
@@ -132,8 +149,9 @@ echo
 
 run_probe "feed" "$FEED_PROBE_PATH" "$LOAD_MAX_P95_FEED_MS"
 run_probe "search" "$SEARCH_PROBE_PATH" "$LOAD_MAX_P95_SEARCH_MS"
+run_probe "top_sellers" "$TOP_SELLERS_PROBE_PATH" "$LOAD_MAX_P95_TOP_SELLERS_MS"
 
-for probe in feed search; do
+for probe in feed search top_sellers; do
   total="$(get_probe_metric "$probe" "total")"
   success="$(get_probe_metric "$probe" "success")"
   failure="$(get_probe_metric "$probe" "failure")"
@@ -176,16 +194,29 @@ search_p99="$(get_probe_metric search p99)"
 search_avg="$(get_probe_metric search avg)"
 search_max="$(get_probe_metric search max)"
 
+top_sellers_pass="$(get_probe_metric top_sellers pass)"
+top_sellers_total="$(get_probe_metric top_sellers total)"
+top_sellers_success="$(get_probe_metric top_sellers success)"
+top_sellers_failure="$(get_probe_metric top_sellers failure)"
+top_sellers_success_rate="$(get_probe_metric top_sellers success_rate)"
+top_sellers_p50="$(get_probe_metric top_sellers p50)"
+top_sellers_p95="$(get_probe_metric top_sellers p95)"
+top_sellers_p99="$(get_probe_metric top_sellers p99)"
+top_sellers_avg="$(get_probe_metric top_sellers avg)"
+top_sellers_max="$(get_probe_metric top_sellers max)"
+
 cat > "$REPORT_FILE" <<JSON
 {
   "generatedAtUtc": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
   "baseUrl": "$BASE_URL",
   "concurrency": $CONCURRENCY,
   "requestsPerProbe": $REQUESTS_PER_PROBE,
+  "warmupRequestsPerProbe": $WARMUP_REQUESTS,
   "thresholds": {
     "minSuccessRate": $LOAD_MIN_SUCCESS_RATE,
     "feedP95Ms": $LOAD_MAX_P95_FEED_MS,
-    "searchP95Ms": $LOAD_MAX_P95_SEARCH_MS
+    "searchP95Ms": $LOAD_MAX_P95_SEARCH_MS,
+    "topSellersP95Ms": $LOAD_MAX_P95_TOP_SELLERS_MS
   },
   "probes": {
     "feed": {
@@ -215,6 +246,20 @@ cat > "$REPORT_FILE" <<JSON
         "avg": ${search_avg},
         "max": ${search_max}
       }
+    },
+    "topSellers": {
+      "passed": ${top_sellers_pass},
+      "total": ${top_sellers_total},
+      "success": ${top_sellers_success},
+      "failure": ${top_sellers_failure},
+      "successRate": ${top_sellers_success_rate},
+      "latencyMs": {
+        "p50": ${top_sellers_p50},
+        "p95": ${top_sellers_p95},
+        "p99": ${top_sellers_p99},
+        "avg": ${top_sellers_avg},
+        "max": ${top_sellers_max}
+      }
     }
   }
 }
@@ -222,7 +267,7 @@ JSON
 
 echo "Load test report: $REPORT_FILE"
 
-if [ "$feed_pass" != "true" ] || [ "$search_pass" != "true" ]; then
+if [ "$feed_pass" != "true" ] || [ "$search_pass" != "true" ] || [ "$top_sellers_pass" != "true" ]; then
   echo "Load test failed threshold gates." >&2
   exit 1
 fi
