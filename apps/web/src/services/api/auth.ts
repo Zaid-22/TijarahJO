@@ -2,175 +2,53 @@ import type {
   ApiResponse,
   LoginRequest,
   SignUpRequest,
-  User as ApiUser,
 } from "../../types/api";
+import { APP_CONFIG } from "../../constants/appConfig";
 import { normalizeJordanPhone } from "../../utils/phone";
 import {
   apiRequest,
-  BACKEND_CONNECTION_SHORT_MESSAGE,
   debugError,
   debugLog,
 } from "./client";
-import { asRecord, readString, type UnknownRecord } from "./normalizers";
-import { parseAuthEnvelope, ParsedAuthUser } from "./schemas/authSchema";
+import { type UnknownRecord } from "./normalizers";
+import { resolveCityId, resolveAreaId } from "./posts/lookups";
+import {
+  type AuthApiResponse,
+  type TwoFactorSetupStartApiResponse,
+  type TwoFactorStatusApiResponse,
+  handleAuthSuccessPayload,
+  normalizeLoginIdentifier,
+  parseTwoFactorSetupStartPayload,
+  parseTwoFactorStatusPayload,
+  resolveAuthFailureMessage,
+  resolveMessageFromPayload,
+  toAuthFailure,
+} from "./authHelpers";
 
-type AuthApiError = {
-  code: string;
-  message: string;
-};
+function buildGoogleAuthStartUrl(mode: "login" | "signup"): string {
+  const normalizedMode = mode === "signup" ? "signup" : "login";
+  const backendHost = APP_CONFIG.backendHostUrl.replace(/\/+$/, "");
+  const path = `/api/v1/auth/google/start?mode=${encodeURIComponent(
+    normalizedMode,
+  )}`;
 
-type AuthApiUser = ApiUser & {
-  roleID?: number;
-  isDeleted?: boolean;
-};
-
-type AuthApiResponse = {
-  success: boolean;
-  user?: AuthApiUser;
-  message?: string;
-  error?: AuthApiError;
-};
-
-function normalizeLoginIdentifier(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return "";
+  if (!backendHost) {
+    return path;
   }
 
-  const normalizedPhone = normalizeJordanPhone(trimmed);
-  if (normalizedPhone) {
-    return normalizedPhone;
-  }
-
-  return trimmed.toLowerCase();
-}
-
-function toAuthFailure(code: string, message: string): AuthApiResponse {
-  return {
-    success: false,
-    message,
-    error: {
-      code,
-      message,
-    },
-  };
-}
-
-function mapParsedAuthUser(userPayload: ParsedAuthUser): AuthApiUser {
-  const joinedDate = userPayload.joinedDate;
-  return {
-    id: String(userPayload.id || ""),
-    firstName: userPayload.firstName,
-    lastName: userPayload.lastName,
-    email: userPayload.email,
-    phone: userPayload.phone,
-    city: userPayload.city,
-    area: userPayload.area,
-    bio: userPayload.bio,
-    avatar: userPayload.avatar,
-    joinedDate,
-    createdAt: joinedDate,
-    updatedAt: new Date().toISOString(),
-    roleID: userPayload.roleID,
-    isDeleted: userPayload.isDeleted,
-  };
-}
-
-function extractMessageFromErrorDetails(details: unknown): string {
-  const detailsRecord = asRecord(details);
-  if (!detailsRecord) {
-    return "";
-  }
-
-  return readString(detailsRecord.Message ?? detailsRecord.message);
-}
-
-function isUniqueConstraintError(message: string): boolean {
-  return (
-    message.includes("UNIQUE KEY constraint") || message.includes("UQ_TbUsers")
-  );
-}
-
-function mapSignupConstraintMessage(message: string): string {
-  if (!isUniqueConstraintError(message)) {
-    return message;
-  }
-
-  if (
-    message.includes("UQ_TbUsers_E") ||
-    message.includes("UQ_TbUsers_Email") ||
-    message.includes("Email")
-  ) {
-    return "An account with this email address already exists. Please use a different email or try logging in.";
-  }
-
-  return "An account with this information already exists. Please check your details and try again.";
-}
-
-function resolveAuthFailureMessage<T>(
-  response: ApiResponse<T>,
-  fallbackMessage: string,
-  normalizeSignupConstraint = false,
-): string {
-  if (response.success) {
-    return fallbackMessage;
-  }
-
-  const messageFromDetails = extractMessageFromErrorDetails(
-    response.error?.details,
-  );
-  const baseMessage =
-    messageFromDetails ||
-    readString(response.error?.message) ||
-    fallbackMessage;
-
-  if (response.error?.code === "CONNECTION_REFUSED") {
-    return BACKEND_CONNECTION_SHORT_MESSAGE;
-  }
-
-  if (normalizeSignupConstraint) {
-    return mapSignupConstraintMessage(baseMessage);
-  }
-
-  return baseMessage;
-}
-
-function handleAuthSuccessPayload(
-  payload: unknown,
-  failureCode: string,
-  failureMessage: string,
-  successFallbackMessage: string,
-): AuthApiResponse {
-  const parsedPayload = parseAuthEnvelope(payload);
-  if (!parsedPayload) {
-    debugError("Invalid auth response structure:", payload);
-    return toAuthFailure("INVALID_RESPONSE", failureMessage);
-  }
-
-  if (parsedPayload.successFlag === false) {
-    const errorMessage = parsedPayload.message || failureMessage;
-    return toAuthFailure(failureCode, errorMessage);
-  }
-
-  const backendUser = parsedPayload.user
-    ? mapParsedAuthUser(parsedPayload.user)
-    : null;
-  if (backendUser) {
-    return {
-      success: true,
-      user: backendUser,
-    };
-  }
-
-  return {
-    success: true,
-    message: parsedPayload.message || successFallbackMessage,
-  };
+  return `${backendHost}${path}`;
 }
 
 // Authentication API
 // ============================================================================
 export const authApi = {
+  /**
+   * Build Google OAuth start URL (backend redirect flow)
+   */
+  getGoogleAuthStartUrl: (mode: "login" | "signup" = "login"): string => {
+    return buildGoogleAuthStartUrl(mode);
+  },
+
   /**
    * Login user with email/phone and password
    */
@@ -215,6 +93,127 @@ export const authApi = {
     return toAuthFailure("LOGIN_FAILED", errorMessage);
   },
 
+  verifyTwoFactorLogin: async (
+    twoFactorToken: string,
+    code: string,
+  ): Promise<AuthApiResponse> => {
+    const response = await apiRequest<unknown>("/auth/2fa/verify-login", {
+      method: "POST",
+      body: JSON.stringify({
+        TwoFactorToken: twoFactorToken.trim(),
+        Code: code.trim(),
+      }),
+    });
+
+    if (response.success && response.data) {
+      return handleAuthSuccessPayload(
+        response.data,
+        "TWO_FACTOR_VERIFY_FAILED",
+        "Two-factor verification failed. Please try again.",
+        "Two-factor verification successful",
+      );
+    }
+
+    const errorMessage = resolveAuthFailureMessage(
+      response,
+      "Two-factor verification failed. Please try again.",
+    );
+    return toAuthFailure("TWO_FACTOR_VERIFY_FAILED", errorMessage);
+  },
+
+  getTwoFactorStatus: async (): Promise<TwoFactorStatusApiResponse> => {
+    const response = await apiRequest<unknown>("/auth/2fa/status", {
+      method: "GET",
+    });
+
+    if (response.success) {
+      return parseTwoFactorStatusPayload(response.data);
+    }
+
+    return {
+      success: false,
+      enabled: false,
+      hasPendingSetup: false,
+      message: resolveAuthFailureMessage(
+        response,
+        "Failed to load two-factor status.",
+      ),
+    };
+  },
+
+  startTwoFactorSetup: async (): Promise<TwoFactorSetupStartApiResponse> => {
+    const response = await apiRequest<unknown>("/auth/2fa/setup/start", {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+
+    if (response.success) {
+      return parseTwoFactorSetupStartPayload(response.data);
+    }
+
+    return {
+      success: false,
+      message: resolveAuthFailureMessage(
+        response,
+        "Failed to start two-factor setup.",
+      ),
+    };
+  },
+
+  confirmTwoFactorSetup: async (code: string): Promise<AuthApiResponse> => {
+    const response = await apiRequest<unknown>("/auth/2fa/setup/confirm", {
+      method: "POST",
+      body: JSON.stringify({
+        Code: code.trim(),
+      }),
+    });
+
+    if (response.success) {
+      return {
+        success: true,
+        message: resolveMessageFromPayload(
+          response.data,
+          "Two-factor authentication enabled.",
+        ),
+      };
+    }
+
+    return toAuthFailure(
+      "TWO_FACTOR_SETUP_CONFIRM_FAILED",
+      resolveAuthFailureMessage(
+        response,
+        "Failed to enable two-factor authentication.",
+      ),
+    );
+  },
+
+  disableTwoFactor: async (code: string): Promise<AuthApiResponse> => {
+    const response = await apiRequest<unknown>("/auth/2fa/disable", {
+      method: "POST",
+      body: JSON.stringify({
+        Code: code.trim(),
+      }),
+    });
+
+    if (response.success) {
+      return {
+        success: true,
+        message: resolveMessageFromPayload(
+          response.data,
+          "Two-factor authentication disabled.",
+        ),
+      };
+    }
+
+    return toAuthFailure(
+      "TWO_FACTOR_DISABLE_FAILED",
+      resolveAuthFailureMessage(
+        response,
+        "Failed to disable two-factor authentication.",
+      ),
+    );
+  },
+
   /**
    * Sign up new user
    */
@@ -240,6 +239,11 @@ export const authApi = {
       return toAuthFailure("VALIDATION_ERROR", "Area is required.");
     }
 
+    const cityId = await resolveCityId(normalizedCity);
+    const areaId = cityId
+      ? await resolveAreaId(cityId, normalizedArea)
+      : undefined;
+
     const response = await apiRequest<unknown>("/auth/signup", {
       method: "POST",
       body: JSON.stringify({
@@ -248,8 +252,8 @@ export const authApi = {
         FirstName: userData.firstName,
         LastName: userData.lastName || "",
         Phone: normalizedPhone,
-        City: normalizedCity,
-        Area: normalizedArea,
+        CityId: cityId,
+        AreaId: areaId,
         Bio: normalizedBio || null,
         Avatar: normalizedAvatar || null,
       }),
@@ -316,6 +320,74 @@ export const authApi = {
       success: false,
       error: result.message,
     };
+  },
+
+  /**
+   * Request an email verification code for password reset
+   */
+  requestPasswordReset: async (email: string): Promise<AuthApiResponse> => {
+    const response = await apiRequest<unknown>(
+      "/auth/forgot-password/request",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          Email: email.trim().toLowerCase(),
+        }),
+      },
+    );
+
+    if (response.success) {
+      return {
+        success: true,
+        message: resolveMessageFromPayload(
+          response.data,
+          "If an account exists for that email, a verification code has been sent.",
+        ),
+      };
+    }
+
+    const errorMessage = resolveAuthFailureMessage(
+      response,
+      "Unable to process password reset request.",
+    );
+    return toAuthFailure("PASSWORD_RESET_REQUEST_FAILED", errorMessage);
+  },
+
+  /**
+   * Confirm password reset with email code and new password
+   */
+  confirmPasswordReset: async (
+    email: string,
+    code: string,
+    newPassword: string,
+  ): Promise<AuthApiResponse> => {
+    const response = await apiRequest<unknown>(
+      "/auth/forgot-password/confirm",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          Email: email.trim().toLowerCase(),
+          Code: code.trim(),
+          NewPassword: newPassword,
+        }),
+      },
+    );
+
+    if (response.success) {
+      return {
+        success: true,
+        message: resolveMessageFromPayload(
+          response.data,
+          "Password reset succeeded.",
+        ),
+      };
+    }
+
+    const errorMessage = resolveAuthFailureMessage(
+      response,
+      "Unable to reset password. Please check your code and try again.",
+    );
+    return toAuthFailure("PASSWORD_RESET_CONFIRM_FAILED", errorMessage);
   },
 
   /**
