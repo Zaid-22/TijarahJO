@@ -283,8 +283,6 @@ export default function App() {
         isAuthenticated={isAuthenticated}
         currentUserDisplayName={userProfile.name}
         userAvatar={userProfile.avatar}
-        userFirstName={userProfile.firstName}
-        userLastName={userProfile.lastName}
         showBackButton={false}
         showLogo={true}
         showSearch={true}
