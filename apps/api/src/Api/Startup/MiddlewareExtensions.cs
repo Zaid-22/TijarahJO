@@ -41,7 +41,7 @@ public static class MiddlewareExtensions
                 };
                 problem.Extensions["traceId"] = context.TraceIdentifier;
 
-                await context.Response.WriteAsync(JsonSerializer.Serialize(problem));
+                await context.Response.WriteAsJsonAsync(problem);
             });
         });
 
@@ -136,7 +136,7 @@ public static class MiddlewareExtensions
                         Instance = context.Request.Path
                     };
                     problem.Extensions["traceId"] = context.TraceIdentifier;
-                    await context.Response.WriteAsync(JsonSerializer.Serialize(problem));
+                    await context.Response.WriteAsJsonAsync(problem);
                     return;
                 }
             }
@@ -173,7 +173,7 @@ public static class MiddlewareExtensions
             problem.Extensions["traceId"] = httpContext.TraceIdentifier;
 
             response.ContentType = "application/problem+json";
-            await response.WriteAsync(JsonSerializer.Serialize(problem));
+            await response.WriteAsJsonAsync(problem);
         });
 
         return app;

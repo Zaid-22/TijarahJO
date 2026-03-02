@@ -61,7 +61,7 @@ public interface IPostDataAccess
     Task<PostModel> GetPostByIDAsync(int? postId, CancellationToken cancellationToken = default);
     Task<int> AddPostAsync(PostModel post, CancellationToken cancellationToken = default);
     Task<bool> UpdatePostAsync(PostModel post, CancellationToken cancellationToken = default);
-    Task<bool> DeletePostAsync(int? postId, CancellationToken cancellationToken = default);
+    Task<bool> DeletePostAsync(int? postId, int actorUserId, CancellationToken cancellationToken = default);
     Task<bool> DoesPostExistAsync(int? postId, CancellationToken cancellationToken = default);
     Task<bool> IncrementPostViewsAsync(int? postId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PostModel>> GetPostsByUserIDAsync(int userId, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);

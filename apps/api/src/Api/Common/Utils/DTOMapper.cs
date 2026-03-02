@@ -81,7 +81,7 @@ public static class DTOMapper
             Status = postModel.Status,
             CreatedAt = postModel.CreatedAt,
             IsDeleted = postModel.IsDeleted,
-            Views = (int?)postModel.Views,
+            Views = postModel.Views,
             CityId = postModel.CityId,
             AreaId = postModel.AreaId,
             Images = images.ToArray()

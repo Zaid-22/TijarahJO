@@ -16,16 +16,30 @@ import {
   Menu,
   X,
   Home,
+  Rows,
 } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
 import { useAuth } from "../../../contexts/AuthContext";
 import { AdminGlobalSearch } from "./AdminGlobalSearch";
+import { AdminNotificationsBell } from "./AdminNotificationsBell";
+import { useSessionTimeout } from "../hooks/useSessionTimeout";
+import { DensityProvider, useDensity } from "../hooks/useDensity";
 
 export function AdminLayout() {
+  return (
+    <DensityProvider>
+      <AdminLayoutInner />
+    </DensityProvider>
+  );
+}
+
+function AdminLayoutInner() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { showWarning, minutesLeft, resetTimer } = useSessionTimeout();
+  const { density, toggleDensity } = useDensity();
 
   const navItems = [
     { label: "Dashboard", path: "/admin", icon: LayoutDashboard },
@@ -123,14 +137,44 @@ export function AdminLayout() {
         {/* Top Bar - Desktop */}
         <div className="hidden md:flex h-14 items-center border-b border-border bg-card px-6 gap-4">
           <AdminGlobalSearch />
-          <div className="ml-auto text-xs text-muted-foreground">
-            Press{" "}
-            <kbd className="px-1.5 py-0.5 text-[10px] bg-muted border border-border rounded">
-              /
-            </kbd>{" "}
-            to search
+          <div className="ml-auto flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleDensity}
+              title={`Switch to ${density === "comfortable" ? "compact" : "comfortable"} view`}
+              aria-label="Toggle table density"
+            >
+              <Rows className="w-4 h-4" />
+            </Button>
+            <AdminNotificationsBell />
+            <span className="text-xs text-muted-foreground">
+              Press{" "}
+              <kbd className="px-1.5 py-0.5 text-[10px] bg-muted border border-border rounded">
+                /
+              </kbd>{" "}
+              to search
+            </span>
           </div>
         </div>
+        {/* Session Timeout Warning */}
+        {showWarning && (
+          <div className="bg-amber-100 border-b border-amber-300 px-6 py-2 flex items-center justify-between">
+            <span className="text-sm text-amber-800 font-medium">
+              ⏱ Session expires in {minutesLeft} minute
+              {minutesLeft !== 1 ? "s" : ""}. Move your mouse or press a key to
+              stay logged in.
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-amber-800"
+              onClick={resetTimer}
+            >
+              Dismiss
+            </Button>
+          </div>
+        )}
         {/* Mobile Header */}
         <div className="flex h-16 items-center border-b border-border bg-card px-4 md:hidden">
           <Button

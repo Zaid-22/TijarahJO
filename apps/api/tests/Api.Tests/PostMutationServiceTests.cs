@@ -257,7 +257,7 @@ public sealed class PostMutationServiceTests
         public Task<bool> SaveAsync(Post post, CancellationToken ct = default)
             => Task.FromResult(true);
 
-        public Task<bool> DeletePostAsync(int? postId, CancellationToken ct = default)
+        public Task<bool> DeletePostAsync(int? postId, int actorUserId, CancellationToken ct = default)
             => Task.FromResult(true);
 
         public Task<bool> DoesPostExistAsync(int? postId, CancellationToken ct = default)

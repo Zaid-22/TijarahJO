@@ -220,7 +220,7 @@ builder.Services.AddSingleton<InMemoryChatPresenceService>();
 RedisStartupResult redisResult = await builder.Services.AddTijarahJoRedis(builder.Configuration, featureFlags);
 
 // Infrastructure + Application layers (Bootstrap project)
-builder.Services.AddTijarahJoInfrastructure();
+builder.Services.AddTijarahJoInfrastructure(builder.Configuration);
 builder.Services.AddApplicationServices();
 
 // ======================= BUILD =======================

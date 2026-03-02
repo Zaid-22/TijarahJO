@@ -15,7 +15,7 @@ public class PostResponseDTO
     public int Status { get; set; }
     public System.DateTime CreatedAt { get; set; }
     public bool IsDeleted { get; set; }
-    public int? Views { get; set; }
+    public long? Views { get; set; }
     public int? CityId { get; set; }
     public int? AreaId { get; set; }
     public string Location { get; set; } = string.Empty;

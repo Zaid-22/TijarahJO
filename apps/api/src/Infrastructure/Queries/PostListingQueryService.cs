@@ -14,6 +14,13 @@ public sealed class PostListingQueryService : IPostListingQueryService
     private const int MaxPageSize = 200;
     private static readonly ConcurrentDictionary<string, bool> FullTextCapabilityCache = new(StringComparer.OrdinalIgnoreCase);
 
+    private readonly string _connectionString;
+
+    public PostListingQueryService(DatabaseConnectionString connectionString)
+    {
+        _connectionString = connectionString.Value;
+    }
+
     public async Task<PostListingPageResult> QueryAsync(PostListingQuery query, CancellationToken cancellationToken = default)
     {
         int page = query.Page < 1 ? 1 : query.Page;
@@ -26,7 +33,7 @@ public sealed class PostListingQueryService : IPostListingQueryService
         int offset = (page - 1) * limit;
         var filters = new List<string>();
 
-        using var connection = new SqlConnection(DataAccessSettings.ConnectionString);
+        using var connection = new SqlConnection(_connectionString);
         using var command = connection.CreateCommand();
         await connection.OpenAsync(cancellationToken);
 
