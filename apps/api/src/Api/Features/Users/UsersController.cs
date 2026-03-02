@@ -174,7 +174,6 @@ public class UsersController : ControllerBase
     }
 
     [Authorize]
-    [HttpGet("Exists/{id:int}")]
     [HttpGet("{id:int}/exists")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

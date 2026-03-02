@@ -197,6 +197,19 @@ if (featureFlags.EnableRateLimiting)
                 QueueLimit = 0
             });
         });
+
+        // Stricter rate limit for authentication endpoints (brute-force protection)
+        options.AddPolicy("auth", httpContext =>
+        {
+            string partition = RateLimitPartitionResolver.Resolve(httpContext);
+            return RateLimitPartition.GetFixedWindowLimiter($"auth:{partition}", _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            });
+        });
     });
 }
 
@@ -208,12 +221,13 @@ builder.Services.AddTijarahJoCors(builder.Configuration, builder.Environment);
 builder.Services.AddTijarahJoSwagger();
 
 // API-layer services
-builder.Services.AddScoped<TokenService>();
-builder.Services.AddScoped<PostsFeedService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IPostsFeedService, PostsFeedService>();
 builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
 builder.Services.AddScoped<IPasswordResetEmailSender, PasswordResetEmailSender>();
 builder.Services.AddSingleton<TwoFactorService>();
 builder.Services.AddSingleton<IPostImageFileStorageService, LocalPostImageFileStorageService>();
+builder.Services.AddSingleton<IImageModerationService, ImageModerationService>();
 builder.Services.AddSingleton<InMemoryChatPresenceService>();
 
 // Redis + SignalR
@@ -222,6 +236,7 @@ RedisStartupResult redisResult = await builder.Services.AddTijarahJoRedis(builde
 // Infrastructure + Application layers (Bootstrap project)
 builder.Services.AddTijarahJoInfrastructure(builder.Configuration);
 builder.Services.AddApplicationServices();
+builder.Services.AddResponseCaching();
 
 // ======================= BUILD =======================
 var app = builder.Build();
@@ -275,6 +290,7 @@ if (featureFlags.EnableRateLimiting)
     app.UseRateLimiter();
 
 app.UseAuthentication();
+app.UseResponseCaching();
 app.UseTijarahJoCsrfMiddleware();
 app.UseAuthorization();
 app.UseTijarahJoStatusCodePages();

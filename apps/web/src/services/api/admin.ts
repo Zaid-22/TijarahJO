@@ -97,14 +97,36 @@ export const adminApi = {
       const response = await apiRequest<AdminDashboardStats>("/admin/stats", {
         method: "GET",
       });
-
       if (response.success && response.data) {
         return response.data;
       }
-
       throw new Error("Failed to fetch admin stats");
     } catch (error) {
-      debugError("Failed to fetch admin stats:", error);
+      debugError("adminApi.getStats", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get analytics data for dashboard charts
+   */
+  getAnalytics: async (): Promise<{
+    weeklyUsers: any[];
+    categoryData: any[];
+  }> => {
+    try {
+      const response = await apiRequest<{
+        weeklyUsers: any[];
+        categoryData: any[];
+      }>("/admin/analytics", {
+        method: "GET",
+      });
+      if (response.success && response.data) {
+        return response.data;
+      }
+      throw new Error("Failed to fetch admin analytics");
+    } catch (error) {
+      debugError("adminApi.getAnalytics", error);
       throw error;
     }
   },

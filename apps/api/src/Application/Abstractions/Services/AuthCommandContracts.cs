@@ -1,6 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
-using Models;
+using TijarahJo.Domain.Models;
 
 namespace TijarahJoDB.Application.Abstractions.Services;
 

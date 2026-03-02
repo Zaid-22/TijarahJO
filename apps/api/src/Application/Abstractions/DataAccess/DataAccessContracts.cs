@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Models;
+using TijarahJo.Domain.Models;
 
 namespace TijarahJoDB.Application.Abstractions.DataAccess;
 
@@ -58,7 +58,7 @@ public interface IConversationDataAccess
 
 public interface IPostDataAccess
 {
-    Task<PostModel> GetPostByIDAsync(int? postId, CancellationToken cancellationToken = default);
+    Task<PostModel?> GetPostByIDAsync(int? postId, CancellationToken cancellationToken = default);
     Task<int> AddPostAsync(PostModel post, CancellationToken cancellationToken = default);
     Task<bool> UpdatePostAsync(PostModel post, CancellationToken cancellationToken = default);
     Task<bool> DeletePostAsync(int? postId, int actorUserId, CancellationToken cancellationToken = default);
@@ -107,4 +107,6 @@ public interface IUserDataAccess
     Task<IReadOnlyList<UserModel>> GetAllUsersAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
     // Returns null when login is not found. Password verification must happen in the application layer (PasswordHelper), never in SQL.
     Task<UserModel?> GetUserByLoginAsync(string login, CancellationToken cancellationToken = default);
+    // Combines email + phone lookup into a single DB query. Returns the first match.
+    Task<UserModel?> GetUserByLoginCandidatesAsync(IReadOnlyList<string> candidates, CancellationToken cancellationToken = default);
 }

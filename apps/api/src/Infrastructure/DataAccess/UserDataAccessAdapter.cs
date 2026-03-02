@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using Models;
+using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.DataAccess;
 using TijarahJoDB.Application.Common;
 using TijarahJoDB.DAL.Entities;
@@ -180,6 +180,46 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
         }
 
         UserEntity? entity = await query.FirstOrDefaultAsync(cancellationToken);
+        return entity is null ? null : ToModel(entity);
+    }
+
+    public async Task<UserModel?> GetUserByLoginCandidatesAsync(IReadOnlyList<string> candidates, CancellationToken cancellationToken = default)
+    {
+        if (candidates == null || candidates.Count == 0)
+        {
+            return null;
+        }
+
+        // Build a single WHERE (Email IN (...) OR Phone IN (...)) query
+        var emails = new List<string>();
+        var phones = new List<string>();
+
+        foreach (string candidate in candidates)
+        {
+            string trimmed = candidate.Trim();
+            if (string.IsNullOrWhiteSpace(trimmed)) continue;
+
+            if (trimmed.Contains('@'))
+            {
+                emails.Add(trimmed);
+            }
+            else
+            {
+                string? normalizedPhone = NormalizePhoneLookup(trimmed);
+                if (!string.IsNullOrWhiteSpace(normalizedPhone))
+                    phones.Add(normalizedPhone);
+                else
+                    emails.Add(trimmed); // treat unknown format as email
+            }
+        }
+
+        UserEntity? entity = await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => !u.IsDeleted &&
+                ((u.Email != null && emails.Contains(u.Email)) ||
+                 (u.Phone != null && phones.Contains(u.Phone))))
+            .FirstOrDefaultAsync(cancellationToken);
+
         return entity is null ? null : ToModel(entity);
     }
 

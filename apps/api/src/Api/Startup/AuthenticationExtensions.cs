@@ -45,6 +45,22 @@ public static class AuthenticationExtensions
         jwtOptions.Issuer = configuration["JWT:Issuer"] ?? Environment.GetEnvironmentVariable("JWT_ISSUER") ?? jwtOptions.Issuer;
         jwtOptions.Audience = configuration["JWT:Audience"] ?? Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? jwtOptions.Audience;
 
+        // Fail fast if Issuer or Audience is not set in production
+        var environment = configuration["ASPNETCORE_ENVIRONMENT"]
+            ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+            ?? "Production";
+        bool isProduction = !string.Equals(environment, "Development", StringComparison.OrdinalIgnoreCase);
+
+        if (isProduction && string.IsNullOrEmpty(jwtOptions.Issuer))
+        {
+            throw new InvalidOperationException("JWT Issuer must be configured for non-development environments.");
+        }
+
+        if (isProduction && string.IsNullOrEmpty(jwtOptions.Audience))
+        {
+            throw new InvalidOperationException("JWT Audience must be configured for non-development environments.");
+        }
+
         // Register JWT Options as singleton
         services.AddSingleton(jwtOptions);
 

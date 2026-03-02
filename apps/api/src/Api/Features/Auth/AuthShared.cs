@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
-using Models;
+using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Common;
 using TijarahJoDB.BLL;
@@ -37,7 +37,7 @@ internal static class AuthShared
     }
 
     public static AuthResponse CreateAuthenticatedResponse(
-        TokenService tokenService,
+        ITokenService tokenService,
         HttpResponse httpResponse,
         UserModel user,
         string roleName)

@@ -55,9 +55,9 @@ public sealed class AdminPostListResult
 
 public sealed class AdminUserDetails
 {
-    public Models.UserModel? User { get; init; }
+    public TijarahJo.Domain.Models.UserModel? User { get; init; }
     public System.Collections.Generic.IReadOnlyList<AdminPostItem> RecentPosts { get; init; } = System.Array.Empty<AdminPostItem>();
-    public System.Collections.Generic.IReadOnlyList<Models.ReviewModel> RecentReviews { get; init; } = System.Array.Empty<Models.ReviewModel>();
+    public System.Collections.Generic.IReadOnlyList<TijarahJo.Domain.Models.ReviewModel> RecentReviews { get; init; } = System.Array.Empty<TijarahJo.Domain.Models.ReviewModel>();
 }
 
 // ── Phase 2: Reviews Moderation ──

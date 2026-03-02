@@ -1,4 +1,4 @@
-using Models;
+using TijarahJo.Domain.Models;
 
 namespace TijarahJoDBAPI.Contracts.Responses;
 

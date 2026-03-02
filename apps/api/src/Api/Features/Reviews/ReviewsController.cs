@@ -28,7 +28,7 @@ namespace TijarahJoDBAPI.Features.Reviews
         public async Task<ActionResult<IEnumerable<ReviewResponseDTO>>> GetUserReviews(int userId)
         {
             if (userId < 1) return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid user ID");
-            IReadOnlyList<Models.ReviewModel> reviews = await _reviews.GetReviewsAsync(userId, HttpContext.RequestAborted);
+            IReadOnlyList<TijarahJo.Domain.Models.ReviewModel> reviews = await _reviews.GetReviewsAsync(userId, HttpContext.RequestAborted);
             return Ok(reviews.Select(DTOMapper.ToReviewResponseDTO).ToList());
         }
 

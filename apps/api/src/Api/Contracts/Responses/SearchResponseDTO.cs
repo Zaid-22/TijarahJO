@@ -44,10 +44,7 @@ public sealed class SearchPostResponseDTO
     public required string CategoryId { get; init; }
 
     [JsonPropertyName("image")]
-    public required string Image { get; init; }
-
-    [JsonPropertyName("images")]
-    public required IReadOnlyList<string> Images { get; init; }
+    public required string Image { get; set; }
 
     [JsonPropertyName("phone")]
     public required string Phone { get; init; }

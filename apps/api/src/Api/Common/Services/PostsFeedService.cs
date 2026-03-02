@@ -5,7 +5,7 @@ using TijarahJoDB.Application.Abstractions.Services;
 
 namespace TijarahJoDBAPI.Common.Services
 {
-    public sealed class PostsFeedService
+    public sealed class PostsFeedService : IPostsFeedService
     {
         private const int MaxFeedPageSize = 200;
         private readonly IPostListingQueryService _postListingQueries;

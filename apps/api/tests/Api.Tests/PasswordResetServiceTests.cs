@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Models;
+using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.DataAccess;
 using TijarahJoDB.Application.Common;
 using TijarahJoDBAPI.Common.Configuration;
@@ -175,6 +175,16 @@ public sealed class PasswordResetServiceTests
         {
             bool matches = string.Equals(login, StoredUser.Email, StringComparison.OrdinalIgnoreCase);
             return Task.FromResult(matches ? StoredUser : null);
+        }
+
+        public async Task<UserModel?> GetUserByLoginCandidatesAsync(IReadOnlyList<string> candidates, CancellationToken cancellationToken = default)
+        {
+            foreach (var c in candidates)
+            {
+                var u = await GetUserByLoginAsync(c, cancellationToken);
+                if (u != null) return u;
+            }
+            return null;
         }
     }
 }

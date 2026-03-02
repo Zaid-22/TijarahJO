@@ -1,4 +1,4 @@
-using Models;
+using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDBAPI.Contracts.Responses;
 
@@ -10,7 +10,6 @@ public static class DTOMapper
     {
         return new UserResponseDTO
         {
-            UserID = userModel.UserID ?? 0,
             Id = userModel.UserID?.ToString() ?? "",
             Email = userModel.Email,
             FirstName = userModel.FirstName,
@@ -57,23 +56,10 @@ public static class DTOMapper
 
     public static PostResponseDTO ToPostResponseDTO(PostModel postModel)
     {
-        var images = new List<string>();
-        if (postModel.Images != null)
-        {
-            foreach (string image in postModel.Images)
-            {
-                if (!string.IsNullOrWhiteSpace(image))
-                {
-                    images.Add(image);
-                }
-            }
-        }
-
         return new PostResponseDTO
         {
             PostID = postModel.PostID ?? 0,
             Id = postModel.PostID?.ToString() ?? string.Empty,
-            UserID = postModel.UserID,
             CategoryID = postModel.CategoryID,
             PostTitle = postModel.PostTitle ?? string.Empty,
             PostDescription = postModel.PostDescription ?? string.Empty,
@@ -84,7 +70,7 @@ public static class DTOMapper
             Views = postModel.Views,
             CityId = postModel.CityId,
             AreaId = postModel.AreaId,
-            Images = images.ToArray()
+            Images = Array.Empty<string>() // Provide base empty array, images generally fetched separately
         };
     }
 
@@ -155,8 +141,7 @@ public static class DTOMapper
                 SellerId = post.SellerId,
                 Category = post.Category,
                 CategoryId = post.CategoryId,
-                Image = post.Image,
-                Images = post.Images,
+                Image = "", // Not returning images in search by default
                 Phone = post.Phone,
                 Description = post.Description,
                 CreatedAt = post.CreatedAt,

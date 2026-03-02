@@ -4,7 +4,6 @@ public class PostResponseDTO
 {
     public int PostID { get; set; }
     public string Id { get; set; } = string.Empty;
-    public int UserID { get; set; }
     public int CategoryID { get; set; }
     public string Category { get; set; } = string.Empty;
     public string PostTitle { get; set; } = string.Empty;

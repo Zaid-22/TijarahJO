@@ -1,8 +1,9 @@
 using System.Security.Claims;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
-using Models;
+using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.DataAccess;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Common;
@@ -19,7 +20,7 @@ namespace TijarahJoDBAPI.Features.Auth;
 [Route("api/v{version:apiVersion}/auth")]
 public class AuthController : ControllerBase
 {
-    private readonly TokenService _tokenService;
+    private readonly ITokenService _tokenService;
     private readonly IAuthCommandService _authCommands;
     private readonly IUserQueryHandler _userQueries;
     private readonly IRoleService _roles;
@@ -27,7 +28,7 @@ public class AuthController : ControllerBase
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
-        TokenService tokenService,
+        ITokenService tokenService,
         IAuthCommandService authCommands,
         IUserQueryHandler userQueries,
         IRoleService roles,
@@ -44,6 +45,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -85,6 +87,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("signup")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<AuthResponse>> Signup([FromBody] SignUpRequest request, CancellationToken cancellationToken)

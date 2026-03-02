@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
-using Models;
+using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.DataAccess;
 using TijarahJoDB.Application.Common;
 using TijarahJoDB.DAL.Entities;
@@ -18,17 +18,17 @@ public sealed class PostDataAccessAdapter : IPostDataAccess
         _dbContext = dbContext;
     }
 
-    public async Task<PostModel> GetPostByIDAsync(int? postId, CancellationToken cancellationToken = default)
+    public async Task<PostModel?> GetPostByIDAsync(int? postId, CancellationToken cancellationToken = default)
     {
         if (!postId.HasValue || postId.Value < 1)
         {
-            return null!;
+            return null;
         }
 
         PostEntity? entity = await _dbContext.Posts
             .AsNoTracking()
             .FirstOrDefaultAsync(item => item.PostID == postId.Value, cancellationToken);
-        return entity is null ? null! : ToModel(entity);
+        return entity is null ? null : ToModel(entity);
     }
 
     public async Task<int> AddPostAsync(PostModel post, CancellationToken cancellationToken = default)

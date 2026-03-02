@@ -1,4 +1,4 @@
-using Models;
+using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.DataAccess;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Services;
@@ -290,6 +290,16 @@ public sealed class AuthCommandServiceTests
                 _account.IsDeleted
                     ? null
                     : _account);
+
+        public async Task<UserModel?> GetUserByLoginCandidatesAsync(IReadOnlyList<string> candidates, CancellationToken ct = default)
+        {
+            foreach (var c in candidates)
+            {
+                var u = await GetUserByLoginAsync(c, ct);
+                if (u != null) return u;
+            }
+            return null;
+        }
 
         public Task<int> AddUserAsync(UserModel user, CancellationToken ct = default)
             => Task.FromResult(_saveResult ? 1 : 0);

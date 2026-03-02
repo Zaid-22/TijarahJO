@@ -1,6 +1,6 @@
 using System;
 
-namespace Models
+namespace TijarahJo.Domain.Models
 {
 	    public class CategoryModel
 	    {

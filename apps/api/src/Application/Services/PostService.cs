@@ -1,4 +1,4 @@
-using Models;
+using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.DataAccess;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.BLL;
@@ -16,7 +16,7 @@ public sealed class PostService : IPostService
 
     public async Task<Post?> FindAsync(int? postId, CancellationToken cancellationToken = default)
     {
-        PostModel postModel = await _posts.GetPostByIDAsync(postId, cancellationToken);
+        PostModel? postModel = await _posts.GetPostByIDAsync(postId, cancellationToken);
         return postModel == null ? null : new Post(postModel, Post.ModeType.Update);
     }
 

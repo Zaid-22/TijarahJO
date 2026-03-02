@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Models;
+using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDBAPI.Common.Services;
 using TijarahJoDBAPI.Common.Utils;
@@ -24,14 +24,14 @@ namespace TijarahJoDBAPI.Features.Posts
     public class UserPostsController : ControllerBase
     {
         private readonly ILogger<UserPostsController> _logger;
-        private readonly PostsFeedService _postsFeedService;
+        private readonly IPostsFeedService _postsFeedService;
         private readonly IPostReadService _postReads;
         private readonly IPostMutationService _postMutations;
         private readonly IPostStatusTransitionService _postStatusTransitions;
 
         public UserPostsController(
             ILogger<UserPostsController> logger,
-            PostsFeedService postsFeedService,
+            IPostsFeedService postsFeedService,
             IPostReadService postReads,
             IPostMutationService postMutations,
             IPostStatusTransitionService postStatusTransitions)
@@ -63,26 +63,8 @@ namespace TijarahJoDBAPI.Features.Posts
                 request.IncludeDeleted
             );
 
-            try
-            {
-                FeedResponse response = await _postsFeedService.FetchPostsFeedAsync(normalizedRequest, cancellationToken);
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Failed to fetch posts feed. page={Page}, limit={Limit}, includeDeleted={IncludeDeleted}",
-                    normalizedRequest.Page,
-                    normalizedRequest.Limit,
-                    normalizedRequest.IncludeDeleted
-                );
-
-                return Problem(
-                    statusCode: StatusCodes.Status500InternalServerError,
-                    title: "POSTS_FEED_FAILED",
-                    detail: "Failed to fetch posts feed.");
-            }
+            FeedResponse response = await _postsFeedService.FetchPostsFeedAsync(normalizedRequest, cancellationToken);
+            return Ok(response);
         }
 
         // --- Read ---
@@ -91,9 +73,9 @@ namespace TijarahJoDBAPI.Features.Posts
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<PostResponseDTO>> GetPostById(int id)
+        public async Task<ActionResult<PostResponseDTO>> GetPostById(int id, CancellationToken cancellationToken)
         {
-            PostReadResult result = await _postReads.GetByIdAsync(id, HttpContext.RequestAborted);
+            PostReadResult result = await _postReads.GetByIdAsync(id, cancellationToken);
             if (!result.Success || result.Post == null)
             {
                 return this.ToPostReadProblem(result.FailureReason, result.Message, "Failed to fetch post.");
@@ -106,9 +88,9 @@ namespace TijarahJoDBAPI.Features.Posts
         [HttpGet("Exists/{id:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<bool>> DoesPostExist(int id)
+        public async Task<ActionResult<bool>> DoesPostExist(int id, CancellationToken cancellationToken)
         {
-            PostExistsResult result = await _postReads.ExistsAsync(id, HttpContext.RequestAborted);
+            PostExistsResult result = await _postReads.ExistsAsync(id, cancellationToken);
             if (!result.Success)
             {
                 return this.ToPostReadProblem(result.FailureReason, result.Message, "Failed to check post existence.");
@@ -136,16 +118,17 @@ namespace TijarahJoDBAPI.Features.Posts
             });
         }
 
-        [HttpGet("user/{userId}")]
+        [HttpGet("user/{userId:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<IEnumerable<PostResponseDTO>>> GetUserPosts(
             int userId,
             [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 50)
+            [FromQuery] int pageSize = 50,
+            CancellationToken cancellationToken = default)
         {
-            PostReadCollectionResult result = await _postReads.GetByUserIdAsync(userId, pageNumber, pageSize, HttpContext.RequestAborted);
+            PostReadCollectionResult result = await _postReads.GetByUserIdAsync(userId, pageNumber, pageSize, cancellationToken);
             if (!result.Success)
             {
                 return this.ToPostReadProblem(result.FailureReason, result.Message, "Failed to fetch user posts.");
@@ -159,16 +142,17 @@ namespace TijarahJoDBAPI.Features.Posts
             return Ok(result.Posts.Select(DTOMapper.ToPostResponseDTO).ToList());
         }
 
-        [HttpGet("category/{categoryId}")]
+        [HttpGet("category/{categoryId:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<IEnumerable<PostResponseDTO>>> GetPostsByCategory(
             int categoryId,
             [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 50)
+            [FromQuery] int pageSize = 50,
+            CancellationToken cancellationToken = default)
         {
-            PostReadCollectionResult result = await _postReads.GetByCategoryIdAsync(categoryId, pageNumber, pageSize, HttpContext.RequestAborted);
+            PostReadCollectionResult result = await _postReads.GetByCategoryIdAsync(categoryId, pageNumber, pageSize, cancellationToken);
             if (!result.Success)
             {
                 return this.ToPostReadProblem(result.FailureReason, result.Message, "Failed to fetch category posts.");
@@ -329,26 +313,9 @@ namespace TijarahJoDBAPI.Features.Posts
 
         // --- Helpers ---
 
-        private static readonly DateTime SqlDateTimeMinUtc = new DateTime(1753, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-
         private static bool IsAdminUser(ClaimsPrincipal user)
         {
             return ApiControllerHelpers.IsAdminUser(user);
-        }
-
-        private static DateTime NormalizeSqlDateTime(DateTime value)
-        {
-            if (value == default || value < SqlDateTimeMinUtc)
-            {
-                return DateTime.UtcNow;
-            }
-
-            return value.Kind switch
-            {
-                DateTimeKind.Utc => value,
-                DateTimeKind.Local => value.ToUniversalTime(),
-                _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-            };
         }
     }
 }
