@@ -1,6 +1,6 @@
 using System;
 
-namespace Models;
+namespace TijarahJo.Domain.Models;
 
     public class PostModel
     {
@@ -46,6 +46,4 @@ namespace Models;
         /// <summary>FK to dbo.Areas. Null if no location set.</summary>
         public int? AreaId { get; set; }
 
-        // Added for image support
-        public List<string> Images { get; set; } = new List<string>();
     }

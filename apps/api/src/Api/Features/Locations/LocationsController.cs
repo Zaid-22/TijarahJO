@@ -18,6 +18,7 @@ public sealed class LocationsController : ControllerBase
     }
 
     [HttpGet("cities")]
+    [ResponseCache(Duration = 300)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<List<CityResponseDTO>>> GetCities(CancellationToken cancellationToken)
     {
@@ -30,6 +31,7 @@ public sealed class LocationsController : ControllerBase
     }
 
     [HttpGet("cities/{cityId:int}/areas")]
+    [ResponseCache(Duration = 300)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<List<AreaResponseDTO>>> GetAreasByCity(int cityId, CancellationToken cancellationToken)

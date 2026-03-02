@@ -18,17 +18,20 @@ public class PostImagesController : ControllerBase
     private readonly IPostImageQueryHandler _postImageQueries;
     private readonly IPostImageCommandService _postImageCommands;
     private readonly IPostImageFileStorageService _postImageStorage;
+    private readonly IImageModerationService _imageModeration;
 
     public PostImagesController(
         ILogger<PostImagesController> logger,
         IPostImageQueryHandler postImageQueries,
         IPostImageCommandService postImageCommands,
-        IPostImageFileStorageService postImageStorage)
+        IPostImageFileStorageService postImageStorage,
+        IImageModerationService imageModeration)
     {
         _logger = logger;
         _postImageQueries = postImageQueries;
         _postImageCommands = postImageCommands;
         _postImageStorage = postImageStorage;
+        _imageModeration = imageModeration;
     }
 
     [HttpGet("")]
@@ -140,6 +143,13 @@ public class PostImagesController : ControllerBase
         if (request.File == null)
         {
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Image file is required.");
+        }
+
+        ModerationResult moderationResult = await _imageModeration.CheckImageAsync(request.File);
+        if (moderationResult.IsFlagged)
+        {
+            _logger.LogWarning("User {UserId} attempted to upload a flagged image (Adult: {Adult}, Violence: {Violence}).", currentUserId, moderationResult.RawAdult, moderationResult.RawViolence);
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Image rejected by moderation filters (inappropriate content detected).");
         }
 
         StoredPostImageFile storedFile;

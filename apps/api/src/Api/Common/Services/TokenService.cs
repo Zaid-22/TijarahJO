@@ -10,7 +10,7 @@ namespace TijarahJoDBAPI.Common.Services;
 /// <summary>
 /// Service for generating and validating JWT tokens
 /// </summary>
-public class TokenService
+public class TokenService : ITokenService
 {
     private readonly JwtOptions _jwtOptions;
 

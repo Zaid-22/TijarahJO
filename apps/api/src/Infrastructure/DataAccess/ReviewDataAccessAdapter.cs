@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
-using Models;
+using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.DataAccess;
 using TijarahJoDB.Application.Common;
 using TijarahJoDB.DAL.Entities;

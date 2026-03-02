@@ -1,4 +1,4 @@
-using Models;
+using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.DataAccess;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Services;
@@ -162,6 +162,9 @@ public sealed class UserQueryHandlerTests
             => Task.FromResult(NextFindUser);
 
         public Task<UserModel?> GetUserByLoginAsync(string login, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+
+        public Task<UserModel?> GetUserByLoginCandidatesAsync(IReadOnlyList<string> candidates, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
         public Task<int> AddUserAsync(UserModel user, CancellationToken cancellationToken = default)

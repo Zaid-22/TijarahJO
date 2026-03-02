@@ -2,7 +2,7 @@ using System.Globalization;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Abstractions.DataAccess;
 using TijarahJoDB.Application.Common;
-using Models;
+using TijarahJo.Domain.Models;
 
 namespace TijarahJoDB.Application.Services;
 

@@ -1,4 +1,4 @@
-using Models;
+using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Services;
 using TijarahJoDB.BLL;

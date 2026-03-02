@@ -26,7 +26,7 @@ public sealed class FavoriteQueryHandler : IFavoriteQueryHandler
             };
         }
 
-        IReadOnlyList<Models.FavoriteModel> favorites = await _favorites.GetFavoritesByUserIdAsync(userId, cancellationToken);
+        IReadOnlyList<TijarahJo.Domain.Models.FavoriteModel> favorites = await _favorites.GetFavoritesByUserIdAsync(userId, cancellationToken);
         IReadOnlyList<string> favoritePostIds = favorites
             .Select(favorite => favorite.PostID.ToString(CultureInfo.InvariantCulture))
             .ToList();

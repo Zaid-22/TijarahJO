@@ -1,7 +1,7 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Models;
+using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.DataAccess;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Common;
@@ -19,14 +19,14 @@ public class TwoFactorController : ControllerBase
 {
     private readonly TwoFactorService _twoFactorService;
     private readonly IUserDataAccess _users;
-    private readonly TokenService _tokenService;
+    private readonly ITokenService _tokenService;
     private readonly IRoleService _roles;
     private readonly ILogger<TwoFactorController> _logger;
 
     public TwoFactorController(
         TwoFactorService twoFactorService,
         IUserDataAccess users,
-        TokenService tokenService,
+        ITokenService tokenService,
         IRoleService roles,
         ILogger<TwoFactorController> logger)
     {

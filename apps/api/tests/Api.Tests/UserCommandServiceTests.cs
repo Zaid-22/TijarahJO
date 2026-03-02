@@ -1,4 +1,4 @@
-using Models;
+using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.DataAccess;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Services;
@@ -346,6 +346,9 @@ public sealed class UserCommandServiceTests
             => Task.FromResult(_account);
 
         public Task<UserModel?> GetUserByLoginAsync(string login, CancellationToken ct = default)
+            => Task.FromResult(_account);
+
+        public Task<UserModel?> GetUserByLoginCandidatesAsync(IReadOnlyList<string> candidates, CancellationToken ct = default)
             => Task.FromResult(_account);
 
         public Task<int> AddUserAsync(UserModel user, CancellationToken ct = default)

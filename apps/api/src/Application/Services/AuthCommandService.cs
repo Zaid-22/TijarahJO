@@ -1,4 +1,4 @@
-using Models;
+using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Common;
 using Microsoft.Extensions.Logging;
@@ -54,15 +54,7 @@ public sealed class AuthCommandService : IAuthCommandService
             loginCandidates.Add(normalizedPhone);
         }
 
-        UserModel? user = null;
-        foreach (string candidate in loginCandidates)
-        {
-            user = await _users.GetUserByLoginAsync(candidate, cancellationToken);
-            if (user != null && user.UserID != null)
-            {
-                break;
-            }
-        }
+        UserModel? user = await _users.GetUserByLoginCandidatesAsync(loginCandidates, cancellationToken);
 
         // Always run a hash comparison to prevent timing-based user enumeration.
         // When user is null, compare against a dummy hash so both paths take equal time.

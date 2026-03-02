@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Models;
+using TijarahJo.Domain.Models;
 using TijarahJoDB.BLL;
 
 namespace TijarahJoDB.Application.Abstractions.Services;

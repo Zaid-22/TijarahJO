@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Caching.Memory;
-using Models;
+using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.BLL;
 

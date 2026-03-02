@@ -19,7 +19,7 @@ public sealed class TwoFactorService
     private readonly byte[] _secretEncryptionKey;
     private readonly byte[] _challengeSigningKey;
 
-    public TwoFactorService(IOptions<TwoFactorOptions> optionsAccessor, JwtOptions jwtOptions)
+    public TwoFactorService(IOptions<TwoFactorOptions> optionsAccessor, JwtOptions jwtOptions, ILogger<TwoFactorService> logger)
     {
         _options = optionsAccessor.Value ?? new TwoFactorOptions();
 
@@ -33,6 +33,11 @@ public sealed class TwoFactorService
         string challengeKeyMaterial = string.IsNullOrWhiteSpace(_options.ChallengeSigningKey)
             ? $"twofactor-challenge::{baseKey}"
             : _options.ChallengeSigningKey.Trim();
+
+        if (string.IsNullOrWhiteSpace(_options.SecretEncryptionKey))
+            logger.LogWarning("TwoFactor:SecretEncryptionKey is not configured. Deriving from JWT signing key. Set a dedicated key for production.");
+        if (string.IsNullOrWhiteSpace(_options.ChallengeSigningKey))
+            logger.LogWarning("TwoFactor:ChallengeSigningKey is not configured. Deriving from JWT signing key. Set a dedicated key for production.");
 
         _secretEncryptionKey = SHA256.HashData(Encoding.UTF8.GetBytes(secretKeyMaterial));
         _challengeSigningKey = SHA256.HashData(Encoding.UTF8.GetBytes(challengeKeyMaterial));

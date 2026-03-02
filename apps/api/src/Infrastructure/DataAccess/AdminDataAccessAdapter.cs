@@ -157,7 +157,7 @@ public sealed class AdminDataAccessAdapter : IAdminDataAccess
             .Where(r => r.ReviewedUserID == userId)
             .OrderByDescending(r => r.CreatedAt)
             .Take(10)
-            .Select(r => new Models.ReviewModel(
+            .Select(r => new TijarahJo.Domain.Models.ReviewModel(
                 r.ReviewID,
                 r.ReviewerID,
                 r.ReviewedUserID,
@@ -166,7 +166,7 @@ public sealed class AdminDataAccessAdapter : IAdminDataAccess
                 r.CreatedAt))
             .ToListAsync(cancellationToken);
 
-        var userModel = new Models.UserModel(
+        var userModel = new TijarahJo.Domain.Models.UserModel(
             userEntity.UserID,
             userEntity.HashedPassword,
 

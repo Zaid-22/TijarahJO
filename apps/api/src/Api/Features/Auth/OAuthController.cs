@@ -3,7 +3,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
-using Models;
+using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Common;
 using TijarahJoDBAPI.Common.Services;
@@ -22,14 +22,14 @@ public class OAuthController : ControllerBase
     private readonly GoogleAuthService _googleAuthService;
     private readonly IAuthCommandService _authCommands;
     private readonly TwoFactorService _twoFactorService;
-    private readonly TokenService _tokenService;
+    private readonly ITokenService _tokenService;
     private readonly ILogger<OAuthController> _logger;
 
     public OAuthController(
         GoogleAuthService googleAuthService,
         IAuthCommandService authCommands,
         TwoFactorService twoFactorService,
-        TokenService tokenService,
+        ITokenService tokenService,
         ILogger<OAuthController> logger)
     {
         _googleAuthService = googleAuthService;

@@ -20,9 +20,24 @@ import { api } from "../../../services/api";
 import { AdminDashboardStats } from "../../../services/api/admin";
 import { logger } from "../../../shared/lib/logger";
 import { LoadingState } from "../../../shared/ui/loading-state";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
 
 export function AdminDashboard() {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
+  const [analytics, setAnalytics] = useState<{
+    weeklyUsers: any[];
+    categoryData: any[];
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -31,8 +46,12 @@ export function AdminDashboard() {
       try {
         setIsLoading(true);
         setLoadError(null);
-        const data = await api.admin.getStats();
-        setStats(data);
+        const [statsData, analyticsData] = await Promise.all([
+          api.admin.getStats(),
+          api.admin.getAnalytics(),
+        ]);
+        setStats(statsData);
+        setAnalytics(analyticsData);
       } catch (error) {
         logger.warn("Failed to fetch dashboard stats", error);
         setLoadError("Failed to load dashboard stats.");
@@ -146,28 +165,156 @@ export function AdminDashboard() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-foreground">Dashboard Overview</h1>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((stat) => (
-          <Card
-            key={stat.title}
-            className="border-none shadow-sm hover:shadow-md transition-shadow"
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.title}
-              </CardTitle>
-              <div className={`p-2 rounded-full ${stat.bgColor}`}>
-                <stat.icon className={`w-4 h-4 ${stat.color}`} />
+      {/* 8 KPI Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {statCards.map((card) => (
+          <Card key={card.title} className="hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {card.title}
+                  </p>
+                  <h3 className="text-2xl font-bold mt-2">{card.value}</h3>
+                </div>
+                <div className={`p-3 rounded-full ${card.bgColor}`}>
+                  <card.icon className={`w-5 h-5 ${card.color}`} />
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
             </CardContent>
           </Card>
         ))}
       </div>
 
+      {/* Analytics Charts */}
+      {analytics && (
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Active Users Chart (7 Days) */}
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">
+                Signups (Last 7 Days)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[250px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={analytics.weeklyUsers}
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      opacity={0.3}
+                    />
+                    <XAxis
+                      dataKey="day"
+                      axisLine={false}
+                      tickLine={false}
+                      fontSize={12}
+                      tickMargin={10}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      fontSize={12}
+                      allowDecimals={false}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: "8px",
+                        border: "1px solid #e2e8f0",
+                        boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                      }}
+                      cursor={{
+                        stroke: "#94a3b8",
+                        strokeWidth: 1,
+                        strokeDasharray: "3 3",
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="count"
+                      name="New Users"
+                      stroke="#10b981"
+                      strokeWidth={3}
+                      dot={{
+                        r: 4,
+                        fill: "#10b981",
+                        strokeWidth: 2,
+                        stroke: "#fff",
+                      }}
+                      activeDot={{ r: 6 }}
+                      animationDuration={1500}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Listings by Category Chart */}
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">
+                Top Categories
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[250px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={analytics.categoryData}
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      opacity={0.3}
+                    />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      fontSize={11}
+                      tickMargin={10}
+                      tickFormatter={(value) =>
+                        value.length > 10
+                          ? `${value.substring(0, 10)}...`
+                          : value
+                      }
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      fontSize={12}
+                      allowDecimals={false}
+                    />
+                    <Tooltip
+                      cursor={{ fill: "#f1f5f9" }}
+                      contentStyle={{
+                        borderRadius: "8px",
+                        border: "1px solid #e2e8f0",
+                        boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                      }}
+                    />
+                    <Bar
+                      dataKey="count"
+                      name="Active Listings"
+                      fill="#8b5cf6"
+                      radius={[4, 4, 0, 0]}
+                      animationDuration={1500}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Second Row: System Overview & Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Admin Activity */}
         <Card className="border-none shadow-sm">
