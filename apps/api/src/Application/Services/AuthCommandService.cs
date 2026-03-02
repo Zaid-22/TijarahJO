@@ -80,7 +80,7 @@ public sealed class AuthCommandService : IAuthCommandService
         {
             try
             {
-                user.HashedPassword = PasswordHelper.HashPassword(command.Password);
+                user = user with { HashedPassword = PasswordHelper.HashPassword(command.Password) };
                 await _users.UpdateUserAsync(user, user.UserID.Value, cancellationToken);
             }
             catch (Exception)
@@ -178,7 +178,7 @@ public sealed class AuthCommandService : IAuthCommandService
             {
                 return Failure(AuthCommandFailureReason.PersistenceFailed, "Error creating user account. Please try again.");
             }
-            user.UserID = newUserId;
+            user = user with { UserID = newUserId };
 
             string? roleName = await ResolveRoleNameForTokenAsync(user.RoleID, cancellationToken);
             if (string.IsNullOrWhiteSpace(roleName))
@@ -413,7 +413,7 @@ public sealed class AuthCommandService : IAuthCommandService
             return userStateFailure;
         }
 
-        await TryHydrateGoogleProfileAsync(
+        user = await TryHydrateGoogleProfileAsync(
             user,
             command.FirstName,
             command.LastName,
@@ -491,7 +491,7 @@ public sealed class AuthCommandService : IAuthCommandService
         return role.RoleName.Trim();
     }
 
-    private async Task TryHydrateGoogleProfileAsync(
+    private async Task<UserModel> TryHydrateGoogleProfileAsync(
         UserModel user,
         string? firstName,
         string? lastName,
@@ -502,13 +502,13 @@ public sealed class AuthCommandService : IAuthCommandService
 
         if (string.IsNullOrWhiteSpace(user.FirstName) && !string.IsNullOrWhiteSpace(firstName))
         {
-            user.FirstName = firstName.Trim();
+            user = user with { FirstName = firstName.Trim() };
             changed = true;
         }
 
         if (string.IsNullOrWhiteSpace(user.LastName) && !string.IsNullOrWhiteSpace(lastName))
         {
-            user.LastName = lastName.Trim();
+            user = user with { LastName = lastName.Trim() };
             changed = true;
         }
 
@@ -516,13 +516,13 @@ public sealed class AuthCommandService : IAuthCommandService
             !string.IsNullOrWhiteSpace(avatar) &&
             ValidationHelpers.IsValidAvatarUrl(avatar))
         {
-            user.Avatar = avatar.Trim();
+            user = user with { Avatar = avatar.Trim() };
             changed = true;
         }
 
         if (!changed)
         {
-            return;
+            return user;
         }
 
         try
@@ -533,6 +533,8 @@ public sealed class AuthCommandService : IAuthCommandService
         {
             _logger.LogDebug(ex, "Google profile hydration failed for user {UserId}.", user.UserID);
         }
+
+        return user;
     }
 
     private static string ResolveGoogleFirstName(string? firstName, string? email)

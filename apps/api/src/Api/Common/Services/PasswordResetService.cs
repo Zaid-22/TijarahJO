@@ -226,7 +226,7 @@ public sealed class PasswordResetService : IPasswordResetService
             );
         }
 
-        user.HashedPassword = PasswordHelper.HashPassword(submittedPassword);
+        user = user with { HashedPassword = PasswordHelper.HashPassword(submittedPassword) };
         bool updated = await _users.UpdateUserAsync(user, user.UserID.Value, cancellationToken);
         if (!updated)
         {

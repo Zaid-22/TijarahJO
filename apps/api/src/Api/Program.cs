@@ -222,6 +222,7 @@ builder.Services.AddTijarahJoSwagger();
 
 // API-layer services
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddSingleton<ITokenBlacklistService, MemoryTokenBlacklistService>();
 builder.Services.AddScoped<IPostsFeedService, PostsFeedService>();
 builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
 builder.Services.AddScoped<IPasswordResetEmailSender, PasswordResetEmailSender>();
@@ -290,6 +291,7 @@ if (featureFlags.EnableRateLimiting)
     app.UseRateLimiter();
 
 app.UseAuthentication();
+app.UseTijarahJoTokenBlacklist();
 app.UseResponseCaching();
 app.UseTijarahJoCsrfMiddleware();
 app.UseAuthorization();

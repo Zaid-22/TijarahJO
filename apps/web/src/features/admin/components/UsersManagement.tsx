@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Ban, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
@@ -38,6 +38,7 @@ export function UsersManagement() {
     id: string;
     displayName: string;
   } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const filteredUsers = useMemo(
     () =>
@@ -193,6 +194,30 @@ export function UsersManagement() {
     }
   };
 
+  const handleBulkAction = async (status: "banned" | "active") => {
+    if (selectedIds.size === 0) return;
+    try {
+      const success = await api.admin.bulkUpdateUserStatus(
+        Array.from(selectedIds),
+        status,
+      );
+      if (success) {
+        setUsers((prev) =>
+          prev.map((u) => (selectedIds.has(u.id) ? { ...u, status } : u)),
+        );
+        toast.success(
+          `${selectedIds.size} users ${status === "banned" ? "banned" : "activated"}`,
+        );
+        setSelectedIds(new Set());
+      } else {
+        toast.error("Bulk action failed");
+      }
+    } catch (error) {
+      logger.warn("[UsersManagement] Bulk action failed", error);
+      toast.error("Error performing bulk action");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between gap-4 items-center">
@@ -238,7 +263,42 @@ export function UsersManagement() {
           });
         }}
         formatJoinedDate={formatJoinedDate}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
       />
+
+      {/* Floating Bulk Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-lg border border-border bg-card px-5 py-3 shadow-xl">
+          <span className="text-sm font-medium text-foreground">
+            {selectedIds.size} selected
+          </span>
+          <div className="h-4 w-px bg-border" />
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => void handleBulkAction("banned")}
+          >
+            <Ban className="w-3.5 h-3.5 mr-1.5" />
+            Bulk Ban
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void handleBulkAction("active")}
+          >
+            <UserCheck className="w-3.5 h-3.5 mr-1.5" />
+            Bulk Activate
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            Clear
+          </Button>
+        </div>
+      )}
 
       <CreateUserDialog
         open={isCreateOpen}

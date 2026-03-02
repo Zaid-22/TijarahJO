@@ -48,6 +48,12 @@ public static class MiddlewareExtensions
         return app;
     }
 
+    public static WebApplication UseTijarahJoTokenBlacklist(this WebApplication app)
+    {
+        app.UseMiddleware<TokenBlacklistMiddleware>();
+        return app;
+    }
+
     public static WebApplication UseTijarahJoCsrfMiddleware(this WebApplication app)
     {
         app.Use(async (context, next) =>

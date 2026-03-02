@@ -2,7 +2,7 @@ using System;
 
 namespace TijarahJo.Domain.Models;
 
-public class FavoriteModel
+public record FavoriteModel
 {
     public FavoriteModel(int? favoriteId, int userId, int postId, DateTime createdAt)
     {
@@ -12,8 +12,8 @@ public class FavoriteModel
         CreatedAt = createdAt;
     }
 
-    public int? FavoriteID { get; set; }
-    public int UserID { get; set; }
-    public int PostID { get; set; }
-    public DateTime CreatedAt { get; set; }
+    public int? FavoriteID { get; init; }
+    public int UserID { get; init; }
+    public int PostID { get; init; }
+    public DateTime CreatedAt { get; init; }
 }

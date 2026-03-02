@@ -96,13 +96,16 @@ public sealed class UserQueryHandler : IUserQueryHandler
             return clone;
         }
 
-        clone.Email = string.Empty;
-        clone.Phone = null;
-        clone.Bio = null;
-        clone.Avatar = null;
-        clone.Status = 0;
-        clone.RoleID = 0;
-        clone.IsDeleted = false;
+        clone = clone with
+        {
+            Email = string.Empty,
+            Phone = null,
+            Bio = null,
+            Avatar = null,
+            Status = 0,
+            RoleID = 0,
+            IsDeleted = false
+        };
         return clone;
     }
 

@@ -80,7 +80,7 @@ public sealed class MessageService : IMessageService
             return false;
         }
 
-        message.MessageModel.MessageId = messageId;
+        message.MessageModel = message.MessageModel with { MessageId = messageId };
         return true;
     }
 

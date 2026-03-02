@@ -2,7 +2,7 @@ using System;
 
 namespace TijarahJo.Domain.Models;
 
-    public class PostImageModel
+    public record PostImageModel
     {
         public PostImageModel(int? postimageid, int postid, string postimageurl, DateTime uploadedat, bool isdeleted)
         {
@@ -13,9 +13,9 @@ namespace TijarahJo.Domain.Models;
             this.IsDeleted = isdeleted;
         }
 
-        public int? PostImageID { get; set; }
-        public int PostID { get; set; }
-        public string PostImageURL { get; set; }
-        public DateTime UploadedAt { get; set; }
-        public bool IsDeleted { get; set; }
+        public int? PostImageID { get; init; }
+        public int PostID { get; init; }
+        public string PostImageURL { get; init; }
+        public DateTime UploadedAt { get; init; }
+        public bool IsDeleted { get; init; }
     }

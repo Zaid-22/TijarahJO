@@ -39,7 +39,7 @@ public sealed class ReviewService : IReviewService
             return false;
         }
 
-        review.ReviewModel.ReviewID = reviewId;
+        review.ReviewModel = review.ReviewModel with { ReviewID = reviewId };
         return true;
     }
 }

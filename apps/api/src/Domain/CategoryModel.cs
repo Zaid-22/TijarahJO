@@ -2,7 +2,7 @@ using System;
 
 namespace TijarahJo.Domain.Models
 {
-	    public class CategoryModel
+	    public record CategoryModel
 	    {
 	        public CategoryModel(
 	            int? categoryid,
@@ -24,13 +24,13 @@ namespace TijarahJo.Domain.Models
 	            this.Image = image;
 	        }
 
-	        public int? CategoryID { get; set; }
-	        public string CategoryName { get; set; }
-	        public string? NameAr { get; set; }
-	        public string? Icon { get; set; }
-	        public string? Color { get; set; }
-	        public string? Image { get; set; }
-	        public DateTime CreatedAt { get; set; }
-	        public bool IsDeleted { get; set; }
+	        public int? CategoryID { get; init; }
+	        public string CategoryName { get; init; }
+	        public string? NameAr { get; init; }
+	        public string? Icon { get; init; }
+	        public string? Color { get; init; }
+	        public string? Image { get; init; }
+	        public DateTime CreatedAt { get; init; }
+	        public bool IsDeleted { get; init; }
 	    }
 }
