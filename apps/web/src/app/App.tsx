@@ -29,7 +29,7 @@ const ROUTES_WITH_LOCAL_HEADER = new Set([
   "admin",
   "profile",
   "settings",
-  "products",
+  "posts",
   "favorites",
   "chat",
   "sell",
@@ -37,7 +37,7 @@ const ROUTES_WITH_LOCAL_HEADER = new Set([
   "help",
   "terms",
   "privacy",
-  "product",
+  "post",
   "category",
   "seller",
 ]);
@@ -286,7 +286,12 @@ export default function App() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onSearchSubmit={() => {
-          setActiveSearchQuery(searchQuery.trim());
+          const normalizedQuery = searchQuery.trim();
+          setSearchQuery(normalizedQuery);
+          setActiveSearchQuery(normalizedQuery);
+          if (!normalizedQuery) {
+            return;
+          }
           navigate("/search");
         }}
         onShowFavorites={() => navigate("/favorites")}
@@ -309,12 +314,12 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+      <div className="min-h-screen bg-background text-foreground flex flex-col">
         {globalHeader}
         <div className="flex-1 flex items-center justify-center">
           <span
             aria-hidden="true"
-            className="h-8 w-8 rounded-full border-2 border-blue-200 border-t-blue-600 animate-spin"
+            className="h-8 w-8 rounded-full border-2 border-primary/20 border-t-primary animate-spin"
           />
         </div>
       </div>
@@ -322,10 +327,10 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-3 focus:py-2 focus:rounded-md focus:bg-primary focus:text-white"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-3 focus:py-2 focus:rounded-md focus:bg-primary focus:text-primary-foreground"
       >
         {language === "ar" ? "تخطي إلى المحتوى الرئيسي" : "Skip to main content"}
       </a>
@@ -337,7 +342,7 @@ export default function App() {
             <div className="min-h-[40vh] flex items-center justify-center">
               <span
                 aria-hidden="true"
-                className="h-7 w-7 rounded-full border-2 border-blue-200 border-t-blue-600 animate-spin"
+                className="h-7 w-7 rounded-full border-2 border-primary/20 border-t-primary animate-spin"
               />
             </div>
           }

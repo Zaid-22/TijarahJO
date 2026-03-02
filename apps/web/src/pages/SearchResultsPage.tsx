@@ -1,29 +1,27 @@
-import { Button } from "../shared/ui/button";
+import { SubpageHeader } from "../shared/ui/subpage-header";
+import { PageShell } from "../shared/ui/page-shell";
+import { MarketplaceDiscoveryControls } from "../features/marketplace/components/MarketplaceDiscoveryControls";
+import { MarketplaceQueryStatus } from "../features/marketplace/components/MarketplaceQueryStatus";
+import { MarketplaceActiveFilters } from "../features/marketplace/components/MarketplaceActiveFilters";
+import { MarketplaceResultsPagination } from "../features/marketplace/components/MarketplaceResultsPagination";
 
-import { ProductCard } from "../features/marketplace/components/ProductCard";
+import { PostResultsGrid } from "../features/marketplace/components/PostResultsGrid";
 
 import { Language } from "../translations";
-import { Product } from "../types";
-import { useEffect, useMemo, useState } from "react";
-import { useDebounce } from "../shared/hooks/useDebounce";
-import { api } from "../services/api";
-import { isActiveProduct, rankProductsBySearch } from "../lib/searchRanking";
-import { APP_CONFIG } from "../constants/appConfig";
-import { runSearchPipeline } from "../features/marketplace/search/searchPipeline";
+import { Post } from "../types";
+import { useCallback, useEffect, useState } from "react";
 import {
-  Search,
-  Grid3x3,
-  LayoutGrid,
-  List,
-  Columns,
-  ArrowLeft,
-} from "lucide-react";
+  rankMarketplacePosts,
+} from "../features/marketplace/search/marketplaceSearch";
+import { useMarketplaceSearchResults } from "../features/marketplace/search/useMarketplaceSearchResults";
+import { useMarketplaceDiscoveryState } from "../shared/hooks/useMarketplaceDiscoveryState";
+import { useMarketplaceSearchFilter } from "../shared/hooks/useMarketplaceSearchFilter";
 
 interface SearchResultsPageProps {
   searchQuery: string;
-  products: Product[];
+  posts: Post[];
   onBack: () => void;
-  onProductClick: (id: string) => void;
+  onPostClick: (id: string) => void;
   language: Language;
   favoriteIds: string[];
   onFavoriteToggle: (id: string) => void;
@@ -35,9 +33,9 @@ interface SearchResultsPageProps {
 
 export function SearchResultsPage({
   searchQuery: initialSearchQuery,
-  products,
+  posts,
   onBack,
-  onProductClick,
+  onPostClick,
   language,
   favoriteIds,
   onFavoriteToggle,
@@ -46,211 +44,173 @@ export function SearchResultsPage({
   currentUserDisplayName,
   currentUserId,
 }: SearchResultsPageProps) {
-  const [viewMode, setViewMode] = useState<
-    "grid-4" | "grid-3" | "grid-2" | "list"
-  >("grid-4");
   const [localSearchQuery, setLocalSearchQuery] = useState(initialSearchQuery);
-  const [searchResults, setSearchResults] = useState<Product[]>(() =>
-    products.filter(isActiveProduct),
+  const [appliedSearchQuery, setAppliedSearchQuery] = useState(
+    initialSearchQuery.trim(),
   );
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const debouncedSearchQuery = useDebounce(localSearchQuery, 300);
-  const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
-
-  useEffect(() => {
-    setLocalSearchQuery(initialSearchQuery);
-  }, [initialSearchQuery]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const query = debouncedSearchQuery.trim();
-
-    if (!query) {
-      setSearchResults(products.filter(isActiveProduct));
-      setSearchError(null);
-      setIsSearching(false);
-      return;
-    }
-
-    setIsSearching(true);
-    setSearchError(null);
-
-    void (async () => {
-      const { products: nextResults, error } = await runSearchPipeline({
-        request: () =>
-          api.search.search({
-            query,
-            status: "ACTIVE",
-            page: 1,
-            limit: APP_CONFIG.search.searchResultsLimit,
-            sortBy: "date",
-            sortOrder: "desc",
-          }),
-        buildFallbackProducts: () => rankProductsBySearch(products, query),
-        fallbackErrorMessage: "Search failed",
-        transformRemoteProducts: (remoteProducts) =>
-          rankProductsBySearch(remoteProducts, query),
-      });
-
-      if (cancelled) {
-        return;
+  const {
+    normalizedSearchQuery,
+    activeSearchFilters: rawSearchFilters,
+    clearSearch: clearAppliedSearch,
+  } = useMarketplaceSearchFilter({
+    language,
+    searchQuery: appliedSearchQuery,
+    setSearchQuery: setAppliedSearchQuery,
+  });
+  const clearSearch = useCallback(() => {
+    setLocalSearchQuery("");
+    clearAppliedSearch();
+    onSearch("");
+  }, [clearAppliedSearch, onSearch]);
+  const submitSearch = useCallback(() => {
+    const normalizedQuery = localSearchQuery.trim();
+    setAppliedSearchQuery(normalizedQuery);
+    onSearch(normalizedQuery);
+  }, [localSearchQuery, onSearch]);
+  const activeSearchFilters = rawSearchFilters.map((item) => ({
+    ...item,
+    onRemove: clearSearch,
+  }));
+  const buildFallbackPosts = useCallback(
+    ({
+      activePosts,
+      query,
+    }: {
+      activePosts: Post[];
+      query: string;
+    }) => {
+      if (!query) {
+        return activePosts;
       }
 
-      setSearchResults(nextResults);
-      setSearchError(error);
-      setIsSearching(false);
-    })();
+      return rankMarketplacePosts(activePosts, query);
+    },
+    [],
+  );
+  const transformRemotePosts = useCallback(
+    (remotePosts: Post[], query: string) =>
+      rankMarketplacePosts(remotePosts, query),
+    [],
+  );
+  const {
+    posts: filteredPosts,
+    isSearching,
+    error: searchError,
+  } = useMarketplaceSearchResults({
+    preset: "search-results",
+    query: normalizedSearchQuery,
+    sourcePosts: posts,
+    page: 1,
+    sortBy: "date",
+    sortOrder: "desc",
+    fallbackErrorMessage: "Search failed",
+    buildFallbackPosts,
+    transformRemotePosts,
+  });
+  const {
+    viewMode,
+    setViewMode,
+    displayedResults: displayedPosts,
+    shouldShowPagination,
+    pagination,
+  } = useMarketplaceDiscoveryState({
+    items: filteredPosts,
+    itemsPerPage: 12,
+  });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [debouncedSearchQuery, products]);
-
-  const filteredProducts = useMemo(() => {
-    const query = debouncedSearchQuery.trim();
-    return query ? searchResults : products.filter(isActiveProduct);
-  }, [debouncedSearchQuery, searchResults, products]);
+  useEffect(() => {
+    const normalizedInitialQuery = initialSearchQuery.trim();
+    setLocalSearchQuery(initialSearchQuery);
+    setAppliedSearchQuery(normalizedInitialQuery);
+  }, [initialSearchQuery]);
 
   return (
-    <div className="bg-gray-100 dark:bg-gray-900">
-      {/* Header */}
-      {/* Search Info - optional or keep? Global header has search bar. 
-          But "Search results for X" is useful content. 
-          Let's keep the Info bar but remove the Header component. 
-      */}
-      <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 mt-4">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={onBack}
-            className="text-[#0A4ABF] hover:bg-blue-50 transition-all duration-200 hover:scale-105 -ml-2 rounded-xl h-10 px-3"
-          >
-            <ArrowLeft
-              className={`w-5 h-5 ${language === "ar" ? "ml-2 rotate-180" : "mr-2"}`}
-            />
-            <span className="font-semibold">
-              {language === "ar" ? "العودة" : "Back"}
-            </span>
-          </Button>
-          <h1 className="text-black dark:text-white">
-            {language === "ar"
-              ? `نتائج البحث عن "${localSearchQuery}"`
-              : `Search results for "${localSearchQuery}"`}
-          </h1>
-        </div>
-      </div>
+    <PageShell>
+      <SubpageHeader
+        onBack={onBack}
+        isRTL={language === "ar"}
+        backLabel={language === "ar" ? "العودة" : "Back"}
+        showLogo={false}
+        title={
+          normalizedSearchQuery
+            ? language === "ar"
+              ? `نتائج البحث عن "${normalizedSearchQuery}"`
+              : `Search results for "${normalizedSearchQuery}"`
+            : language === "ar"
+              ? "نتائج البحث"
+              : "Search results"
+        }
+      />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {isSearching && (
-          <div className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-            {language === "ar" ? "جاري البحث..." : "Searching..."}
-          </div>
-        )}
-        {searchError && !isSearching && (
-          <div className="mb-4 text-sm text-red-600 dark:text-red-400">
-            {searchError}
-          </div>
-        )}
+        <MarketplaceQueryStatus
+          isLoading={isSearching}
+          error={searchError}
+          loadingLabel={language === "ar" ? "جاري البحث..." : "Searching..."}
+        />
 
-        {/* View Controls - Hidden on mobile, shown on larger screens */}
-        <div className="hidden sm:flex items-center justify-end mb-8">
-          <div className="flex items-center gap-1 bg-white dark:bg-gray-800 rounded-lg p-1 shadow-sm border border-gray-200 dark:border-gray-700">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setViewMode("grid-4")}
-              className={`h-9 w-9 p-0 ${viewMode === "grid-4" ? "bg-gray-100 dark:bg-gray-700" : ""}`}
-              title="4 columns"
-              aria-label="4 columns"
-            >
-              <Grid3x3 className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setViewMode("grid-3")}
-              className={`h-9 w-9 p-0 ${viewMode === "grid-3" ? "bg-gray-100 dark:bg-gray-700" : ""}`}
-              title="3 columns"
-              aria-label="3 columns"
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setViewMode("grid-2")}
-              className={`h-9 w-9 p-0 ${viewMode === "grid-2" ? "bg-gray-100 dark:bg-gray-700" : ""}`}
-              title="2 columns"
-              aria-label="2 columns"
-            >
-              <Columns className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setViewMode("list")}
-              className={`h-9 w-9 p-0 ${viewMode === "list" ? "bg-gray-100 dark:bg-gray-700" : ""}`}
-              title="List view"
-              aria-label="List view"
-            >
-              <List className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Product Grid */}
-        <div
-          className={`grid ${
-            viewMode === "grid-4"
-              ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-              : viewMode === "grid-3"
-                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-                : viewMode === "grid-2"
-                  ? "grid-cols-1 sm:grid-cols-2"
-                  : "grid-cols-1"
-          } gap-4 sm:gap-5 md:gap-6 transition-all duration-300`}
-        >
-          {filteredProducts.length === 0 ? (
-            <div className="col-span-full flex flex-col items-center justify-center py-16 px-4">
-              <Search className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
-              <h3 className="text-black dark:text-white mb-2">
-                {language === "ar" ? "لا توجد نتائج" : "No results found"}
-              </h3>
-                <p className="text-gray-500 dark:text-gray-400 text-center max-w-md">
-                  {language === "ar"
-                    ? `لم نتمكن من العثور على أي منتجات تطابق "${localSearchQuery}"`
-                    : `We couldn't find any products matching "${localSearchQuery}"`}
-                </p>
-              <Button
-                onClick={() => {
-                  setLocalSearchQuery("");
-                  onSearch("");
-                  onBack();
-                }}
-                className="mt-4 bg-[#0A4ABF] text-white hover:bg-[#083a95]"
-              >
-                {language === "ar" ? "العودة إلى السوق" : "Back to Marketplace"}
-              </Button>
-            </div>
-          ) : (
-            filteredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onProductClick={onProductClick}
-                viewMode={viewMode}
-                isFavorite={favoriteIdSet.has(product.id)}
-                onFavoriteToggle={onFavoriteToggle}
-                isAuthenticated={isAuthenticated}
-                currentUserId={isAuthenticated ? currentUserId : undefined}
-                currentUserDisplayName={currentUserDisplayName}
+        <MarketplaceDiscoveryControls
+          language={language}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          toolbarClassName="mb-8"
+          search={{
+            value: localSearchQuery,
+            placeholder: language === "ar" ? "ابحث في النتائج..." : "Search results...",
+            clearLabel: language === "ar" ? "مسح البحث" : "Clear search",
+            onChange: setLocalSearchQuery,
+            onSubmit: submitSearch,
+          }}
+          activeFilters={
+            activeSearchFilters.length > 0 ? (
+              <MarketplaceActiveFilters
+                title={language === "ar" ? "الفلاتر النشطة" : "Active filters"}
+                items={activeSearchFilters}
+                clearAllLabel={language === "ar" ? "مسح الكل" : "Clear all"}
+                onClearAll={clearSearch}
               />
-            ))
-          )}
-        </div>
+            ) : undefined
+          }
+        />
+
+        <PostResultsGrid
+          posts={displayedPosts}
+          viewMode={viewMode}
+          onPostClick={onPostClick}
+          favoriteIds={favoriteIds}
+          onFavoriteToggle={onFavoriteToggle}
+          isAuthenticated={isAuthenticated}
+          currentUserId={currentUserId}
+          currentUserDisplayName={currentUserDisplayName}
+          language={language}
+          animated
+          emptyState={{
+            title: language === "ar" ? "لا توجد نتائج" : "No results found",
+            description:
+              language === "ar"
+                ? `لم نتمكن من العثور على أي منشورات تطابق "${normalizedSearchQuery}"`
+                : `We couldn't find any posts matching "${normalizedSearchQuery}"`,
+            actionLabel: language === "ar" ? "العودة إلى السوق" : "Back to Marketplace",
+            onAction: () => {
+              clearSearch();
+              onBack();
+            },
+          }}
+        />
+        {shouldShowPagination ? (
+          <MarketplaceResultsPagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            isLoading={pagination.isLoading}
+            language={language}
+            onPrevious={pagination.onPrevious}
+            onNext={pagination.onNext}
+            className="mt-12 mb-8"
+            showLoadingIndicator
+          />
+        ) : null}
       </main>
-    </div>
+    </PageShell>
   );
 }
