@@ -486,4 +486,66 @@ public sealed class AdminDataAccessAdapter : IAdminDataAccess
         await _dbContext.SaveChangesAsync(cancellationToken);
         return true;
     }
+
+    // ── Reports ──
+
+    private static readonly string[] _reportStatusLabels = { "Pending", "Under Review", "Resolved", "Dismissed" };
+
+    public async Task<AdminReportListResult> GetReportsAsync(int? status = null, string? reportType = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
+    {
+        var query = _dbContext.Reports.AsNoTracking().AsQueryable();
+
+        if (status.HasValue)
+            query = query.Where(r => r.Status == status.Value);
+        if (!string.IsNullOrWhiteSpace(reportType))
+            query = query.Where(r => r.ReportType == reportType);
+
+        int totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await (from r in query
+                          join reporter in _dbContext.Users.AsNoTracking() on r.ReporterUserID equals reporter.UserID
+                          join resolver in _dbContext.Users.AsNoTracking() on r.ResolvedByUserID equals resolver.UserID into rg
+                          from resolver in rg.DefaultIfEmpty()
+                          orderby r.CreatedAt descending
+                          select new AdminReportItem
+                          {
+                              ReportID = r.ReportID,
+                              ReportType = r.ReportType,
+                              TargetID = r.TargetID,
+                              Reason = r.Reason,
+                              Description = r.Description,
+                              ReporterUserID = r.ReporterUserID,
+                              ReporterName = (reporter.FirstName + " " + (reporter.LastName ?? "")).Trim(),
+                              Status = r.Status,
+                              StatusLabel = r.Status >= 0 && r.Status < _reportStatusLabels.Length ? _reportStatusLabels[r.Status] : "Unknown",
+                              ResolvedByUserID = r.ResolvedByUserID,
+                              ResolvedByName = resolver != null ? (resolver.FirstName + " " + (resolver.LastName ?? "")).Trim() : null,
+                              ResolutionNotes = r.ResolutionNotes,
+                              CreatedAt = r.CreatedAt,
+                              ResolvedAt = r.ResolvedAt
+                          })
+                          .Skip((pageNumber - 1) * pageSize)
+                          .Take(pageSize)
+                          .ToListAsync(cancellationToken);
+
+        return new AdminReportListResult { Reports = items, TotalCount = totalCount };
+    }
+
+    public async Task<bool> UpdateReportStatusAsync(int reportId, int newStatus, int adminUserId, string? resolutionNotes = null, CancellationToken cancellationToken = default)
+    {
+        var entity = await _dbContext.Reports.FindAsync(new object[] { reportId }, cancellationToken);
+        if (entity == null) return false;
+
+        entity.Status = newStatus;
+        if (newStatus == 2 || newStatus == 3) // Resolved or Dismissed
+        {
+            entity.ResolvedByUserID = adminUserId;
+            entity.ResolvedAt = System.DateTime.UtcNow;
+        }
+        if (!string.IsNullOrWhiteSpace(resolutionNotes))
+            entity.ResolutionNotes = resolutionNotes;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
 }

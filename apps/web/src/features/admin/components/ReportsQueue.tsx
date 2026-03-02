@@ -1,0 +1,395 @@
+import { useEffect, useState } from "react";
+import {
+  Flag,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Eye,
+  Clock,
+} from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "../../../shared/ui/button";
+import { Badge } from "../../../shared/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../../shared/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "../../../shared/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../shared/ui/select";
+import { Textarea } from "../../../shared/ui/textarea";
+import { api } from "../../../services/api";
+import { AdminReportItem } from "../../../services/api/admin";
+import { logger } from "../../../shared/lib/logger";
+
+const STATUS_LABELS: Record<number, string> = {
+  0: "Pending",
+  1: "Under Review",
+  2: "Resolved",
+  3: "Dismissed",
+};
+
+const STATUS_COLORS: Record<number, string> = {
+  0: "bg-yellow-100 text-yellow-800",
+  1: "bg-blue-100 text-blue-800",
+  2: "bg-green-100 text-green-800",
+  3: "bg-gray-100 text-gray-800",
+};
+
+const STATUS_ICONS: Record<number, typeof Clock> = {
+  0: Clock,
+  1: Eye,
+  2: CheckCircle,
+  3: XCircle,
+};
+
+const REPORT_TYPE_COLORS: Record<string, string> = {
+  LISTING: "bg-violet-100 text-violet-800",
+  USER: "bg-blue-100 text-blue-800",
+  REVIEW: "bg-amber-100 text-amber-800",
+  CHAT: "bg-emerald-100 text-emerald-800",
+};
+
+export function ReportsQueue() {
+  const [reports, setReports] = useState<AdminReportItem[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+
+  // Action dialog
+  const [selectedReport, setSelectedReport] = useState<AdminReportItem | null>(
+    null,
+  );
+  const [actionDialogOpen, setActionDialogOpen] = useState(false);
+  const [newStatus, setNewStatus] = useState(0);
+  const [resolutionNotes, setResolutionNotes] = useState("");
+
+  const pageSize = 25;
+
+  const fetchReports = async () => {
+    try {
+      setIsLoading(true);
+      const statusParam =
+        statusFilter === "all" ? undefined : Number(statusFilter);
+      const typeParam = typeFilter === "all" ? undefined : typeFilter;
+      const result = await api.admin.getReports(
+        statusParam,
+        typeParam,
+        page,
+        pageSize,
+      );
+      setReports(result.reports);
+      setTotalCount(result.totalCount);
+    } catch (error) {
+      logger.warn("[ReportsQueue] Failed to fetch reports", error);
+      toast.error("Failed to load reports");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, statusFilter, typeFilter]);
+
+  const openActionDialog = (report: AdminReportItem) => {
+    setSelectedReport(report);
+    setNewStatus(report.status);
+    setResolutionNotes(report.resolutionNotes ?? "");
+    setActionDialogOpen(true);
+  };
+
+  const handleUpdateStatus = async () => {
+    if (!selectedReport) return;
+    try {
+      await api.admin.updateReportStatus(
+        selectedReport.reportID,
+        newStatus,
+        resolutionNotes || undefined,
+      );
+      toast.success("Report updated");
+      setActionDialogOpen(false);
+      await fetchReports();
+    } catch (error) {
+      logger.warn("[ReportsQueue] Update failed", error);
+      toast.error("Failed to update report");
+    }
+  };
+
+  const totalPages = Math.ceil(totalCount / pageSize);
+
+  if (isLoading && reports.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <span className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between gap-4 items-center">
+        <div className="flex items-center gap-3">
+          <Flag className="w-6 h-6 text-primary" />
+          <h1 className="text-2xl font-bold text-foreground">Reports Queue</h1>
+          <Badge variant="secondary">{totalCount} total</Badge>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
+        <div className="w-40">
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => {
+              setStatusFilter(v);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="0">Pending</SelectItem>
+              <SelectItem value="1">Under Review</SelectItem>
+              <SelectItem value="2">Resolved</SelectItem>
+              <SelectItem value="3">Dismissed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="w-40">
+          <Select
+            value={typeFilter}
+            onValueChange={(v) => {
+              setTypeFilter(v);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="LISTING">Listing</SelectItem>
+              <SelectItem value="USER">User</SelectItem>
+              <SelectItem value="REVIEW">Review</SelectItem>
+              <SelectItem value="CHAT">Chat</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {reports.length === 0 ? (
+        <Card className="border-none shadow-sm">
+          <CardContent className="py-12 text-center text-muted-foreground">
+            <AlertTriangle className="w-10 h-10 mx-auto mb-3 text-muted-foreground/50" />
+            No reports found matching your filters.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {reports.map((report) => {
+            const StatusIcon = STATUS_ICONS[report.status] ?? Clock;
+            return (
+              <Card
+                key={report.reportID}
+                className="border-none shadow-sm hover:shadow-md transition-shadow"
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Badge
+                        className={
+                          REPORT_TYPE_COLORS[report.reportType] ??
+                          "bg-gray-100 text-gray-800"
+                        }
+                      >
+                        {report.reportType}
+                      </Badge>
+                      <Badge
+                        className={
+                          STATUS_COLORS[report.status] ?? "bg-gray-100"
+                        }
+                      >
+                        <StatusIcon className="w-3 h-3 mr-1" />
+                        {STATUS_LABELS[report.status] ?? "Unknown"}
+                      </Badge>
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        #{report.reportID}
+                      </CardTitle>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openActionDialog(report)}
+                    >
+                      <Eye className="w-3.5 h-3.5 mr-1.5" /> Review
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Reason:</span>{" "}
+                      <span className="font-medium">{report.reason}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Target ID:</span>{" "}
+                      <span className="font-medium">{report.targetID}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Reporter:</span>{" "}
+                      <span className="font-medium">{report.reporterName}</span>
+                    </div>
+                  </div>
+                  {report.description && (
+                    <p className="mt-2 text-sm text-muted-foreground border-l-2 border-border pl-3">
+                      {report.description}
+                    </p>
+                  )}
+                  <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+                    <span>
+                      Filed: {new Date(report.createdAt).toLocaleString()}
+                    </span>
+                    {report.resolvedByName && (
+                      <span>Resolved by: {report.resolvedByName}</span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page === 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {page} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= totalPages}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
+      {/* Review/Action Dialog */}
+      <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Review Report #{selectedReport?.reportID}</DialogTitle>
+          </DialogHeader>
+          {selectedReport && (
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Type:</span>{" "}
+                  <span className="font-medium">
+                    {selectedReport.reportType}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Target ID:</span>{" "}
+                  <span className="font-medium">{selectedReport.targetID}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Reason:</span>{" "}
+                  <span className="font-medium">{selectedReport.reason}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Reporter:</span>{" "}
+                  <span className="font-medium">
+                    {selectedReport.reporterName}
+                  </span>
+                </div>
+              </div>
+              {selectedReport.description && (
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Description:</span>
+                  <p className="mt-1 border-l-2 border-border pl-3">
+                    {selectedReport.description}
+                  </p>
+                </div>
+              )}
+              <div>
+                <label className="text-sm font-medium text-foreground">
+                  Update Status
+                </label>
+                <Select
+                  value={String(newStatus)}
+                  onValueChange={(v) => setNewStatus(Number(v))}
+                >
+                  <SelectTrigger className="mt-1.5">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Pending</SelectItem>
+                    <SelectItem value="1">Under Review</SelectItem>
+                    <SelectItem value="2">Resolved</SelectItem>
+                    <SelectItem value="3">Dismissed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label
+                  htmlFor="resolution-notes"
+                  className="text-sm font-medium text-foreground"
+                >
+                  Resolution Notes
+                </label>
+                <Textarea
+                  id="resolution-notes"
+                  className="mt-1.5"
+                  placeholder="Add notes about how this was resolved..."
+                  value={resolutionNotes}
+                  onChange={(e) => setResolutionNotes(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setActionDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateStatus}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

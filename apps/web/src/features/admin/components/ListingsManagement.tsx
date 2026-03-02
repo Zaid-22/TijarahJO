@@ -1,6 +1,6 @@
 /* eslint-disable jsx-a11y/control-has-associated-label */
 import { useEffect, useState } from "react";
-import { Search, Eye, Ban, CheckCircle, Clock } from "lucide-react";
+import { Search, Eye, Ban, CheckCircle, Clock, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
@@ -8,6 +8,7 @@ import { api } from "../../../services/api";
 import { AdminPostListResult } from "../../../services/api/admin";
 import { ConfirmActionDialog } from "../../../shared/ui/confirm-action-dialog";
 import { logger } from "../../../shared/lib/logger";
+import { exportToCsv } from "../utils/exportCsv";
 
 export function ListingsManagement() {
   const [postsResult, setPostsResult] = useState<AdminPostListResult>({
@@ -123,6 +124,23 @@ export function ListingsManagement() {
         </h1>
 
         <div className="flex w-full sm:w-auto items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const rows = filteredPosts.map((p) => ({
+                ID: p.postId,
+                Title: p.title,
+                Price: p.price ?? "",
+                Status: p.status,
+                Category: p.categoryName,
+                Seller: p.sellerName,
+              }));
+              exportToCsv("listings.csv", rows);
+            }}
+          >
+            <Download className="w-4 h-4 mr-1.5" /> Export CSV
+          </Button>
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
             <Input

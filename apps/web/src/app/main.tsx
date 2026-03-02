@@ -75,6 +75,11 @@ const LocationsManagement = lazy(() =>
     default: m.LocationsManagement,
   })),
 );
+const ReportsQueue = lazy(() =>
+  import("../features/admin/components/ReportsQueue").then((m) => ({
+    default: m.ReportsQueue,
+  })),
+);
 const Toaster = lazy(() =>
   import("../shared/ui/sonner").then((m) => ({ default: m.Toaster })),
 );
@@ -117,6 +122,7 @@ ReactDOM.createRoot(rootElement).render(
                 <Route path="settings" element={<SystemSettingsPanel />} />
                 <Route path="chats" element={<ChatInspection />} />
                 <Route path="locations" element={<LocationsManagement />} />
+                <Route path="reports" element={<ReportsQueue />} />
               </Route>
             </Route>
             <Route path="/*" element={<App />} />

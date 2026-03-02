@@ -9,6 +9,7 @@ import {
   MessageSquare,
   MessageCircle,
   MapPin,
+  Flag,
   FileText,
   Settings2,
   LogOut,
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
 import { useAuth } from "../../../contexts/AuthContext";
+import { AdminGlobalSearch } from "./AdminGlobalSearch";
 
 export function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -34,6 +36,7 @@ export function AdminLayout() {
     { label: "Categories", path: "/admin/categories", icon: Tags },
     { label: "Roles", path: "/admin/roles", icon: Shield },
     { label: "Locations", path: "/admin/locations", icon: MapPin },
+    { label: "Reports", path: "/admin/reports", icon: Flag },
     { label: "Audit Log", path: "/admin/audit-log", icon: FileText },
     { label: "Settings", path: "/admin/settings", icon: Settings2 },
   ];
@@ -117,6 +120,17 @@ export function AdminLayout() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Top Bar - Desktop */}
+        <div className="hidden md:flex h-14 items-center border-b border-border bg-card px-6 gap-4">
+          <AdminGlobalSearch />
+          <div className="ml-auto text-xs text-muted-foreground">
+            Press{" "}
+            <kbd className="px-1.5 py-0.5 text-[10px] bg-muted border border-border rounded">
+              /
+            </kbd>{" "}
+            to search
+          </div>
+        </div>
         {/* Mobile Header */}
         <div className="flex h-16 items-center border-b border-border bg-card px-4 md:hidden">
           <Button
