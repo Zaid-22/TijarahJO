@@ -4,16 +4,17 @@
 
 :root {
   --font-size: 16px;
+  --font-family-sans: "Noto Sans Arabic", "Noto Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: #030213;
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.95 0.0058 264.53);
-  --secondary-foreground: #030213;
+  --primary: #0a4abf;
+  --primary-foreground: #ffffff;
+  --secondary: #3e7eff;
+  --secondary-foreground: #ffffff;
   --muted: #ececf0;
   --muted-foreground: #717182;
   --accent: #e9ebef;
@@ -44,25 +45,26 @@
 }
 
 .dark {
-  --background: #1a1a1a;
-  --foreground: oklch(0.985 0 0);
-  --card: #262626;
-  --card-foreground: oklch(0.985 0 0);
-  --popover: #1a1a1a;
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: #333333;
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: #333333;
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: #333333;
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: #333333;
-  --input: #333333;
-  --ring: oklch(0.439 0 0);
+  --background: #0b1220;
+  --foreground: #e6edf8;
+  --card: #121c2f;
+  --card-foreground: #eef4ff;
+  --popover: #111a2c;
+  --popover-foreground: #e6edf8;
+  --primary: #6ea8ff;
+  --primary-foreground: #081326;
+  --secondary: #3a76e8;
+  --secondary-foreground: #f0f5ff;
+  --muted: #18253a;
+  --muted-foreground: #99a8c3;
+  --accent: #1f2f49;
+  --accent-foreground: #e8f0ff;
+  --destructive: #e24c72;
+  --destructive-foreground: #ffffff;
+  --border: rgba(148, 163, 184, 0.24);
+  --input: #18253a;
+  --input-background: #18253a;
+  --ring: #8ab4ff;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
   --chart-1: oklch(0.488 0.243 264.376);
@@ -70,14 +72,14 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: #262626;
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: #333333;
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: #333333;
-  --sidebar-ring: oklch(0.439 0 0);
+  --sidebar: #101a2d;
+  --sidebar-foreground: #e6edf8;
+  --sidebar-primary: #5f9dff;
+  --sidebar-primary-foreground: #081326;
+  --sidebar-accent: #1b2940;
+  --sidebar-accent-foreground: #e8f0ff;
+  --sidebar-border: rgba(148, 163, 184, 0.24);
+  --sidebar-ring: #8ab4ff;
 }
 
 @theme inline {
@@ -128,8 +130,16 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-family-sans);
     margin: 0;
     padding: 0;
+  }
+
+  .dark body {
+    background-image:
+      radial-gradient(1100px 420px at 10% -12%, rgba(110, 168, 255, 0.18), transparent 58%),
+      radial-gradient(900px 360px at 92% -20%, rgba(58, 118, 232, 0.16), transparent 60%);
+    background-attachment: fixed;
   }
 }
 
@@ -213,6 +223,89 @@ html {
   animation: fadeIn 0.4s ease-out;
 }
 
+.animate-fade-in-soft {
+  animation: fadeIn 0.6s ease-out both;
+}
+
+.anim-delay-0 {
+  animation-delay: 0ms;
+}
+
+.anim-delay-100 {
+  animation-delay: 100ms;
+}
+
+.anim-delay-200 {
+  animation-delay: 200ms;
+}
+
+.anim-delay-300 {
+  animation-delay: 300ms;
+}
+
+.anim-delay-400 {
+  animation-delay: 400ms;
+}
+
+.anim-delay-500 {
+  animation-delay: 500ms;
+}
+
+.anim-delay-600 {
+  animation-delay: 600ms;
+}
+
+.anim-delay-700 {
+  animation-delay: 700ms;
+}
+
+.anim-delay-800 {
+  animation-delay: 800ms;
+}
+
+.anim-delay-900 {
+  animation-delay: 900ms;
+}
+
+.card-shadow-brand {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.card-shadow-brand:hover {
+  box-shadow: 0 12px 28px rgba(10, 74, 191, 0.15);
+}
+
+.min-h-content-60vh {
+  min-height: 60vh;
+}
+
+.min-h-content-70vh {
+  min-height: 70vh;
+}
+
+.max-h-dialog-90vh {
+  max-height: 90vh;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .animate-fade-in,
+  .animate-fade-in-soft {
+    animation: none !important;
+  }
+}
+
 /* Smooth transitions for interactive elements with scoped properties */
 button,
 a {
@@ -246,7 +339,7 @@ textarea {
 }
 
 .dark ::-webkit-scrollbar-track {
-  background: #262626;
+  background: #111a2b;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -255,7 +348,7 @@ textarea {
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #555;
+  background: #385272;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -263,7 +356,7 @@ textarea {
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #777;
+  background: #4d6e95;
 }
 
 /* Remove spinner arrows from number inputs */

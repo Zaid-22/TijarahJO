@@ -2,15 +2,13 @@ import { ChatPresence, Message } from "../../types";
 import { toPositiveIntegerId } from "../../utils/idValidation";
 import { apiRequest } from "./client";
 import { normalizeChatMessage, RawChatMessage } from "./chatNormalization";
-
-type PresencePayload = {
-  isOnline?: unknown;
-  IsOnline?: unknown;
-  lastSeenAtUtc?: unknown;
-  LastSeenAtUtc?: unknown;
-  statusText?: unknown;
-  StatusText?: unknown;
-};
+import {
+  parseChatMessagesPayload,
+  normalizePresenceTimestamp,
+  parsePresencePayload,
+  parseSentChatMessagePayload,
+} from "./schemas/chatSchema";
+import { asRecord, readString } from "./normalizers";
 
 function normalizeChatUserId(userId: unknown): number | undefined {
   return toPositiveIntegerId(userId);
@@ -20,25 +18,21 @@ function normalizeMessageContent(content: unknown): string {
   return typeof content === "string" ? content.trim() : "";
 }
 
-function mapChatMessages(payload: RawChatMessage[] | undefined): Message[] {
-  if (!Array.isArray(payload)) {
-    return [];
-  }
-
+function mapChatMessages(payload: RawChatMessage[]): Message[] {
   return payload
     .map((message) => normalizeChatMessage(message))
     .filter((message): message is Message => message !== null);
 }
 
 async function fetchChatMessages(endpoint: string): Promise<Message[]> {
-  const response = await apiRequest<RawChatMessage[]>(endpoint, {
+  const response = await apiRequest<unknown>(endpoint, {
     method: "GET",
   });
   if (!response.success) {
     return [];
   }
 
-  return mapChatMessages(response.data);
+  return mapChatMessages(parseChatMessagesPayload(response.data));
 }
 
 export const chatApi = {
@@ -61,38 +55,38 @@ export const chatApi = {
       };
     }
 
-    const response = await apiRequest<PresencePayload>(
+    const response = await apiRequest<unknown>(
       `/chat/presence/${normalizedOtherUserId}`,
       {
         method: "GET",
       },
     );
 
-    if (!response.success || !response.data) {
+    if (!response.success) {
+      return {
+        isOnline: false,
+      };
+    }
+
+    const presence = parsePresencePayload(response.data);
+    if (!presence) {
       return {
         isOnline: false,
       };
     }
 
     const isOnline = Boolean(
-      response.data.isOnline ??
-        response.data.IsOnline ??
+      presence.isOnline ??
+        presence.IsOnline ??
         false,
     );
-    const rawLastSeen = response.data.lastSeenAtUtc ?? response.data.LastSeenAtUtc;
-    const parsedLastSeen =
-      rawLastSeen === undefined || rawLastSeen === null || String(rawLastSeen).trim() === ""
-        ? undefined
-        : new Date(String(rawLastSeen));
+    const rawLastSeen = presence.lastSeenAtUtc ?? presence.LastSeenAtUtc;
 
     return {
       isOnline,
-      lastSeenAtUtc:
-        parsedLastSeen && !Number.isNaN(parsedLastSeen.getTime())
-          ? parsedLastSeen.toISOString()
-          : undefined,
+      lastSeenAtUtc: normalizePresenceTimestamp(rawLastSeen),
       statusText: String(
-        response.data.statusText ?? response.data.StatusText ?? "",
+        presence.statusText ?? presence.StatusText ?? "",
       ).trim() || undefined,
     };
   },
@@ -115,7 +109,7 @@ export const chatApi = {
     const normalizedPostId =
       postId === undefined ? undefined : normalizeChatUserId(postId);
 
-    const response = await apiRequest<RawChatMessage>("/chat/send", {
+    const response = await apiRequest<unknown>("/chat/send", {
       method: "POST",
       body: JSON.stringify({
         ReceiverId: normalizedReceiverId,
@@ -124,10 +118,33 @@ export const chatApi = {
       }),
     });
 
-    if (response.success && response.data) {
-      return normalizeChatMessage(response.data);
+    if (response.success) {
+      const message = parseSentChatMessagePayload(response.data);
+      return message ? normalizeChatMessage(message) : null;
     }
 
     return null;
+  },
+
+  uploadImage: async (file: File): Promise<string | null> => {
+    if (!(file instanceof File) || file.size <= 0) {
+      return null;
+    }
+
+    const formData = new FormData();
+    formData.append("File", file);
+
+    const response = await apiRequest<unknown>("/chat/upload-image", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.success) {
+      return null;
+    }
+
+    const payload = asRecord(response.data);
+    const uploadUrl = readString(payload?.url ?? payload?.Url);
+    return uploadUrl || null;
   },
 };

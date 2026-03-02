@@ -38,5 +38,5 @@ CORS_AllowedOrigins=http://localhost:5173,https://localhost:5173
 # ============================================
 
 # Backend API Base URL
-VITE_API_BASE_URL=http://localhost:5033/api
+VITE_API_BASE_URL=http://localhost:5033/api/v1
 

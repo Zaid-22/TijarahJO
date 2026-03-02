@@ -5,6 +5,7 @@ import type { EditProfileFormProfile } from "../../features/profile/types";
 import { api } from "../../services/api";
 import { deferredToast } from "../../utils/toast";
 import { resolveCurrentUserId } from "./appRoutesUtils";
+import { resolveCityId, resolveAreaId } from "../../services/api/posts/lookups";
 
 interface UseProfileSaveActionParams {
   navigate: NavigateFunction;
@@ -33,7 +34,9 @@ export function useProfileSaveAction({
       const trimmedArea = updatedProfile.area.trim();
       const trimmedBio = updatedProfile.bio.trim();
       const trimmedAvatar = (updatedProfile.avatar || "").trim();
-      const normalizedEmail = (updatedProfile.email || userProfile.email).trim();
+      const normalizedEmail = (
+        updatedProfile.email || userProfile.email
+      ).trim();
 
       if (!normalizedEmail) {
         const message = "Email is required to update your profile.";
@@ -60,13 +63,18 @@ export function useProfileSaveAction({
       }
 
       try {
+        const cityId = await resolveCityId(trimmedCity);
+        const areaId = cityId
+          ? await resolveAreaId(cityId, trimmedArea)
+          : undefined;
+
         await api.users.updateUser(resolvedUserId, {
           Email: normalizedEmail,
           FirstName: trimmedFirstName,
           LastName: trimmedLastName,
           Phone: trimmedPhone,
-          City: trimmedCity,
-          Area: trimmedArea,
+          CityId: cityId,
+          AreaId: areaId,
           Bio: trimmedBio || null,
           Avatar: trimmedAvatar || null,
         });
@@ -84,7 +92,8 @@ export function useProfileSaveAction({
           bio: trimmedBio,
           avatar: trimmedAvatar,
           location: `${trimmedCity}, ${trimmedArea}`,
-          name: `${trimmedFirstName} ${trimmedLastName}`.trim() || normalizedEmail,
+          name:
+            `${trimmedFirstName} ${trimmedLastName}`.trim() || normalizedEmail,
         });
 
         deferredToast.success("Profile updated");

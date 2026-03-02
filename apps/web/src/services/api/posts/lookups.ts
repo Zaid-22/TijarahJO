@@ -2,6 +2,7 @@ import { apiRequest } from "../client";
 import { toPositiveIntegerId } from "../../../utils/idValidation";
 import { getUserDisplayName, getUserIdentifier } from "./mappers";
 import { RawCategory, RawPost, RawPostImage, RawUserLookup } from "./types";
+import { locationsApi } from "../locations";
 
 export const POST_IMAGES_ENDPOINT = "/post-images";
 const USERS_ENDPOINT = "/users";
@@ -16,6 +17,10 @@ let postImageRowsByPostIdCache: Record<
 > = {};
 let categoriesCacheUpdatedAt = 0;
 let usersCacheUpdatedAt = 0;
+
+let citiesCache: Record<string, string> | null = null;
+let citiesCacheUpdatedAt = 0;
+const areasCacheByCityId: Record<string, Record<string, string>> = {};
 
 let usersAllEndpointAccessible: boolean | null = null;
 
@@ -46,11 +51,11 @@ function isDeletedImageFlag(value: unknown): boolean {
 }
 
 function extractPostImageUrl(imageRow: RawPostImage): string {
-  if (isDeletedImageFlag(imageRow?.IsDeleted)) {
+  if (isDeletedImageFlag(imageRow?.IsDeleted ?? imageRow?.isDeleted)) {
     return "";
   }
 
-  const imageUrlRaw = imageRow?.PostImageURL;
+  const imageUrlRaw = imageRow?.PostImageURL ?? imageRow?.postImageURL;
   if (typeof imageUrlRaw !== "string") {
     return "";
   }
@@ -261,6 +266,94 @@ async function ensureUsersCache(
   return usersCache;
 }
 
+async function ensureCitiesCache(
+  forceRefresh: boolean = false,
+): Promise<Record<string, string>> {
+  if (!forceRefresh && citiesCache && isCacheFresh(citiesCacheUpdatedAt)) {
+    return citiesCache;
+  }
+
+  const cities = await locationsApi.getCities();
+  const nextCache: Record<string, string> = {};
+  cities.forEach((city) => {
+    nextCache[String(city.cityId)] = city.cityName;
+  });
+
+  citiesCache = nextCache;
+  citiesCacheUpdatedAt = Date.now();
+  return citiesCache;
+}
+
+async function ensureAreasCache(
+  cityId: number,
+  forceRefresh: boolean = false,
+): Promise<Record<string, string>> {
+  const cityKey = String(cityId);
+  if (!forceRefresh && areasCacheByCityId[cityKey]) {
+    return areasCacheByCityId[cityKey];
+  }
+
+  const areas = await locationsApi.getAreasByCity(cityId);
+  const nextCache: Record<string, string> = {};
+  areas.forEach((area) => {
+    nextCache[String(area.areaId)] = area.areaName;
+  });
+
+  areasCacheByCityId[cityKey] = nextCache;
+  return areasCacheByCityId[cityKey];
+}
+
+export async function resolveCityId(
+  cityValue: unknown,
+  forceRefresh: boolean = false,
+): Promise<number | undefined> {
+  const numericCityId = toPositiveIntegerId(cityValue);
+  if (numericCityId) {
+    return numericCityId;
+  }
+
+  if (typeof cityValue !== "string" || !cityValue.trim()) {
+    return undefined;
+  }
+
+  const normalizedCity = cityValue.trim().toLowerCase();
+  const citiesCache = await ensureCitiesCache(forceRefresh);
+
+  for (const [id, name] of Object.entries(citiesCache)) {
+    if (name.toLowerCase() === normalizedCity || id === normalizedCity) {
+      return toPositiveIntegerId(id);
+    }
+  }
+
+  return undefined;
+}
+
+export async function resolveAreaId(
+  cityId: number,
+  areaValue: unknown,
+  forceRefresh: boolean = false,
+): Promise<number | undefined> {
+  const numericAreaId = toPositiveIntegerId(areaValue);
+  if (numericAreaId) {
+    return numericAreaId;
+  }
+
+  if (typeof areaValue !== "string" || !areaValue.trim()) {
+    return undefined;
+  }
+
+  const normalizedArea = areaValue.trim().toLowerCase();
+  const areasCache = await ensureAreasCache(cityId, forceRefresh);
+
+  for (const [id, name] of Object.entries(areasCache)) {
+    if (name.toLowerCase() === normalizedArea || id === normalizedArea) {
+      return toPositiveIntegerId(id);
+    }
+  }
+
+  return undefined;
+}
+
 export async function enrichPostsWithCategoryAndSeller(
   posts: RawPost[],
   forceRefresh: boolean = false,
@@ -284,10 +377,26 @@ export async function enrichPostsWithCategoryAndSeller(
         String(id) !== "0",
     );
 
-  const [resolvedCategories, resolvedUsers] = await Promise.all([
-    ensureCategoriesCache(forceRefresh),
-    ensureUsersCache(forceRefresh, postUserIds),
-  ]);
+  const postCityIds = Array.from(
+    new Set(
+      posts
+        .map((post) => post?.CityId ?? post?.cityId)
+        .map(Number)
+        .filter((id) => Number.isFinite(id) && id > 0),
+    ),
+  );
+
+  const [resolvedCategories, resolvedUsers, resolvedCities] = await Promise.all(
+    [
+      ensureCategoriesCache(forceRefresh),
+      ensureUsersCache(forceRefresh, postUserIds),
+      ensureCitiesCache(forceRefresh),
+    ],
+  );
+
+  await Promise.all(
+    postCityIds.map((cityId) => ensureAreasCache(cityId, forceRefresh)),
+  );
 
   return posts.map((post) => {
     const categoryId = post?.CategoryID ?? post?.categoryID ?? post?.CategoryId;
@@ -319,10 +428,38 @@ export async function enrichPostsWithCategoryAndSeller(
           : "Unknown";
     }
 
+    const cityId = post?.CityId ?? post?.cityId;
+    const areaId = post?.AreaId ?? post?.areaId;
+
+    let cityName =
+      typeof (post?.City ?? post?.city) === "string"
+        ? String(post?.City ?? post?.city).trim()
+        : "";
+    if (!cityName && cityId !== null && cityId !== undefined) {
+      cityName = resolvedCities[String(cityId)] || "";
+    }
+
+    let areaName =
+      typeof (post?.Area ?? post?.area) === "string"
+        ? String(post?.Area ?? post?.area).trim()
+        : "";
+    if (
+      !areaName &&
+      areaId !== null &&
+      areaId !== undefined &&
+      cityId !== null &&
+      cityId !== undefined
+    ) {
+      const cityAreas = areasCacheByCityId[String(cityId)] || {};
+      areaName = cityAreas[String(areaId)] || "";
+    }
+
     return {
       ...post,
       Category: categoryName,
       Seller: sellerName,
+      City: cityName || post?.City,
+      Area: areaName || post?.Area,
     };
   });
 }

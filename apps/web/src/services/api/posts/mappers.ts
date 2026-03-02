@@ -1,10 +1,11 @@
-import { Product } from "../../../types";
+import { Post } from "../../../types";
 import { toIsoStringOrNow } from "../shared";
 import { resolveUserDisplayName } from "../../../utils/userDisplayName";
 import { RawPost, RawUserLookup } from "./types";
-import { normalizeProductStatus } from "./status";
+import { normalizePostStatus } from "./status";
+import { APP_CONFIG } from "../../../constants/appConfig";
 
-export { normalizeProductStatus } from "./status";
+export { normalizePostStatus } from "./status";
 
 function normalizePostImages(rawImages: readonly unknown[]): string[] {
   const sanitized = rawImages
@@ -40,7 +41,11 @@ function normalizePostImages(rawImages: readonly unknown[]): string[] {
       }
     }
 
-    normalized.push(current);
+    let normalizedPath = current;
+    if (normalizedPath.startsWith("/")) {
+      normalizedPath = `${APP_CONFIG.backendHostUrl}${normalizedPath}`;
+    }
+    normalized.push(normalizedPath);
   }
 
   return normalized;
@@ -98,22 +103,28 @@ export function getUserDisplayName(
   );
 }
 
-export function transformPostModelToProduct(
+export function transformPostModelToPost(
   postModel: RawPost,
   images: string[] = [],
   fallbackIndex?: number,
-): Product {
+): Post {
   const backendImages = Array.isArray(postModel.Images)
     ? postModel.Images
     : Array.isArray(postModel.images)
       ? postModel.images
       : [];
-  const singleImage =
-    typeof postModel.PostImageURL === "string"
-      ? postModel.PostImageURL
-      : typeof postModel.postImageURL === "string"
-        ? postModel.postImageURL
-        : "";
+  const singleImageCandidates = [
+    postModel.PostImageURL,
+    postModel.postImageURL,
+    postModel.Image,
+    postModel.image,
+  ];
+  const singleImage = (
+    singleImageCandidates.find(
+      (value): value is string =>
+        typeof value === "string" && value.trim().length > 0,
+    ) ?? ""
+  ).trim();
   const preferredImages = images.length > 0 ? images : backendImages;
   const normalizedImages = normalizePostImages(
     preferredImages.length > 0 ? preferredImages : [singleImage],
@@ -217,6 +228,6 @@ export function transformPostModelToProduct(
         : typeof postModel.views === "number"
           ? postModel.views
           : 0,
-    status: normalizeProductStatus(postModel.Status ?? postModel.status),
+    status: normalizePostStatus(postModel.Status ?? postModel.status),
   };
 }

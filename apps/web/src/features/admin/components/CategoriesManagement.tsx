@@ -192,13 +192,13 @@ export function CategoriesManagement() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between gap-4 items-center">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-2xl font-bold text-foreground">
           Categories Management
         </h1>
 
         <div className="flex items-center gap-4 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search categories..."
               className="pl-10"
@@ -236,7 +236,7 @@ export function CategoriesManagement() {
           }
         }}
         title="Add New Category"
-        description="Create a new product category."
+        description="Create a new post category."
         saveLabel="Save Category"
         idPrefix="create-category"
         formData={formData}

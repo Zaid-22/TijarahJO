@@ -24,8 +24,8 @@ namespace TijarahJoDB.BLL
                 this.CreatedAt,
                 this.IsDeleted,
                 this.Views,
-                this.City,
-                this.Area
+                this.CityId,
+                this.AreaId
             );
 
         public int? PostID { get; set; }
@@ -37,9 +37,9 @@ namespace TijarahJoDB.BLL
         public int Status { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsDeleted { get; set; }
-        public int Views { get; set; }
-        public string? City { get; set; }
-        public string? Area { get; set; }
+        public long Views { get; set; }
+        public int? CityId { get; set; }
+        public int? AreaId { get; set; }
 
         public Post(PostModel postModel, ModeType mode = ModeType.AddNew)
         {
@@ -53,8 +53,8 @@ namespace TijarahJoDB.BLL
             this.CreatedAt = postModel.CreatedAt;
             this.IsDeleted = postModel.IsDeleted;
             this.Views = postModel.Views;
-            this.City = postModel.City;
-            this.Area = postModel.Area;
+            this.CityId = postModel.CityId;
+            this.AreaId = postModel.AreaId;
             this.Mode = mode;
         }
     }

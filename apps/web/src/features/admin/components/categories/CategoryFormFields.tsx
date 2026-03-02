@@ -52,7 +52,7 @@ export function CategoryFormFields({
             onChange={(e) => onChange({ ...formData, color: e.target.value })}
             className="w-12 p-1 h-10"
           />
-          <span className="text-sm text-gray-500">{formData.color}</span>
+          <span className="text-sm text-muted-foreground">{formData.color}</span>
         </div>
       </div>
 
@@ -88,7 +88,7 @@ export function CategoryFormFields({
           <img
             src={formData.image}
             alt="Category preview"
-            className="col-span-3 h-24 w-full rounded-md object-cover border border-gray-200"
+            className="col-span-3 h-24 w-full rounded-md border border-border object-cover"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.display = "none";
             }}

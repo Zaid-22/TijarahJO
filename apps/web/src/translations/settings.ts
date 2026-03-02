@@ -52,6 +52,7 @@ export type SettingsTranslations = {
   disabled: string;
   enabled: string;
   editProfile: string;
+  comingSoon: string;
 };
 
 export const settingsTranslations: Record<Language, SettingsTranslations> = {
@@ -107,6 +108,7 @@ export const settingsTranslations: Record<Language, SettingsTranslations> = {
     disabled: "Disabled",
     enabled: "Enabled",
     editProfile: "Edit Profile",
+    comingSoon: "Coming Soon",
   },
   ar: {
     settings: "الإعدادات",
@@ -160,5 +162,6 @@ export const settingsTranslations: Record<Language, SettingsTranslations> = {
     disabled: "معطل",
     enabled: "مفعل",
     editProfile: "تعديل الملف الشخصي",
+    comingSoon: "قريباً",
   },
 };

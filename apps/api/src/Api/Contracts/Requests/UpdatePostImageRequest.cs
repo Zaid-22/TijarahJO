@@ -1,0 +1,16 @@
+using System;
+using System.ComponentModel.DataAnnotations;
+
+namespace TijarahJoDBAPI.Contracts.Requests;
+
+public sealed class UpdatePostImageRequest
+{
+    [Range(1, int.MaxValue)]
+    public int PostID { get; set; }
+
+    [Required]
+    [MaxLength(4000)]
+    public string PostImageURL { get; set; } = string.Empty;
+
+    public DateTime? UploadedAt { get; set; }
+}

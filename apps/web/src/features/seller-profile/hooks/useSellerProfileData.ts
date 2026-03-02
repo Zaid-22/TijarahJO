@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api } from "../../../services/api";
-import { transformPostModelToProduct } from "../../../services/api/posts/mappers";
+import { transformPostModelToPost } from "../../../services/api/posts/mappers";
 import type { RawPost } from "../../../services/api/posts/types";
-import { Product } from "../../../types";
+import { Post } from "../../../types";
 import { toPositiveIntegerId } from "../../../utils/idValidation";
 import { normalizeSellerDisplayName } from "../../../utils/sellerDisplayName";
 import { resolveUserDisplayName } from "../../../utils/userDisplayName";
@@ -21,14 +21,14 @@ function isActiveListing(post: unknown): boolean {
   return status === "ACTIVE" && !isDeleted;
 }
 
-function normalizeListingToProduct(
+function normalizeListingToPost(
   post: unknown,
   fallbackIndex: number,
   sellerName: string,
   sellerId: string,
   fallbackLocation: string,
-): Product {
-  const normalized = transformPostModelToProduct(
+): Post {
+  const normalized = transformPostModelToPost(
     post as RawPost,
     [],
     fallbackIndex,
@@ -62,7 +62,7 @@ export interface SellerProfileState {
 }
 
 export function useSellerProfileData(userId: string | undefined) {
-  const [activeListings, setActiveListings] = useState<Product[]>([]);
+  const [activeListings, setActiveListings] = useState<Post[]>([]);
   const [reviews, setReviews] = useState<SellerReview[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sellerProfile, setSellerProfile] = useState<SellerProfileState | null>(
@@ -102,7 +102,7 @@ export function useSellerProfileData(userId: string | undefined) {
         const activePosts = (sellerResponse.posts || [])
           .filter(isActiveListing)
           .map((post, index: number) =>
-            normalizeListingToProduct(
+            normalizeListingToPost(
               post,
               index,
               sellerName,
@@ -137,8 +137,8 @@ export function useSellerProfileData(userId: string | undefined) {
         const userPosts = await api.posts.getUserPosts(String(userId));
         const activePosts = userPosts
           .filter(isActiveListing)
-          .map((post: Product, index: number) =>
-            normalizeListingToProduct(
+          .map((post: Post, index: number) =>
+            normalizeListingToPost(
               post,
               index,
               fallbackSellerName,

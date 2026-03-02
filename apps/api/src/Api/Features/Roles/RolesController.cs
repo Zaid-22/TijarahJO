@@ -1,187 +1,141 @@
-using Microsoft.AspNetCore.Mvc;
-using Models;
-using System.Collections.Generic;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.BLL;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using TijarahJoDB.Application.Abstractions.Services;
+using TijarahJoDBAPI.Common.Authorization;
+using TijarahJoDBAPI.Common.Utils;
+using TijarahJoDBAPI.Contracts.Requests;
+using TijarahJoDBAPI.Contracts.Responses;
 
-namespace TijarahJoDBAPI.Features.Roles
+namespace TijarahJoDBAPI.Features.Roles;
+
+[ApiController]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/roles")]
+public class RolesController : ControllerBase
 {
-	[ApiController]
-	[Route("api/roles")]
-	public class RolesController : ControllerBase
-	{
-		private readonly IRoleService _roles;
-		private static readonly DateTime SqlDateTimeMinUtc = new DateTime(1753, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    private readonly IRoleQueryHandler _roleQueries;
+    private readonly IRoleCommandService _roleCommands;
 
-		public RolesController(IRoleService roles)
-		{
-			_roles = roles;
-		}
+    public RolesController(IRoleQueryHandler roleQueries, IRoleCommandService roleCommands)
+    {
+        _roleQueries = roleQueries;
+        _roleCommands = roleCommands;
+    }
 
-		private static DateTime NormalizeSqlDateTime(DateTime value, DateTime? fallback = null)
-		{
-			if (value == default || value < SqlDateTimeMinUtc)
-			{
-				return fallback ?? DateTime.UtcNow;
-			}
+    [HttpGet("")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IEnumerable<RoleResponseDTO>>> GetAllRoles()
+    {
+        RoleListQueryResult result = await _roleQueries.GetAllAsync(HttpContext.RequestAborted);
+        if (!result.Success)
+        {
+            return this.ToRoleListQueryProblem(result, "Failed to fetch roles.");
+        }
 
-			return value.Kind switch
-			{
-				DateTimeKind.Utc => value,
-				DateTimeKind.Local => value.ToUniversalTime(),
-				_ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-			};
-		}
+        if (result.Roles.Count == 0)
+        {
+            return Ok(new List<RoleResponseDTO>());
+        }
 
-		[HttpGet("")]
-		[ProducesResponseType(StatusCodes.Status200OK)]
-		[ProducesResponseType(StatusCodes.Status404NotFound)]
-		public ActionResult<IEnumerable<RoleModel>> GetAllRoles()
-		{
-			var roles = _roles.GetAllRoles();
+        List<RoleResponseDTO> dtoList = result.Roles
+            .Select(DTOMapper.ToRoleResponseDTO)
+            .ToList();
 
-			if (roles == null || roles.Count == 0)
-			{
-				return Ok(new List<RoleModel>());
-			}
+        return Ok(dtoList);
+    }
 
-			var dtoList = new List<RoleModel>();
+    [HttpGet("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<RoleResponseDTO>> GetRoleById(int id)
+    {
+        RoleByIdQueryResult result = await _roleQueries.GetByIdAsync(id, HttpContext.RequestAborted);
+        if (!result.Success || result.Role == null)
+        {
+            return this.ToRoleByIdQueryProblem(result, "Failed to fetch role.");
+        }
 
-			foreach (var roleModel in roles)
-			{
-				if (roleModel.IsDeleted)
-				{
-					continue;
-				}
+        return Ok(DTOMapper.ToRoleResponseDTO(result.Role));
+    }
 
-				dtoList.Add(roleModel);
-			}
+    [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+    [HttpPost]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<RoleResponseDTO>> AddRole([FromBody] CreateRoleRequest request)
+    {
+        RoleCommandResult result = await _roleCommands.CreateAsync(
+            new CreateRoleCommand
+            {
+                RoleName = request.RoleName
+            },
+            HttpContext.RequestAborted
+        );
+        if (!result.Success || result.Role == null)
+        {
+            return this.ToRoleCommandProblem(result, "Role operation failed.");
+        }
 
-			return Ok(dtoList);
-		}
+        return CreatedAtAction(
+            nameof(GetRoleById),
+            new { id = result.Role.RoleID },
+            DTOMapper.ToRoleResponseDTO(result.Role.RoleModel)
+        );
+    }
 
-		[HttpGet("{id:int}")]
-		[ProducesResponseType(StatusCodes.Status200OK)]
-		[ProducesResponseType(StatusCodes.Status400BadRequest)]
-		[ProducesResponseType(StatusCodes.Status404NotFound)]
-		public ActionResult<RoleModel> GetRoleById(int id)
-		{
-			if (id < 1)
-			{
-				return BadRequest($"Not accepted ID {id}");
-			}
+    [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+    [HttpPut("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<RoleResponseDTO>> UpdateRole(int id, [FromBody] UpdateRoleRequest request)
+    {
+        RoleCommandResult result = await _roleCommands.UpdateAsync(
+            new UpdateRoleCommand
+            {
+                RoleId = id,
+                RoleName = request.RoleName
+            },
+            HttpContext.RequestAborted
+        );
+        if (!result.Success || result.Role == null)
+        {
+            return this.ToRoleCommandProblem(result, "Role operation failed.");
+        }
 
-			Role? role = _roles.Find(id);
+        return Ok(DTOMapper.ToRoleResponseDTO(result.Role.RoleModel));
+    }
 
-			if (role == null)
-			{
-				return NotFound($"Role with ID {id} not found.");
-			}
+    [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+    [HttpDelete("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> DeleteRole(int id)
+    {
+        RoleCommandResult result = await _roleCommands.DeleteAsync(id, HttpContext.RequestAborted);
+        if (!result.Success)
+        {
+            return this.ToRoleCommandProblem(result, "Role operation failed.");
+        }
 
-			RoleModel dto = role.RoleModel;
+        return Ok(new ApiMessageResponse { Message = $"Role with ID {id} has been deleted." });
+    }
 
-			return Ok(dto);
-		}
+    [HttpGet("Exists/{id:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<bool>> DoesRoleExist(int id)
+    {
+        RoleExistsQueryResult result = await _roleQueries.ExistsAsync(id, HttpContext.RequestAborted);
+        if (!result.Success)
+        {
+            return this.ToRoleExistsQueryProblem(result, "Failed to check role existence.");
+        }
 
-		[Authorize(Roles = "1")]
-		[HttpPost]
-		[ProducesResponseType(StatusCodes.Status201Created)]
-		[ProducesResponseType(StatusCodes.Status400BadRequest)]
-		public ActionResult<RoleModel> AddRole(RoleModel newRoleModel)
-		{
-			if (newRoleModel == null || string.IsNullOrWhiteSpace(newRoleModel.RoleName))
-			{
-				return BadRequest("Invalid Role data.");
-			}
-
-			newRoleModel.RoleName = newRoleModel.RoleName.Trim();
-			newRoleModel.CreatedAt = NormalizeSqlDateTime(newRoleModel.CreatedAt);
-			newRoleModel.IsDeleted = false;
-
-			Role role = _roles.Create(new RoleModel
-			(
-					newRoleModel.RoleID,
-					newRoleModel.RoleName,
-					newRoleModel.CreatedAt,
-					newRoleModel.IsDeleted
-			));
-
-			if (!_roles.Save(role))
-			{
-				return StatusCode(StatusCodes.Status500InternalServerError, "Error adding Role");
-			}
-
-			newRoleModel.RoleID = role.RoleID;
-
-			return CreatedAtAction(nameof(GetRoleById), new { id = newRoleModel.RoleID }, newRoleModel);
-		}
-
-		[Authorize(Roles = "1")]
-		[HttpPut("{id:int}")]
-		[ProducesResponseType(StatusCodes.Status200OK)]
-		[ProducesResponseType(StatusCodes.Status400BadRequest)]
-		[ProducesResponseType(StatusCodes.Status404NotFound)]
-		public ActionResult<RoleModel> UpdateRole(int id, RoleModel updatedRole)
-		{
-			if (id < 1 || updatedRole == null || string.IsNullOrWhiteSpace(updatedRole.RoleName))
-			{
-				return BadRequest("Invalid Role data.");
-			}
-
-			Role? role = _roles.Find(id);
-
-			if (role == null)
-			{
-				return NotFound($"Role with ID {id} not found.");
-			}
-
-			role.RoleName = updatedRole.RoleName.Trim();
-			role.CreatedAt = NormalizeSqlDateTime(role.CreatedAt, DateTime.UtcNow);
-
-			if (!_roles.Save(role))
-			{
-				return StatusCode(StatusCodes.Status500InternalServerError, "Error updating Role");
-			}
-
-			return Ok(role.RoleModel);
-		}
-
-		[Authorize(Roles = "1")]
-		[HttpDelete("{id:int}")]
-		[ProducesResponseType(StatusCodes.Status200OK)]
-		[ProducesResponseType(StatusCodes.Status400BadRequest)]
-		[ProducesResponseType(StatusCodes.Status404NotFound)]
-		public ActionResult DeleteRole(int id)
-		{
-			if (id < 1)
-			{
-				return BadRequest($"Not accepted ID {id}");
-			}
-
-			if (_roles.DeleteRole(id))
-			{
-				return Ok($"Role with ID {id} has been deleted.");
-			}
-			else
-			{
-				return NotFound($"Role with ID {id} not found. No rows deleted!");
-				}
-		}
-
-		[HttpGet("Exists/{id:int}")]
-		[ProducesResponseType(StatusCodes.Status200OK)]
-		[ProducesResponseType(StatusCodes.Status400BadRequest)]
-		public ActionResult<bool> DoesRoleExist(int id)
-		{
-			if (id < 1)
-			{
-				return BadRequest($"Not accepted ID {id}");
-			}
-
-			bool exists = _roles.DoesRoleExist(id);
-
-			return Ok(exists);
-		}
-	}
+        return Ok(result.Exists);
+    }
 }

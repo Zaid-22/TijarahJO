@@ -1,11 +1,11 @@
-import { ProductStatus } from "./types";
+import { PostStatus } from "./types";
 
 const POST_STATUS_ACTIVE = 0;
 const POST_STATUS_BLOCKED = 1;
 const POST_STATUS_INACTIVE = 2;
 const POST_STATUS_SOLD = 3;
 
-export function normalizeProductStatus(rawStatus: unknown): ProductStatus {
+export function normalizePostStatus(rawStatus: unknown): PostStatus {
   if (typeof rawStatus === "string") {
     const normalized = rawStatus.trim().toUpperCase();
     if (normalized === "SOLD") {

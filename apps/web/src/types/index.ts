@@ -1,6 +1,6 @@
 // Core data types for the application
 
-export interface Product {
+export interface Post {
   id: string; // Changed from number to string for UUID support
   name: string;
   price: number;

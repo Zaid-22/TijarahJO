@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
 import { Label } from "../../../shared/ui/label";
@@ -13,55 +13,35 @@ import {
 import { translations } from "../../../translations";
 import { Language } from "../../../types";
 import { UserProfile } from "../../../types";
-import { Upload, X } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "../../../services/api";
-import { logger } from "../../../shared/lib/logger";
+import { useCatalogCategories } from "../../../shared/hooks/useCatalogCategories";
+import { useLocationOptions } from "../../../shared/hooks/useLocationOptions";
+import { CreatePostInput } from "../../../app/routes/appRoutesUtils";
+import { SellItemImagePicker } from "./SellItemImagePicker";
+
+const MAX_IMAGES = 5;
+
+type SelectedImage = {
+  id: string;
+  previewUrl: string;
+  file: File;
+};
 
 interface SellItemDialogProps {
   language: Language;
   onClose: () => void;
-  onSubmit?: (product: {
-    name: string;
-    price: number;
-    category: string;
-    location: string;
-    area: string;
-    description: string;
-    image: string;
-    images: string[];
-  }) => void;
+  onSubmit?: (post: CreatePostInput) => void | Promise<void>;
   userProfile: UserProfile;
-  onGoToSettings?: () => void;
 }
-
-const DEFAULT_CATEGORIES = [
-  "Electronics",
-  "Mobile Phones & Tablets",
-  "Computers & Laptops",
-  "Home Appliances",
-  "Furniture",
-  "Vehicles",
-  "Fashion & Clothing",
-  "Health & Beauty",
-  "Sports & Fitness",
-  "Books & Stationery",
-  "Toys & Games",
-  "Real Estate",
-  "Pets & Animals",
-  "Services",
-  "Other",
-];
 
 export function SellItemDialogContent({
   language,
   onClose,
   onSubmit,
   userProfile,
-  // onGoToSettings,
 }: SellItemDialogProps) {
-  const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  // Auto-fill location from user profile when form loads
+  const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     price: "",
@@ -77,87 +57,113 @@ export function SellItemDialogContent({
     location: false,
     images: false,
   });
-  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const objectUrlsRef = useRef<Set<string>>(new Set());
+  const { categories: catalogCategories, isLoading: isLoadingCategories } =
+    useCatalogCategories();
+  const categories = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          catalogCategories
+            .map((category) => category.name.trim())
+            .filter((name) => name.length > 0),
+        ),
+      ),
+    [catalogCategories],
+  );
+  const { cityNames, areaNames, isLoadingCities, isLoadingAreas } =
+    useLocationOptions(formData.location);
+  const cityOptions = useMemo(() => {
+    const normalizedOptionSet = new Set(
+      cityNames
+        .map((city) => city.trim().toLocaleLowerCase())
+        .filter((city) => city.length > 0),
+    );
+    const normalizedCurrentCity = formData.location.trim();
+    if (
+      normalizedCurrentCity &&
+      !normalizedOptionSet.has(normalizedCurrentCity.toLocaleLowerCase())
+    ) {
+      return [normalizedCurrentCity, ...cityNames];
+    }
+
+    return cityNames;
+  }, [cityNames, formData.location]);
+  const areaSuggestions = useMemo(() => {
+    const normalizedOptionSet = new Set(
+      areaNames
+        .map((area) => area.trim().toLocaleLowerCase())
+        .filter((area) => area.length > 0),
+    );
+    const normalizedCurrentArea = formData.area.trim();
+    if (
+      normalizedCurrentArea &&
+      !normalizedOptionSet.has(normalizedCurrentArea.toLocaleLowerCase())
+    ) {
+      return [normalizedCurrentArea, ...areaNames];
+    }
+
+    return areaNames;
+  }, [areaNames, formData.area]);
 
   const t = translations[language];
 
-  // Phone number is optional - no longer required for posting
-
-  const jordanianCities = [
-    "Amman",
-    "Irbid",
-    "Zarqa",
-    "Aqaba",
-    "Madaba",
-    "Salt",
-    "Jerash",
-    "Karak",
-    "Mafraq",
-    "Tafilah",
-    "Ma'an",
-    "Ajloun",
-  ];
-
   useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const response = await api.categories.getCategories();
-        if (!response.success || !response.categories?.length || cancelled) {
-          return;
-        }
-
-        const categoryNames = Array.from(
-          new Set(
-            response.categories
-              .map((category) => category.name?.trim())
-              .filter((name): name is string => Boolean(name)),
-          ),
-        ).sort((a, b) => a.localeCompare(b));
-
-        if (categoryNames.length > 0) {
-          setCategories(categoryNames);
-        }
-      } catch (error) {
-        logger.warn(
-          "[SellItemDialog] Failed to load categories from backend, using defaults.",
-          error,
-        );
-      }
-    })();
-
+    const objectUrls = objectUrlsRef.current;
     return () => {
-      cancelled = true;
+      for (const objectUrl of objectUrls) {
+        URL.revokeObjectURL(objectUrl);
+      }
+      objectUrls.clear();
     };
   }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) {
-      Array.from(files).forEach((file) => {
-        if (selectedImages.length < 5) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            setSelectedImages((prev) => {
-              if (prev.length < 5) {
-                return [...prev, reader.result as string];
-              }
-              return prev;
-            });
-          };
-          reader.readAsDataURL(file);
-        }
-      });
+    if (!files) {
+      return;
     }
+
+    setSelectedImages((prev) => {
+      const remainingSlots = Math.max(0, MAX_IMAGES - prev.length);
+      if (remainingSlots === 0) {
+        return prev;
+      }
+
+      const nextItems = Array.from(files)
+        .slice(0, remainingSlots)
+        .map((file, index) => {
+          const previewUrl = URL.createObjectURL(file);
+          objectUrlsRef.current.add(previewUrl);
+          return {
+            id: `${file.name}-${file.size}-${file.lastModified}-${index}`,
+            previewUrl,
+            file,
+          };
+        });
+
+      return [...prev, ...nextItems];
+    });
+
+    e.target.value = "";
   };
 
   const removeImage = (index: number) => {
-    setSelectedImages(selectedImages.filter((_, i) => i !== index));
+    setSelectedImages((prev) => {
+      const target = prev[index];
+      if (target && objectUrlsRef.current.delete(target.previewUrl)) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
-  const handleSubmit = () => {
-    // Validate form and collect errors
+  const handleSubmit = async () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    // Validate form and collect errors.
     const newErrors = {
       title: !formData.title,
       price: !formData.price || parseFloat(formData.price) < 0.01,
@@ -168,9 +174,7 @@ export function SellItemDialogContent({
 
     setErrors(newErrors);
 
-    // Check if there are any errors
     const hasErrors = Object.values(newErrors).some((error) => error);
-
     if (hasErrors) {
       toast.error(
         language === "ar"
@@ -180,27 +184,37 @@ export function SellItemDialogContent({
       return;
     }
 
-    // Create product object
-    const newProduct = {
+    const newPost: CreatePostInput = {
       name: formData.title,
       price: parseFloat(formData.price),
       category: formData.category,
       location: formData.location,
       area: formData.area,
       description: formData.description,
-      image: selectedImages[0] || "", // Use first image as main image
-      images: selectedImages.length > 0 ? selectedImages : [], // Save all images
+      image: selectedImages[0]?.previewUrl || "",
+      images: selectedImages.map((entry) => entry.file),
     };
 
-    // Call onSubmit if provided (this will handle API call in App.tsx)
     if (onSubmit) {
-      onSubmit(newProduct);
-      // Close dialog after submitting
-      onClose();
-    } else {
-      // If no onSubmit handler, just close
-      onClose();
+      setIsSubmitting(true);
+      try {
+        await onSubmit(newPost);
+        onClose();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : language === "ar"
+              ? "تعذر نشر المنشور"
+              : "Failed to publish post",
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
     }
+
+    onClose();
   };
 
   return (
@@ -214,7 +228,7 @@ export function SellItemDialogContent({
           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
         />
         {errors.title && (
-          <div className="text-red-500 text-sm">
+          <div className="text-sm text-destructive">
             {t.titleRequired || "Title is required"}
           </div>
         )}
@@ -231,7 +245,6 @@ export function SellItemDialogContent({
             placeholder={t.pricePlaceholder}
             value={formData.price}
             onChange={(e) => {
-              // Prevent negative values
               const value = e.target.value;
               if (parseFloat(value) >= 0 || value === "") {
                 setFormData({
@@ -241,14 +254,13 @@ export function SellItemDialogContent({
               }
             }}
             onKeyDown={(e) => {
-              // Prevent minus key
               if (e.key === "-" || e.key === "e" || e.key === "E") {
                 e.preventDefault();
               }
             }}
           />
           {errors.price && (
-            <div className="text-red-500 text-sm">
+            <div className="text-sm text-destructive">
               {language === "ar"
                 ? "السعر مطلوب ويجب أن يكون 0.01 دينار على الأقل"
                 : "Price is required and must be at least 0.01 JOD"}
@@ -267,49 +279,71 @@ export function SellItemDialogContent({
               <SelectValue placeholder={t.categoryPlaceholder} />
             </SelectTrigger>
             <SelectContent>
-              {categories.map((category) => (
-                <SelectItem key={category} value={category}>
-                  {category}
+              {categories.length > 0 ? (
+                categories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="__no_categories__" disabled>
+                  {isLoadingCategories
+                    ? language === "ar"
+                      ? "جارٍ تحميل الفئات..."
+                      : "Loading categories..."
+                    : language === "ar"
+                      ? "لا توجد فئات متاحة"
+                      : "No categories available"}
                 </SelectItem>
-              ))}
+              )}
             </SelectContent>
           </Select>
           {errors.category && (
-            <div className="text-red-500 text-sm">
+            <div className="text-sm text-destructive">
               {t.categoryRequired || "Category is required"}
             </div>
           )}
         </div>
       </div>
 
-      {/* Location Fields - Auto-filled from user profile, can be changed for this post only */}
       <div className="space-y-2">
         <Label htmlFor="location">{t.location}</Label>
         <Select
           value={formData.location}
           onValueChange={(value) =>
-            setFormData({ ...formData, location: value })
+            setFormData({ ...formData, location: value, area: "" })
           }
         >
           <SelectTrigger id="location">
             <SelectValue placeholder={t.locationPlaceholder} />
           </SelectTrigger>
           <SelectContent>
-            {jordanianCities.map((city) => (
-              <SelectItem key={city} value={city}>
-                {city}
+            {cityOptions.length > 0 ? (
+              cityOptions.map((city) => (
+                <SelectItem key={city} value={city}>
+                  {city}
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="__no_cities__" disabled>
+                {isLoadingCities
+                  ? language === "ar"
+                    ? "جارٍ تحميل المدن..."
+                    : "Loading cities..."
+                  : language === "ar"
+                    ? "لا توجد مدن متاحة"
+                    : "No cities available"}
               </SelectItem>
-            ))}
+            )}
           </SelectContent>
         </Select>
         {errors.location && (
-          <div className="text-red-500 text-sm">
+          <div className="text-sm text-destructive">
             {t.locationRequired || "Location is required"}
           </div>
         )}
       </div>
 
-      {/* Area/Neighborhood Field - Auto-filled from user profile, can be changed for this post only */}
       <div className="space-y-2">
         <Label htmlFor="area">
           {language === "ar"
@@ -318,6 +352,7 @@ export function SellItemDialogContent({
         </Label>
         <Input
           id="area"
+          list="sell-item-area-suggestions"
           placeholder={
             language === "ar"
               ? "مثال: الدوار السابع، الصويفية، إلخ"
@@ -326,88 +361,34 @@ export function SellItemDialogContent({
           value={formData.area}
           onChange={(e) => setFormData({ ...formData, area: e.target.value })}
         />
+        {areaSuggestions.length > 0 ? (
+          <datalist id="sell-item-area-suggestions">
+            {areaSuggestions.map((area) => (
+              <option key={area} value={area}>
+                {area}
+              </option>
+            ))}
+          </datalist>
+        ) : null}
+        {isLoadingAreas ? (
+          <p className="text-xs text-muted-foreground">
+            {language === "ar" ? "جارٍ تحميل المناطق..." : "Loading areas..."}
+          </p>
+        ) : null}
       </div>
 
-      {/* Image Upload */}
-      <div className="space-y-2">
-        <Label className="font-semibold text-base">
-          {t.itemImages || "Post Images"}
-        </Label>
-        <div className="space-y-3">
-          {/* Image Preview Grid */}
-          {selectedImages.length > 0 && (
-            <div className="grid grid-cols-3 gap-3">
-              {selectedImages.map((image, index) => (
-                <div
-                  key={`${image}-${index}`}
-                  className="relative aspect-square rounded-lg overflow-hidden border-2 border-gray-200 group"
-                >
-                  <img
-                    src={image}
-                    alt={`Upload ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                  {index === 0 && (
-                    <div className="absolute top-2 left-2 px-2 py-1 rounded text-xs bg-[#0A4ABF] text-white">
-                      {language === "ar" ? "غلاف" : "Cover"}
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => removeImage(index)}
-                    aria-label={
-                      language === "ar"
-                        ? `إزالة الصورة ${index + 1}`
-                        : `Remove image ${index + 1}`
-                    }
-                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Upload Button */}
-          {selectedImages.length < 5 && (
-            <label
-              htmlFor="image-upload"
-              className="flex flex-col items-center justify-center gap-2 p-8 border-2 border-dashed border-[#0A4ABF] rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-            >
-              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-[#0A4ABF26]">
-                <Upload className="w-6 h-6 text-[#0A4ABF]" />
-              </div>
-              <div className="text-center">
-                <div className="mb-1 font-bold text-base text-[#0A4ABF]">
-                  {t.uploadImages || "Upload Images"}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  {t.imagesHint ||
-                    "Add up to 5 images. First image will be the cover photo."}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400 mt-2 font-medium">
-                  {selectedImages.length}/5{" "}
-                  {language === "ar" ? "صور محملة" : "images uploaded"}
-                </div>
-              </div>
-              <input
-                id="image-upload"
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={handleImageUpload}
-              />
-            </label>
-          )}
-          {errors.images && (
-            <div className="text-red-500 text-sm">
-              {t.imagesRequired || "Images are required"}
-            </div>
-          )}
-        </div>
-      </div>
+      <SellItemImagePicker
+        language={language}
+        selectedImages={selectedImages}
+        maxImages={MAX_IMAGES}
+        title={t.itemImages || "Post Images"}
+        uploadLabel={t.uploadImages || "Upload Images"}
+        imagesHint={t.imagesHint || "Add up to 5 images. First image will be the cover photo."}
+        imagesRequiredLabel={t.imagesRequired || "Images are required"}
+        hasError={errors.images}
+        onUpload={handleImageUpload}
+        onRemove={removeImage}
+      />
 
       <div className="space-y-2">
         <Label htmlFor="description">{t.description}</Label>
@@ -426,11 +407,18 @@ export function SellItemDialogContent({
       </div>
 
       <Button
-        className="w-full font-semibold text-base bg-[#0A4ABF] text-white hover:bg-[#083a95]"
-        onClick={handleSubmit}
+        className="w-full text-base font-semibold"
+        onClick={() => {
+          void handleSubmit();
+        }}
         type="button"
+        disabled={isSubmitting}
       >
-        {t.postItemButton || "Publish Post"}
+        {isSubmitting
+          ? language === "ar"
+            ? "جارٍ النشر..."
+            : "Publishing..."
+          : t.postItemButton || "Publish Post"}
       </Button>
     </div>
   );

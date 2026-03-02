@@ -182,6 +182,41 @@ public sealed class AuthCommandServiceTests
     }
 
     [Fact]
+    public async Task SignupAsync_ReturnsInvalidRequest_WhenCityIsInvalid()
+    {
+        var service = BuildService();
+
+        AuthCommandResult result = await service.SignupAsync(new SignupCommand
+        {
+            Password = "pass",
+            FirstName = "Test",
+            Email = "a@b.com",
+            CityId = 9999
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal(AuthCommandFailureReason.InvalidRequest, result.FailureReason);
+    }
+
+    [Fact]
+    public async Task SignupAsync_ReturnsInvalidRequest_WhenAreaDoesNotBelongToCity()
+    {
+        var service = BuildService();
+
+        AuthCommandResult result = await service.SignupAsync(new SignupCommand
+        {
+            Password = "pass",
+            FirstName = "Test",
+            Email = "a@b.com",
+            CityId = 1,
+            AreaId = 99
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal(AuthCommandFailureReason.InvalidRequest, result.FailureReason);
+    }
+
+    [Fact]
     public async Task SignupAsync_ReturnsSuccess_WithValidData()
     {
         var service = BuildService();
@@ -230,9 +265,10 @@ public sealed class AuthCommandServiceTests
         var users = new FakeUserDataAccess(account);
         var externalIdentities = new FakeExternalIdentityDataAccess();
         var roles = new FakeRoleService();
+        var locations = new FakeLocationReadService();
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<AuthCommandService>.Instance;
 
-        return new AuthCommandService(users, externalIdentities, roles, logger);
+        return new AuthCommandService(users, externalIdentities, roles, locations, logger);
     }
 
     // -------------------------------------------------------------------------
@@ -258,10 +294,10 @@ public sealed class AuthCommandServiceTests
         public Task<int> AddUserAsync(UserModel user, CancellationToken ct = default)
             => Task.FromResult(_saveResult ? 1 : 0);
 
-        public Task<bool> UpdateUserAsync(UserModel user, CancellationToken ct = default)
+        public Task<bool> UpdateUserAsync(UserModel user, int actorUserId, CancellationToken ct = default)
             => Task.FromResult(_saveResult);
 
-        public Task<bool> DeleteUserAsync(int? userId, CancellationToken ct = default)
+        public Task<bool> DeleteUserAsync(int? userId, int actorUserId, CancellationToken ct = default)
             => Task.FromResult(true);
 
         public Task<bool> DoesUserExistAsync(int? userId, CancellationToken ct = default)
@@ -316,5 +352,26 @@ public sealed class AuthCommandServiceTests
 
         public Task<bool> DoesRoleExistAsync(int? roleId, CancellationToken ct = default)
             => Task.FromResult(true);
+    }
+
+    private sealed class FakeLocationReadService : ILocationReadService
+    {
+        private static readonly CityLookupResult[] Cities =
+        {
+            new() { CityId = 1, CityName = "Amman" },
+            new() { CityId = 2, CityName = "Irbid" }
+        };
+
+        private static readonly AreaLookupResult[] Areas =
+        {
+            new() { AreaId = 1, AreaName = "West Amman", CityId = 1 },
+            new() { AreaId = 2, AreaName = "City Center", CityId = 2 }
+        };
+
+        public Task<IReadOnlyList<CityLookupResult>> GetCitiesAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<CityLookupResult>>(Cities);
+
+        public Task<IReadOnlyList<AreaLookupResult>> GetAreasByCityAsync(int cityId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<AreaLookupResult>>(Areas.Where(area => area.CityId == cityId).ToArray());
     }
 }

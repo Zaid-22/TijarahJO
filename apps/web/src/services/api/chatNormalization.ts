@@ -8,6 +8,8 @@ export type RawChatMessage = {
   senderId?: unknown;
   ReceiverId?: unknown;
   receiverId?: unknown;
+  ConversationId?: unknown;
+  conversationId?: unknown;
   PostId?: unknown;
   postId?: unknown;
   Content?: unknown;
@@ -45,13 +47,17 @@ export function normalizeChatMessage(
 
   const messageId = toPositiveIntegerId(message.MessageId ?? message.messageId);
   const postId = toPositiveIntegerId(message.PostId ?? message.postId);
+  const conversationId = toPositiveIntegerId(
+    message.ConversationId ?? message.conversationId,
+  );
   const rawTimestamp = message.Timestamp ?? message.timestamp;
 
   return {
-    messageId,
     senderId,
     receiverId,
-    postId,
+    ...(messageId ? { messageId } : {}),
+    ...(conversationId ? { conversationId } : {}),
+    ...(postId ? { postId } : {}),
     content,
     timestamp: toTimestampOrNow(rawTimestamp),
     isRead: Boolean(message.IsRead ?? message.isRead ?? false),

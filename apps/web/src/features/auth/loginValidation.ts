@@ -33,6 +33,25 @@ export interface LoginFormErrors {
   area: string;
 }
 
+export interface LoginValidationMessages {
+  identifierRequired: string;
+  identifierInvalid: string;
+  passwordRequired: string;
+  passwordMinLength: string;
+  passwordUppercase: string;
+  passwordLowercase: string;
+  passwordNumber: string;
+  passwordSpecial: string;
+  confirmPasswordRequired: string;
+  confirmPasswordMismatch: string;
+  firstNameRequired: string;
+  lastNameRequired: string;
+  phoneRequired: string;
+  phoneInvalid: string;
+  cityRequired: string;
+  areaRequired: string;
+}
+
 export const createEmptyLoginErrors = (): LoginFormErrors => ({
   identifier: "",
   password: "",
@@ -44,9 +63,33 @@ export const createEmptyLoginErrors = (): LoginFormErrors => ({
   area: "",
 });
 
-function validateIdentifier(value: string, isSignUp: boolean): string {
+const DEFAULT_LOGIN_VALIDATION_MESSAGES: LoginValidationMessages = {
+  identifierRequired: "Email or phone is required",
+  identifierInvalid: "Enter a valid email or Jordanian phone number",
+  passwordRequired: "Password is required",
+  passwordMinLength: "Password must be at least 8 characters",
+  passwordUppercase: "Password must contain at least one uppercase letter",
+  passwordLowercase: "Password must contain at least one lowercase letter",
+  passwordNumber: "Password must contain at least one number",
+  passwordSpecial:
+    "Password must contain at least one special character (!@#$%^&*...)",
+  confirmPasswordRequired: "Please confirm your password",
+  confirmPasswordMismatch: "Passwords do not match",
+  firstNameRequired: "First name is required",
+  lastNameRequired: "Last name is required",
+  phoneRequired: "Phone number is required",
+  phoneInvalid: "Enter a valid Jordanian phone number",
+  cityRequired: "City is required",
+  areaRequired: "Area is required",
+};
+
+function validateIdentifier(
+  value: string,
+  isSignUp: boolean,
+  messages: LoginValidationMessages,
+): string {
   if (!value.trim()) {
-    return "Email or phone is required";
+    return messages.identifierRequired;
   }
 
   if (!isSignUp) {
@@ -55,19 +98,23 @@ function validateIdentifier(value: string, isSignUp: boolean): string {
 
   const parsedIdentifier = parseAuthIdentifier(value);
   if (!parsedIdentifier.email && !parsedIdentifier.phone) {
-    return "Enter a valid email or Jordanian phone number";
+    return messages.identifierInvalid;
   }
 
   return "";
 }
 
-function validatePassword(value: string, isSignUp: boolean): string {
+function validatePassword(
+  value: string,
+  isSignUp: boolean,
+  messages: LoginValidationMessages,
+): string {
   if (!value) {
-    return "Password is required";
+    return messages.passwordRequired;
   }
 
   if (value.length < 8) {
-    return "Password must be at least 8 characters";
+    return messages.passwordMinLength;
   }
 
   if (!isSignUp) {
@@ -77,19 +124,19 @@ function validatePassword(value: string, isSignUp: boolean): string {
   const { requirements } = calculatePasswordStrength(value);
 
   if (!requirements.hasUpperCase) {
-    return "Password must contain at least one uppercase letter";
+    return messages.passwordUppercase;
   }
 
   if (!requirements.hasLowerCase) {
-    return "Password must contain at least one lowercase letter";
+    return messages.passwordLowercase;
   }
 
   if (!requirements.hasNumber) {
-    return "Password must contain at least one number";
+    return messages.passwordNumber;
   }
 
   if (!requirements.hasSpecialChar) {
-    return "Password must contain at least one special character (!@#$%^&*...)";
+    return messages.passwordSpecial;
   }
 
   return "";
@@ -98,68 +145,76 @@ function validatePassword(value: string, isSignUp: boolean): string {
 function validateConfirmPassword(
   value: string,
   values: LoginFormValues,
+  messages: LoginValidationMessages,
 ): string {
   if (!value) {
-    return "Please confirm your password";
+    return messages.confirmPasswordRequired;
   }
 
   if (value !== values.password) {
-    return "Passwords do not match";
+    return messages.confirmPasswordMismatch;
   }
 
   return "";
 }
 
-function validateFirstName(value: string): string {
-  return value.trim() ? "" : "First name is required";
+function validateFirstName(
+  value: string,
+  messages: LoginValidationMessages,
+): string {
+  return value.trim() ? "" : messages.firstNameRequired;
 }
 
-function validateLastName(value: string): string {
-  return value.trim() ? "" : "Last name is required";
+function validateLastName(
+  value: string,
+  messages: LoginValidationMessages,
+): string {
+  return value.trim() ? "" : messages.lastNameRequired;
 }
 
-function validatePhone(value: string): string {
+function validatePhone(value: string, messages: LoginValidationMessages): string {
   if (!value.trim()) {
-    return "Phone number is required";
+    return messages.phoneRequired;
   }
 
   if (!normalizeJordanPhone(value)) {
-    return "Enter a valid Jordanian phone number";
+    return messages.phoneInvalid;
   }
 
   return "";
 }
 
-function validateCity(value: string): string {
-  return value.trim() ? "" : "City is required";
+function validateCity(value: string, messages: LoginValidationMessages): string {
+  return value.trim() ? "" : messages.cityRequired;
 }
 
-function validateArea(value: string): string {
-  return value.trim() ? "" : "Area is required";
+function validateArea(value: string, messages: LoginValidationMessages): string {
+  return value.trim() ? "" : messages.areaRequired;
 }
 
 export function validateLoginField(
   field: LoginField,
   values: LoginFormValues,
   isSignUp: boolean,
+  messages: LoginValidationMessages = DEFAULT_LOGIN_VALIDATION_MESSAGES,
 ): string {
   switch (field) {
     case "identifier":
-      return validateIdentifier(values.identifier, isSignUp);
+      return validateIdentifier(values.identifier, isSignUp, messages);
     case "password":
-      return validatePassword(values.password, isSignUp);
+      return validatePassword(values.password, isSignUp, messages);
     case "confirmPassword":
-      return validateConfirmPassword(values.confirmPassword, values);
+      return validateConfirmPassword(values.confirmPassword, values, messages);
     case "firstName":
-      return validateFirstName(values.firstName);
+      return validateFirstName(values.firstName, messages);
     case "lastName":
-      return validateLastName(values.lastName);
+      return validateLastName(values.lastName, messages);
     case "phone":
-      return validatePhone(values.phone);
+      return validatePhone(values.phone, messages);
     case "city":
-      return validateCity(values.city);
+      return validateCity(values.city, messages);
     case "area":
-      return validateArea(values.area);
+      return validateArea(values.area, messages);
     default:
       return "";
   }
@@ -168,22 +223,24 @@ export function validateLoginField(
 export function validateLoginForm(
   values: LoginFormValues,
   isSignUp: boolean,
+  messages: LoginValidationMessages = DEFAULT_LOGIN_VALIDATION_MESSAGES,
 ): LoginFormErrors {
   const nextErrors = createEmptyLoginErrors();
 
-  nextErrors.identifier = validateIdentifier(values.identifier, isSignUp);
-  nextErrors.password = validatePassword(values.password, isSignUp);
+  nextErrors.identifier = validateIdentifier(values.identifier, isSignUp, messages);
+  nextErrors.password = validatePassword(values.password, isSignUp, messages);
 
   if (isSignUp) {
     nextErrors.confirmPassword = validateConfirmPassword(
       values.confirmPassword,
       values,
+      messages,
     );
-    nextErrors.firstName = validateFirstName(values.firstName);
-    nextErrors.lastName = validateLastName(values.lastName);
-    nextErrors.phone = validatePhone(values.phone);
-    nextErrors.city = validateCity(values.city);
-    nextErrors.area = validateArea(values.area);
+    nextErrors.firstName = validateFirstName(values.firstName, messages);
+    nextErrors.lastName = validateLastName(values.lastName, messages);
+    nextErrors.phone = validatePhone(values.phone, messages);
+    nextErrors.city = validateCity(values.city, messages);
+    nextErrors.area = validateArea(values.area, messages);
   }
 
   return nextErrors;

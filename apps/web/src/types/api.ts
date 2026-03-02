@@ -5,7 +5,9 @@
  * All entities use string-based IDs for consistency.
  */
 
-import { Product } from "../types";
+import { Post } from "../types";
+
+export type PostImageInput = string | File;
 
 // ============================================================================
 // Authentication & User Management
@@ -43,7 +45,7 @@ export interface User {
   updatedAt: string; // ISO date string
 }
 // ============================================================================
-// Product/Post Management
+// Post/Post Management
 // ============================================================================
 
 export interface CreatePostRequest {
@@ -53,7 +55,7 @@ export interface CreatePostRequest {
   city: string;
   area?: string;
   description: string;
-  images: string[]; // Array of image URLs or base64
+  images: PostImageInput[]; // Array of persisted URLs and/or raw File objects
   phone: string; // +962 format
   location?: string; // Legacy support
 }
@@ -67,20 +69,25 @@ export interface UpdatePostRequest {
   city?: string;
   area?: string;
   description?: string;
-  images?: string[];
+  images?: PostImageInput[];
   phone?: string;
   location?: string; // Legacy support
 }
 
+export interface UpdatePostStatusRequest {
+  id: string;
+  status: "ACTIVE" | "SOLD" | "DELETED" | "BLOCKED" | "INACTIVE";
+}
+
 export interface PostResponse {
   success: boolean;
-  post?: Product;
+  post?: Post;
   message?: string;
 }
 
 export interface PostsListResponse {
   success: boolean;
-  posts: Product[];
+  posts: Post[];
   pagination?: {
     currentPage: number;
     totalPages: number;
@@ -149,7 +156,7 @@ export interface SellerProfile {
 export interface SellerProfileResponse {
   success: boolean;
   seller: SellerProfile;
-  posts: Product[];
+  posts: Post[];
 }
 
 // ============================================================================
@@ -198,6 +205,7 @@ export interface SellerProfileResponse {
  * - GET    /api/post-images
  * - GET    /api/post-images/:id
  * - POST   /api/post-images
+ * - POST   /api/post-images/upload (multipart file upload)
  * - PUT    /api/post-images/:id
  * - DELETE /api/post-images/:id
  * - GET    /api/post-images/Exists/:id
@@ -212,18 +220,20 @@ export interface SellerProfileResponse {
  * - GET    /api/roles/Exists/:id
  *
  * REVIEWS:
- * - GET    /api/reviews/user/:userId
- * - POST   /api/reviews
+ * - GET    /api/v1/reviews/user/:userId
+ * - POST   /api/v1/reviews
  *
  * CHAT:
- * - GET    /api/chat/recent
- * - GET    /api/chat/history/:otherUserId
- * - POST   /api/chat/send
+ * - GET    /api/v1/chat/recent
+ * - GET    /api/v1/chat/history/:otherUserId
+ * - GET    /api/v1/chat/presence/:otherUserId
+ * - POST   /api/v1/chat/send
+ * - POST   /api/v1/chat/upload-image
  *
  * FAVORITES:
- * - GET    /api/favorites
- * - POST   /api/favorites
- * - DELETE /api/favorites/:postId
+ * - GET    /api/v1/favorites
+ * - POST   /api/v1/favorites
+ * - DELETE /api/v1/favorites/:postId
  *
  * SELLERS:
  * - GET    /api/sellers/:sellerId

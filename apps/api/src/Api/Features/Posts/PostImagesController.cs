@@ -1,298 +1,266 @@
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Models;
-using System.Security.Claims;
 using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.BLL;
+using TijarahJoDBAPI.Common.Services;
+using TijarahJoDBAPI.Common.Utils;
+using TijarahJoDBAPI.Contracts.Requests;
+using TijarahJoDBAPI.Contracts.Responses;
 
-namespace TijarahJoDBAPI.Features.Posts
+namespace TijarahJoDBAPI.Features.Posts;
+
+[ApiController]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/post-images")]
+public class PostImagesController : ControllerBase
 {
-    [ApiController]
-    [Route("api/post-images")]
-    public class PostImagesController : ControllerBase
+    private readonly ILogger<PostImagesController> _logger;
+    private readonly IPostImageQueryHandler _postImageQueries;
+    private readonly IPostImageCommandService _postImageCommands;
+    private readonly IPostImageFileStorageService _postImageStorage;
+
+    public PostImagesController(
+        ILogger<PostImagesController> logger,
+        IPostImageQueryHandler postImageQueries,
+        IPostImageCommandService postImageCommands,
+        IPostImageFileStorageService postImageStorage)
     {
-        private readonly ILogger<PostImagesController> _logger;
-        private readonly IPostService _posts;
-        private readonly IPostImageService _postImages;
+        _logger = logger;
+        _postImageQueries = postImageQueries;
+        _postImageCommands = postImageCommands;
+        _postImageStorage = postImageStorage;
+    }
 
-        public PostImagesController(
-            ILogger<PostImagesController> logger,
-            IPostService posts,
-            IPostImageService postImages)
+    [HttpGet("")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IEnumerable<PostImageResponseDTO>>> GetAllPostImages(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50)
+    {
+        PostImageListQueryResult result = await _postImageQueries.GetAllAsync(page, pageSize, HttpContext.RequestAborted);
+        if (!result.Success)
         {
-            _logger = logger;
-            _posts = posts;
-            _postImages = postImages;
+            return this.ToPostImageListQueryProblem(result, "Failed to fetch post images.");
         }
 
-        private static bool IsAdminUser(ClaimsPrincipal user)
+        if (result.PostImages.Count == 0)
         {
-            var roleClaim = user.FindFirst(ClaimTypes.Role)?.Value;
-            return int.TryParse(roleClaim, out int roleId) && roleId == 1;
+            return Ok(new List<PostImageResponseDTO>());
         }
 
-        private int? GetCurrentUserId()
+        List<PostImageResponseDTO> dtoList = result.PostImages
+            .Select(DTOMapper.ToPostImageResponseDTO)
+            .ToList();
+
+        _logger.LogDebug("Returning {Count} non-deleted post images.", dtoList.Count);
+        return Ok(dtoList);
+    }
+
+    [HttpGet("post/{postId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<IEnumerable<PostImageResponseDTO>>> GetPostImagesByPostId(int postId)
+    {
+        PostImageListQueryResult result = await _postImageQueries.GetByPostIdAsync(postId, HttpContext.RequestAborted);
+        if (!result.Success)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            return int.TryParse(userIdClaim, out int currentUserId) ? currentUserId : null;
+            return this.ToPostImageListQueryProblem(result, "Failed to fetch post images.");
         }
 
-        private static readonly DateTime SqlDateTimeMinUtc = new(1753, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        List<PostImageResponseDTO> images = result.PostImages
+            .Select(DTOMapper.ToPostImageResponseDTO)
+            .ToList();
 
-        private static DateTime NormalizeSqlDateTime(DateTime value, DateTime? fallback = null)
+        return Ok(images);
+    }
+
+    [HttpGet("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<PostImageResponseDTO>> GetPostImageById(int id)
+    {
+        PostImageByIdQueryResult result = await _postImageQueries.GetByIdAsync(id, HttpContext.RequestAborted);
+        if (!result.Success || result.PostImage == null)
         {
-            if (value == default || value < SqlDateTimeMinUtc)
-            {
-                return fallback ?? DateTime.UtcNow;
-            }
-
-            return value.Kind switch
-            {
-                DateTimeKind.Utc => value,
-                DateTimeKind.Local => value.ToUniversalTime(),
-                _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-            };
+            return this.ToPostImageByIdQueryProblem(result, "Failed to fetch post image.");
         }
 
-        [HttpGet("")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public ActionResult<IEnumerable<PostImageModel>> GetAllPostImages()
+        return Ok(DTOMapper.ToPostImageResponseDTO(result.PostImage));
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PostImageResponseDTO>> AddPostImage([FromBody] CreatePostImageRequest request)
+    {
+        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int currentUserId, out ActionResult? failureResult))
         {
-            var postImages = _postImages.GetAllPostImages();
-
-            if (postImages == null || postImages.Count == 0)
-            {
-                return Ok(new List<PostImageModel>());
-            }
-
-            var dtoList = postImages.Where(image => !image.IsDeleted).ToList();
-
-            _logger.LogDebug("Returning {Count} non-deleted post images.", dtoList.Count);
-            return Ok(dtoList);
+            return failureResult!;
         }
 
-        [HttpGet("post/{postId:int}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public ActionResult<IEnumerable<PostImageModel>> GetPostImagesByPostId(int postId)
+        PostImageCommandResult result = await _postImageCommands.CreateAsync(
+            currentUserId,
+            ApiControllerHelpers.IsAdminUser(User),
+            request.PostID,
+            request.PostImageURL,
+            request.UploadedAt,
+            HttpContext.RequestAborted
+        );
+        if (!result.Success || result.PostImage == null)
         {
-            if (postId < 1)
-            {
-                return BadRequest($"Invalid post ID {postId}");
-            }
-
-            var images = _postImages
-                .GetPostImagesByPostId(postId)
-                .Where(image => !image.IsDeleted)
-                .OrderBy(image => image.UploadedAt)
-                .ThenBy(image => image.PostImageID)
-                .ToList();
-
-            return Ok(images);
+            _logger.LogWarning("Post image creation failed for PostID {PostId}. Reason: {Reason}", request.PostID, result.FailureReason);
+            return this.ToPostImageCommandProblem(result, "Post image creation failed.");
         }
 
-        [HttpGet("{id:int}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public ActionResult<PostImageModel> GetPostImageById(int id)
+        return CreatedAtAction(
+            nameof(GetPostImageById),
+            new { id = result.PostImage.PostImageID },
+            DTOMapper.ToPostImageResponseDTO(result.PostImage.PostImageModel)
+        );
+    }
+
+    [Authorize]
+    [HttpPost("upload")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<PostImageUploadResponseDTO>> UploadPostImage([FromForm] UploadPostImageFileRequest request)
+    {
+        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int currentUserId, out ActionResult? failureResult))
         {
-            if (id < 1)
-            {
-                return BadRequest($"Not accepted ID {id}");
-            }
-
-            PostImage? postimage = _postImages.Find(id);
-            if (postimage == null)
-            {
-                return NotFound($"PostImage with ID {id} not found.");
-            }
-
-            return Ok(postimage.PostImageModel);
+            return failureResult!;
         }
 
-        [Authorize]
-        [HttpPost]
-        [ProducesResponseType(StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public ActionResult<PostImageModel> AddPostImage(PostImageModel? newPostImageDTO)
+        if (request.File == null)
         {
-            if (newPostImageDTO == null || newPostImageDTO.PostID <= 0 || string.IsNullOrWhiteSpace(newPostImageDTO.PostImageURL))
-            {
-                return BadRequest("Invalid PostImage data.");
-            }
-
-            int? currentUserId = GetCurrentUserId();
-            if (currentUserId == null)
-            {
-                return Unauthorized("Invalid authentication token.");
-            }
-
-            Post? post = _posts.Find(newPostImageDTO.PostID);
-            if (post == null)
-            {
-                return NotFound($"Post with ID {newPostImageDTO.PostID} not found.");
-            }
-            if (post.IsDeleted)
-            {
-                return BadRequest("Cannot add images to a deleted post.");
-            }
-
-            if (post.UserID != currentUserId.Value && !IsAdminUser(User))
-            {
-                return StatusCode(StatusCodes.Status403Forbidden, "You can only add images to your own posts.");
-            }
-
-            newPostImageDTO.PostImageURL = newPostImageDTO.PostImageURL.Trim();
-            newPostImageDTO.UploadedAt = NormalizeSqlDateTime(newPostImageDTO.UploadedAt);
-            newPostImageDTO.IsDeleted = false;
-
-            PostImage postimage = _postImages.Create(new PostImageModel
-            (
-                newPostImageDTO.PostImageID,
-                newPostImageDTO.PostID,
-                newPostImageDTO.PostImageURL,
-                newPostImageDTO.UploadedAt,
-                newPostImageDTO.IsDeleted
-            ));
-
-            try
-            {
-                if (!_postImages.Save(postimage))
-                {
-                    _logger.LogWarning("Failed to save post image for PostID {PostId}.", newPostImageDTO.PostID);
-                    return StatusCode(StatusCodes.Status500InternalServerError, "Error adding PostImage");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Exception while saving post image for PostID {PostId}.", newPostImageDTO.PostID);
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error adding PostImage");
-            }
-
-            newPostImageDTO.PostImageID = postimage.PostImageID;
-            return CreatedAtAction(nameof(GetPostImageById), new { id = newPostImageDTO.PostImageID }, newPostImageDTO);
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Image file is required.");
         }
 
-        [Authorize]
-        [HttpPut("{id}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public ActionResult<PostImageModel> UpdatePostImage(int id, PostImageModel? updatedPostImage)
+        StoredPostImageFile storedFile;
+        try
         {
-            if (id < 1 || updatedPostImage == null || updatedPostImage.PostID <= 0 || string.IsNullOrWhiteSpace(updatedPostImage.PostImageURL))
-            {
-                return BadRequest("Invalid PostImage data.");
-            }
-
-            int? currentUserId = GetCurrentUserId();
-            if (currentUserId == null)
-            {
-                return Unauthorized("Invalid authentication token.");
-            }
-
-            updatedPostImage.PostImageURL = updatedPostImage.PostImageURL.Trim();
-
-            PostImage? postimage = _postImages.Find(id);
-            if (postimage == null)
-            {
-                return NotFound($"PostImage with ID {id} not found.");
-            }
-
-            Post? post = _posts.Find(postimage.PostID);
-            if (post == null)
-            {
-                return NotFound($"Post with ID {postimage.PostID} not found.");
-            }
-            if (post.IsDeleted)
-            {
-                return BadRequest("Cannot update images on a deleted post.");
-            }
-
-            if (post.UserID != currentUserId.Value && !IsAdminUser(User))
-            {
-                return StatusCode(StatusCodes.Status403Forbidden, "You can only update images on your own posts.");
-            }
-
-            if (updatedPostImage.PostID != postimage.PostID)
-            {
-                return BadRequest("Moving an image to another post is not allowed.");
-            }
-
-            postimage.PostImageURL = updatedPostImage.PostImageURL;
-            postimage.UploadedAt = NormalizeSqlDateTime(updatedPostImage.UploadedAt, postimage.UploadedAt);
-            postimage.IsDeleted = updatedPostImage.IsDeleted;
-
-            if (!_postImages.Save(postimage))
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error updating PostImage");
-            }
-
-            return Ok(postimage.PostImageModel);
+            storedFile = await _postImageStorage.SaveAsync(request.File, HttpContext.RequestAborted);
+        }
+        catch (ArgumentException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: ex.Message);
         }
 
-        [Authorize]
-        [HttpDelete("{id}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public ActionResult DeletePostImage(int id)
+        PostImageCommandResult result = await _postImageCommands.CreateAsync(
+            currentUserId,
+            ApiControllerHelpers.IsAdminUser(User),
+            request.PostID,
+            storedFile.PublicUrl,
+            DateTime.UtcNow,
+            HttpContext.RequestAborted
+        );
+        if (!result.Success || result.PostImage == null)
         {
-            if (id < 1)
-            {
-                return BadRequest($"Not accepted ID {id}");
-            }
-
-            int? currentUserId = GetCurrentUserId();
-            if (currentUserId == null)
-            {
-                return Unauthorized("Invalid authentication token.");
-            }
-
-            PostImage? postimage = _postImages.Find(id);
-            if (postimage == null)
-            {
-                return NotFound($"PostImage with ID {id} not found.");
-            }
-
-            Post? post = _posts.Find(postimage.PostID);
-            if (post == null)
-            {
-                return NotFound($"Post with ID {postimage.PostID} not found.");
-            }
-            if (post.IsDeleted)
-            {
-                return BadRequest("Cannot delete images from a deleted post.");
-            }
-
-            if (post.UserID != currentUserId.Value && !IsAdminUser(User))
-            {
-                return StatusCode(StatusCodes.Status403Forbidden, "You can only delete images from your own posts.");
-            }
-
-            if (_postImages.DeletePostImage(id))
-            {
-                return Ok($"PostImage with ID {id} has been deleted.");
-            }
-
-            return NotFound($"PostImage with ID {id} not found. No rows deleted!");
+            await _postImageStorage.DeleteByPublicUrlAsync(storedFile.PublicUrl, HttpContext.RequestAborted);
+            _logger.LogWarning(
+                "Post image upload failed to persist metadata for PostID {PostId}. Reason: {Reason}",
+                request.PostID,
+                result.FailureReason
+            );
+            return this.ToPostImageCommandProblem(result, "Post image upload failed.");
         }
 
-        [HttpGet("Exists/{id:int}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public ActionResult<bool> DoesPostImageExist(int id)
-        {
-            if (id < 1)
+        PostImageResponseDTO postImageDto = DTOMapper.ToPostImageResponseDTO(result.PostImage.PostImageModel);
+        return CreatedAtAction(
+            nameof(GetPostImageById),
+            new { id = result.PostImage.PostImageID },
+            new PostImageUploadResponseDTO
             {
-                return BadRequest($"Not accepted ID {id}");
+                Url = postImageDto.PostImageURL,
+                PostImage = postImageDto
             }
+        );
+    }
 
-            bool exists = _postImages.DoesPostImageExist(id);
-            return Ok(exists);
+    [Authorize]
+    [HttpPut("{id}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<PostImageResponseDTO>> UpdatePostImage(int id, [FromBody] UpdatePostImageRequest request)
+    {
+        if (id < 1)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid PostImage data.");
         }
+
+        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int currentUserId, out ActionResult? failureResult))
+        {
+            return failureResult!;
+        }
+
+        PostImageCommandResult result = await _postImageCommands.UpdateAsync(
+            currentUserId,
+            ApiControllerHelpers.IsAdminUser(User),
+            id,
+            request.PostID,
+            request.PostImageURL,
+            request.UploadedAt,
+            HttpContext.RequestAborted
+        );
+        if (!result.Success || result.PostImage == null)
+        {
+            _logger.LogWarning("Post image update failed for PostImageID {PostImageId}. Reason: {Reason}", id, result.FailureReason);
+            return this.ToPostImageCommandProblem(result, "Post image update failed.");
+        }
+
+        return Ok(DTOMapper.ToPostImageResponseDTO(result.PostImage.PostImageModel));
+    }
+
+    [Authorize]
+    [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> DeletePostImage(int id)
+    {
+        if (id < 1)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: $"Not accepted ID {id}");
+        }
+
+        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int currentUserId, out ActionResult? failureResult))
+        {
+            return failureResult!;
+        }
+
+        PostImageCommandResult result = await _postImageCommands.DeleteAsync(
+            currentUserId,
+            ApiControllerHelpers.IsAdminUser(User),
+            id,
+            HttpContext.RequestAborted
+        );
+        if (!result.Success)
+        {
+            _logger.LogWarning("Post image deletion failed for PostImageID {PostImageId}. Reason: {Reason}", id, result.FailureReason);
+            return this.ToPostImageCommandProblem(result, "Post image deletion failed.");
+        }
+
+        return Ok(new ApiMessageResponse { Message = $"PostImage with ID {id} has been deleted." });
+    }
+
+    [HttpGet("Exists/{id:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<bool>> DoesPostImageExist(int id)
+    {
+        PostImageExistsQueryResult result = await _postImageQueries.ExistsAsync(id, HttpContext.RequestAborted);
+        if (!result.Success)
+        {
+            return this.ToPostImageExistsQueryProblem(result, "Failed to check post image existence.");
+        }
+
+        return Ok(result.Exists);
     }
 }

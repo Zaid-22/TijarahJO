@@ -1,22 +1,38 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
+import {
+  useQuery,
+  useQueryClient,
+  type Query,
+  type QueryClient,
+} from "@tanstack/react-query";
+import { serverQueryClient } from "../query/queryClient";
 
-type ServerQueryEntry<TData = unknown> = {
-  data?: TData;
-  error: string | null;
-  updatedAt: number;
-  lastAccessedAt: number;
-  isFetching: boolean;
-  inFlight?: Promise<TData>;
-  listeners: Set<() => void>;
+const SERVER_QUERY_NAMESPACE = "server-query";
+
+type ServerQueryContext = {
+  signal: AbortSignal;
+};
+
+type InvalidateServerQueryOptions = {
+  cancelInFlight?: boolean;
+};
+
+type UpdateServerQueryDataOptions = {
+  cancelInFlight?: boolean;
+  preserveError?: boolean;
+  keepFreshWhenUndefined?: boolean;
 };
 
 type UseServerQueryOptions<TData> = {
   key: string;
-  queryFn: () => Promise<TData>;
+  queryFn: (context: ServerQueryContext) => Promise<TData>;
+  tags?: string[];
   enabled?: boolean;
   staleTimeMs?: number;
   retryCount?: number;
   retryDelayMs?: number;
+  refetchOnWindowFocus?: boolean;
+  refetchOnReconnect?: boolean;
   initialData?: TData;
 };
 
@@ -26,218 +42,400 @@ type UseServerQueryResult<TData> = {
   isLoading: boolean;
   isFetching: boolean;
   refetch: () => Promise<TData | undefined>;
+  cancel: () => void;
 };
 
-const serverQueryCache = new Map<string, ServerQueryEntry<unknown>>();
-const MAX_SERVER_QUERY_CACHE_ENTRIES = 150;
-const SERVER_QUERY_IDLE_TTL_MS = 5 * 60_000;
-
-function markEntryAccess(entry: ServerQueryEntry<unknown>) {
-  entry.lastAccessedAt = Date.now();
-}
-
-function pruneServerQueryCache() {
-  const now = Date.now();
-
-  for (const [key, entry] of serverQueryCache.entries()) {
-    const isIdle = now - entry.lastAccessedAt > SERVER_QUERY_IDLE_TTL_MS;
-    const hasSubscribers = entry.listeners.size > 0;
-
-    if (isIdle && !hasSubscribers && !entry.isFetching && !entry.inFlight) {
-      serverQueryCache.delete(key);
-    }
-  }
-
-  if (serverQueryCache.size <= MAX_SERVER_QUERY_CACHE_ENTRIES) {
-    return;
-  }
-
-  const evictableEntries = Array.from(serverQueryCache.entries())
-    .filter(([, entry]) => entry.listeners.size === 0 && !entry.isFetching && !entry.inFlight)
-    .sort(([, a], [, b]) => a.lastAccessedAt - b.lastAccessedAt);
-
-  for (const [key] of evictableEntries) {
-    if (serverQueryCache.size <= MAX_SERVER_QUERY_CACHE_ENTRIES) {
-      break;
-    }
-    serverQueryCache.delete(key);
-  }
-}
-
-function getEntry<TData>(
-  key: string,
-  initialData?: TData,
-): ServerQueryEntry<TData> {
-  const cachedEntry = serverQueryCache.get(key);
-  if (cachedEntry) {
-    markEntryAccess(cachedEntry);
-    return cachedEntry as ServerQueryEntry<TData>;
-  }
-
-  const now = Date.now();
-  const nextEntry: ServerQueryEntry<TData> = {
-    data: initialData,
-    error: null,
-    updatedAt: initialData === undefined ? 0 : now,
-    lastAccessedAt: now,
-    isFetching: false,
-    listeners: new Set(),
-  };
-  serverQueryCache.set(key, nextEntry);
-  pruneServerQueryCache();
-  return nextEntry;
-}
-
-function notifyEntry(entry: ServerQueryEntry<unknown>) {
-  entry.listeners.forEach((listener) => listener());
-}
+const keyTags = new Map<string, Set<string>>();
+const tagKeys = new Map<string, Set<string>>();
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
     return error.message;
   }
+
   return "Request failed";
 }
 
-async function runWithRetry<TData>(
-  queryFn: () => Promise<TData>,
-  retryCount: number,
-  retryDelayMs: number,
-): Promise<TData> {
-  let attempts = 0;
-  let lastError: unknown = null;
-
-  while (attempts <= retryCount) {
-    try {
-      return await queryFn();
-    } catch (error) {
-      lastError = error;
-      if (attempts >= retryCount) {
-        break;
-      }
-
-      const delay = retryDelayMs * (attempts + 1);
-      await new Promise<void>((resolve) => {
-        setTimeout(resolve, delay);
-      });
-    }
-
-    attempts += 1;
-  }
-
-  throw lastError;
+function toQueryKey(key: string) {
+  return [SERVER_QUERY_NAMESPACE, key] as const;
 }
 
-export function invalidateServerQuery(key: string) {
-  const entry = serverQueryCache.get(key);
-  if (!entry) {
+function getServerKey(query: Query): string | null {
+  const queryKey = query.queryKey;
+  if (!Array.isArray(queryKey) || queryKey.length < 2) {
+    return null;
+  }
+  if (queryKey[0] !== SERVER_QUERY_NAMESPACE) {
+    return null;
+  }
+  if (typeof queryKey[1] !== "string") {
+    return null;
+  }
+
+  return queryKey[1];
+}
+
+function normalizeServerQueryTag(tag: string): string {
+  return tag.trim().toLowerCase();
+}
+
+function normalizeServerQueryPrefix(prefix: string): string {
+  return prefix.trim();
+}
+
+function normalizeServerQueryTags(tags: string[] | undefined): string[] {
+  if (!Array.isArray(tags) || tags.length === 0) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      tags
+        .map((tag) => normalizeServerQueryTag(String(tag)))
+        .filter((tag) => tag.length > 0),
+    ),
+  );
+}
+
+function removeTagMappingsForKey(key: string) {
+  const existingTags = keyTags.get(key);
+  if (!existingTags) {
     return;
   }
 
-  markEntryAccess(entry);
-  entry.updatedAt = 0;
-  notifyEntry(entry);
+  for (const tag of existingTags) {
+    const keys = tagKeys.get(tag);
+    if (!keys) {
+      continue;
+    }
+
+    keys.delete(key);
+    if (keys.size === 0) {
+      tagKeys.delete(tag);
+    }
+  }
+
+  keyTags.delete(key);
 }
 
-export function setServerQueryData<TData>(key: string, data: TData) {
-  const entry = getEntry<TData>(key);
-  markEntryAccess(entry as ServerQueryEntry<unknown>);
-  entry.data = data;
-  entry.error = null;
-  entry.updatedAt = Date.now();
-  notifyEntry(entry as ServerQueryEntry<unknown>);
-  pruneServerQueryCache();
+function syncServerQueryKeyTags(key: string, tags: string[]) {
+  removeTagMappingsForKey(key);
+  if (tags.length === 0) {
+    return;
+  }
+
+  const nextTags = new Set(tags);
+  keyTags.set(key, nextTags);
+
+  for (const tag of nextTags) {
+    const keys = tagKeys.get(tag) || new Set<string>();
+    keys.add(key);
+    tagKeys.set(tag, keys);
+  }
+}
+
+function cancelServerQueries(
+  matcher: (key: string) => boolean,
+  queryClient: QueryClient = serverQueryClient,
+) {
+  void queryClient.cancelQueries({
+    predicate: (query) => {
+      const key = getServerKey(query);
+      return key !== null && matcher(key);
+    },
+  });
+}
+
+function invalidateServerQueries(
+  matcher: (key: string) => boolean,
+  options: InvalidateServerQueryOptions = {},
+  queryClient: QueryClient = serverQueryClient,
+) {
+  if (options.cancelInFlight) {
+    cancelServerQueries(matcher, queryClient);
+  }
+
+  void queryClient.invalidateQueries({
+    predicate: (query) => {
+      const key = getServerKey(query);
+      return key !== null && matcher(key);
+    },
+  });
+}
+
+function removeServerQueries(
+  matcher: (key: string) => boolean,
+  queryClient: QueryClient = serverQueryClient,
+) {
+  const queries = queryClient.getQueryCache().findAll({
+    predicate: (query) => {
+      const key = getServerKey(query);
+      return key !== null && matcher(key);
+    },
+  });
+
+  const keysToRemove = new Set<string>();
+  for (const query of queries) {
+    const key = getServerKey(query);
+    if (key) {
+      keysToRemove.add(key);
+    }
+  }
+
+  queryClient.removeQueries({
+    predicate: (query) => {
+      const key = getServerKey(query);
+      return key !== null && matcher(key);
+    },
+  });
+
+  for (const key of keysToRemove) {
+    removeTagMappingsForKey(key);
+  }
+}
+
+function keyMatchesPrefix(key: string, prefix: string): boolean {
+  const normalizedPrefix = normalizeServerQueryPrefix(prefix);
+  return normalizedPrefix.length > 0 && key.startsWith(normalizedPrefix);
 }
 
 export function useServerQuery<TData>({
   key,
   queryFn,
+  tags,
   enabled = true,
   staleTimeMs = 60_000,
   retryCount = 1,
   retryDelayMs = 600,
+  refetchOnWindowFocus = false,
+  refetchOnReconnect = false,
   initialData,
 }: UseServerQueryOptions<TData>): UseServerQueryResult<TData> {
-  const [, setVersion] = useState(0);
-  const cacheEntry = useMemo(
-    () => getEntry<TData>(key, initialData),
-    [initialData, key],
-  );
-
-  const forceUpdate = useCallback(() => {
-    setVersion((value) => value + 1);
-  }, []);
+  const normalizedTags = useMemo(() => normalizeServerQueryTags(tags), [tags]);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    cacheEntry.listeners.add(forceUpdate);
-    return () => {
-      cacheEntry.listeners.delete(forceUpdate);
-    };
-  }, [cacheEntry, forceUpdate]);
+    syncServerQueryKeyTags(key, normalizedTags);
+  }, [key, normalizedTags]);
 
-  const executeFetch = useCallback(
-    async (force: boolean): Promise<TData | undefined> => {
-      if (!enabled) {
-        markEntryAccess(cacheEntry as ServerQueryEntry<unknown>);
-        return cacheEntry.data;
-      }
-
-      markEntryAccess(cacheEntry as ServerQueryEntry<unknown>);
-      const isFresh =
-        cacheEntry.updatedAt > 0 &&
-        Date.now() - cacheEntry.updatedAt < staleTimeMs;
-      if (!force && isFresh && cacheEntry.data !== undefined) {
-        return cacheEntry.data;
-      }
-
-      if (!force && cacheEntry.inFlight) {
-        return cacheEntry.inFlight;
-      }
-
-      cacheEntry.isFetching = true;
-      cacheEntry.error = null;
-      notifyEntry(cacheEntry as ServerQueryEntry<unknown>);
-
-      const request = runWithRetry(queryFn, retryCount, retryDelayMs)
-        .then((data) => {
-          cacheEntry.data = data;
-          cacheEntry.error = null;
-          cacheEntry.updatedAt = Date.now();
-          markEntryAccess(cacheEntry as ServerQueryEntry<unknown>);
-          return data;
-        })
-        .catch((error) => {
-          cacheEntry.error = toErrorMessage(error);
-          throw error;
-        })
-        .finally(() => {
-          cacheEntry.isFetching = false;
-          cacheEntry.inFlight = undefined;
-          markEntryAccess(cacheEntry as ServerQueryEntry<unknown>);
-          notifyEntry(cacheEntry as ServerQueryEntry<unknown>);
-          pruneServerQueryCache();
-        });
-
-      cacheEntry.inFlight = request;
-
-      try {
-        return await request;
-      } catch {
-        return cacheEntry.data;
-      }
-    },
-    [cacheEntry, enabled, queryFn, retryCount, retryDelayMs, staleTimeMs],
-  );
-
-  useEffect(() => {
-    void executeFetch(false);
-  }, [executeFetch]);
+  const query = useQuery({
+    queryKey: toQueryKey(key),
+    queryFn: ({ signal }) => queryFn({ signal }),
+    enabled,
+    staleTime: staleTimeMs,
+    retry: retryCount,
+    retryDelay: (attempt) => retryDelayMs * Math.max(1, attempt),
+    refetchOnWindowFocus,
+    refetchOnReconnect,
+    initialData,
+  });
 
   return {
-    data: cacheEntry.data,
-    error: cacheEntry.error,
-    isLoading: enabled && cacheEntry.isFetching && cacheEntry.data === undefined,
-    isFetching: enabled && cacheEntry.isFetching,
-    refetch: () => executeFetch(true),
+    data: query.data,
+    error: query.error ? toErrorMessage(query.error) : null,
+    isLoading: enabled && query.isPending && query.data === undefined,
+    isFetching: enabled && query.isFetching,
+    refetch: async () => {
+      const result = await query.refetch();
+      return result.data;
+    },
+    cancel: () => {
+      void queryClient.cancelQueries({
+        queryKey: toQueryKey(key),
+        exact: true,
+      });
+    },
   };
 }
+
+function invalidateServerQuery(
+  key: string,
+  options: InvalidateServerQueryOptions = {},
+  queryClient: QueryClient = serverQueryClient,
+) {
+  invalidateServerQueries((candidateKey) => candidateKey === key, options, queryClient);
+}
+
+function invalidateServerQueryPrefix(
+  prefix: string,
+  options: InvalidateServerQueryOptions = {},
+  queryClient: QueryClient = serverQueryClient,
+) {
+  const normalizedPrefix = normalizeServerQueryPrefix(prefix);
+  if (!normalizedPrefix) {
+    return;
+  }
+
+  invalidateServerQueries(
+    (candidateKey) => keyMatchesPrefix(candidateKey, normalizedPrefix),
+    options,
+    queryClient,
+  );
+}
+
+function invalidateServerQueryTag(
+  tag: string,
+  options: InvalidateServerQueryOptions = {},
+  queryClient: QueryClient = serverQueryClient,
+) {
+  const normalizedTag = normalizeServerQueryTag(tag);
+  if (!normalizedTag) {
+    return;
+  }
+
+  const keys = tagKeys.get(normalizedTag);
+  if (!keys || keys.size === 0) {
+    return;
+  }
+
+  const keySet = new Set(keys);
+  invalidateServerQueries((candidateKey) => keySet.has(candidateKey), options, queryClient);
+}
+
+function cancelServerQuery(key: string, queryClient: QueryClient = serverQueryClient) {
+  void queryClient.cancelQueries({
+    queryKey: toQueryKey(key),
+    exact: true,
+  });
+}
+
+function cancelServerQueryPrefix(
+  prefix: string,
+  queryClient: QueryClient = serverQueryClient,
+) {
+  const normalizedPrefix = normalizeServerQueryPrefix(prefix);
+  if (!normalizedPrefix) {
+    return;
+  }
+
+  cancelServerQueries(
+    (candidateKey) => keyMatchesPrefix(candidateKey, normalizedPrefix),
+    queryClient,
+  );
+}
+
+function cancelServerQueryTag(tag: string, queryClient: QueryClient = serverQueryClient) {
+  const normalizedTag = normalizeServerQueryTag(tag);
+  if (!normalizedTag) {
+    return;
+  }
+
+  const keys = tagKeys.get(normalizedTag);
+  if (!keys || keys.size === 0) {
+    return;
+  }
+
+  const keySet = new Set(keys);
+  cancelServerQueries((candidateKey) => keySet.has(candidateKey), queryClient);
+}
+
+function removeServerQuery(key: string, queryClient: QueryClient = serverQueryClient) {
+  queryClient.removeQueries({
+    queryKey: toQueryKey(key),
+    exact: true,
+  });
+  removeTagMappingsForKey(key);
+}
+
+function removeServerQueryPrefix(
+  prefix: string,
+  queryClient: QueryClient = serverQueryClient,
+) {
+  const normalizedPrefix = normalizeServerQueryPrefix(prefix);
+  if (!normalizedPrefix) {
+    return;
+  }
+
+  removeServerQueries(
+    (candidateKey) => keyMatchesPrefix(candidateKey, normalizedPrefix),
+    queryClient,
+  );
+}
+
+function removeServerQueryTag(tag: string, queryClient: QueryClient = serverQueryClient) {
+  const normalizedTag = normalizeServerQueryTag(tag);
+  if (!normalizedTag) {
+    return;
+  }
+
+  const keys = tagKeys.get(normalizedTag);
+  if (!keys || keys.size === 0) {
+    return;
+  }
+
+  const keySet = new Set(keys);
+  removeServerQueries((candidateKey) => keySet.has(candidateKey), queryClient);
+}
+
+function getServerQueryData<TData>(
+  key: string,
+  queryClient: QueryClient = serverQueryClient,
+): TData | undefined {
+  return queryClient.getQueryData<TData>(toQueryKey(key));
+}
+
+function setServerQueryData<TData>(
+  key: string,
+  data: TData,
+  queryClient: QueryClient = serverQueryClient,
+) {
+  queryClient.setQueryData(toQueryKey(key), data);
+}
+
+function updateServerQueryData<TData>(
+  key: string,
+  updater: (current: TData | undefined) => TData | undefined,
+  options: UpdateServerQueryDataOptions = {},
+  queryClient: QueryClient = serverQueryClient,
+): TData | undefined {
+  if (options.cancelInFlight) {
+    void queryClient.cancelQueries({
+      queryKey: toQueryKey(key),
+      exact: true,
+    });
+  }
+
+  let nextValue: TData | undefined;
+  queryClient.setQueryData<TData | undefined>(
+    toQueryKey(key),
+    (current) => {
+      nextValue = updater(current);
+      return nextValue;
+    },
+  );
+
+  if (nextValue === undefined && !options.keepFreshWhenUndefined) {
+    invalidateServerQuery(key, { cancelInFlight: false }, queryClient);
+  }
+
+  // TanStack Query tracks error state with query status; resetting here would
+  // discard optimistic updates (e.g. favorites toggles) before mutation settles.
+  // Keep updated data intact and let follow-up invalidation/refetch resolve state.
+  void options.preserveError;
+
+  return nextValue;
+}
+
+export {
+  cancelServerQueries,
+  cancelServerQuery,
+  cancelServerQueryPrefix,
+  cancelServerQueryTag,
+  getServerQueryData,
+  invalidateServerQueries,
+  invalidateServerQuery,
+  invalidateServerQueryPrefix,
+  invalidateServerQueryTag,
+  normalizeServerQueryTags,
+  removeServerQuery,
+  removeServerQueryPrefix,
+  removeServerQueryTag,
+  setServerQueryData,
+  updateServerQueryData,
+};
+
+export type {
+  InvalidateServerQueryOptions,
+  ServerQueryContext,
+  UpdateServerQueryDataOptions,
+};

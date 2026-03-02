@@ -16,6 +16,7 @@ MIGRATION_FILES=()
 
 SEED_BASELINE_FILES=(
   "seeds/baseline/BASELINE_REFERENCE_DATA.sql"
+  "seeds/baseline/BASELINE_LOCATIONS.sql"
 )
 
 SEED_DEV_FILES=(

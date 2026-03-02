@@ -1,4 +1,4 @@
-import type { Product, Language } from "../../types";
+import type { Post, Language } from "../../types";
 
 const ONE_MINUTE_MS = 60 * 1000;
 const ONE_HOUR_MS = 60 * ONE_MINUTE_MS;
@@ -161,19 +161,19 @@ export const resolveDisplayLocationLabel = ({
 };
 
 export const countActiveListings = (
-  allProducts: Product[] | undefined,
-  currentProduct: Product,
+  allPosts: Post[] | undefined,
+  currentPost: Post,
 ): number => {
-  if (!allProducts) {
+  if (!allPosts) {
     return 0;
   }
 
-  const normalizedCurrentSellerId = String(currentProduct.sellerId || "").trim();
-  const normalizedCurrentSellerName = String(currentProduct.seller || "")
+  const normalizedCurrentSellerId = String(currentPost.sellerId || "").trim();
+  const normalizedCurrentSellerName = String(currentPost.seller || "")
     .trim()
     .toLowerCase();
 
-  return allProducts.filter((candidate) => {
+  return allPosts.filter((candidate) => {
     if (candidate.status !== "ACTIVE") {
       return false;
     }
@@ -191,13 +191,13 @@ export const countActiveListings = (
   }).length;
 };
 
-export const getDisplayImages = (product: Product): {
+export const getDisplayImages = (product: Post): {
   displayImages: string[];
   hasMultipleImages: boolean;
 } => {
   const productImages =
     product.images && product.images.length > 0
-      ? product.images.filter((img) => img && img.trim() !== "")
+      ? product.images.filter((img: string) => img && img.trim() !== "")
       : product.image && product.image.trim() !== ""
         ? [product.image]
         : [];

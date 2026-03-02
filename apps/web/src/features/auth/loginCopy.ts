@@ -1,0 +1,244 @@
+import type { Language } from "../../types";
+import type { LoginValidationMessages } from "./loginValidation";
+
+export interface LoginCopy {
+  form: {
+    signUpTitle: string;
+    signInTitle: string;
+    signUpSubtitle: string;
+    signInSubtitle: string;
+    firstNameLabel: string;
+    firstNamePlaceholder: string;
+    lastNameLabel: string;
+    lastNamePlaceholder: string;
+    phoneLabel: string;
+    phonePlaceholder: string;
+    cityLabel: string;
+    cityPlaceholder: string;
+    areaLabel: string;
+    areaPlaceholder: string;
+    identifierLabel: string;
+    identifierPlaceholder: string;
+    passwordLabel: string;
+    passwordPlaceholder: string;
+    confirmPasswordLabel: string;
+    confirmPasswordPlaceholder: string;
+    creatingAccount: string;
+    signingIn: string;
+    createAccount: string;
+    signInButton: string;
+    alreadyHaveAccount: string;
+    dontHaveAccount: string;
+    signInLink: string;
+    signUpLink: string;
+    continueWithGoogle: string;
+    orUseEmail: string;
+    forgotPassword: string;
+    continueAsGuest: string;
+    showPassword: string;
+    hidePassword: string;
+    twoFactorTitle: string;
+    twoFactorSubtitle: string;
+    twoFactorCodeLabel: string;
+    twoFactorCodePlaceholder: string;
+    verifyTwoFactorButton: string;
+    verifyingTwoFactor: string;
+    cancelTwoFactor: string;
+  };
+  errors: {
+    backendConnection: string;
+    unexpected: string;
+    duplicateHintSuffix: string;
+    signUpInvalidIdentifierPrompt: string;
+    signUpInvalidPhonePrompt: string;
+    signUpCityRequiredPrompt: string;
+    signUpAreaRequiredPrompt: string;
+    registrationFailedFallback: string;
+    loginFailedFallback: string;
+    googleAuthFailedFallback: string;
+    twoFactorRequiredPrompt: string;
+    twoFactorCodeInvalid: string;
+    twoFactorSessionExpired: string;
+  };
+  validation: LoginValidationMessages;
+}
+
+const loginCopyByLanguage: Record<Language, LoginCopy> = {
+  en: {
+    form: {
+      signUpTitle: "Sign Up",
+      signInTitle: "Sign In",
+      signUpSubtitle: "Create your TijarahJo account to start buying and selling",
+      signInSubtitle: "Sign in to access your TijarahJo account",
+      firstNameLabel: "First Name",
+      firstNamePlaceholder: "First name",
+      lastNameLabel: "Last Name",
+      lastNamePlaceholder: "Last name",
+      phoneLabel: "Phone Number",
+      phonePlaceholder: "+9627XXXXXXXX",
+      cityLabel: "City",
+      cityPlaceholder: "City",
+      areaLabel: "Area",
+      areaPlaceholder: "Area",
+      identifierLabel: "Email or Phone",
+      identifierPlaceholder: "Email address or phone number",
+      passwordLabel: "Password",
+      passwordPlaceholder: "Password",
+      confirmPasswordLabel: "Confirm Password",
+      confirmPasswordPlaceholder: "Confirm password",
+      creatingAccount: "Creating Account...",
+      signingIn: "Signing In...",
+      createAccount: "Create Account",
+      signInButton: "Sign In",
+      alreadyHaveAccount: "Already have an account?",
+      dontHaveAccount: "Don't have an account?",
+      signInLink: "Sign in",
+      signUpLink: "Sign up",
+      continueWithGoogle: "Continue with Google",
+      orUseEmail: "or continue with email",
+      forgotPassword: "Forgot password?",
+      continueAsGuest: "Continue as Guest",
+      showPassword: "Show password",
+      hidePassword: "Hide password",
+      twoFactorTitle: "Two-Factor Verification",
+      twoFactorSubtitle: "Enter the 6-digit code from your authenticator app.",
+      twoFactorCodeLabel: "Verification Code",
+      twoFactorCodePlaceholder: "123456",
+      verifyTwoFactorButton: "Verify Code",
+      verifyingTwoFactor: "Verifying...",
+      cancelTwoFactor: "Back to Sign In",
+    },
+    errors: {
+      backendConnection:
+        "Cannot connect to backend. Please make sure the backend is running on",
+      unexpected: "An unexpected error occurred. Please try again.",
+      duplicateHintSuffix:
+        "Try using different credentials, or switch to sign in if you already have an account.",
+      signUpInvalidIdentifierPrompt:
+        "Please enter a valid email address or Jordanian phone number.",
+      signUpInvalidPhonePrompt: "Please enter a valid Jordanian phone number.",
+      signUpCityRequiredPrompt: "Please enter your city.",
+      signUpAreaRequiredPrompt: "Please enter your area.",
+      registrationFailedFallback: "Registration failed. Please try again.",
+      loginFailedFallback: "Invalid email or password. Please try again.",
+      googleAuthFailedFallback: "Google sign-in failed. Please try again.",
+      twoFactorRequiredPrompt:
+        "Two-factor verification is required. Enter the code from your authenticator app.",
+      twoFactorCodeInvalid: "Enter a valid 6-digit verification code.",
+      twoFactorSessionExpired: "Two-factor session expired. Please sign in again.",
+    },
+    validation: {
+      identifierRequired: "Email or phone is required",
+      identifierInvalid: "Enter a valid email or Jordanian phone number",
+      passwordRequired: "Password is required",
+      passwordMinLength: "Password must be at least 8 characters",
+      passwordUppercase:
+        "Password must contain at least one uppercase letter",
+      passwordLowercase:
+        "Password must contain at least one lowercase letter",
+      passwordNumber: "Password must contain at least one number",
+      passwordSpecial:
+        "Password must contain at least one special character (!@#$%^&*...)",
+      confirmPasswordRequired: "Please confirm your password",
+      confirmPasswordMismatch: "Passwords do not match",
+      firstNameRequired: "First name is required",
+      lastNameRequired: "Last name is required",
+      phoneRequired: "Phone number is required",
+      phoneInvalid: "Enter a valid Jordanian phone number",
+      cityRequired: "City is required",
+      areaRequired: "Area is required",
+    },
+  },
+  ar: {
+    form: {
+      signUpTitle: "إنشاء حساب",
+      signInTitle: "تسجيل الدخول",
+      signUpSubtitle: "أنشئ حسابك في تجارة جو لبدء البيع والشراء",
+      signInSubtitle: "سجّل الدخول للوصول إلى حسابك في تجارة جو",
+      firstNameLabel: "الاسم الأول",
+      firstNamePlaceholder: "الاسم الأول",
+      lastNameLabel: "اسم العائلة",
+      lastNamePlaceholder: "اسم العائلة",
+      phoneLabel: "رقم الهاتف",
+      phonePlaceholder: "+9627XXXXXXXX",
+      cityLabel: "المدينة",
+      cityPlaceholder: "المدينة",
+      areaLabel: "المنطقة",
+      areaPlaceholder: "المنطقة",
+      identifierLabel: "البريد الإلكتروني أو الهاتف",
+      identifierPlaceholder: "البريد الإلكتروني أو رقم الهاتف",
+      passwordLabel: "كلمة المرور",
+      passwordPlaceholder: "كلمة المرور",
+      confirmPasswordLabel: "تأكيد كلمة المرور",
+      confirmPasswordPlaceholder: "تأكيد كلمة المرور",
+      creatingAccount: "جارٍ إنشاء الحساب...",
+      signingIn: "جارٍ تسجيل الدخول...",
+      createAccount: "إنشاء الحساب",
+      signInButton: "تسجيل الدخول",
+      alreadyHaveAccount: "لديك حساب بالفعل؟",
+      dontHaveAccount: "ليس لديك حساب؟",
+      signInLink: "تسجيل الدخول",
+      signUpLink: "إنشاء حساب",
+      continueWithGoogle: "المتابعة باستخدام Google",
+      orUseEmail: "أو المتابعة بالبريد الإلكتروني",
+      forgotPassword: "هل نسيت كلمة المرور؟",
+      continueAsGuest: "المتابعة كزائر",
+      showPassword: "إظهار كلمة المرور",
+      hidePassword: "إخفاء كلمة المرور",
+      twoFactorTitle: "التحقق بخطوتين",
+      twoFactorSubtitle: "أدخل رمز التحقق المكوّن من 6 أرقام من تطبيق المصادقة.",
+      twoFactorCodeLabel: "رمز التحقق",
+      twoFactorCodePlaceholder: "123456",
+      verifyTwoFactorButton: "تأكيد الرمز",
+      verifyingTwoFactor: "جارٍ التحقق...",
+      cancelTwoFactor: "العودة لتسجيل الدخول",
+    },
+    errors: {
+      backendConnection:
+        "لا يمكن الاتصال بالخادم الخلفي. تأكد من تشغيل الخادم على",
+      unexpected: "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
+      duplicateHintSuffix:
+        "جرّب بيانات اعتماد مختلفة، أو انتقل إلى تسجيل الدخول إذا كان لديك حساب بالفعل.",
+      signUpInvalidIdentifierPrompt:
+        "يرجى إدخال بريد إلكتروني صالح أو رقم هاتف أردني صالح.",
+      signUpInvalidPhonePrompt: "يرجى إدخال رقم هاتف أردني صالح.",
+      signUpCityRequiredPrompt: "يرجى إدخال المدينة.",
+      signUpAreaRequiredPrompt: "يرجى إدخال المنطقة.",
+      registrationFailedFallback: "فشل إنشاء الحساب. يرجى المحاولة مرة أخرى.",
+      loginFailedFallback:
+        "البريد الإلكتروني أو كلمة المرور غير صحيحة. يرجى المحاولة مرة أخرى.",
+      googleAuthFailedFallback:
+        "فشل تسجيل الدخول عبر Google. يرجى المحاولة مرة أخرى.",
+      twoFactorRequiredPrompt:
+        "المصادقة الثنائية مطلوبة. أدخل الرمز من تطبيق المصادقة.",
+      twoFactorCodeInvalid: "أدخل رمز تحقق صالحًا مكوّنًا من 6 أرقام.",
+      twoFactorSessionExpired: "انتهت جلسة المصادقة الثنائية. سجّل الدخول مرة أخرى.",
+    },
+    validation: {
+      identifierRequired: "البريد الإلكتروني أو الهاتف مطلوب",
+      identifierInvalid:
+        "أدخل بريدًا إلكترونيًا صالحًا أو رقم هاتف أردني صالحًا",
+      passwordRequired: "كلمة المرور مطلوبة",
+      passwordMinLength: "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل",
+      passwordUppercase:
+        "يجب أن تحتوي كلمة المرور على حرف كبير واحد على الأقل",
+      passwordLowercase:
+        "يجب أن تحتوي كلمة المرور على حرف صغير واحد على الأقل",
+      passwordNumber: "يجب أن تحتوي كلمة المرور على رقم واحد على الأقل",
+      passwordSpecial:
+        "يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل (!@#$%^&*...)",
+      confirmPasswordRequired: "يرجى تأكيد كلمة المرور",
+      confirmPasswordMismatch: "كلمتا المرور غير متطابقتين",
+      firstNameRequired: "الاسم الأول مطلوب",
+      lastNameRequired: "اسم العائلة مطلوب",
+      phoneRequired: "رقم الهاتف مطلوب",
+      phoneInvalid: "أدخل رقم هاتف أردني صالحًا",
+      cityRequired: "المدينة مطلوبة",
+      areaRequired: "المنطقة مطلوبة",
+    },
+  },
+};
+
+export function getLoginCopy(language: Language): LoginCopy {
+  return loginCopyByLanguage[language];
+}

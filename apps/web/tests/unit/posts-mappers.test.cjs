@@ -2,24 +2,24 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
-  normalizeProductStatus,
-  transformPostModelToProduct,
+  normalizePostStatus,
+  transformPostModelToPost,
   getUserDisplayName,
   getUserIdentifier,
 } = require("../../.unit-dist/services/api/posts/mappers.js");
 
-test("normalizeProductStatus maps moderation-like states to DELETED", () => {
-  assert.equal(normalizeProductStatus("blocked"), "DELETED");
-  assert.equal(normalizeProductStatus("inactive"), "DELETED");
-  assert.equal(normalizeProductStatus(1), "DELETED");
-  assert.equal(normalizeProductStatus(2), "DELETED");
+test("normalizePostStatus maps moderation-like states to DELETED", () => {
+  assert.equal(normalizePostStatus("blocked"), "DELETED");
+  assert.equal(normalizePostStatus("inactive"), "DELETED");
+  assert.equal(normalizePostStatus(1), "DELETED");
+  assert.equal(normalizePostStatus(2), "DELETED");
 });
 
-test("normalizeProductStatus maps SOLD and defaults ACTIVE", () => {
-  assert.equal(normalizeProductStatus("sold"), "SOLD");
-  assert.equal(normalizeProductStatus(3), "SOLD");
-  assert.equal(normalizeProductStatus("anything-else"), "ACTIVE");
-  assert.equal(normalizeProductStatus(undefined), "ACTIVE");
+test("normalizePostStatus maps SOLD and defaults ACTIVE", () => {
+  assert.equal(normalizePostStatus("sold"), "SOLD");
+  assert.equal(normalizePostStatus(3), "SOLD");
+  assert.equal(normalizePostStatus("anything-else"), "ACTIVE");
+  assert.equal(normalizePostStatus(undefined), "ACTIVE");
 });
 
 test("getUserIdentifier resolves canonical user id from mixed backend casing", () => {
@@ -41,8 +41,8 @@ test("getUserDisplayName resolves explicit name > full name > email > fallback",
   assert.equal(getUserDisplayName(null, "99"), "User 99");
 });
 
-test("transformPostModelToProduct maps backend post shape to frontend product", () => {
-  const product = transformPostModelToProduct(
+test("transformPostModelToPost maps backend post shape to frontend post", () => {
+  const post = transformPostModelToPost(
     {
       PostID: 10,
       UserID: 4,
@@ -62,15 +62,15 @@ test("transformPostModelToProduct maps backend post shape to frontend product", 
     [],
   );
 
-  assert.equal(product.id, "10");
-  assert.equal(product.sellerId, "4");
-  assert.equal(product.categoryId, "3");
-  assert.equal(product.name, "Laptop");
-  assert.equal(product.location, "Amman");
-  assert.equal(product.area, "Khalda");
-  assert.equal(product.status, "ACTIVE");
-  assert.equal(product.image, "https://example.com/1.jpg");
-  assert.deepEqual(product.images, [
+  assert.equal(post.id, "10");
+  assert.equal(post.sellerId, "4");
+  assert.equal(post.categoryId, "3");
+  assert.equal(post.name, "Laptop");
+  assert.equal(post.location, "Amman");
+  assert.equal(post.area, "Khalda");
+  assert.equal(post.status, "ACTIVE");
+  assert.equal(post.image, "https://example.com/1.jpg");
+  assert.deepEqual(post.images, [
     "https://example.com/1.jpg",
     "https://example.com/2.jpg",
   ]);

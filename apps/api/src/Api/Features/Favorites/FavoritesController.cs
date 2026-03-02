@@ -1,124 +1,102 @@
-using System.Linq;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDBAPI.Common.Utils;
+using TijarahJoDBAPI.Contracts.Requests;
+using TijarahJoDBAPI.Contracts.Responses;
 
-namespace TijarahJoDBAPI.Features.Favorites
+namespace TijarahJoDBAPI.Features.Favorites;
+
+[ApiController]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/favorites")]
+[Authorize]
+public class FavoritesController : ControllerBase
 {
-    [ApiController]
-    [Route("api/favorites")]
-    [Authorize]
-    public class FavoritesController : ControllerBase
+    private readonly IFavoriteQueryHandler _favoriteQueries;
+
+    public FavoritesController(IFavoriteQueryHandler favoriteQueries)
     {
-        private readonly IFavoriteService _favorites;
-        private readonly IPostService _posts;
+        _favoriteQueries = favoriteQueries;
+    }
 
-        public FavoritesController(IFavoriteService favorites, IPostService posts)
+    [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<FavoritesResponse>> GetFavorites()
+    {
+        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int currentUserId, out ActionResult? failureResult))
         {
-            _favorites = favorites;
-            _posts = posts;
+            return failureResult!;
         }
 
-        public class AddFavoriteRequest
+        FavoriteListQueryResult result = await _favoriteQueries.GetFavoritesAsync(currentUserId, HttpContext.RequestAborted);
+        if (!result.Success)
         {
-            public string? PostId { get; set; }
+            return this.ToFavoriteListQueryProblem(result, "Failed to fetch favorites.");
         }
 
-        [HttpGet]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public ActionResult GetFavorites()
+        return Ok(new FavoritesResponse
         {
-            if (!ApiControllerHelpers.TryGetCurrentUserId(User, out int currentUserId))
-            {
-                return Unauthorized(new { message = "Invalid authentication token." });
-            }
+            Success = true,
+            Favorites = result.FavoritePostIds.ToList()
+        });
+    }
 
-            var favorites = _favorites.GetFavoritesByUserId(currentUserId);
-            var favoritePostIds = favorites
-                .Select(f => f.PostID.ToString())
-                .ToList();
-
-            return Ok(new
-            {
-                success = true,
-                favorites = favoritePostIds
-            });
+    [HttpPost]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<OperationSuccessResponse>> AddFavorite([FromBody] AddFavoriteRequest request)
+    {
+        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int currentUserId, out ActionResult? failureResult))
+        {
+            return failureResult!;
         }
 
-        [HttpPost]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public ActionResult AddFavorite([FromBody] AddFavoriteRequest? request)
+        FavoriteOperationQueryResult result = await _favoriteQueries.AddAsync(
+            currentUserId,
+            request.PostId,
+            HttpContext.RequestAborted
+        );
+        if (!result.Success)
         {
-            if (!ApiControllerHelpers.TryGetCurrentUserId(User, out int currentUserId))
-            {
-                return Unauthorized(new { message = "Invalid authentication token." });
-            }
-
-            if (request == null || string.IsNullOrWhiteSpace(request.PostId))
-            {
-                return BadRequest(new { message = "PostId is required." });
-            }
-
-            if (!ApiControllerHelpers.TryParsePositiveId(request.PostId, out int postId))
-            {
-                return BadRequest(new { message = $"Invalid post ID: {request.PostId}" });
-            }
-
-            if (!_posts.DoesPostExist(postId))
-            {
-                return NotFound(new { message = $"Post with ID {postId} not found." });
-            }
-
-            bool saved = _favorites.AddFavorite(currentUserId, postId);
-            if (!saved)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new
-                {
-                    message = "Failed to add favorite."
-                });
-            }
-
-            return Ok(new
-            {
-                success = true
-            });
+            return this.ToFavoriteOperationQueryProblem(result, "Favorite operation failed.");
         }
 
-        [HttpDelete("{postId}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public ActionResult RemoveFavorite(string postId)
+        return Ok(new OperationSuccessResponse
         {
-            if (!ApiControllerHelpers.TryGetCurrentUserId(User, out int currentUserId))
-            {
-                return Unauthorized(new { message = "Invalid authentication token." });
-            }
+            Success = true
+        });
+    }
 
-            if (!ApiControllerHelpers.TryParsePositiveId(postId, out int parsedPostId))
-            {
-                return BadRequest(new { message = $"Invalid post ID: {postId}" });
-            }
-
-            bool removed = _favorites.RemoveFavorite(currentUserId, parsedPostId);
-            if (!removed)
-            {
-                return NotFound(new
-                {
-                    message = "Favorite was not found."
-                });
-            }
-
-            return Ok(new
-            {
-                success = true
-            });
+    [HttpDelete("{postId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<OperationSuccessResponse>> RemoveFavorite(string postId)
+    {
+        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int currentUserId, out ActionResult? failureResult))
+        {
+            return failureResult!;
         }
+
+        FavoriteOperationQueryResult result = await _favoriteQueries.RemoveAsync(
+            currentUserId,
+            postId,
+            HttpContext.RequestAborted
+        );
+        if (!result.Success)
+        {
+            return this.ToFavoriteOperationQueryProblem(result, "Favorite operation failed.");
+        }
+
+        return Ok(new OperationSuccessResponse
+        {
+            Success = true
+        });
     }
 }

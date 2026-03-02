@@ -7,21 +7,6 @@ import type {
 const JORDAN_DIALING_PREFIX = "962";
 const MAX_JORDAN_PHONE_DIGITS = 9;
 
-export const JORDANIAN_CITIES = [
-  "Amman",
-  "Irbid",
-  "Zarqa",
-  "Aqaba",
-  "Madaba",
-  "Salt",
-  "Jerash",
-  "Karak",
-  "Mafraq",
-  "Tafilah",
-  "Ma'an",
-  "Ajloun",
-] as const;
-
 function composeName(
   firstName: string,
   middleName: string | undefined,

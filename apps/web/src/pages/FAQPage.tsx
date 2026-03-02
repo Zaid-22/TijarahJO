@@ -1,11 +1,14 @@
-import { ArrowLeft, HelpCircle } from "lucide-react";
-import { Button } from "../shared/ui/button";
+import { HelpCircle } from "lucide-react";
+import { SubpageHeader } from "../shared/ui/subpage-header";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "../shared/ui/accordion";
+import { Card, CardContent } from "../shared/ui/card";
+import { PageShell } from "../shared/ui/page-shell";
+import { InfoPageIntroCard, InfoPageSupportCard } from "../shared/ui/info-page";
 
 interface FAQPageProps {
   language: "en" | "ar";
@@ -19,14 +22,18 @@ export function FAQPage({ language, onBack }: FAQPageProps) {
     en: {
       title: "Frequently Asked Questions",
       back: "Back",
+      subtitle:
+        "Answers to common questions about buying, selling, and account usage.",
+      stillNeedHelp: "Still need help?",
+      helpCenterCta: "Open Help Center",
       questions: [
         {
           q: "How do I buy an item?",
-          a: "You can browse items by category or search for specific products. Once you find an item you like, you can contact the seller directly via the chat feature or by phone if listed.",
+          a: "You can browse items by category or search for specific posts. Once you find an item you like, you can contact the seller directly via the chat feature or by phone if listed.",
         },
         {
           q: "How do I sell an item?",
-          a: "To sell an item, you need to sign in to your account. Click on the 'Sell' or 'Add Post' button, fill in the details about your product including images, price, and description, and then publish your listing.",
+          a: "To sell an item, you need to sign in to your account. Click on the 'Sell' or 'Add Post' button, fill in the details about your post including images, price, and description, and then publish your listing.",
         },
         {
           q: "Is TijarahJo free to use?",
@@ -45,14 +52,18 @@ export function FAQPage({ language, onBack }: FAQPageProps) {
     ar: {
       title: "الأسئلة الشائعة",
       back: "عودة",
+      subtitle:
+        "إجابات على الأسئلة الشائعة حول الشراء والبيع واستخدام الحساب.",
+      stillNeedHelp: "هل تحتاج مساعدة إضافية؟",
+      helpCenterCta: "فتح مركز المساعدة",
       questions: [
         {
-          q: "كيف يمكنني شراء منتج؟",
-          a: "يمكنك تصفح المنتجات حسب الفئة أو البحث عن منتجات محددة. بمجرد العثور على منتج يعجبك، يمكنك التواصل مع البائع مباشرة عبر ميزة الدردشة أو عبر الهاتف إذا كان مدرجاً.",
+          q: "كيف يمكنني شراء منشور؟",
+          a: "يمكنك تصفح المنشورات حسب الفئة أو البحث عن منشورات محددة. بمجرد العثور على منشور يعجبك، يمكنك التواصل مع البائع مباشرة عبر ميزة الدردشة أو عبر الهاتف إذا كان مدرجاً.",
         },
         {
-          q: "كيف يمكنني بيع منتج؟",
-          a: "لبيع منتج، تحتاج إلى تسجيل الدخول إلى حسابك. انقر على زر 'بيع' أو 'إضافة إعلان'، واملأ التفاصيل حول منتجك بما في ذلك الصور والسعر والوصف، ثم انشر إعلانك.",
+          q: "كيف يمكنني بيع منشور؟",
+          a: "لبيع منشور، تحتاج إلى تسجيل الدخول إلى حسابك. انقر على زر 'بيع' أو 'إضافة منشور'، واملأ التفاصيل حول منشورك بما في ذلك الصور والسعر والوصف، ثم انشر إعلانك.",
         },
         {
           q: "هل استخدام تجارة جو مجاني؟",
@@ -73,48 +84,52 @@ export function FAQPage({ language, onBack }: FAQPageProps) {
   const t = content[language];
 
   return (
-    <div className="bg-gray-50 dark:bg-[#1a1a1a] pb-8">
-      {/* Header */}
-      <div className="bg-white dark:bg-[#111111] border-b border-gray-200 dark:border-gray-800 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={onBack}
-            className={`hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full h-10 w-10 p-0 ${isRTL ? "-mr-2" : "-ml-2"}`}
-          >
-            <ArrowLeft className={`w-6 h-6 ${isRTL ? "rotate-180" : ""}`} />
-          </Button>
-          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-            {t.title}
-          </h1>
-        </div>
-      </div>
+    <PageShell tone="account">
+      <SubpageHeader
+        onBack={onBack}
+        isRTL={isRTL}
+        backLabel={t.back}
+        showLogo={false}
+        title={t.title}
+      />
 
       {/* Content */}
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white dark:bg-[#111111] rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-          <div className="p-6 md:p-8">
-            <div className="flex justify-center mb-8">
-              <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
-                <HelpCircle className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              </div>
-            </div>
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <InfoPageIntroCard
+          icon={HelpCircle}
+          title={t.title}
+          description={t.subtitle}
+        />
 
+        <Card className="border-border bg-card/95 backdrop-blur-sm">
+          <CardContent className="pt-6 md:pt-8">
             <Accordion type="single" collapsible className="w-full">
-              {t.questions.map((item, index) => (
-                <AccordionItem key={index} value={`item-${index}`}>
-                  <AccordionTrigger className="text-left text-lg font-medium">
-                    {item.q}
-                  </AccordionTrigger>
-                  <AccordionContent className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                    {item.a}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
+              {t.questions.map((item) => {
+                const stableItemId = item.q
+                  .toLowerCase()
+                  .replace(/[^a-z0-9\u0600-\u06ff]+/g, "-")
+                  .replace(/^-+|-+$/g, "");
+
+                return (
+                  <AccordionItem
+                    key={`${language}-${stableItemId}`}
+                    value={`item-${language}-${stableItemId}`}
+                  >
+                    <AccordionTrigger className="text-left">
+                      {item.q}
+                    </AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground leading-relaxed">
+                      {item.a}
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
             </Accordion>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+
+        <InfoPageSupportCard label={t.stillNeedHelp} ctaLabel={t.helpCenterCta} />
       </div>
-    </div>
+    </PageShell>
   );
 }

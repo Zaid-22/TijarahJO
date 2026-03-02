@@ -1,38 +1,43 @@
 import { translations, Language } from "../translations";
-import { Product } from "../types";
+import { Post } from "../types";
 import { CreatePostInput } from "../app/routes/appRoutesUtils";
+import { UpdatePostInput } from "../app/routes/usePostActions";
 import type { ProfilePageUserProfile } from "../features/profile/types";
 import { getProfileListings } from "../features/profile/profileListings";
 import { ProfileHeaderSection } from "../features/profile/components/ProfileHeaderSection";
 import { ProfileSidebarSection } from "../features/profile/components/ProfileSidebarSection";
 import { ProfileListingsSection } from "../features/profile/components/ProfileListingsSection";
+import { SubpageHeader } from "../shared/ui/subpage-header";
+import { PageShell } from "../shared/ui/page-shell";
+import { Button } from "../shared/ui/button";
+import { Settings } from "lucide-react";
 
 interface ProfilePageProps {
   onBackToMarketplace: () => void;
-  products: Product[];
-  onProductClick?: (productId: string) => void;
-  onDeleteProduct?: (productId: string) => void;
-  onUpdateProduct?: (product: Product) => void;
-  onAddProduct?: (product: CreatePostInput) => void | Promise<void>;
-  onAddProductClick?: () => void;
+  posts: Post[];
+  onPostClick?: (postId: string) => void;
+  onDeletePost?: (postId: string) => void;
+  onUpdatePost?: (post: UpdatePostInput) => void;
+  onAddPost?: (post: CreatePostInput) => void | Promise<void>;
+  onAddPostClick?: () => void;
   onSettingsClick?: () => void;
   onEditProfileClick?: () => void;
   language?: Language;
   userProfile: ProfilePageUserProfile;
   favoriteIds?: string[];
-  onFavoriteToggle?: (productId: string) => void;
+  onFavoriteToggle?: (postId: string) => void;
   isAuthenticated?: boolean;
   currentUserDisplayName?: string;
 }
 
 export function ProfilePage({
   onBackToMarketplace,
-  products = [],
-  onProductClick,
-  onDeleteProduct,
-  onUpdateProduct,
-  onAddProduct,
-  onAddProductClick,
+  posts = [],
+  onPostClick,
+  onDeletePost,
+  onUpdatePost,
+  onAddPost,
+  onAddPostClick,
   onSettingsClick,
   onEditProfileClick,
   language = "en",
@@ -46,17 +51,37 @@ export function ProfilePage({
   const isRTL = language === "ar";
 
   const { activeListings, soldListings, normalizedCurrentUserId } =
-    getProfileListings(products, userProfile, currentUserDisplayName);
+    getProfileListings(posts, userProfile, currentUserDisplayName);
 
   return (
-    <div className="bg-gray-50 dark:bg-[#1a1a1a]">
+    <PageShell tone="account">
+      <SubpageHeader
+        onBack={onBackToMarketplace}
+        isRTL={isRTL}
+        backLabel={t.backToMarketplace}
+        title={t.myProfile}
+        showLogo={false}
+        rightContent={
+          onSettingsClick ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onSettingsClick}
+              aria-label={language === "ar" ? "الإعدادات" : "Settings"}
+            >
+              <Settings className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+              <span className="hidden sm:inline">
+                {language === "ar" ? "الإعدادات" : "Settings"}
+              </span>
+            </Button>
+          ) : null
+        }
+      />
       <ProfileHeaderSection
         userProfile={userProfile}
         isRTL={isRTL}
         t={t}
         activeListingsCount={activeListings.length}
-        onBackToMarketplace={onBackToMarketplace}
-        onSettingsClick={onSettingsClick}
         onEditProfileClick={onEditProfileClick}
       />
 
@@ -78,16 +103,16 @@ export function ProfilePage({
                 isAuthenticated ? normalizedCurrentUserId || undefined : undefined
               }
               currentUserDisplayName={currentUserDisplayName}
-              onProductClick={onProductClick}
-              onDeleteProduct={onDeleteProduct}
-              onUpdateProduct={onUpdateProduct}
-              onAddProduct={onAddProduct}
-              onAddProductClick={onAddProductClick}
+              onPostClick={onPostClick}
+              onDeletePost={onDeletePost}
+              onUpdatePost={onUpdatePost}
+              onAddPost={onAddPost}
+              onAddPostClick={onAddPostClick}
               onFavoriteToggle={onFavoriteToggle}
             />
           </div>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

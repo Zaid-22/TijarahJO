@@ -64,6 +64,16 @@ export async function performAuthLogin({
       return false;
     }
 
+    if (response.requiresTwoFactor) {
+      setAuthError(
+        normalizeMessage(
+          response.message,
+          "Two-factor verification is required. Please sign in from the login page.",
+        ),
+      );
+      return false;
+    }
+
     let user = resolveAuthUser(response.user, {
       email,
       name: email,

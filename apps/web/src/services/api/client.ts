@@ -14,6 +14,11 @@ const BACKEND_TIMEOUT_MESSAGE = `Request timed out. Please check if the backend 
 const BACKEND_CONNECTION_MESSAGE = `Cannot connect to backend. Please make sure the backend is running on ${BACKEND_URL_HINT}. Start it with: ${BACKEND_RUN_COMMAND}`;
 export const BACKEND_CONNECTION_SHORT_MESSAGE = `Cannot connect to backend. Please make sure the backend is running on ${BACKEND_URL_HINT}`;
 
+export type ApiRequestOptions = RequestInit & {
+  timeoutMs?: number;
+  throwOnAbort?: boolean;
+};
+
 function getCookieValue(name: string): string | null {
   if (typeof document === "undefined") {
     return null;
@@ -41,11 +46,102 @@ function isUnsafeMethod(method: string): boolean {
   );
 }
 
+function hasAuthorizationHeader(headers?: HeadersInit): boolean {
+  if (!headers) {
+    return false;
+  }
+
+  if (headers instanceof Headers) {
+    return headers.has("Authorization");
+  }
+
+  if (Array.isArray(headers)) {
+    return headers.some(
+      ([key, value]) =>
+        key.toLowerCase() === "authorization" &&
+        String(value).trim().length > 0,
+    );
+  }
+
+  return Object.entries(headers).some(
+    ([key, value]) =>
+      key.toLowerCase() === "authorization" &&
+      String(value ?? "").trim().length > 0,
+  );
+}
+
+async function resolveCsrfToken(
+  method: string,
+  headers?: HeadersInit,
+): Promise<string | null> {
+  if (!isUnsafeMethod(method) || hasAuthorizationHeader(headers)) {
+    return null;
+  }
+
+  const existingToken = getCookieValue("XSRF-TOKEN");
+  if (existingToken) {
+    return existingToken;
+  }
+
+  // Prime XSRF-TOKEN for cookie-authenticated write requests.
+  try {
+    await fetch(`${API_BASE_URL}/auth/me`, {
+      method: "GET",
+      credentials: "include",
+    });
+  } catch {
+    // Ignore priming errors and allow request flow to surface the real failure.
+  }
+
+  return getCookieValue("XSRF-TOKEN");
+}
+
 export const debugLog = (...args: unknown[]) => {
   if (DEBUG_API) {
     logger.info(...args);
   }
 };
+
+// ---- Token refresh logic ----
+// Prevents concurrent refresh attempts (only one in-flight at a time).
+let refreshPromise: Promise<boolean> | null = null;
+
+const AUTH_ENDPOINTS_NO_RETRY = [
+  "/auth/login",
+  "/auth/signup",
+  "/auth/refresh",
+  "/auth/logout",
+  "/auth/forgot-password/request",
+  "/auth/forgot-password/confirm",
+  "/auth/2fa/verify-login",
+];
+
+function shouldAttemptRefresh(endpoint: string): boolean {
+  return !AUTH_ENDPOINTS_NO_RETRY.some((path) => endpoint.startsWith(path));
+}
+
+async function attemptTokenRefresh(): Promise<boolean> {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      return response.ok;
+    } catch {
+      return false;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
 
 export const debugWarn = (...args: unknown[]) => {
   if (DEBUG_API) {
@@ -59,34 +155,103 @@ export const debugError = (...args: unknown[]) => {
   }
 };
 
+function createAbortError(message = "Request cancelled"): Error {
+  const error = new Error(message);
+  error.name = "AbortError";
+  return error;
+}
+
 // Shared HTTP helper used across all API domains.
 export async function apiRequest<T>(
   endpoint: string,
-  options: RequestInit = {},
+  options: ApiRequestOptions = {},
 ): Promise<ApiResponse<T>> {
+  const {
+    timeoutMs = REQUEST_TIMEOUT_MS,
+    throwOnAbort = false,
+    signal: callerSignal,
+    ...requestOptions
+  } = options;
+
+  const controller = new AbortController();
+  let didTimeout = false;
+  const syncAbortFromCaller = () => {
+    if (!controller.signal.aborted) {
+      controller.abort();
+    }
+  };
+  if (callerSignal) {
+    if (callerSignal.aborted) {
+      syncAbortFromCaller();
+    } else {
+      callerSignal.addEventListener("abort", syncAbortFromCaller, {
+        once: true,
+      });
+    }
+  }
+  const timeoutId = setTimeout(() => {
+    didTimeout = true;
+    if (!controller.signal.aborted) {
+      controller.abort();
+    }
+  }, timeoutMs);
+
   try {
-    const method = (options.method || "GET").toUpperCase();
-    const csrfToken = isUnsafeMethod(method) ? getCookieValue("XSRF-TOKEN") : null;
+    const method = (requestOptions.method || "GET").toUpperCase();
+    const csrfToken = await resolveCsrfToken(method, requestOptions.headers);
+    const requestHeaders = new Headers(requestOptions.headers);
+    const isFormDataBody =
+      typeof FormData !== "undefined" &&
+      requestOptions.body instanceof FormData;
+    if (!isFormDataBody && !requestHeaders.has("Content-Type")) {
+      requestHeaders.set("Content-Type", "application/json");
+    }
+    if (csrfToken) {
+      requestHeaders.set("X-CSRF-Token", csrfToken);
+    }
 
-    // Add timeout to prevent hanging requests
-    const controller = new AbortController();
-    const timeoutId = setTimeout(
-      () => controller.abort(),
-      REQUEST_TIMEOUT_MS,
-    );
+    if (callerSignal?.aborted) {
+      if (throwOnAbort) {
+        throw createAbortError();
+      }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
+      return {
+        success: false,
+        error: {
+          code: "ABORTED",
+          message: "Request cancelled",
+        },
+      };
+    }
+
+    let response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...requestOptions,
+      credentials: requestOptions.credentials ?? "include",
       signal: controller.signal,
-      credentials: options.credentials ?? "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
-        ...options.headers,
-      },
+      headers: requestHeaders,
     });
 
-    clearTimeout(timeoutId);
+    // Auto-retry on 401 by refreshing the JWT cookie (one attempt only).
+    if (response.status === 401 && shouldAttemptRefresh(endpoint)) {
+      const refreshed = await attemptTokenRefresh();
+      if (refreshed) {
+        // Re-resolve CSRF token since the cookie changed.
+        const freshCsrfToken = await resolveCsrfToken(
+          method,
+          requestOptions.headers,
+        );
+        const retryHeaders = new Headers(requestHeaders);
+        if (freshCsrfToken) {
+          retryHeaders.set("X-CSRF-Token", freshCsrfToken);
+        }
+        response = await fetch(`${API_BASE_URL}${endpoint}`, {
+          ...requestOptions,
+          credentials: requestOptions.credentials ?? "include",
+          signal: controller.signal,
+          headers: retryHeaders,
+        });
+      }
+    }
 
     // Check if response has content
     const text = await response.text();
@@ -174,6 +339,20 @@ export async function apiRequest<T>(
     // Handle specific error types
     if (error instanceof Error) {
       if (error.name === "AbortError") {
+        if (callerSignal?.aborted && !didTimeout && throwOnAbort) {
+          throw createAbortError();
+        }
+
+        if (callerSignal?.aborted && !didTimeout) {
+          return {
+            success: false,
+            error: {
+              code: "ABORTED",
+              message: "Request cancelled",
+            },
+          };
+        }
+
         return {
           success: false,
           error: {
@@ -207,5 +386,10 @@ export async function apiRequest<T>(
             : "Network error. Please check if the backend is running.",
       },
     };
+  } finally {
+    clearTimeout(timeoutId);
+    if (callerSignal) {
+      callerSignal.removeEventListener("abort", syncAbortFromCaller);
+    }
   }
 }

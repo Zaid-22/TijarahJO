@@ -30,7 +30,7 @@ public sealed class MessageDataAccessAdapter : IMessageDataAccess
             SenderID = message.SenderId,
             ConversationID = message.ConversationId,
             Content = message.Content,
-            Timestamp = message.Timestamp == default ? DateTime.UtcNow : message.Timestamp,
+            CreatedAt = message.Timestamp == default ? DateTime.UtcNow : message.Timestamp,
             IsRead = message.IsRead
         };
 
@@ -46,23 +46,20 @@ public sealed class MessageDataAccessAdapter : IMessageDataAccess
         int conversationId,
         CancellationToken cancellationToken = default)
     {
-        Task<ConversationMetadata?> metadataTask = _dbContext.Conversations
+        ConversationMetadata? metadata = await _dbContext.Conversations
             .AsNoTracking()
             .Where(c => c.ConversationID == conversationId)
             .Select(c => new ConversationMetadata(c.User1ID, c.User2ID, c.PostID))
             .FirstOrDefaultAsync(cancellationToken);
 
-        var messages = _dbContext.Messages
+        List<MessageEntity> messages = await _dbContext.Messages
             .AsNoTracking()
             .Where(item => item.ConversationID == conversationId)
-            .OrderBy(item => item.Timestamp)
+            .OrderBy(item => item.CreatedAt)
             .ThenBy(item => item.MessageID)
             .ToListAsync(cancellationToken);
 
-        await Task.WhenAll(metadataTask, messages);
-        ConversationMetadata? metadata = metadataTask.Result;
-
-        return messages.Result
+        return messages
             .Select(item => ToModel(item, metadata?.User1ID, metadata?.User2ID, metadata?.PostID))
             .ToList();
     }
@@ -81,11 +78,11 @@ WITH UserConversations AS
 (
     SELECT c.ConversationID
     FROM dbo.Conversations AS c
-    WHERE c.User1ID = @UserID
+    WHERE c.User1ID = @UserID AND c.IsDeleted = 0
     UNION
     SELECT c.ConversationID
     FROM dbo.Conversations AS c
-    WHERE c.User2ID = @UserID
+    WHERE c.User2ID = @UserID AND c.IsDeleted = 0
 ),
 Ranked AS
 (
@@ -94,31 +91,35 @@ Ranked AS
         m.SenderID,
         m.ConversationID,
         m.Content,
-        m.[Timestamp],
+        m.CreatedAt,
         m.IsRead,
+        m.IsDeleted,
         ROW_NUMBER() OVER
         (
             PARTITION BY m.ConversationID
-            ORDER BY m.[Timestamp] DESC, m.MessageID DESC
+            ORDER BY m.CreatedAt DESC, m.MessageID DESC
         ) AS RowNum
     FROM dbo.Messages AS m
     INNER JOIN UserConversations AS uc ON uc.ConversationID = m.ConversationID
+    WHERE m.IsDeleted = 0
 )
 SELECT
     MessageID,
     SenderID,
     ConversationID,
     Content,
-    [Timestamp],
-    IsRead
+    CreatedAt,
+    IsRead,
+    IsDeleted
 FROM Ranked
 WHERE RowNum = 1
-ORDER BY [Timestamp] DESC, MessageID DESC;";
+ORDER BY CreatedAt DESC, MessageID DESC;";
 
         var userIdParameter = new SqlParameter("@UserID", userId);
 
         List<MessageEntity> recent = await _dbContext.Messages
             .FromSqlRaw(sql, userIdParameter)
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
@@ -175,7 +176,7 @@ ORDER BY [Timestamp] DESC, MessageID DESC;";
             entity.SenderID,
             entity.ConversationID,
             entity.Content,
-            entity.Timestamp,
+            entity.CreatedAt,
             entity.IsRead,
             receiverId,
             postId

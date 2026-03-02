@@ -348,11 +348,11 @@ Before starting, make sure you have:
    - Open `.env` file in Notepad
    - Add this line (replace port with your backend port):
    ```
-   VITE_API_BASE_URL=http://localhost:7000/api
+   VITE_API_BASE_URL=http://localhost:7000/api/v1
    ```
    - If your backend uses HTTPS, use:
    ```
-   VITE_API_BASE_URL=https://localhost:7000/api
+   VITE_API_BASE_URL=https://localhost:7000/api/v1
    ```
    - **Replace `7000` with your actual backend port!**
 
@@ -420,7 +420,7 @@ Before starting, make sure you have:
    - Try to create a post
 
 4. **Check Network Tab:**
-   - You should see API requests to `http://localhost:7000/api/...`
+   - You should see API requests to `http://localhost:7000/api/v1/...`
    - Requests should show status `200` (success) or other codes
    - If you see `CORS error`, see troubleshooting
 
@@ -508,7 +508,7 @@ Before starting, make sure you have:
 
 ### Problem: CORS Error in Browser
 
-**Error:** "Access to fetch at 'http://localhost:7000/api/...' from origin 'http://localhost:5173' has been blocked by CORS policy"
+**Error:** "Access to fetch at 'http://localhost:7000/api/v1/...' from origin 'http://localhost:5173' has been blocked by CORS policy"
 
 **Solution:**
 1. Open `Program.cs` in backend

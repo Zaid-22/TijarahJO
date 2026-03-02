@@ -1,217 +1,151 @@
-using Microsoft.AspNetCore.Mvc;
-using Models;
-using System.Collections.Generic;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.BLL;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using TijarahJoDB.Application.Abstractions.Services;
+using TijarahJoDBAPI.Common.Authorization;
+using TijarahJoDBAPI.Common.Utils;
+using TijarahJoDBAPI.Contracts.Requests;
+using TijarahJoDBAPI.Contracts.Responses;
 
-namespace TijarahJoDBAPI.Features.Categories
+namespace TijarahJoDBAPI.Features.Categories;
+
+[ApiController]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/categories")]
+public class ItemCategoriesController : ControllerBase
 {
-	[ApiController]
-	[Route("api/categories")] // Primary route for frontend compatibility
-	public class ItemCategoriesController : ControllerBase
-	{
-		private readonly ICategoryService _categories;
-		private static readonly DateTime SqlDateTimeMinUtc = new DateTime(1753, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    private readonly ICategoryQueryHandler _categoryQueries;
+    private readonly ICategoryCommandService _categoryCommands;
 
-		public ItemCategoriesController(ICategoryService categories)
-		{
-			_categories = categories;
-		}
+    public ItemCategoriesController(ICategoryQueryHandler categoryQueries, ICategoryCommandService categoryCommands)
+    {
+        _categoryQueries = categoryQueries;
+        _categoryCommands = categoryCommands;
+    }
 
-		private static DateTime NormalizeSqlDateTime(DateTime value, DateTime? fallback = null)
-		{
-			if (value == default || value < SqlDateTimeMinUtc)
-			{
-				return fallback ?? DateTime.UtcNow;
-			}
+    [HttpGet("")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IEnumerable<CategoryResponseDTO>>> GetAllCategories(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50)
+    {
+        CategoryListQueryResult result = await _categoryQueries.GetAllAsync(page, pageSize, HttpContext.RequestAborted);
+        if (!result.Success)
+        {
+            return this.ToCategoryListQueryProblem(result, "Failed to fetch categories.");
+        }
 
-			return value.Kind switch
-			{
-				DateTimeKind.Utc => value,
-				DateTimeKind.Local => value.ToUniversalTime(),
-				_ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-			};
-		}
+        if (result.Categories.Count == 0)
+        {
+            return Ok(new List<CategoryResponseDTO>());
+        }
 
-		private static string? NormalizeOptionalText(string? value)
-		{
-			if (string.IsNullOrWhiteSpace(value))
-			{
-				return null;
-			}
+        List<CategoryResponseDTO> dtoList = result.Categories
+            .Select(DTOMapper.ToCategoryResponseDTO)
+            .ToList();
 
-			return value.Trim();
-		}
+        return Ok(dtoList);
+    }
 
-			[HttpGet("", Name = "GetAllCategories")]
-			[ProducesResponseType(StatusCodes.Status200OK)]
-		[ProducesResponseType(StatusCodes.Status404NotFound)]
-		public ActionResult<IEnumerable<CategoryModel>> GetAllCategories()
-		{
-			var categories = _categories.GetAllCategories();
+    [HttpGet("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CategoryResponseDTO>> GetCategoryById(int id)
+    {
+        CategoryByIdQueryResult result = await _categoryQueries.GetByIdAsync(id, HttpContext.RequestAborted);
+        if (!result.Success || result.Category == null)
+        {
+            return this.ToCategoryByIdQueryProblem(result, "Failed to fetch category.");
+        }
 
-			if (categories == null || categories.Count == 0)
-			{
-				return Ok(new List<CategoryModel>()); // Return empty list instead of 404
-			}
+        return Ok(DTOMapper.ToCategoryResponseDTO(result.Category));
+    }
 
-			var dtoList = categories
-				.Where(category => !category.IsDeleted && !string.IsNullOrWhiteSpace(category.CategoryName))
-				.ToList();
+    [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+    [HttpPost]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<CategoryResponseDTO>> AddCategory([FromBody] CreateCategoryRequest request)
+    {
+        CategoryCommandResult result = await _categoryCommands.CreateAsync(
+            new CreateCategoryCommand
+            {
+                CategoryName = request.CategoryName,
+                NameAr = request.NameAr,
+                Icon = request.Icon,
+                Color = request.Color,
+                Image = request.Image
+            },
+            HttpContext.RequestAborted
+        );
+        if (!result.Success || result.Category == null)
+        {
+            return this.ToCategoryCommandProblem(result, "Category operation failed.");
+        }
 
-			return Ok(dtoList);
-		}
+        return CreatedAtAction(
+            nameof(GetCategoryById),
+            new { id = result.Category.CategoryID },
+            DTOMapper.ToCategoryResponseDTO(result.Category.CategoryModel)
+        );
+    }
 
-		[HttpGet("{id}", Name = "GetCategoryById")]
-		[ProducesResponseType(StatusCodes.Status200OK)]
-		[ProducesResponseType(StatusCodes.Status400BadRequest)]
-		[ProducesResponseType(StatusCodes.Status404NotFound)]
-		public ActionResult<CategoryModel> GetCategoryById(int id)
-		{
-			if (id < 1)
-			{
-				return BadRequest($"Not accepted ID {id}");
-			}
+    [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+    [HttpPut("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CategoryResponseDTO>> UpdateCategory(int id, [FromBody] UpdateCategoryRequest request)
+    {
+        CategoryCommandResult result = await _categoryCommands.UpdateAsync(
+            new UpdateCategoryCommand
+            {
+                CategoryId = id,
+                CategoryName = request.CategoryName,
+                NameAr = request.NameAr,
+                Icon = request.Icon,
+                Color = request.Color,
+                Image = request.Image
+            },
+            HttpContext.RequestAborted
+        );
+        if (!result.Success || result.Category == null)
+        {
+            return this.ToCategoryCommandProblem(result, "Category operation failed.");
+        }
 
-			Category? category = _categories.Find(id);
+        return Ok(DTOMapper.ToCategoryResponseDTO(result.Category.CategoryModel));
+    }
 
-			if (category == null)
-			{
-				return NotFound($"Category with ID {id} not found.");
-			}
+    [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+    [HttpDelete("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> DeleteCategory(int id)
+    {
+        CategoryCommandResult result = await _categoryCommands.DeleteAsync(id, HttpContext.RequestAborted);
+        if (!result.Success)
+        {
+            return this.ToCategoryCommandProblem(result, "Category operation failed.");
+        }
 
-			CategoryModel dto = category.CategoryModel;
+        return Ok(new ApiMessageResponse { Message = $"Category with ID {id} has been deleted." });
+    }
 
-			return Ok(dto);
-		}
+    [HttpGet("Exists/{id:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<bool>> DoesCategoryExist(int id)
+    {
+        CategoryExistsQueryResult result = await _categoryQueries.ExistsAsync(id, HttpContext.RequestAborted);
+        if (!result.Success)
+        {
+            return this.ToCategoryExistsQueryProblem(result, "Failed to check category existence.");
+        }
 
-		[Authorize(Roles = "1")]
-		[HttpPost(Name = "AddCategory")]
-		[ProducesResponseType(StatusCodes.Status201Created)]
-		[ProducesResponseType(StatusCodes.Status400BadRequest)]
-		public ActionResult<CategoryModel> AddCategory(CategoryModel newCategoryDTO)
-		{
-			if (newCategoryDTO == null || string.IsNullOrWhiteSpace(newCategoryDTO.CategoryName))
-			{
-				return BadRequest("Invalid Category data.");
-			}
-
-				newCategoryDTO.CategoryName = newCategoryDTO.CategoryName.Trim();
-				newCategoryDTO.NameAr = NormalizeOptionalText(newCategoryDTO.NameAr);
-				newCategoryDTO.Icon = NormalizeOptionalText(newCategoryDTO.Icon);
-				newCategoryDTO.Color = NormalizeOptionalText(newCategoryDTO.Color);
-				newCategoryDTO.Image = NormalizeOptionalText(newCategoryDTO.Image);
-				newCategoryDTO.CreatedAt = NormalizeSqlDateTime(newCategoryDTO.CreatedAt);
-				newCategoryDTO.IsDeleted = false;
-
-				Category category = _categories.Create(new CategoryModel
-				(
-						newCategoryDTO.CategoryID,
-						newCategoryDTO.CategoryName,
-						newCategoryDTO.CreatedAt,
-						newCategoryDTO.IsDeleted,
-						newCategoryDTO.NameAr,
-						newCategoryDTO.Icon,
-						newCategoryDTO.Color,
-						newCategoryDTO.Image
-				));
-
-			if (!_categories.Save(category))
-			{
-				return StatusCode(StatusCodes.Status500InternalServerError, "Error adding Category");
-			}
-
-			newCategoryDTO.CategoryID = category.CategoryID;
-
-			return CreatedAtAction(nameof(GetCategoryById), new { id = newCategoryDTO.CategoryID }, newCategoryDTO);
-		}
-
-		[Authorize(Roles = "1")]
-		[HttpPut("{id}", Name = "UpdateCategory")]
-		[ProducesResponseType(StatusCodes.Status200OK)]
-		[ProducesResponseType(StatusCodes.Status400BadRequest)]
-		[ProducesResponseType(StatusCodes.Status404NotFound)]
-		public ActionResult<CategoryModel> UpdateCategory(int id, CategoryModel updatedCategory)
-		{
-			if (id < 1 || updatedCategory == null || string.IsNullOrWhiteSpace(updatedCategory.CategoryName))
-			{
-				return BadRequest("Invalid Category data.");
-			}
-
-			Category? category = _categories.Find(id);
-
-			if (category == null)
-			{
-				return NotFound($"Category with ID {id} not found.");
-			}
-
-				category.CategoryName = updatedCategory.CategoryName.Trim();
-				if (updatedCategory.NameAr != null)
-				{
-					category.NameAr = NormalizeOptionalText(updatedCategory.NameAr);
-				}
-
-				if (updatedCategory.Icon != null)
-				{
-					category.Icon = NormalizeOptionalText(updatedCategory.Icon);
-				}
-
-				if (updatedCategory.Color != null)
-				{
-					category.Color = NormalizeOptionalText(updatedCategory.Color);
-				}
-
-				if (updatedCategory.Image != null)
-				{
-					category.Image = NormalizeOptionalText(updatedCategory.Image);
-				}
-				// Preserve immutable/system fields to avoid accidental invalid timestamps from partial client payloads.
-				category.CreatedAt = NormalizeSqlDateTime(category.CreatedAt, DateTime.UtcNow);
-
-			if (!_categories.Save(category))
-			{
-				return StatusCode(StatusCodes.Status500InternalServerError, "Error updating Category");
-			}
-
-			return Ok(category.CategoryModel);
-		}
-
-		[Authorize(Roles = "1")]
-		[HttpDelete("{id}", Name = "DeleteCategory")]
-		[ProducesResponseType(StatusCodes.Status200OK)]
-		[ProducesResponseType(StatusCodes.Status400BadRequest)]
-		[ProducesResponseType(StatusCodes.Status404NotFound)]
-		public ActionResult DeleteCategory(int id)
-		{
-			if (id < 1)
-			{
-				return BadRequest($"Not accepted ID {id}");
-			}
-
-			if (_categories.DeleteCategory(id))
-			{
-				return Ok($"Category with ID {id} has been deleted.");
-			}
-			else
-			{
-				return NotFound($"Category with ID {id} not found. No rows deleted!");
-			}
-		}
-
-		[HttpGet("Exists/{id}", Name = "DoesCategoryExist")]
-		[ProducesResponseType(StatusCodes.Status200OK)]
-		[ProducesResponseType(StatusCodes.Status400BadRequest)]
-		public ActionResult<bool> DoesCategoryExist(int id)
-		{
-			if (id < 1)
-			{
-				return BadRequest($"Not accepted ID {id}");
-			}
-
-			bool exists = _categories.DoesCategoryExist(id);
-
-			return Ok(exists);
-		}
-	}
+        return Ok(result.Exists);
+    }
 }

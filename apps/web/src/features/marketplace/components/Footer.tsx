@@ -1,163 +1,251 @@
 import {
   Facebook,
-  Twitter,
   Instagram,
   Mail,
-  Phone,
   MapPin,
+  Phone,
+  Twitter,
+  type LucideIcon,
 } from "lucide-react";
-import { Link } from "react-router-dom";
-import { categoryData } from "../../../data/categoryData";
+import { Link, useLocation } from "react-router-dom";
+import { useCatalogCategories } from "../../../shared/hooks/useCatalogCategories";
+import { resolveCategoryName } from "../../../shared/lib/categoryVisuals";
+import { Logo } from "../../../shared/ui/logo";
 
 interface FooterProps {
   language: "en" | "ar";
 }
 
-export function Footer({ language }: FooterProps) {
-  const t = {
-    en: {
-      about: "About TijarahJo",
-      aboutText:
-        "Your trusted marketplace in Jordan for buying and selling new and used items. Safe, easy, and reliable.",
-      quickLinks: "Quick Links",
-      categories: "Categories",
-      support: "Support",
-      contactUs: "Contact Us",
-      termsConditions: "Terms & Conditions",
-      privacyPolicy: "Privacy Policy",
-      faq: "FAQ",
-      helpCenter: "Help Center",
-      electronics: "Electronics",
-      vehicles: "Vehicles",
-      realEstate: "Real Estate",
-      fashion: "Fashion & Clothing",
-      furniture: "Furniture",
-      mobilePhones: "Mobile Phones",
-      followUs: "Follow Us",
-      allRightsReserved: "© 2024 TijarahJo. All rights reserved.",
-      address: "Amman, Jordan",
-      email: "info@tijarahjo.com",
-      phone: "+962 7 9123 4567",
-    },
-    ar: {
-      about: "حول تجارة جو",
-      aboutText:
-        "سوقك الموثوق في الأردن لبيع وشراء السلع الجديدة والمستعملة. آمن وسهل وموثوق.",
-      quickLinks: "روابط سريعة",
-      categories: "الفئات",
-      support: "الدعم",
-      contactUs: "اتصل بنا",
-      termsConditions: "الشروط والأحكام",
-      privacyPolicy: "سياسة الخصوصية",
-      faq: "الأسئلة الشائعة",
-      helpCenter: "مركز المساعدة",
-      electronics: "الإلكترونيات",
-      vehicles: "المركبات",
-      realEstate: "العقارات",
-      fashion: "الأزياء والملابس",
-      furniture: "الأثاث",
-      mobilePhones: "الهواتف المحمولة",
-      followUs: "تابعنا",
-      allRightsReserved: "© 2024 تجارة جو. جميع الحقوق محفوظة.",
-      address: "عمان، الأردن",
-      email: "info@tijarahjo.com",
-      phone: "+962 7 9123 4567",
-    },
-  };
+type FooterCopy = {
+  aboutText: string;
+  quickLinks: string;
+  categories: string;
+  contactUs: string;
+  termsConditions: string;
+  privacyPolicy: string;
+  faq: string;
+  helpCenter: string;
+  followUs: string;
+  allRightsReserved: string;
+  madeInJordan: string;
+  address: string;
+  email: string;
+  phone: string;
+};
 
-  const content = t[language];
+const footerCopyByLanguage: Record<FooterProps["language"], FooterCopy> = {
+  en: {
+    aboutText:
+      "TijarahJo is Jordan's trusted marketplace for buying and selling new and used posts with confidence.",
+    quickLinks: "Quick Links",
+    categories: "Top Categories",
+    contactUs: "Contact",
+    termsConditions: "Terms & Conditions",
+    privacyPolicy: "Privacy Policy",
+    faq: "FAQ",
+    helpCenter: "Help Center",
+    followUs: "Follow Us",
+    allRightsReserved: "All rights reserved.",
+    madeInJordan: "Made in Jordan",
+    address: "Amman, Jordan",
+    email: "info@tijarahjo.com",
+    phone: "+962 7 9123 4567",
+  },
+  ar: {
+    aboutText:
+      "تجارة جو هو سوق الأردن الموثوق لبيع وشراء المنشورات الجديدة والمستعملة بكل ثقة.",
+    quickLinks: "روابط سريعة",
+    categories: "أهم الفئات",
+    contactUs: "تواصل معنا",
+    termsConditions: "الشروط والأحكام",
+    privacyPolicy: "سياسة الخصوصية",
+    faq: "الأسئلة الشائعة",
+    helpCenter: "مركز المساعدة",
+    followUs: "تابعنا",
+    allRightsReserved: "جميع الحقوق محفوظة.",
+    madeInJordan: "صنع في الأردن",
+    address: "عمان، الأردن",
+    email: "info@tijarahjo.com",
+    phone: "+962 7 9123 4567",
+  },
+};
+
+type SocialLink = {
+  href: string;
+  labelEn: string;
+  labelAr: string;
+  icon: LucideIcon;
+};
+
+const socialLinks: SocialLink[] = [
+  {
+    href: "https://www.facebook.com/",
+    labelEn: "Facebook",
+    labelAr: "فيسبوك",
+    icon: Facebook,
+  },
+  {
+    href: "https://x.com/",
+    labelEn: "X",
+    labelAr: "إكس",
+    icon: Twitter,
+  },
+  {
+    href: "https://www.instagram.com/",
+    labelEn: "Instagram",
+    labelAr: "إنستغرام",
+    icon: Instagram,
+  },
+];
+
+export function Footer({ language }: FooterProps) {
+  const { categories } = useCatalogCategories();
+  const location = useLocation();
+  const isRTL = language === "ar";
+  const currentPath = `${location.pathname}${location.search}`;
+  const currentYear = new Date().getFullYear();
+  const content = footerCopyByLanguage[language];
 
   return (
-    <footer data-app-global-footer="true" className="bg-black border-t border-gray-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-        {/* Main Footer Content */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 mb-12">
-          {/* About Section */}
-          <div className="space-y-4">
-            <h3 className="text-white text-lg">{content.about}</h3>
-            <p className="text-sm text-gray-400 leading-relaxed">
+    <footer
+      data-app-global-footer="true"
+      dir={isRTL ? "rtl" : "ltr"}
+      className="relative border-t border-white/10 bg-slate-950 text-slate-100"
+    >
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/75 to-transparent" />
+
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+        <div className="grid grid-cols-1 gap-10 border-b border-white/10 pb-10 md:grid-cols-2 lg:grid-cols-12 lg:gap-8">
+          <section className="space-y-5 lg:col-span-5">
+            <Logo
+              size="md"
+              variant="light"
+              className="drop-shadow-md"
+            />
+            <p className="max-w-md text-sm leading-7 text-slate-300">
               {content.aboutText}
             </p>
-            {/* Social Media Icons */}
-            <div className="flex gap-3 pt-2">
-              <div className="w-10 h-10 rounded-full bg-gray-900 text-gray-400 flex items-center justify-center">
-                <Facebook className="w-5 h-5" />
-              </div>
-              <div className="w-10 h-10 rounded-full bg-gray-900 text-gray-400 flex items-center justify-center">
-                <Twitter className="w-5 h-5" />
-              </div>
-              <div className="w-10 h-10 rounded-full bg-gray-900 text-gray-400 flex items-center justify-center">
-                <Instagram className="w-5 h-5" />
+            <div>
+              <p className="mb-3 text-sm font-semibold text-slate-100">
+                {content.followUs}
+              </p>
+              <div className="flex gap-3">
+                {socialLinks.map((link) => {
+                  const Icon = link.icon;
+                  return (
+                    <a
+                      key={link.href}
+                      href={link.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={language === "ar" ? link.labelAr : link.labelEn}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/12 bg-white/5 text-slate-300 transition-colors hover:border-primary/45 hover:bg-primary/15 hover:text-primary focus-visible:text-primary"
+                    >
+                      <Icon className="h-4 w-4" />
+                    </a>
+                  );
+                })}
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Quick Links */}
-          <div className="space-y-4">
-            <h3 className="text-white text-lg">{content.quickLinks}</h3>
+          <section className="space-y-4 lg:col-span-2">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-100/95">
+              {content.quickLinks}
+            </h3>
             <ul className="space-y-3 text-sm">
               <li>
-                <span className="text-gray-400">{content.contactUs}</span>
+                <Link
+                  to="/terms"
+                  state={{ fromPath: currentPath }}
+                  className="text-slate-300 transition-colors hover:text-primary"
+                >
+                  {content.termsConditions}
+                </Link>
               </li>
               <li>
-                <span className="text-gray-400">{content.termsConditions}</span>
-              </li>
-              <li>
-                <span className="text-gray-400">{content.privacyPolicy}</span>
+                <Link
+                  to="/privacy"
+                  state={{ fromPath: currentPath }}
+                  className="text-slate-300 transition-colors hover:text-primary"
+                >
+                  {content.privacyPolicy}
+                </Link>
               </li>
               <li>
                 <Link
                   to="/faq"
-                  className="text-gray-400 hover:text-white transition-colors"
+                  state={{ fromPath: currentPath }}
+                  className="text-slate-300 transition-colors hover:text-primary"
                 >
                   {content.faq}
                 </Link>
               </li>
+              <li>
+                <Link
+                  to="/help"
+                  state={{ fromPath: currentPath }}
+                  className="text-slate-300 transition-colors hover:text-primary"
+                >
+                  {content.helpCenter}
+                </Link>
+              </li>
             </ul>
-          </div>
+          </section>
 
-          {/* Categories */}
-          <div className="space-y-4">
-            <h3 className="text-white text-lg">{content.categories}</h3>
+          <section className="space-y-4 lg:col-span-2">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-100/95">
+              {content.categories}
+            </h3>
             <ul className="space-y-3 text-sm">
-              {categoryData.slice(0, 6).map((category) => (
-                <li key={category.name}>
+              {categories.slice(0, 5).map((category) => (
+                <li key={String(category.id || category.name)}>
                   <Link
                     to={`/category/${encodeURIComponent(category.name)}`}
-                    className="text-gray-400 hover:text-[#60A5FA] focus-visible:text-[#60A5FA] transition-colors"
+                    className="text-slate-300 transition-colors hover:text-primary"
                   >
-                    {language === "ar" ? category.nameAr : category.name}
+                    {resolveCategoryName(category, language)}
                   </Link>
                 </li>
               ))}
             </ul>
-          </div>
+          </section>
 
-          {/* Contact Info */}
-          <div className="space-y-4">
-            <h3 className="text-white text-lg">{content.contactUs}</h3>
-            <ul className="space-y-4 text-sm">
-              <li className="flex items-start gap-3 text-gray-400">
-                <MapPin className="w-5 h-5 mt-0.5 flex-shrink-0" />
+          <section className="space-y-4 lg:col-span-3">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-100/95">
+              {content.contactUs}
+            </h3>
+            <ul className="space-y-3 text-sm text-slate-300">
+              <li className="flex items-start gap-3 rounded-lg border border-white/8 bg-white/5 px-3 py-2.5">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary/80" />
                 <span>{content.address}</span>
               </li>
-              <li className="flex items-start gap-3 text-gray-400">
-                <Mail className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                <span>{content.email}</span>
+              <li className="flex items-start gap-3 rounded-lg border border-white/8 bg-white/5 px-3 py-2.5">
+                <Mail className="mt-0.5 h-4 w-4 shrink-0 text-primary/80" />
+                <a
+                  href={`mailto:${content.email}`}
+                  className="transition-colors hover:text-primary"
+                >
+                  {content.email}
+                </a>
               </li>
-              <li className="flex items-start gap-3 text-gray-400">
-                <Phone className="w-5 h-5 mt-0.5 flex-shrink-0" />
+              <li className="flex items-start gap-3 rounded-lg border border-white/8 bg-white/5 px-3 py-2.5">
+                <Phone className="mt-0.5 h-4 w-4 shrink-0 text-primary/80" />
                 <span dir="ltr">{content.phone}</span>
               </li>
             </ul>
-          </div>
+          </section>
         </div>
 
-        {/* Bottom Bar */}
-        <div className="border-t border-gray-800 pt-8">
-          <div className="text-center">
-            <p className="text-sm text-gray-500">{content.allRightsReserved}</p>
-          </div>
+        <div className="mt-5 flex flex-col items-center gap-2 text-sm text-slate-400 sm:flex-row sm:justify-between">
+          <p>
+            {language === "ar"
+              ? `© ${currentYear} تجارة جو. ${content.allRightsReserved}`
+              : `© ${currentYear} TijarahJo. ${content.allRightsReserved}`}
+          </p>
+          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+            {content.madeInJordan}
+          </p>
         </div>
       </div>
     </footer>

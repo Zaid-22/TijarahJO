@@ -234,12 +234,12 @@ export function RolesManagement() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between gap-4 items-center">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-2xl font-bold text-foreground">
           Roles Management
         </h1>
         <div className="flex items-center gap-4 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search roles..."
               className="pl-10"
@@ -298,7 +298,7 @@ export function RolesManagement() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -313,7 +313,7 @@ export function RolesManagement() {
               <TableRow>
                 <TableCell
                   colSpan={4}
-                  className="text-center py-8 text-gray-500"
+                  className="py-8 text-center text-muted-foreground"
                 >
                   No roles found
                 </TableCell>
@@ -341,7 +341,7 @@ export function RolesManagement() {
                           disabled={isSystemRole}
                           title={isSystemRole ? "System roles cannot be edited" : "Edit role"}
                         >
-                          <Pencil className="w-4 h-4 text-gray-500" />
+                          <Pencil className="w-4 h-4 text-muted-foreground" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -349,7 +349,7 @@ export function RolesManagement() {
                           aria-label={`Delete role ${role.name}`}
                           onClick={() => setPendingDeleteRole(role)}
                           disabled={isSystemRole}
-                          className="hover:text-red-600 hover:bg-red-50"
+                          className="hover:bg-destructive/10 hover:text-destructive"
                           title={isSystemRole ? "System roles cannot be deleted" : "Delete role"}
                         >
                           <Trash2 className="w-4 h-4" />

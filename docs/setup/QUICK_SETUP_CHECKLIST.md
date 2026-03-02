@@ -54,7 +54,7 @@ Use this checklist when setting up the project on a new computer.
 ## ✅ Frontend Configuration
 
 - [ ] Navigate to: `apps/web`
-- [ ] Create `.env` file with: `VITE_API_BASE_URL=http://localhost:5033/api`
+- [ ] Create `.env` file with: `VITE_API_BASE_URL=http://localhost:5033/api/v1`
 - [ ] Run `npm install`
 - [ ] Run `npm run dev`
 - [ ] Frontend starts on: `http://localhost:5173`
@@ -105,7 +105,7 @@ Key: _________________
 
 **API Base URL:**
 ```
-URL: http://localhost:5033/api
+URL: http://localhost:5033/api/v1
 ```
 
 ---

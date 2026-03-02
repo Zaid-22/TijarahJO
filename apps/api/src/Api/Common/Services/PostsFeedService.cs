@@ -1,16 +1,20 @@
 using System.Globalization;
 using System.Text.Json.Serialization;
-using TijarahJoDB.DAL.Queries;
+using Microsoft.Extensions.Caching.Memory;
+using TijarahJoDB.Application.Abstractions.Services;
 
 namespace TijarahJoDBAPI.Common.Services
 {
     public sealed class PostsFeedService
     {
-        private readonly PostListingQueryService _postListingQueries;
+        private const int MaxFeedPageSize = 200;
+        private readonly IPostListingQueryService _postListingQueries;
+        private readonly IMemoryCache _cache;
 
-        public PostsFeedService(PostListingQueryService postListingQueries)
+        public PostsFeedService(IPostListingQueryService postListingQueries, IMemoryCache cache)
         {
             _postListingQueries = postListingQueries;
+            _cache = cache;
         }
 
         public sealed record NormalizedFeedRequest(int Page, int Limit, bool IncludeDeleted);
@@ -32,29 +36,34 @@ namespace TijarahJoDBAPI.Common.Services
             {
                 normalizedLimit = 20;
             }
-            if (normalizedLimit > 500)
+            if (normalizedLimit > MaxFeedPageSize)
             {
-                normalizedLimit = 500;
+                normalizedLimit = MaxFeedPageSize;
             }
 
-            bool normalizedIncludeDeleted = includeDeleted.GetValueOrDefault(false);
+            // Public feed never exposes deleted listings.
+            bool normalizedIncludeDeleted = false;
             return new NormalizedFeedRequest(normalizedPage, normalizedLimit, normalizedIncludeDeleted);
         }
 
-        public FeedResponse FetchPostsFeed(NormalizedFeedRequest request)
+        public async Task<FeedResponse> FetchPostsFeedAsync(NormalizedFeedRequest request, CancellationToken cancellationToken = default)
         {
-            PostListingVisibilityMode visibility = request.IncludeDeleted
-                ? PostListingVisibilityMode.All
-                : PostListingVisibilityMode.PublicVisible;
+            string cacheKey = $"posts-feed|{request.Page}|{request.Limit}|{request.IncludeDeleted}";
+            if (_cache.TryGetValue(cacheKey, out FeedResponse? cached) && cached is not null)
+            {
+                return cached;
+            }
 
-            PostListingPageResult pageResult = _postListingQueries.Query(new PostListingQuery
+            PostListingVisibilityMode visibility = PostListingVisibilityMode.PublicVisible;
+
+            PostListingPageResult pageResult = await _postListingQueries.QueryAsync(new PostListingQuery
             {
                 Page = request.Page,
                 Limit = request.Limit,
                 Visibility = visibility,
                 SortField = PostListingSortField.CreatedAt,
                 SortAscending = false
-            });
+            }, cancellationToken);
 
             var posts = new List<FeedPostItem>();
             foreach (PostListingRow row in pageResult.Posts)
@@ -86,7 +95,7 @@ namespace TijarahJoDBAPI.Common.Services
                 ? (int)Math.Ceiling(pageResult.TotalPosts / (double)request.Limit)
                 : 0;
 
-            return new FeedResponse
+            FeedResponse response = new FeedResponse
             {
                 Success = true,
                 Posts = posts,
@@ -98,6 +107,16 @@ namespace TijarahJoDBAPI.Common.Services
                     PostsPerPage = request.Limit
                 }
             };
+
+            _cache.Set(
+                cacheKey,
+                response,
+                new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30)
+                });
+
+            return response;
         }
     }
 
@@ -176,7 +195,7 @@ namespace TijarahJoDBAPI.Common.Services
         public string UpdatedAt { get; init; } = string.Empty;
 
         [JsonPropertyName("views")]
-        public int Views { get; init; }
+        public long Views { get; init; }
 
         [JsonPropertyName("status")]
         public string Status { get; init; } = "ACTIVE";

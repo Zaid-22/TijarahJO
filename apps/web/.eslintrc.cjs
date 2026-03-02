@@ -15,11 +15,17 @@ module.exports = {
       jsx: true,
     },
   },
-  plugins: ["@typescript-eslint", "react-hooks", "react-refresh"],
+  plugins: [
+    "@typescript-eslint",
+    "react-hooks",
+    "react-refresh",
+    "jsx-a11y",
+  ],
   extends: [
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
     "plugin:react-hooks/recommended",
+    "plugin:jsx-a11y/recommended",
   ],
   ignorePatterns: ["dist", "node_modules"],
   rules: {
@@ -49,6 +55,10 @@ module.exports = {
       "error",
       { max: 450, skipBlankLines: true, skipComments: true },
     ],
+    "jsx-a11y/control-has-associated-label": "error",
+    "jsx-a11y/no-static-element-interactions": "error",
+    "jsx-a11y/click-events-have-key-events": "error",
+    "jsx-a11y/interactive-supports-focus": "error",
     "react-refresh/only-export-components": "off",
   },
   overrides: [

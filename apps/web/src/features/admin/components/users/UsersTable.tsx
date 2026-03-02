@@ -5,6 +5,7 @@ import {
   Trash2,
   UserCheck,
   UserX,
+  Eye,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -29,6 +30,7 @@ interface UsersTableProps {
   onToggleRole: (userId: string, currentRole: "admin" | "user") => void;
   onChangeStatus: (userId: string, nextStatus: "active" | "banned") => void;
   onDeleteRequest: (user: AdminUserRecord) => void;
+  onViewDetails: (userId: string) => void;
   formatJoinedDate: (value?: string) => string;
 }
 
@@ -37,10 +39,11 @@ export function UsersTable({
   onToggleRole,
   onChangeStatus,
   onDeleteRequest,
+  onViewDetails,
   formatJoinedDate,
 }: UsersTableProps) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
       <Table>
         <TableHeader>
           <TableRow>
@@ -54,7 +57,10 @@ export function UsersTable({
         <TableBody>
           {users.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+              <TableCell
+                colSpan={5}
+                className="py-8 text-center text-muted-foreground"
+              >
                 No users found
               </TableCell>
             </TableRow>
@@ -63,15 +69,21 @@ export function UsersTable({
               <TableRow key={user.id}>
                 <TableCell>
                   <div className="flex flex-col">
-                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                    <span className="font-medium text-foreground">
                       {user.name}
                     </span>
-                    <span className="text-sm text-gray-500">{user.email}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {user.email}
+                    </span>
                   </div>
                 </TableCell>
-                <TableCell>{formatJoinedDate(user.joinedDate || user.joinedAt)}</TableCell>
                 <TableCell>
-                  <Badge variant={user.role === "admin" ? "default" : "secondary"}>
+                  {formatJoinedDate(user.joinedDate || user.joinedAt)}
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    variant={user.role === "admin" ? "default" : "secondary"}
+                  >
                     {user.role}
                   </Badge>
                 </TableCell>
@@ -80,18 +92,18 @@ export function UsersTable({
                     variant="outline"
                     className={
                       user.status === "active"
-                        ? "bg-green-50 text-green-700 border-green-200"
+                        ? "border-primary/30 bg-primary/10 text-primary"
                         : user.status === "banned"
-                          ? "bg-red-50 text-red-700 border-red-200"
-                          : "bg-gray-50 text-gray-700 border-gray-200"
+                          ? "border-destructive/30 bg-destructive/10 text-destructive"
+                          : "border-border bg-muted text-muted-foreground"
                     }
                   >
                     {user.status}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -99,9 +111,11 @@ export function UsersTable({
                       >
                         <MoreVertical className="w-4 h-4" />
                       </Button>
-                      </DropdownMenuTrigger>
+                    </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onToggleRole(user.id, user.role)}>
+                      <DropdownMenuItem
+                        onClick={() => onToggleRole(user.id, user.role)}
+                      >
                         {user.role === "admin" ? (
                           <>
                             <ShieldAlert className="w-4 h-4 mr-2" />
@@ -114,11 +128,15 @@ export function UsersTable({
                           </>
                         )}
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onViewDetails(user.id)}>
+                        <Eye className="w-4 h-4 mr-2" />
+                        View User Details
+                      </DropdownMenuItem>
 
                       {user.status !== "banned" ? (
                         <DropdownMenuItem
                           onClick={() => onChangeStatus(user.id, "banned")}
-                          className="text-red-600 focus:text-red-600"
+                          className="text-destructive focus:text-destructive"
                         >
                           <UserX className="w-4 h-4 mr-2" />
                           Ban User
@@ -126,7 +144,7 @@ export function UsersTable({
                       ) : (
                         <DropdownMenuItem
                           onClick={() => onChangeStatus(user.id, "active")}
-                          className="text-green-600 focus:text-green-600"
+                          className="text-primary focus:text-primary"
                         >
                           <UserCheck className="w-4 h-4 mr-2" />
                           Unban User
@@ -135,7 +153,7 @@ export function UsersTable({
 
                       <DropdownMenuItem
                         onClick={() => onDeleteRequest(user)}
-                        className="text-red-600 focus:text-red-600"
+                        className="text-destructive focus:text-destructive"
                       >
                         <Trash2 className="w-4 h-4 mr-2" />
                         Delete User

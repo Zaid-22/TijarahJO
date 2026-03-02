@@ -28,23 +28,39 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
+type CardTitleProps = React.ComponentProps<"h4"> & {
+  children: React.ReactNode;
+};
+
+function CardTitle({ className, children, ...props }: CardTitleProps) {
   return (
     <h4
       data-slot="card-title"
       className={cn("leading-none", className)}
       {...props}
-    />
+    >
+      {children}
+    </h4>
   );
 }
 
-function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
+type CardDescriptionProps = React.ComponentProps<"p"> & {
+  children: React.ReactNode;
+};
+
+function CardDescription({
+  className,
+  children,
+  ...props
+}: CardDescriptionProps) {
   return (
     <p
       data-slot="card-description"
       className={cn("text-muted-foreground", className)}
       {...props}
-    />
+    >
+      {children}
+    </p>
   );
 }
 

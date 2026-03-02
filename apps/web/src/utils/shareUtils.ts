@@ -72,36 +72,36 @@ const shareContent = async (
 };
 
 /**
- * Generate share URL for a product
+ * Generate share URL for a post
  */
-const getProductShareUrl = (productId: string): string => {
-  // In production, this would be the actual domain
+const getPostShareUrl = (postId: string): string => {
+  // In postion, this would be the actual domain
   const baseUrl = window.location.origin;
-  return `${baseUrl}?product=${productId}`;
+  return `${baseUrl}?post=${postId}`;
 };
 
 /**
- * Generate share data for a product
+ * Generate share data for a post
  */
-const getProductShareData = (product: {
+const getPostShareData = (post: {
   id: string;
   name: string;
   price: number;
   category: string;
   location: string;
 }): ShareData => {
-  const url = getProductShareUrl(product.id);
-  const title = `${product.name} - TijarahJo`;
-  const text = `Check out this ${product.category} for ${product.price} JOD in ${product.location} on TijarahJo!\n\n${product.name}`;
+  const url = getPostShareUrl(post.id);
+  const title = `${post.name} - TijarahJo`;
+  const text = `Check out this ${post.category} for ${post.price} JOD in ${post.location} on TijarahJo!\n\n${post.name}`;
 
   return { title, text, url };
 };
 
 /**
- * Share a product
+ * Share a post
  */
-export const shareProduct = async (
-  product: {
+export const sharePost = async (
+  post: {
     id: string;
     name: string;
     price: number;
@@ -110,6 +110,6 @@ export const shareProduct = async (
   },
   language: "en" | "ar" = "en",
 ): Promise<boolean> => {
-  const shareData = getProductShareData(product);
+  const shareData = getPostShareData(post);
   return shareContent(shareData, language);
 };

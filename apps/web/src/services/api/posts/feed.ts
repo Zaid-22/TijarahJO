@@ -2,80 +2,42 @@ import {
   PostsListResponse,
   SearchRequest,
 } from "../../../types/api";
-import { apiRequest } from "../client";
-import { transformPostModelToProduct } from "./mappers";
-import { RawPost } from "./types";
-
-interface PaginationLike {
-  currentPage?: unknown;
-  totalPages?: unknown;
-  totalPosts?: unknown;
-  postsPerPage?: unknown;
-}
-
-interface FeedPayload {
-  posts?: RawPost[];
-  pagination?: PaginationLike;
-}
+import { ApiRequestOptions, apiRequest } from "../client";
+import {
+  parsePaginationPayload,
+  parsePostsEnvelope,
+} from "../schemas/postSchema";
+import { transformPostModelToPost } from "./mappers";
 
 const FEED_PAGE_SIZE = 500;
 
-function normalizePagination(
-  pagination: PaginationLike | undefined,
-  fallbackPage: number,
-  fallbackRowsPerPage: number,
-  fallbackTotalPosts: number,
+type FeedApiOptions = Pick<ApiRequestOptions, "signal" | "throwOnAbort">;
+
+async function fetchFeedPage(
+  page: number,
+  limit: number,
+  options: FeedApiOptions = {},
 ) {
-  const currentPageValue = Number(pagination?.currentPage);
-  const resolvedCurrentPage =
-    Number.isFinite(currentPageValue) && currentPageValue > 0
-      ? Math.floor(currentPageValue)
-      : fallbackPage;
-
-  const postsPerPageValue = Number(pagination?.postsPerPage);
-  const resolvedRowsPerPage =
-    Number.isFinite(postsPerPageValue) && postsPerPageValue > 0
-      ? Math.floor(postsPerPageValue)
-      : fallbackRowsPerPage;
-
-  const totalPostsValue = Number(pagination?.totalPosts);
-  const resolvedTotalPosts =
-    Number.isFinite(totalPostsValue) && totalPostsValue >= 0
-      ? Math.floor(totalPostsValue)
-      : fallbackTotalPosts;
-
-  const totalPagesValue = Number(pagination?.totalPages);
-  const resolvedTotalPages =
-    Number.isFinite(totalPagesValue) && totalPagesValue >= 0
-      ? Math.floor(totalPagesValue)
-      : resolvedTotalPosts > 0
-        ? Math.ceil(resolvedTotalPosts / resolvedRowsPerPage)
-        : 0;
-
-  return {
-    currentPage: resolvedCurrentPage,
-    totalPages: resolvedTotalPages,
-    totalPosts: resolvedTotalPosts,
-    postsPerPage: resolvedRowsPerPage,
-  };
-}
-
-async function fetchFeedPage(page: number, limit: number) {
-  const response = await apiRequest<FeedPayload>(
+  const response = await apiRequest<unknown>(
     `/posts/feed?page=${page}&limit=${limit}&includeDeleted=false`,
-    { method: "GET" },
+    {
+      method: "GET",
+      signal: options.signal,
+      throwOnAbort: options.throwOnAbort,
+    },
   );
 
-  if (
-    !response.success ||
-    !response.data ||
-    !Array.isArray(response.data.posts)
-  ) {
+  if (!response.success) {
     return null;
   }
 
-  const posts = response.data.posts.map((post, index) =>
-    transformPostModelToProduct(
+  const parsedPayload = parsePostsEnvelope(response.data);
+  if (!parsedPayload) {
+    return null;
+  }
+
+  const posts = parsedPayload.posts.map((post, index) =>
+    transformPostModelToPost(
       post,
       Array.isArray(post?.images) ? post.images : [],
       index,
@@ -84,8 +46,8 @@ async function fetchFeedPage(page: number, limit: number) {
 
   return {
     posts,
-    pagination: normalizePagination(
-      response.data.pagination,
+    pagination: parsePaginationPayload(
+      parsedPayload.pagination,
       page,
       limit,
       posts.length,
@@ -95,6 +57,7 @@ async function fetchFeedPage(page: number, limit: number) {
 
 export async function getPostsFromFeed(
   params?: SearchRequest,
+  options: FeedApiOptions = {},
 ): Promise<PostsListResponse> {
   const pageNumber =
     params?.page && Number.isFinite(params.page) && params.page > 0
@@ -105,7 +68,7 @@ export async function getPostsFromFeed(
       ? Math.min(FEED_PAGE_SIZE, Math.floor(params.limit))
       : 20;
 
-  const pagedFeed = await fetchFeedPage(pageNumber, rowsPerPage);
+  const pagedFeed = await fetchFeedPage(pageNumber, rowsPerPage, options);
   if (!pagedFeed) {
     return {
       success: false,

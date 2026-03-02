@@ -1,3 +1,5 @@
+import { COLORS } from "../../../../constants/colors";
+
 export interface CategoryFormData {
   name: string;
   nameAr: string;
@@ -10,7 +12,7 @@ export function getDefaultCategoryFormData(): CategoryFormData {
   return {
     name: "",
     nameAr: "",
-    color: "#0A4ABF",
+    color: COLORS.PRIMARY,
     icon: "box",
     image: "",
   };

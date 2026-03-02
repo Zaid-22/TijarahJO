@@ -1,12 +1,14 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import { useChat } from "../hooks/useChat";
 import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
-import { Send, User } from "lucide-react";
+import { ImagePlus, Loader2, Send, User, X } from "lucide-react";
 import { ScrollArea } from "../../../shared/ui/scroll-area";
 import { cn } from "@/shared/ui/utils";
 import { api } from "../../../services/api";
-import { ChatPresence } from "../../../types";
+import type { ChatPresence, Language } from "../../../types";
+import { usePrefersReducedMotion } from "../../../shared/hooks/usePrefersReducedMotion";
+import { parseChatMessageContent } from "../chatMessageContent";
 
 interface ChatWindowProps {
   otherUserId: number;
@@ -14,6 +16,7 @@ interface ChatWindowProps {
   currentUser: { id: string; name: string };
   onBack: () => void;
   postId?: number; // Optional context
+  language?: Language;
 }
 
 export function ChatWindow({
@@ -22,18 +25,76 @@ export function ChatWindow({
   currentUser,
   onBack,
   postId,
+  language = "en",
 }: ChatWindowProps) {
-  const { messages, isLoading, sendMessage } = useChat(otherUserId);
+  const { messages, isLoading, error, sendMessage, sendImageMessage } = useChat(otherUserId);
   const [inputText, setInputText] = useState("");
   const [presence, setPresence] = useState<ChatPresence>({ isOnline: false });
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [selectedImagePreview, setSelectedImagePreview] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const chatBodyRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const isRTL = language === "ar";
+  const labels = {
+    back: language === "ar" ? "العودة" : "Back",
+    online: language === "ar" ? "متصل" : "Online",
+    offline: language === "ar" ? "غير متصل" : "Offline",
+    lastSeen: language === "ar" ? "آخر ظهور" : "Last seen",
+    loadingMessages:
+      language === "ar" ? "جارٍ تحميل الرسائل..." : "Loading messages...",
+    noMessages:
+      language === "ar" ? "لا توجد رسائل بعد. ابدأ التحية!" : "No messages yet. Say hi!",
+    typeMessage:
+      language === "ar"
+        ? "اكتب رسالة أو أضف تعليقًا للصورة..."
+        : "Type a message or add a caption...",
+    sendMessage:
+      language === "ar" ? "إرسال الرسالة" : "Send message",
+    attachImage:
+      language === "ar" ? "إرفاق صورة" : "Attach image",
+    removeImage:
+      language === "ar" ? "إزالة الصورة" : "Remove image",
+    imageMessage:
+      language === "ar" ? "صورة" : "Image",
+    sending:
+      language === "ar" ? "جارٍ الإرسال..." : "Sending...",
+  };
+  const dateTimeLocale = language === "ar" ? "ar-JO" : "en-US";
 
-  // Auto-scroll to bottom
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: "smooth" });
+  const clearSelectedImage = () => {
+    if (selectedImagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(selectedImagePreview);
     }
-  }, [messages]);
+
+    setSelectedImageFile(null);
+    setSelectedImagePreview("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // Auto-scroll inside the chat viewport only (prevents window/page jump).
+  useEffect(() => {
+    const viewport = chatBodyRef.current?.querySelector(
+      '[data-slot="scroll-area-viewport"]',
+    ) as HTMLDivElement | null;
+    if (!viewport) return;
+
+    viewport.scrollTo({
+      top: viewport.scrollHeight,
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+    });
+  }, [messages, prefersReducedMotion]);
+
+  useEffect(() => {
+    return () => {
+      if (selectedImagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(selectedImagePreview);
+      }
+    };
+  }, [selectedImagePreview]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -60,44 +121,89 @@ export function ChatWindow({
     };
   }, [otherUserId]);
 
-  const handleSend = () => {
-    if (inputText.trim()) {
-      sendMessage(inputText, postId);
-      setInputText("");
+  const handleImageSelected = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) {
+      return;
     }
+
+    if (selectedImagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(selectedImagePreview);
+    }
+
+    setSelectedImageFile(file);
+    setSelectedImagePreview(URL.createObjectURL(file));
+  };
+
+  const handleSend = async () => {
+    const trimmedInput = inputText.trim();
+    if (!trimmedInput && !selectedImageFile) {
+      return;
+    }
+
+    setIsSending(true);
+    let sent = false;
+
+    if (selectedImageFile) {
+      sent = await sendImageMessage(selectedImageFile, trimmedInput || undefined, postId);
+      if (sent) {
+        setInputText("");
+        clearSelectedImage();
+      }
+    } else {
+      sent = await sendMessage(trimmedInput, postId);
+      if (sent) {
+        setInputText("");
+      }
+    }
+
+    setIsSending(false);
+  };
+  const openFilePicker = () => {
+    fileInputRef.current?.click();
+  };
+  const handleSendClick = () => {
+    void handleSend();
   };
 
   const presenceLabel = presence.isOnline
-    ? "Online"
+    ? labels.online
     : presence.lastSeenAtUtc
-      ? `Last seen ${new Date(presence.lastSeenAtUtc).toLocaleString()}`
-      : "Offline";
+      ? `${labels.lastSeen} ${new Date(presence.lastSeenAtUtc).toLocaleString(dateTimeLocale)}`
+      : labels.offline;
+  const canSend = (inputText.trim().length > 0 || Boolean(selectedImageFile)) && !isSending;
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-md backdrop-blur-sm">
       {/* Header */}
-      <div className="flex items-center p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 rounded-t-lg">
+      <div className="flex items-center border-b border-border/60 bg-gradient-to-r from-muted/70 via-muted/50 to-transparent p-4">
         <Button
           variant="ghost"
           size="sm"
           onClick={onBack}
-          className="mr-2 md:hidden"
+          className={`md:hidden ${isRTL ? "ml-2" : "mr-2"}`}
+          aria-label={labels.back}
         >
           ←
         </Button>
-        <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 mr-3">
-          <User className="w-6 h-6" />
+        <div
+          className={cn(
+            "flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-primary/10 text-primary",
+            isRTL ? "ml-3" : "mr-3",
+          )}
+        >
+          <User className="h-6 w-6" />
         </div>
         <div>
-          <h3 className="font-semibold text-gray-900 dark:text-white">
+          <h3 className="font-semibold text-foreground">
             {otherDisplayName}
           </h3>
           <p
             className={cn(
-              "text-xs",
+              "text-sm",
               presence.isOnline
-                ? "text-green-500"
-                : "text-gray-500 dark:text-gray-400",
+                ? "text-primary"
+                : "text-muted-foreground",
             )}
           >
             {presence.statusText || presenceLabel}
@@ -106,79 +212,160 @@ export function ChatWindow({
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4">
-          {isLoading && (
-            <p className="text-center text-gray-500">Loading messages...</p>
-          )}
-          {!isLoading && messages.length === 0 && (
-            <p className="text-center text-gray-400 mt-10">
-              No messages yet. Say hi!
-            </p>
-          )}
-          {messages.map((msg) => {
-            const isMe = msg.senderId.toString() === currentUser.id;
-            const messageKey =
-              typeof msg.messageId === "number"
-                ? `msg-${msg.messageId}`
-                : `msg-${msg.senderId}-${msg.receiverId}-${msg.postId ?? "none"}-${msg.timestamp}-${msg.content}`;
-            return (
-              <div
-                key={messageKey}
-                className={cn(
-                  "flex w-full mb-2",
-                  isMe ? "justify-end" : "justify-start",
-                )}
-              >
+      <div ref={chatBodyRef} className="min-h-0 flex-1">
+        <ScrollArea className="h-full px-4 py-4">
+          <div className="space-y-4">
+            {isLoading && (
+              <p className="text-center text-muted-foreground">{labels.loadingMessages}</p>
+            )}
+            {!isLoading && messages.length === 0 && (
+              <p className="mt-10 text-center text-muted-foreground">
+                {labels.noMessages}
+              </p>
+            )}
+            {messages.map((msg) => {
+              const parsedContent = parseChatMessageContent(msg.content);
+              const isMe = msg.senderId.toString() === currentUser.id;
+              const messageKey =
+                typeof msg.messageId === "number"
+                  ? `msg-${msg.messageId}`
+                  : `msg-${msg.senderId}-${msg.receiverId}-${msg.postId ?? "none"}-${msg.timestamp}-${msg.content}`;
+
+              return (
                 <div
+                  key={messageKey}
                   className={cn(
-                    "max-w-[70%] px-4 py-2 rounded-2xl text-sm",
-                    isMe
-                      ? "bg-blue-600 text-white rounded-tr-none"
-                      : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-tl-none",
+                    "mb-2 flex w-full",
+                    isMe ? "justify-end" : "justify-start",
                   )}
                 >
-                  <p>{msg.content}</p>
-                  <span
+                  <div
                     className={cn(
-                      "text-[10px] block mt-1 opacity-70",
+                      "max-w-[78%] rounded-2xl px-3 py-2 text-sm shadow-sm",
                       isMe
-                        ? "text-blue-100"
-                        : "text-gray-500 dark:text-gray-400",
+                        ? "rounded-tr-md bg-primary text-primary-foreground"
+                        : "rounded-tl-md border border-border/60 bg-muted/65 text-foreground",
                     )}
                   >
-                    {new Date(msg.timestamp).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
+                    {parsedContent.type === "image" ? (
+                      <div className="space-y-2">
+                        <img
+                          src={parsedContent.imageUrl}
+                          alt={parsedContent.caption || labels.imageMessage}
+                          className="max-h-72 w-full rounded-xl object-cover"
+                          loading="lazy"
+                        />
+                        {parsedContent.caption && (
+                          <p className="whitespace-pre-wrap break-words">{parsedContent.caption}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="whitespace-pre-wrap break-words">{parsedContent.text}</p>
+                    )}
+                    <span
+                      className={cn(
+                        "mt-1 block text-xs opacity-75",
+                        isMe
+                          ? "text-primary-foreground/90"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {new Date(msg.timestamp).toLocaleTimeString(dateTimeLocale, {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: language !== "ar",
+                      })}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-          <div ref={scrollRef} />
-        </div>
-      </ScrollArea>
+              );
+            })}
+          </div>
+        </ScrollArea>
+      </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 rounded-b-lg">
-        <div className="flex gap-2">
+      <div className="border-t border-border/60 bg-gradient-to-r from-muted/70 via-muted/50 to-transparent p-4">
+        {selectedImagePreview && (
+          <div className="mb-3 flex items-start gap-3 rounded-xl border border-border/70 bg-background/80 p-2">
+            <img
+              src={selectedImagePreview}
+              alt={labels.imageMessage}
+              className="h-16 w-16 rounded-lg border border-border/60 object-cover"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="truncate text-sm font-medium text-foreground">
+                {selectedImageFile?.name || labels.imageMessage}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {language === "ar" ? "يمكنك إضافة تعليق قبل الإرسال." : "You can add a caption before sending."}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={labels.removeImage}
+              onClick={clearSelectedImage}
+              className="h-8 w-8"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        {error && (
+          <p className="mb-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            {error}
+          </p>
+        )}
+
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImageSelected}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label={labels.attachImage}
+            onClick={openFilePicker}
+          >
+            <ImagePlus className="h-5 w-5" />
+          </Button>
           <Input
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder="Type a message..."
-            className="flex-1 bg-white dark:bg-gray-800"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void handleSend();
+              }
+            }}
+            placeholder={labels.typeMessage}
+            className="flex-1 bg-background"
           />
           <Button
-            onClick={handleSend}
+            onClick={handleSendClick}
             size="icon"
-            aria-label="Send message"
-            className="bg-blue-600 hover:bg-blue-700"
+            aria-label={labels.sendMessage}
+            className="bg-primary hover:bg-primary/90"
+            disabled={!canSend}
           >
-            <Send className="w-5 h-5" />
+            {isSending ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Send className="h-5 w-5" />
+            )}
           </Button>
         </div>
+        {isSending && (
+          <p className="mt-2 text-xs text-muted-foreground">{labels.sending}</p>
+        )}
       </div>
     </div>
   );

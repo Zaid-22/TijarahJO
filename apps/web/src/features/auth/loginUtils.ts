@@ -1,4 +1,5 @@
 import { normalizeJordanPhone } from "../../utils/phone";
+import type { Language } from "../../types";
 
 interface ParsedAuthIdentifier {
   email: string | null;
@@ -54,11 +55,16 @@ export const parseAuthIdentifier = (value: string): ParsedAuthIdentifier => {
   return { email: null, phone: normalizeJordanPhone(trimmed) };
 };
 
-export const formatJoinedDateLabel = (value?: unknown): string => {
+export const formatJoinedDateLabel = (
+  value?: unknown,
+  language: Language = "en",
+): string => {
+  const dateLocale = language === "ar" ? "ar-JO" : "en-US";
+
   if (typeof value === "string" && value.trim()) {
     const parsedDate = new Date(value);
     if (!Number.isNaN(parsedDate.getTime())) {
-      return parsedDate.toLocaleDateString("en-US", {
+      return parsedDate.toLocaleDateString(dateLocale, {
         month: "short",
         year: "numeric",
       });
@@ -67,7 +73,7 @@ export const formatJoinedDateLabel = (value?: unknown): string => {
     return value.trim();
   }
 
-  return new Date().toLocaleDateString("en-US", {
+  return new Date().toLocaleDateString(dateLocale, {
     month: "short",
     year: "numeric",
   });
@@ -87,22 +93,22 @@ export const calculatePasswordStrength = (
   const metRequirements = Object.values(requirements).filter(Boolean).length;
 
   if (metRequirements === 0 || password.length === 0) {
-    return { score: 0, label: "", color: "#E5E7EB", requirements };
+    return { score: 0, label: "", color: "rgb(229 231 235)", requirements };
   }
 
   if (metRequirements <= 2) {
-    return { score: 25, label: "Weak", color: "#EF4444", requirements };
+    return { score: 25, label: "Weak", color: "rgb(239 68 68)", requirements };
   }
 
   if (metRequirements === 3) {
-    return { score: 50, label: "Good", color: "#F97316", requirements };
+    return { score: 50, label: "Good", color: "rgb(249 115 22)", requirements };
   }
 
   if (metRequirements === 4) {
-    return { score: 75, label: "Strong", color: "#10B981", requirements };
+    return { score: 75, label: "Strong", color: "rgb(16 185 129)", requirements };
   }
 
-  return { score: 100, label: "Very Strong", color: "#10B981", requirements };
+  return { score: 100, label: "Very Strong", color: "rgb(16 185 129)", requirements };
 };
 
 export const extractApiMessage = (payload: unknown): string | null => {

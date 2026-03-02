@@ -1,4 +1,4 @@
-import { Product } from "../types";
+import { Post } from "../types";
 type SearchIntent = {
   queryTerms: string[];
   categoryTerms: string[];
@@ -271,12 +271,12 @@ function includesAnyIntentTerm(
   });
 }
 
-function listingQualityBoost(product: Product): number {
+function listingQualityBoost(post: Post): number {
   const descriptionLength = normalizeSearchText(
-    product.description || "",
+    post.description || "",
   ).length;
   const imageCount =
-    product.images?.filter(Boolean).length || (product.image ? 1 : 0);
+    post.images?.filter(Boolean).length || (post.image ? 1 : 0);
 
   let score = 0;
 
@@ -290,14 +290,14 @@ function listingQualityBoost(product: Product): number {
   else if (descriptionLength > 0) score += 2;
   else score -= 2;
 
-  if (product.phone && product.phone.trim().length > 0) {
+  if (post.phone && post.phone.trim().length > 0) {
     score += 2;
   }
 
   return score;
 }
 
-function scoreProduct(product: Product, context: QueryContext): number {
+function scorePost(post: Post, context: QueryContext): number {
   const {
     normalizedQuery,
     queryTokens,
@@ -308,11 +308,11 @@ function scoreProduct(product: Product, context: QueryContext): number {
     wantsPremium,
   } = context;
 
-  const name = normalizeSearchText(product.name || "");
-  const category = normalizeSearchText(product.category || "");
-  const location = normalizeSearchText(product.location || "");
-  const seller = normalizeSearchText(product.seller || "");
-  const description = normalizeSearchText(product.description || "");
+  const name = normalizeSearchText(post.name || "");
+  const category = normalizeSearchText(post.category || "");
+  const location = normalizeSearchText(post.location || "");
+  const seller = normalizeSearchText(post.seller || "");
+  const description = normalizeSearchText(post.description || "");
   const nameTokenSet = new Set(tokenize(name));
   const categoryTokenSet = new Set(tokenize(category));
   const descriptionTokenSet = new Set(tokenize(description));
@@ -370,7 +370,7 @@ function scoreProduct(product: Product, context: QueryContext): number {
     }
   }
 
-  const numericPrice = Number(product.price);
+  const numericPrice = Number(post.price);
   if (Number.isFinite(numericPrice) && numericPrice > 0) {
     if (wantsAffordable) {
       if (numericPrice <= 1_000) score += 22;
@@ -390,42 +390,42 @@ function scoreProduct(product: Product, context: QueryContext): number {
     return 0;
   }
 
-  score += recencyBoost(product.createdAt);
-  score += viewsBoost(product.views);
-  score += listingQualityBoost(product);
+  score += recencyBoost(post.createdAt);
+  score += viewsBoost(post.views);
+  score += listingQualityBoost(post);
 
   if (wantsPremium) {
     score += Math.min(
       10,
-      Math.log10(Math.max(0, Number(product.views || 0)) + 1) * 4,
+      Math.log10(Math.max(0, Number(post.views || 0)) + 1) * 4,
     );
   }
 
   return score;
 }
 
-export function isActiveProduct(product: Product): boolean {
-  return product.status !== "SOLD" && product.status !== "DELETED";
+export function isActivePost(post: Post): boolean {
+  return post.status !== "SOLD" && post.status !== "DELETED";
 }
 
-export function rankProductsBySearch(
-  products: Product[],
+export function rankPostsBySearch(
+  posts: Post[],
   query: string,
-): Product[] {
-  const activeProducts = products.filter(isActiveProduct);
+): Post[] {
+  const activePosts = posts.filter(isActivePost);
   const context = buildQueryContext(query);
 
   if (!context) {
-    return [...activeProducts];
+    return [...activePosts];
   }
 
-  return activeProducts
-    .map((product, index) => ({
-      product,
+  return activePosts
+    .map((post, index) => ({
+      post,
       index,
-      score: scoreProduct(product, context),
-      createdAtTs: toTimestamp(product.createdAt),
-      views: Number(product.views || 0),
+      score: scorePost(post, context),
+      createdAtTs: toTimestamp(post.createdAt),
+      views: Number(post.views || 0),
     }))
     .filter((entry) => entry.score > 0)
     .sort((a, b) => {
@@ -445,5 +445,5 @@ export function rankProductsBySearch(
 
       return a.index - b.index;
     })
-    .map((entry) => entry.product);
+    .map((entry) => entry.post);
 }

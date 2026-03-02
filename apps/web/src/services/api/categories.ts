@@ -1,70 +1,24 @@
 import { CategoriesResponse, Category } from "../../types/api";
 import { toPositiveIntegerId } from "../../utils/idValidation";
 import { apiRequest } from "./client";
-
-type RawCategoryModel = {
-  CategoryID?: unknown;
-  categoryID?: unknown;
-  id?: unknown;
-  CategoryName?: unknown;
-  categoryName?: unknown;
-  name?: unknown;
-  NameAr?: unknown;
-  nameAr?: unknown;
-  categoryNameAr?: unknown;
-  Icon?: unknown;
-  icon?: unknown;
-  Color?: unknown;
-  color?: unknown;
-  Image?: unknown;
-  image?: unknown;
-};
-
-function readString(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function transformCategoryModelToCategory(
-  categoryModel: RawCategoryModel,
-  fallbackIndex?: number,
-): Category {
-  const numericCategoryId = toPositiveIntegerId(
-    categoryModel.CategoryID ?? categoryModel.categoryID ?? categoryModel.id,
-  );
-
-  const fallbackId =
-    fallbackIndex !== undefined ? `category-${fallbackIndex}` : "category-unknown";
-  const uniqueId = numericCategoryId ? String(numericCategoryId) : fallbackId;
-
-  const name =
-    readString(
-      categoryModel.CategoryName ?? categoryModel.categoryName ?? categoryModel.name,
-    ) || "Uncategorized";
-  const nameAr =
-    readString(
-      categoryModel.NameAr ?? categoryModel.nameAr ?? categoryModel.categoryNameAr,
-    ) || name;
-
-  return {
-    id: uniqueId,
-    name,
-    nameAr,
-    icon: readString(categoryModel.Icon ?? categoryModel.icon) || "box",
-    color: readString(categoryModel.Color ?? categoryModel.color) || "#0A4ABF",
-    image: readString(categoryModel.Image ?? categoryModel.image),
-    postCount: 0,
-  };
-}
+import { COLORS } from "../../constants/colors";
+import {
+  parseCategoryCollectionPayload,
+  parseCategoryExistsPayload,
+  parseCategoryPayload,
+  normalizeCategory,
+} from "./schemas/categorySchema";
 
 export const categoriesApi = {
   getCategories: async (): Promise<CategoriesResponse> => {
-    const response = await apiRequest<RawCategoryModel[]>("/categories", {
+    const response = await apiRequest<unknown>("/categories", {
       method: "GET",
     });
 
-    if (response.success && Array.isArray(response.data)) {
-      const categories = response.data.map((cat, index) =>
-        transformCategoryModelToCategory(cat, index),
+    if (response.success) {
+      const rawCategories = parseCategoryCollectionPayload(response.data);
+      const categories = rawCategories.map((cat, index) =>
+        normalizeCategory(cat, index),
       );
 
       return {
@@ -82,15 +36,18 @@ export const categoriesApi = {
       return null;
     }
 
-    const response = await apiRequest<RawCategoryModel>(
+    const response = await apiRequest<unknown>(
       `/categories/${normalizedCategoryId}`,
       {
         method: "GET",
       },
     );
 
-    if (response.success && response.data) {
-      return transformCategoryModelToCategory(response.data);
+    if (response.success) {
+      const categoryModel = parseCategoryPayload(response.data);
+      if (categoryModel) {
+        return normalizeCategory(categoryModel);
+      }
     }
 
     return null;
@@ -115,19 +72,27 @@ export const categoriesApi = {
       CategoryName: name,
       NameAr: data.nameAr.trim() || name,
       Icon: data.icon || "box",
-      Color: data.color || "#0A4ABF",
+      Color: data.color || COLORS.PRIMARY,
       Image: data.image || "",
     };
 
-    const response = await apiRequest<RawCategoryModel>("/categories", {
+    const response = await apiRequest<unknown>("/categories", {
       method: "POST",
       body: JSON.stringify(backendCategory),
     });
 
-    if (response.success && response.data) {
+    if (response.success) {
+      const categoryModel = parseCategoryPayload(response.data);
+      if (!categoryModel) {
+        return {
+          success: false,
+          message: "Invalid category response",
+        };
+      }
+
       return {
         success: true,
-        category: transformCategoryModelToCategory(response.data),
+        category: normalizeCategory(categoryModel),
       };
     }
 
@@ -168,7 +133,7 @@ export const categoriesApi = {
       Image: data.image,
     };
 
-    const response = await apiRequest<RawCategoryModel>(
+    const response = await apiRequest<unknown>(
       `/categories/${normalizedCategoryId}`,
       {
         method: "PUT",
@@ -176,10 +141,18 @@ export const categoriesApi = {
       },
     );
 
-    if (response.success && response.data) {
+    if (response.success) {
+      const categoryModel = parseCategoryPayload(response.data);
+      if (!categoryModel) {
+        return {
+          success: false,
+          message: "Invalid category response",
+        };
+      }
+
       return {
         success: true,
-        category: transformCategoryModelToCategory(response.data),
+        category: normalizeCategory(categoryModel),
       };
     }
 
@@ -229,6 +202,6 @@ export const categoriesApi = {
       },
     );
 
-    return response.success ? Boolean(response.data) : false;
+    return response.success ? parseCategoryExistsPayload(response.data) : false;
   },
 };

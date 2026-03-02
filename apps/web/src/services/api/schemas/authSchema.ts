@@ -25,6 +25,8 @@ export type ParsedAuthEnvelope = {
   successFlag: boolean | null;
   message: string;
   user: ParsedAuthUser | null;
+  requiresTwoFactor: boolean;
+  twoFactorToken?: string;
 };
 
 function parseAuthUser(value: unknown): ParsedAuthUser | null {
@@ -62,10 +64,19 @@ export function parseAuthEnvelope(payload: unknown): ParsedAuthEnvelope | null {
   const successValue = payloadRecord.Success ?? payloadRecord.success;
   const successFlag = typeof successValue === "boolean" ? successValue : null;
   const message = readString(payloadRecord.Message ?? payloadRecord.message);
+  const requiresTwoFactor = toBoolean(
+    payloadRecord.RequiresTwoFactor ?? payloadRecord.requiresTwoFactor,
+    false,
+  );
+  const twoFactorToken =
+    readString(payloadRecord.TwoFactorToken ?? payloadRecord.twoFactorToken) ||
+    undefined;
 
   return {
     successFlag,
     message,
     user: parseAuthUser(payloadRecord.User ?? payloadRecord.user),
+    requiresTwoFactor,
+    twoFactorToken,
   };
 }

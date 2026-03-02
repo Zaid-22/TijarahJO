@@ -1,0 +1,69 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
+using Models;
+using TijarahJoDB.Application.Abstractions.DataAccess;
+using TijarahJoDB.Application.Common;
+using TijarahJoDB.DAL.Entities;
+using TijarahJoDB.DAL.Persistence;
+
+namespace TijarahJoDB_DataAccess;
+
+
+public sealed class ReviewDataAccessAdapter : IReviewDataAccess
+{
+    private readonly TijarahJoDbContext _dbContext;
+
+    public ReviewDataAccessAdapter(TijarahJoDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
+    public async Task<int> AddReviewAsync(ReviewModel review, CancellationToken cancellationToken = default)
+    {
+        var entity = new ReviewEntity
+        {
+            ReviewerID = review.ReviewerID,
+            ReviewedUserID = review.ReviewedUserID,
+            Rating = review.Rating,
+            Comment = review.Comment,
+            CreatedAt = review.Timestamp == default ? DateTime.UtcNow : review.Timestamp
+        };
+
+        _dbContext.Reviews.Add(entity);
+        _dbContext.AuditActorUserId = review.ReviewerID > 0 ? review.ReviewerID : null;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return entity.ReviewID;
+    }
+
+    public async Task<IReadOnlyList<ReviewModel>> GetReviewsByUserIdAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Reviews
+            .AsNoTracking()
+            .Where(r => r.ReviewedUserID == userId)
+            .Join(
+                _dbContext.Users.AsNoTracking(),
+                review => review.ReviewerID,
+                user => user.UserID,
+                (review, user) => new ReviewModel
+                {
+                    ReviewID = review.ReviewID,
+                    ReviewerID = review.ReviewerID,
+                    ReviewedUserID = review.ReviewedUserID,
+                    Rating = review.Rating,
+                    Comment = review.Comment ?? string.Empty,
+                    Timestamp = review.CreatedAt,
+                    ReviewerName = (user.FirstName + " " + (user.LastName ?? string.Empty)).Trim(),
+                    ReviewerAvatar = user.Avatar
+                })
+            .OrderByDescending(r => r.Timestamp)
+            .ThenByDescending(r => r.ReviewID)
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<bool> HasReviewedAsync(int reviewerId, int reviewedUserId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Reviews
+            .AsNoTracking()
+            .AnyAsync(item => item.ReviewerID == reviewerId && item.ReviewedUserID == reviewedUserId, cancellationToken);
+    }
+}

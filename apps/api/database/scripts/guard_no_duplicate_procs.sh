@@ -5,6 +5,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ACTIVE_MIGRATIONS_DIR="$SCRIPT_DIR/migrations"
 ACTIVE_PROCEDURES_DIR="$SCRIPT_DIR/procedures"
+ACTIVE_SOURCE_DIRS=("$ACTIVE_MIGRATIONS_DIR")
+
+if [[ -d "$ACTIVE_PROCEDURES_DIR" ]]; then
+  ACTIVE_SOURCE_DIRS+=("$ACTIVE_PROCEDURES_DIR")
+fi
 
 if ! command -v rg >/dev/null 2>&1; then
   echo "Error: rg (ripgrep) is required for guard_no_duplicate_procs.sh" >&2
@@ -16,7 +21,8 @@ trap 'rm -f "$TMP_MATCHES"' EXIT
 
 rg -noP \
   "(?i)(?:create\\s+(?:or\\s+alter\\s+)?procedure|alter\\s+procedure)\\s+\\[?(?:dbo)\\]?\\.\\[?([A-Za-z0-9_]+)\\]?" \
-  "$ACTIVE_MIGRATIONS_DIR" "$ACTIVE_PROCEDURES_DIR" \
+  "${ACTIVE_SOURCE_DIRS[@]}" \
+  --glob '!**/legacy/**' \
   --replace '$1' > "$TMP_MATCHES" || true
 
 if [[ ! -s "$TMP_MATCHES" ]]; then
