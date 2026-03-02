@@ -62,11 +62,12 @@ export function SearchResultsPage({
     clearAppliedSearch();
     onSearch("");
   }, [clearAppliedSearch, onSearch]);
-  const submitSearch = useCallback(() => {
-    const normalizedQuery = localSearchQuery.trim();
+  const submitSearch = useCallback((query: string) => {
+    const normalizedQuery = query.trim();
+    setLocalSearchQuery(query);
     setAppliedSearchQuery(normalizedQuery);
     onSearch(normalizedQuery);
-  }, [localSearchQuery, onSearch]);
+  }, [onSearch]);
   const activeSearchFilters = rawSearchFilters.map((item) => ({
     ...item,
     onRemove: clearSearch,

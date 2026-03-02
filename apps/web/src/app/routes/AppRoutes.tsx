@@ -25,7 +25,6 @@ interface AppRoutesProps {
   setSearchQuery: (q: string) => void;
   setActiveSearchQuery: (q: string) => void;
   activeSearchQuery: string;
-  searchQuery: string;
 }
 
 export function AppRoutes(props: AppRoutesProps) {

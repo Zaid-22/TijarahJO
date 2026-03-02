@@ -12,7 +12,7 @@ interface DiscoverySearchConfig {
   placeholder: string;
   clearLabel: string;
   onChange: (value: string) => void;
-  onSubmit?: () => void;
+  onSubmit?: (value: string) => void;
 }
 
 interface DiscoveryMobileFiltersConfig {

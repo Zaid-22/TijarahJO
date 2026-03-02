@@ -130,9 +130,10 @@ export function AllPostsPage({
     setSearchInputValue("");
     clearAppliedSearch();
   }, [clearAppliedSearch]);
-  const submitSearch = useCallback(() => {
-    setAppliedSearchQuery(searchInputValue.trim());
-  }, [searchInputValue]);
+  const submitSearch = useCallback((query: string) => {
+    setSearchInputValue(query);
+    setAppliedSearchQuery(query.trim());
+  }, []);
   const activeSearchFilters = rawSearchFilters.map((item) => ({
     ...item,
     onRemove: clearSearch,
