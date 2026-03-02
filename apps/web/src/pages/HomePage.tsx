@@ -1,26 +1,15 @@
 import {
-  Search,
   Loader2,
-  Grid3x3,
-  LayoutGrid,
-  Columns,
-  List,
 } from "lucide-react";
-import { Button } from "../shared/ui/button";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "../shared/ui/pagination";
-import { ProductCard } from "../features/marketplace/components/ProductCard";
-import { Language, Product, ViewMode } from "../types";
+import { PostResultsGrid } from "../features/marketplace/components/PostResultsGrid";
+import { MarketplaceResultsPagination } from "../features/marketplace/components/MarketplaceResultsPagination";
+import { Language, Post, ViewMode } from "../types";
 import { APP_CONFIG } from "../constants/appConfig";
-import { useMemo } from "react";
 import { HomeHeroSection } from "../features/home/components/HomeHeroSection";
 import { HomeCategoriesSection } from "../features/home/components/HomeCategoriesSection";
+import { MarketplaceDiscoveryControls } from "../features/marketplace/components/MarketplaceDiscoveryControls";
+import { usePrefersReducedMotion } from "../shared/hooks/usePrefersReducedMotion";
+import { PageShell } from "../shared/ui/page-shell";
 
 interface HomePageProps {
   language: Language;
@@ -36,20 +25,20 @@ interface HomePageProps {
   // Navigation / Actions
   setShowLoginPrompt: (show: boolean) => void;
   setShowSellItem: (show: boolean) => void;
-  setShowAllProducts: (show: boolean) => void;
+  setShowAllPosts: (show: boolean) => void;
   setSelectedCategoryForPage: (category: string) => void;
 
   // Data
-  isLoadingProducts: boolean;
-  productsError: string | null;
-  displayedItems: Product[];
+  isLoadingPosts: boolean;
+  postsError: string | null;
+  displayedPosts: Post[];
 
   // View Control
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
 
-  // Product Actions
-  onProductClick: (id: string, origin?: string) => void;
+  // Post Actions
+  onPostClick: (id: string, origin?: string) => void;
   favoriteIds: string[];
   toggleFavorite: (id: string) => void;
   currentUserDisplayName: string;
@@ -76,14 +65,14 @@ export function HomePage({
   setSearchQuery,
   setShowLoginPrompt,
   setShowSellItem,
-  setShowAllProducts,
+  setShowAllPosts,
   setSelectedCategoryForPage,
-  isLoadingProducts,
-  productsError,
-  displayedItems,
+  isLoadingPosts,
+  postsError,
+  displayedPosts,
   viewMode,
   setViewMode,
-  onProductClick,
+  onPostClick,
   favoriteIds,
   toggleFavorite,
   currentUserDisplayName,
@@ -96,18 +85,18 @@ export function HomePage({
   getCategoryTranslation,
 }: HomePageProps) {
   const backendUrlHint = APP_CONFIG.backendHostUrl;
-  const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   const scrollToTop = () => {
-    const mainContent = document.querySelector("main");
+    const mainContent = document.getElementById("home-marketplace-content");
     mainContent?.scrollIntoView({
-      behavior: "smooth",
+      behavior: prefersReducedMotion ? "auto" : "smooth",
       block: "start",
     });
   };
 
   return (
-    <>
+    <PageShell>
       <HomeHeroSection
         language={language}
         isAuthenticated={isAuthenticated}
@@ -119,91 +108,34 @@ export function HomePage({
         onBrowseItems={scrollToTop}
       />
       <HomeCategoriesSection
+        language={language}
         t={t}
         getCategoryTranslation={getCategoryTranslation}
         setSelectedCategoryForPage={setSelectedCategoryForPage}
-        setShowAllProducts={setShowAllProducts}
+        setShowAllPosts={setShowAllPosts}
       />
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main id="home-marketplace-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* View Controls Only */}
-        <div className="flex flex-col gap-4 mb-8">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div></div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 bg-white dark:bg-gray-800 rounded-lg p-1 shadow-sm">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setViewMode("grid-4")}
-                  className={`h-9 w-9 sm:h-8 sm:w-8 p-0 transition-all duration-200 ${
-                    viewMode === "grid-4"
-                      ? "bg-blue-50 dark:bg-blue-900/30 text-[#0A4ABF]"
-                      : "text-[#6B7280]"
-                  }`}
-                  title="4 Columns Grid"
-                  aria-label="4 Columns Grid"
-                >
-                  <Grid3x3 className="w-5 h-5 sm:w-4 sm:h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setViewMode("grid-3")}
-                  className={`h-9 w-9 sm:h-8 sm:w-8 p-0 transition-all duration-200 ${
-                    viewMode === "grid-3"
-                      ? "bg-blue-50 dark:bg-blue-900/30 text-[#0A4ABF]"
-                      : "text-[#6B7280]"
-                  }`}
-                  title="3 Columns Grid"
-                  aria-label="3 Columns Grid"
-                >
-                  <LayoutGrid className="w-5 h-5 sm:w-4 sm:h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setViewMode("grid-2")}
-                  className={`h-9 w-9 sm:h-8 sm:w-8 p-0 transition-all duration-200 ${
-                    viewMode === "grid-2"
-                      ? "bg-blue-50 dark:bg-blue-900/30 text-[#0A4ABF]"
-                      : "text-[#6B7280]"
-                  }`}
-                  title="2 Columns Grid"
-                  aria-label="2 Columns Grid"
-                >
-                  <Columns className="w-5 h-5 sm:w-4 sm:h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setViewMode("list")}
-                  className={`h-9 w-9 sm:h-8 sm:w-8 p-0 transition-all duration-200 ${
-                    viewMode === "list"
-                      ? "bg-blue-50 dark:bg-blue-900/30 text-[#0A4ABF]"
-                      : "text-[#6B7280]"
-                  }`}
-                  title="List View"
-                  aria-label="List View"
-                >
-                  <List className="w-5 h-5 sm:w-4 sm:h-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <MarketplaceDiscoveryControls
+          language={language}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          className="mb-8"
+          showViewModeOnMobile
+        />
 
         {/* Loading State */}
-        {isLoadingProducts && (
+        {isLoadingPosts && (
           <div className="col-span-full flex flex-col items-center justify-center py-16 px-4">
-            <Loader2 className="w-16 h-16 text-blue-600 dark:text-blue-400 mb-4 animate-spin" />
-            <h3 className="text-black dark:text-white mb-2">
+            <Loader2 className="mb-4 h-16 w-16 animate-spin text-primary" />
+            <h3 className="mb-2 text-foreground">
               {language === "ar"
-                ? "جارٍ تحميل المنتجات..."
-                : "Loading products..."}
+                ? "جارٍ تحميل المنشورات..."
+                : "Loading posts..."}
             </h3>
-            <p className="text-gray-500 dark:text-gray-400 text-center max-w-md">
+            <p className="max-w-md text-center text-muted-foreground">
               {language === "ar"
                 ? "جاري جلب البيانات من قاعدة البيانات"
                 : "Fetching data from database"}
@@ -212,12 +144,12 @@ export function HomePage({
         )}
 
         {/* Error State */}
-        {!isLoadingProducts && productsError && (
+        {!isLoadingPosts && postsError && (
           <div className="col-span-full flex flex-col items-center justify-center py-8 px-4 mb-4 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
             <p className="text-yellow-800 dark:text-yellow-200 text-sm text-center">
-              {productsError}
+              {postsError}
             </p>
-            {productsError.includes("Cannot connect") && (
+            {postsError.includes("Cannot connect") && (
               <p className="text-yellow-700 dark:text-yellow-300 text-xs text-center mt-2">
                 {language === "ar"
                   ? `تأكد من تشغيل الخادم الخلفي على ${backendUrlHint}`
@@ -227,119 +159,59 @@ export function HomePage({
           </div>
         )}
 
-        {/* Product Grid */}
-        {!isLoadingProducts && (
-          <div
-            className={`grid ${
-              viewMode === "grid-4"
-                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                : viewMode === "grid-3"
-                  ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-                  : viewMode === "grid-2"
-                    ? "grid-cols-1 sm:grid-cols-2"
-                    : "grid-cols-1"
-            } gap-4 sm:gap-5 md:gap-6 transition-all duration-300`}
-          >
-            {displayedItems.length === 0 ? (
-              <div className="col-span-full flex flex-col items-center justify-center py-16 px-4">
-                <Search className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
-                <h3 className="text-black dark:text-white mb-2">
-                  {searchQuery
-                    ? language === "ar"
-                      ? "لا توجد نتائج"
-                      : "No results found"
-                    : language === "ar"
-                      ? "لا توجد منتجات"
-                      : "No products found"}
-                </h3>
-                <p className="text-gray-500 dark:text-gray-400 text-center max-w-md">
-                  {searchQuery
-                    ? language === "ar"
-                      ? `لم نتمكن من العثور على أي منتجات تطابق "${searchQuery}"`
-                      : `We couldn't find any products matching "${searchQuery}"`
-                    : language === "ar"
-                      ? "جرب فئة أخرى أو أضف منتجات جديدة"
-                      : "Try a different category or add new products"}
-                </p>
-                {searchQuery && (
-                  <Button
-                    onClick={() => setSearchQuery("")}
-                    className="mt-4 bg-[#0A4ABF] text-white hover:bg-[#083a99]"
-                  >
-                    {language === "ar" ? "مسح البحث" : "Clear Search"}
-                  </Button>
-                )}
-              </div>
-            ) : (
-              displayedItems.map((product) => (
-                <ProductCard
-                  key={
-                    product.id
-                      ? `product-${product.id}`
-                      : `product-fallback-${String(
-                          product.name || "item",
-                        ).trim().toLowerCase()}-${String(product.sellerId || product.seller || "unknown").trim().toLowerCase()}-${String(product.createdAt || "created")}`
-                  }
-                  product={product}
-                  onProductClick={(id) => onProductClick(id, "marketplace")}
-                  viewMode={viewMode}
-                  isFavorite={favoriteIdSet.has(product.id)}
-                  onFavoriteToggle={toggleFavorite}
-                  isAuthenticated={isAuthenticated}
-                  currentUserId={isAuthenticated ? currentUserId : undefined}
-                  currentUserDisplayName={
-                    isAuthenticated ? currentUserDisplayName : undefined
-                  }
-                />
-              ))
-            )}
-          </div>
+        {/* Post Grid */}
+        {!isLoadingPosts && (
+          <PostResultsGrid
+            posts={displayedPosts}
+            viewMode={viewMode}
+            onPostClick={(id) => onPostClick(id, "marketplace")}
+            favoriteIds={favoriteIds}
+            onFavoriteToggle={toggleFavorite}
+            language={language}
+            isAuthenticated={isAuthenticated}
+            currentUserId={currentUserId}
+            currentUserDisplayName={currentUserDisplayName}
+            animated
+            emptyState={{
+              title: searchQuery
+                ? language === "ar"
+                  ? "لا توجد نتائج"
+                  : "No results found"
+                : language === "ar"
+                  ? "لا توجد منشورات"
+                  : "No posts found",
+              description: searchQuery
+                ? language === "ar"
+                  ? `لم نتمكن من العثور على أي منشورات تطابق "${searchQuery}"`
+                  : `We couldn't find any posts matching "${searchQuery}"`
+                : language === "ar"
+                  ? "جرب فئة أخرى أو أضف منشورات جديدة"
+                  : "Try a different category or add new posts",
+              actionLabel: searchQuery
+                ? language === "ar"
+                  ? "مسح البحث"
+                  : "Clear Search"
+                : undefined,
+              onAction: searchQuery
+                ? () => setSearchQuery("")
+                : undefined,
+            }}
+          />
         )}
 
-        {/* Pagination */}
-        {displayedItems.length > 0 && totalPages > 1 && (
-          <div className="mt-12 mb-8">
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={goToPreviousPage}
-                    disabled={currentPage === 1 || isLoading}
-                  />
-                </PaginationItem>
-
-                {/* Simply show current page / total */}
-                <PaginationItem>
-                  <PaginationLink isActive>
-                    {currentPage} / {totalPages}
-                  </PaginationLink>
-                </PaginationItem>
-
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={goToNextPage}
-                    disabled={currentPage === totalPages || isLoading}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
-        )}
-
-        {/* Loading Indicator for pagination */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-8">
-            <div className="flex items-center gap-3">
-              <Loader2
-                className="w-6 h-6 animate-spin text-[#0A4ABF]"
-              />
-              <span className="text-gray-600 dark:text-gray-400">
-                {language === "ar" ? "جارٍ التحميل..." : "Loading..."}
-              </span>
-            </div>
-          </div>
-        )}
+        {displayedPosts.length > 0 ? (
+          <MarketplaceResultsPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            isLoading={isLoading}
+            language={language}
+            onPrevious={goToPreviousPage}
+            onNext={goToNextPage}
+            className="mt-12 mb-8"
+            showLoadingIndicator
+          />
+        ) : null}
       </main>
-    </>
+    </PageShell>
   );
 }

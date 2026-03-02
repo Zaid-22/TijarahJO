@@ -1,51 +1,18 @@
-import { Button } from "../../../shared/ui/button";
-import { Input } from "../../../shared/ui/input";
-import { Avatar, AvatarImage, AvatarFallback } from "../../../shared/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "../../../shared/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetTrigger,
-} from "../../../shared/ui/sheet";
-import { Logo } from "../../../shared/ui/logo";
-import { translations, Language } from "../../../translations";
-import {
-  ArrowLeft,
-  Search,
-  Heart,
-  MessageCircle,
-  User,
-  Plus,
-  // Languages,
-  Settings,
-  Shield,
-  LogOut,
-  Menu,
-} from "lucide-react";
+import { ArrowLeft, MessageCircle, Plus } from "lucide-react";
 import { useState } from "react";
+import { Button } from "../../../shared/ui/button";
+import { Logo } from "../../../shared/ui/logo";
+import { type Language, translations } from "../../../translations";
 import { useCatalogCategories } from "../../../shared/hooks/useCatalogCategories";
-import {
-  resolveCategoryColor,
-  resolveCategoryIcon,
-  resolveCategoryName,
-} from "../../../shared/lib/categoryVisuals";
+import { HeaderDesktopProfileMenu } from "./header/HeaderDesktopProfileMenu";
+import { HeaderMobileMenuSheet } from "./header/HeaderMobileMenuSheet";
+import { HeaderSearchInput } from "./header/HeaderSearchInput";
 
-interface HeaderProps {
+export interface HeaderProps {
   language: Language;
   isAuthenticated?: boolean;
   currentUserDisplayName?: string;
   userAvatar?: string;
-  userFirstName?: string;
-  userLastName?: string;
   showBackButton?: boolean;
   showLogo?: boolean;
   showSearch?: boolean;
@@ -60,7 +27,6 @@ interface HeaderProps {
   onShowAdminDashboard?: () => void;
   onShowSellItem?: () => void;
   onLogout?: () => void;
-  // onToggleLanguage?: () => void;
   onCategoryClick?: (categoryName: string) => void;
   darkMode?: boolean;
   isAdmin?: boolean;
@@ -72,8 +38,6 @@ export function Header({
   isAuthenticated = false,
   currentUserDisplayName,
   userAvatar,
-  userFirstName,
-  userLastName,
   showBackButton = false,
   showLogo = true,
   showSearch = true,
@@ -88,7 +52,6 @@ export function Header({
   onShowAdminDashboard,
   onShowSellItem,
   onLogout,
-  // onToggleLanguage,
   onCategoryClick,
   darkMode = false,
   isAdmin = false,
@@ -98,279 +61,79 @@ export function Header({
   const isRTL = language === "ar";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { categories } = useCatalogCategories();
-  const normalizedUnreadMessagesCount = Math.max(0, Math.floor(unreadMessagesCount));
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && searchQuery.trim() && onSearchSubmit) {
-      e.preventDefault();
-      onSearchSubmit();
-    }
-  };
-
-  const handleCategoryClick = (categoryName: string) => {
-    setIsMobileMenuOpen(false);
-    if (onCategoryClick) {
-      onCategoryClick(categoryName);
-    }
-  };
+  const normalizedUnreadMessagesCount = Math.max(
+    0,
+    Math.floor(unreadMessagesCount),
+  );
+  const actionIconButtonClassName =
+    "group relative h-10 w-10 rounded-full border border-border/60 bg-background/70 p-0 text-muted-foreground shadow-sm hover:border-primary/35 hover:bg-primary/5 hover:text-primary hover:shadow-md transition-all";
 
   return (
-    <header className="sticky top-0 z-50 bg-white dark:bg-[#111111] border-b border-gray-200 dark:border-gray-800 shadow-sm backdrop-blur-lg">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-20 gap-2">
-          {/* Left Section - Logo/Menu/Back Button */}
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+    <header className="sticky top-0 z-50 border-b border-border/35 bg-gradient-to-b from-background via-background/95 to-background/90 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
+      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/35 to-transparent" />
+      <div className="relative mx-auto max-w-7xl px-3 sm:px-4 lg:px-8">
+        <div className="flex h-16 items-center gap-3 sm:h-[4.75rem] sm:gap-5">
+          <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
             {showBackButton ? (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={onBack}
-                className="hover:bg-gray-100 dark:hover:bg-gray-800 p-1 sm:p-2 flex-shrink-0 text-primary"
+                className="group rounded-full border border-border/60 bg-background/70 p-1 text-muted-foreground shadow-sm hover:border-primary/35 hover:bg-primary/5 hover:text-primary sm:p-2"
                 aria-label={language === "ar" ? "رجوع" : "Go back"}
               >
                 <ArrowLeft
-                  className={`w-5 h-5 sm:w-6 sm:h-6 ${isRTL ? "rotate-180" : ""}`}
+                  className={`w-5 h-5 sm:w-6 sm:h-6 transition-transform ${isRTL ? "rotate-180 group-hover:translate-x-1" : "group-hover:-translate-x-1"}`}
                 />
               </Button>
             ) : (
               <>
-                <Sheet
-                  open={isMobileMenuOpen}
+                <HeaderMobileMenuSheet
+                  language={language}
+                  isRTL={isRTL}
+                  isAuthenticated={isAuthenticated}
+                  isAdmin={isAdmin}
+                  unreadMessagesCount={normalizedUnreadMessagesCount}
+                  categories={categories}
+                  isOpen={isMobileMenuOpen}
                   onOpenChange={setIsMobileMenuOpen}
-                >
-                  <SheetTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="md:hidden p-1 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0 text-primary"
-                      aria-label={language === "ar" ? "فتح القائمة" : "Open menu"}
-                    >
-                      <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent
-                    side={isRTL ? "right" : "left"}
-                    className="w-80 dark:bg-[#111111] dark:border-gray-800 overflow-y-auto"
-                  >
-                    <SheetHeader>
-                      <SheetTitle className="dark:text-white">
-                        {t.menu || "Menu"}
-                      </SheetTitle>
-                      <SheetDescription className="dark:text-gray-400">
-                        {t.menuDescription ||
-                          "Access your profile and settings"}
-                      </SheetDescription>
-                    </SheetHeader>
-                    <div className="mt-6 space-y-4 pb-6">
-                      {/* User Actions Section */}
-                      {isAuthenticated ? (
-                        <div className="space-y-2">
-                          <h3 className="px-4 text-sm text-gray-500 dark:text-gray-400">
-                            {language === "ar" ? "الحساب" : "Account"}
-                          </h3>
-                          <div className="space-y-1">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsMobileMenuOpen(false);
-                                onShowProfile?.();
-                              }}
-                              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                            >
-                              <User className="w-5 h-5 text-primary dark:text-secondary" />
-                              <span className="text-gray-700 dark:text-gray-300">
-                                {language === "ar"
-                                  ? "ملفي الشخصي"
-                                  : "My Profile"}
-                              </span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsMobileMenuOpen(false);
-                                onShowFavorites?.();
-                              }}
-                              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                            >
-                              <Heart className="w-5 h-5 text-primary dark:text-secondary" />
-                              <span className="text-gray-700 dark:text-gray-300">
-                                {language === "ar" ? "المفضلة" : "Favorites"}
-                              </span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsMobileMenuOpen(false);
-                                onShowMessages?.();
-                              }}
-                              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                            >
-                              <MessageCircle className="w-5 h-5 text-primary dark:text-secondary" />
-                              <span className="text-gray-700 dark:text-gray-300">
-                                {language === "ar" ? "الرسائل" : "Messages"}
-                              </span>
-                              {normalizedUnreadMessagesCount > 0 && (
-                                <span className="ml-auto inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-semibold text-white">
-                                  {normalizedUnreadMessagesCount > 99
-                                    ? "99+"
-                                    : normalizedUnreadMessagesCount}
-                                </span>
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsMobileMenuOpen(false);
-                                onShowSettings?.();
-                              }}
-                              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                            >
-                              <Settings className="w-5 h-5 text-primary dark:text-secondary" />
-                              <span className="text-gray-700 dark:text-gray-300">
-                                {language === "ar" ? "الإعدادات" : "Settings"}
-                              </span>
-                            </button>
-                            {isAdmin && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setIsMobileMenuOpen(false);
-                                  onShowAdminDashboard?.();
-                                }}
-                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                              >
-                                <Shield className="w-5 h-5 text-primary dark:text-secondary" />
-                                <span className="text-gray-700 dark:text-gray-300">
-                                  {language === "ar" ? "لوحة الإدارة" : "Admin Dashboard"}
-                                </span>
-                              </button>
-                            )}
-                            <div className="h-px bg-gray-200 dark:bg-gray-800 my-2" />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsMobileMenuOpen(false);
-                                onLogout?.();
-                              }}
-                              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors"
-                            >
-                              <LogOut className="w-5 h-5 text-red-600 dark:text-red-400" />
-                              <span className="text-red-600 dark:text-red-400">
-                                {language === "ar" ? "تسجيل الخروج" : "Logout"}
-                              </span>
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsMobileMenuOpen(false);
-                              onShowProfile?.();
-                            }}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary dark:bg-secondary text-white hover:opacity-90 rounded-lg transition-opacity"
-                          >
-                            <User className="w-5 h-5" />
-                            <span className="font-medium">
-                              {language === "ar" ? "تسجيل الدخول" : "Sign In"}
-                            </span>
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Categories Section */}
-                      <div className="space-y-2">
-                        <h3 className="px-4 text-sm text-gray-500 dark:text-gray-400">
-                          {language === "ar" ? "التصنيفات" : "Categories"}
-                        </h3>
-                        <div className="space-y-1">
-                          {categories.map((category) => {
-                            const CategoryIcon = resolveCategoryIcon(category.icon);
-                            const categoryColor = resolveCategoryColor(category.color);
-                            const categoryName = resolveCategoryName(category, language);
-                            return (
-                              <button
-                                key={String(category.id || category.name)}
-                                type="button"
-                                onClick={() =>
-                                  handleCategoryClick(category.name)
-                                }
-                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                              >
-                                <CategoryIcon
-                                  className="w-5 h-5"
-                                  style={{ color: categoryColor }}
-                                />
-                                <span className="text-gray-700 dark:text-gray-300">
-                                  {categoryName}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </SheetContent>
-                </Sheet>
+                  onShowProfile={onShowProfile}
+                  onShowFavorites={onShowFavorites}
+                  onShowMessages={onShowMessages}
+                  onShowSettings={onShowSettings}
+                  onShowAdminDashboard={onShowAdminDashboard}
+                  onLogout={onLogout}
+                  onCategoryClick={onCategoryClick}
+                />
                 {showLogo && <Logo size="md" darkMode={darkMode} />}
               </>
             )}
           </div>
 
-          {/* Center Section - Search */}
           {showSearch && (
-            <div className="hidden md:flex flex-1 max-w-2xl mx-8">
-              <div className="relative w-full">
-                <Search
-                  className={`absolute ${isRTL ? "right-3" : "left-3"} top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500`}
-                />
-                <Input
-                  placeholder={t.searchPlaceholder}
-                  value={searchQuery}
-                  onChange={(e) => onSearchChange?.(e.target.value)}
-                  onKeyDown={handleKeyPress}
-                  className={`${isRTL ? "pr-12" : "pl-12"} h-11 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-primary dark:focus:border-secondary rounded-full dark:text-white dark:placeholder:text-gray-500`}
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => onSearchChange?.("")}
-                    className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors`}
-                    aria-label={language === "ar" ? "مسح البحث" : "Clear search"}
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                )}
-              </div>
+            <div className="mx-1 hidden min-w-0 flex-1 md:block lg:mx-5">
+              <HeaderSearchInput
+                language={language}
+                isRTL={isRTL}
+                searchQuery={searchQuery}
+                onSearchChange={onSearchChange}
+                onSearchSubmit={onSearchSubmit}
+              />
             </div>
           )}
 
-          {/* Right Section - Actions */}
-          <div className="flex items-center gap-1 sm:gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
             {isAuthenticated && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="relative h-9 sm:h-10 w-9 sm:w-10 p-0 text-primary hover:bg-gray-100 dark:hover:bg-gray-800"
+                className={actionIconButtonClassName}
                 onClick={onShowMessages}
                 aria-label={language === "ar" ? "الرسائل" : "Messages"}
               >
-                <MessageCircle className="w-5 h-5" />
+                <MessageCircle className="w-5 h-5 transition-transform group-hover:scale-110" />
                 {normalizedUnreadMessagesCount > 0 && (
-                  <span className="absolute -top-1 -right-1 inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white">
+                  <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-xs font-bold leading-none text-destructive-foreground animate-in zoom-in duration-300 ring-2 ring-background">
                     {normalizedUnreadMessagesCount > 99
                       ? "99+"
                       : normalizedUnreadMessagesCount}
@@ -382,133 +145,44 @@ export function Header({
             {isAuthenticated && (
               <Button
                 size="sm"
-                className="hover:opacity-90 shadow-sm dark:shadow-primary/20 h-9 sm:h-10 px-2 sm:px-4 bg-primary text-white"
+                className="h-10 rounded-full bg-primary px-2 text-primary-foreground shadow-lg hover:bg-primary/95 hover:shadow-xl active:scale-95 sm:px-5"
                 onClick={onShowSellItem}
               >
-                <Plus className="w-5 h-5 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline ml-2">{t.sellItem}</span>
+                <Plus className="h-4 w-4" />
+                <span
+                  className={`text-sm font-semibold ${isRTL ? "mr-2 hidden sm:inline" : "ml-2 hidden sm:inline"}`}
+                >
+                  {t.sellItem}
+                </span>
               </Button>
             )}
 
-            {/* Desktop Only - Profile */}
-            {isAuthenticated ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="hidden sm:flex items-center justify-center rounded-full focus:outline-none transition-all duration-200 hover:scale-105">
-                    <Avatar className="w-10 h-10 border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 shadow-sm ring-2 ring-white dark:ring-gray-900">
-                      <AvatarImage
-                        src={userAvatar}
-                        alt={currentUserDisplayName || "User"}
-                        className="object-cover object-[center_20%]"
-                      />
-                      <AvatarFallback className="bg-primary text-white dark:bg-secondary text-sm font-semibold">
-                        {userFirstName?.[0] || currentUserDisplayName?.[0] || "U"}
-                        {userLastName?.[0] || ""}
-                      </AvatarFallback>
-                    </Avatar>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="w-56 dark:bg-[#111111] dark:border-gray-800"
-                >
-                  <DropdownMenuItem
-                    onClick={onShowProfile}
-                    className="cursor-pointer dark:hover:bg-gray-800 dark:text-white"
-                  >
-                    <User className="w-4 h-4 mr-2" />
-                    {language === "ar" ? "ملفي الشخصي" : "My Profile"}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={onShowFavorites}
-                    className="cursor-pointer dark:hover:bg-gray-800 dark:text-white"
-                  >
-                    <Heart className="w-4 h-4 mr-2" />
-                    {language === "ar" ? "المفضلة" : "Favorites"}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={onShowMessages}
-                    className="cursor-pointer dark:hover:bg-gray-800 dark:text-white"
-                  >
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    {language === "ar" ? "الرسائل" : "Messages"}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={onShowSettings}
-                    className="cursor-pointer dark:hover:bg-gray-800 dark:text-white"
-                  >
-                    <Settings className="w-4 h-4 mr-2" />
-                    {language === "ar" ? "الإعدادات" : "Settings"}
-                  </DropdownMenuItem>
-                  {isAdmin && (
-                    <DropdownMenuItem
-                      onClick={onShowAdminDashboard}
-                      className="cursor-pointer dark:hover:bg-gray-800 dark:text-white"
-                    >
-                      <Shield className="w-4 h-4 mr-2" />
-                      {language === "ar" ? "لوحة الإدارة" : "Admin Dashboard"}
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator className="dark:bg-gray-800" />
-                  <DropdownMenuItem
-                    onClick={onLogout}
-                    className="cursor-pointer dark:hover:bg-gray-800 text-red-600 dark:text-red-400"
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    {language === "ar" ? "تسجيل الخروج" : "Logout"}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                className="hidden sm:flex hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-secondary dark:border-gray-700 px-4 text-primary border-primary"
-                onClick={onShowProfile}
-              >
-                {language === "ar" ? "تسجيل الدخول" : "Sign In"}
-              </Button>
-            )}
+            <HeaderDesktopProfileMenu
+              language={language}
+              isAuthenticated={isAuthenticated}
+              isAdmin={isAdmin}
+              currentUserDisplayName={currentUserDisplayName}
+              userAvatar={userAvatar}
+              unreadMessagesCount={normalizedUnreadMessagesCount}
+              onShowProfile={onShowProfile}
+              onShowFavorites={onShowFavorites}
+              onShowMessages={onShowMessages}
+              onShowSettings={onShowSettings}
+              onShowAdminDashboard={onShowAdminDashboard}
+              onLogout={onLogout}
+            />
           </div>
         </div>
 
-        {/* Mobile Search */}
         {showSearch && (
           <div className="md:hidden pb-4">
-            <div className="relative">
-              <Search
-                className={`absolute ${isRTL ? "right-3" : "left-3"} top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500`}
-              />
-              <Input
-                placeholder={t.searchPlaceholder}
-                value={searchQuery}
-                onChange={(e) => onSearchChange?.(e.target.value)}
-                onKeyDown={handleKeyPress}
-                className={`${isRTL ? "pr-12" : "pl-12"} h-11 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-primary dark:focus:border-secondary rounded-full dark:text-white dark:placeholder:text-gray-500`}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => onSearchChange?.("")}
-                  className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors`}
-                  aria-label={language === "ar" ? "مسح البحث" : "Clear search"}
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              )}
-            </div>
+            <HeaderSearchInput
+              language={language}
+              isRTL={isRTL}
+              searchQuery={searchQuery}
+              onSearchChange={onSearchChange}
+              onSearchSubmit={onSearchSubmit}
+            />
           </div>
         )}
       </div>

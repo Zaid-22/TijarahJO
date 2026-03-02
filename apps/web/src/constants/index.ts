@@ -5,6 +5,7 @@ export const STORAGE_KEYS = {
   DARK_MODE: "tijarahjo_dark_mode",
   USER_PROFILE: "tijarahjo_user_profile",
   SETTINGS_PREFERENCES: "tijarahjo_settings_preferences",
+  VIEW_MODE: "tijarahjo_view_mode",
 } as const;
 
 // Debounce Delays

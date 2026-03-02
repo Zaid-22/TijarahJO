@@ -20,17 +20,20 @@ public sealed class AuthCommandService : IAuthCommandService
     private readonly IUserDataAccess _users;
     private readonly IExternalIdentityDataAccess _externalIdentities;
     private readonly IRoleService _roles;
+    private readonly ILocationReadService _locations;
     private readonly ILogger<AuthCommandService> _logger;
 
     public AuthCommandService(
         IUserDataAccess users,
         IExternalIdentityDataAccess externalIdentities,
         IRoleService roles,
+        ILocationReadService locations,
         ILogger<AuthCommandService> logger)
     {
         _users = users;
         _externalIdentities = externalIdentities;
         _roles = roles;
+        _locations = locations;
         _logger = logger;
     }
 
@@ -86,7 +89,7 @@ public sealed class AuthCommandService : IAuthCommandService
             try
             {
                 user.HashedPassword = PasswordHelper.HashPassword(command.Password);
-                await _users.UpdateUserAsync(user, cancellationToken);
+                await _users.UpdateUserAsync(user, user.UserID.Value, cancellationToken);
             }
             catch (Exception)
             {
@@ -128,6 +131,18 @@ public sealed class AuthCommandService : IAuthCommandService
         if (command.AreaId.HasValue && !command.CityId.HasValue)
         {
             return Failure(AuthCommandFailureReason.InvalidRequest, "CityId is required when AreaId is provided.");
+        }
+
+        if (command.CityId.HasValue || command.AreaId.HasValue)
+        {
+            (bool isValid, string validationMessage) = await ValidateLocationSelectionAsync(
+                command.CityId,
+                command.AreaId,
+                cancellationToken);
+            if (!isValid)
+            {
+                return Failure(AuthCommandFailureReason.InvalidRequest, validationMessage);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(command.Avatar) && !IsValidAvatarUrl(command.Avatar))
@@ -188,10 +203,22 @@ public sealed class AuthCommandService : IAuthCommandService
         }
         catch (Exception ex) when (LooksLikeDuplicateIdentity(ex.Message))
         {
+            _logger.LogInformation(
+                ex,
+                "Signup rejected due to duplicate identity. email={Email} phone={Phone}",
+                normalizedEmail,
+                normalizedPhone
+            );
             return Failure(AuthCommandFailureReason.DuplicateIdentity, ResolveDuplicateIdentityMessage(ex.Message, isPhoneOnlySignup));
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError(
+                ex,
+                "Signup persistence failed. email={Email} phone={Phone}",
+                normalizedEmail,
+                normalizedPhone
+            );
             return Failure(AuthCommandFailureReason.PersistenceFailed, "An error occurred while creating your account. Please try again.");
         }
     }
@@ -512,7 +539,7 @@ public sealed class AuthCommandService : IAuthCommandService
 
         try
         {
-            await _users.UpdateUserAsync(user, cancellationToken);
+            await _users.UpdateUserAsync(user, user.UserID!.Value, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -590,6 +617,48 @@ public sealed class AuthCommandService : IAuthCommandService
         return isPhoneOnlySignup
             ? "An account with this phone number already exists. Please use a different phone number or try logging in."
             : "An account with this information already exists. Please check your details and try again.";
+    }
+
+    private async Task<(bool IsValid, string Message)> ValidateLocationSelectionAsync(
+        int? cityId,
+        int? areaId,
+        CancellationToken cancellationToken)
+    {
+        if (!cityId.HasValue)
+        {
+            return (true, string.Empty);
+        }
+
+        if (cityId.Value < 1)
+        {
+            return (false, "CityId must be a positive integer.");
+        }
+
+        IReadOnlyList<CityLookupResult> cities = await _locations.GetCitiesAsync(cancellationToken);
+        bool cityExists = cities.Any(city => city.CityId == cityId.Value);
+        if (!cityExists)
+        {
+            return (false, "Selected city is invalid.");
+        }
+
+        if (!areaId.HasValue)
+        {
+            return (true, string.Empty);
+        }
+
+        if (areaId.Value < 1)
+        {
+            return (false, "AreaId must be a positive integer.");
+        }
+
+        IReadOnlyList<AreaLookupResult> areas = await _locations.GetAreasByCityAsync(cityId.Value, cancellationToken);
+        bool areaBelongsToCity = areas.Any(area => area.AreaId == areaId.Value);
+        if (!areaBelongsToCity)
+        {
+            return (false, "Selected area does not belong to the selected city.");
+        }
+
+        return (true, string.Empty);
     }
 
     private static AuthCommandResult Failure(AuthCommandFailureReason reason, string message)

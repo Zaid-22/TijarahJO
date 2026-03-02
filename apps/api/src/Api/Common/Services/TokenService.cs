@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
+using TijarahJoDBAPI.Common.Authorization;
 using TijarahJoDBAPI.Common.Configuration;
 
 namespace TijarahJoDBAPI.Common.Services;
@@ -21,13 +22,14 @@ public class TokenService
     /// <summary>
     /// Generate JWT token for a user
     /// </summary>
-    public string GenerateToken(int userId, string email, int roleId)
+    public string GenerateToken(int userId, string email, string roleName)
     {
+        string normalizedRoleName = AppRoles.NormalizeRoleName(roleName);
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
             new Claim(ClaimTypes.Email, email),
-            new Claim(ClaimTypes.Role, roleId.ToString()),
+            new Claim(ClaimTypes.Role, normalizedRoleName),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
         };

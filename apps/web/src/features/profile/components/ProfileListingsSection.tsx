@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { type MouseEvent, useMemo, useState } from "react";
 import { Edit, Eye, Package, Plus, Trash2 } from "lucide-react";
-import { Product } from "../../../types";
+import { Post } from "../../../types";
 import { Button } from "../../../shared/ui/button";
 import {
   Dialog,
@@ -21,10 +21,12 @@ import {
   AlertDialogTitle,
 } from "../../../shared/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../shared/ui/tabs";
-import { ProductCard } from "../../marketplace/components/ProductCard";
+import { PostCard } from "../../marketplace/components/PostCard";
+import { MarketplaceEmptyState } from "../../marketplace/components/MarketplaceEmptyState";
 import { SellItemDialogContent } from "../../marketplace/components/SellItemDialog";
-import { EditProductDialog } from "../../marketplace/components/EditProductDialog";
+import { EditPostDialog } from "../../marketplace/components/EditPostDialog";
 import { CreatePostInput } from "../../../app/routes/appRoutesUtils";
+import { UpdatePostInput } from "../../../app/routes/usePostActions";
 import type { ProfilePageUserProfile } from "../types";
 
 interface ProfileListingsSectionProps {
@@ -32,49 +34,18 @@ interface ProfileListingsSectionProps {
   isRTL: boolean;
   t: Record<string, string>;
   userProfile: ProfilePageUserProfile;
-  activeListings: Product[];
-  soldListings: Product[];
+  activeListings: Post[];
+  soldListings: Post[];
   favoriteIds: string[];
   isAuthenticated: boolean;
   currentUserId?: string;
   currentUserDisplayName?: string;
-  onProductClick?: (productId: string) => void;
-  onDeleteProduct?: (productId: string) => void;
-  onUpdateProduct?: (product: Product) => void;
-  onAddProduct?: (product: CreatePostInput) => void | Promise<void>;
-  onAddProductClick?: () => void;
-  onFavoriteToggle?: (productId: string) => void;
-}
-
-function EmptyListingsState({
-  title,
-  description,
-  cta,
-  isRTL,
-  onAddClick,
-}: {
-  title: string;
-  description: string;
-  cta: string;
-  isRTL: boolean;
-  onAddClick: () => void;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6 bg-gray-100 dark:bg-gray-800">
-        <Package className="w-12 h-12 text-[#0A4ABF]" />
-      </div>
-      <h3 className="mb-3 text-gray-900 dark:text-white">{title}</h3>
-      <p className="text-gray-600 mb-6 max-w-md">{description}</p>
-      <Button
-        onClick={onAddClick}
-        className="bg-[#0A4ABF] text-white hover:bg-[#083a99]"
-      >
-        <Plus className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
-        {cta}
-      </Button>
-    </div>
-  );
+  onPostClick?: (postId: string) => void;
+  onDeletePost?: (postId: string) => void;
+  onUpdatePost?: (post: UpdatePostInput) => void;
+  onAddPost?: (post: CreatePostInput) => void | Promise<void>;
+  onAddPostClick?: () => void;
+  onFavoriteToggle?: (postId: string) => void;
 }
 
 export function ProfileListingsSection({
@@ -88,21 +59,22 @@ export function ProfileListingsSection({
   isAuthenticated,
   currentUserId,
   currentUserDisplayName,
-  onProductClick,
-  onDeleteProduct,
-  onUpdateProduct,
-  onAddProduct,
-  onAddProductClick,
+  onPostClick,
+  onDeletePost,
+  onUpdatePost,
+  onAddPost,
+  onAddPostClick,
   onFavoriteToggle,
 }: ProfileListingsSectionProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<string | null>(null);
-  const [productToEdit, setProductToEdit] = useState<Product | null>(null);
+  const [postToDelete, setPostToDelete] = useState<string | null>(null);
+  const [postToEdit, setPostToEdit] = useState<Post | null>(null);
   const favoriteIdsSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
+  const defaultCity = language === "ar" ? "عمّان" : "Amman";
 
   const handleAddPostAction = () => {
-    if (onAddProductClick) {
-      onAddProductClick();
+    if (onAddPostClick) {
+      onAddPostClick();
       return;
     }
 
@@ -116,49 +88,46 @@ export function ProfileListingsSection({
           <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="active">
               <Package className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
-              {t.activeListings || "Active"} ({activeListings.length})
+              {t.activeListings} ({activeListings.length})
             </TabsTrigger>
             <TabsTrigger value="sold">
               <Package className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
-              {t.soldListings || "Sold"} ({soldListings.length})
+              {t.soldListings} ({soldListings.length})
             </TabsTrigger>
           </TabsList>
 
-          {onAddProductClick ? (
+          {onAddPostClick ? (
             <Button
               size="sm"
-              className="hover:opacity-90 w-full sm:w-auto bg-[#0A4ABF] text-white hover:bg-[#083a99]"
+              className="w-full sm:w-auto hover:opacity-90"
               onClick={handleAddPostAction}
             >
               <Plus className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
-              {t.addProduct || "Add Post"}
+              {t.addPost}
             </Button>
           ) : (
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button
                   size="sm"
-                  className="hover:opacity-90 w-full sm:w-auto bg-[#0A4ABF] text-white hover:bg-[#083a99]"
+                  className="w-full sm:w-auto hover:opacity-90"
                   onClick={handleAddPostAction}
                 >
                   <Plus className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
-                  {t.addProduct || "Add Post"}
+                  {t.addPost}
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-h-dialog-90vh overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>{t.postYourItem || "Post Your Post"}</DialogTitle>
-                  <DialogDescription>
-                    {t.postItemDescription ||
-                      "Fill in the details below to list your post"}
-                  </DialogDescription>
+                  <DialogTitle>{t.postYourItem}</DialogTitle>
+                  <DialogDescription>{t.postItemDescription}</DialogDescription>
                 </DialogHeader>
                 <SellItemDialogContent
                   language={language}
                   onClose={() => setIsAddDialogOpen(false)}
-                  onSubmit={(product) => {
-                    if (onAddProduct) {
-                      void onAddProduct(product);
+                  onSubmit={(post) => {
+                    if (onAddPost) {
+                      void onAddPost(post);
                     }
                   }}
                   userProfile={{
@@ -168,8 +137,8 @@ export function ProfileListingsSection({
                     lastName: userProfile.lastName || "",
                     email: userProfile.email || "",
                     phone: userProfile.phone || "+962",
-                    location: userProfile.location || userProfile.city || "Amman",
-                    city: userProfile.city || "Amman",
+                    location: userProfile.location || userProfile.city || defaultCity,
+                    city: userProfile.city || defaultCity,
                     area: userProfile.area || "",
                     bio: userProfile.bio || "",
                     avatar: userProfile.avatar || "",
@@ -184,30 +153,29 @@ export function ProfileListingsSection({
         <TabsContent value="active" className="mt-0">
           {activeListings.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
-              {activeListings.map((product) => (
-                <div key={product.id} className="relative group">
-                  <ProductCard
-                    product={product}
-                    onProductClick={onProductClick}
-                    isFavorite={favoriteIdsSet.has(product.id)}
+              {activeListings.map((post) => (
+                <div key={post.id} className="relative group">
+                  <PostCard
+                    post={post}
+                    onPostClick={onPostClick}
+                    isFavorite={favoriteIdsSet.has(post.id)}
                     onFavoriteToggle={onFavoriteToggle}
                     isAuthenticated={isAuthenticated}
                     currentUserId={isAuthenticated ? currentUserId : undefined}
                     currentUserDisplayName={currentUserDisplayName}
+                    language={language}
                   />
                 </div>
               ))}
             </div>
           ) : (
-            <EmptyListingsState
-              title={t.noActiveListings || "No Active Listings"}
-              description={
-                t.noActiveListingsDescription ||
-                "You don't have any active listings. Start selling by adding your first product!"
-              }
-              cta={t.addProduct || "Add Post"}
-              isRTL={isRTL}
-              onAddClick={handleAddPostAction}
+            <MarketplaceEmptyState
+              title={t.noActiveListings}
+              description={t.noActiveListingsDescription}
+              actionLabel={t.addPost}
+              onAction={handleAddPostAction}
+              icon={Package}
+              className="py-20"
             />
           )}
         </TabsContent>
@@ -215,58 +183,59 @@ export function ProfileListingsSection({
         <TabsContent value="sold" className="mt-0">
           {soldListings.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {soldListings.map((product) => (
-                <div key={product.id} className="relative group">
-                  <ProductCard
-                    product={product}
-                    onProductClick={onProductClick}
-                    isFavorite={favoriteIdsSet.has(product.id)}
+              {soldListings.map((post) => (
+                <div key={post.id} className="relative group">
+                  <PostCard
+                    post={post}
+                    onPostClick={onPostClick}
+                    isFavorite={favoriteIdsSet.has(post.id)}
                     onFavoriteToggle={onFavoriteToggle}
                     isAuthenticated={isAuthenticated}
                     currentUserId={isAuthenticated ? currentUserId : undefined}
                     currentUserDisplayName={currentUserDisplayName}
+                    language={language}
                   />
                   <div className="absolute top-2 right-2 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {onProductClick ? (
+                    {onPostClick ? (
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-9 w-9 p-0 bg-white/90 backdrop-blur-sm hover:bg-blue-50 shadow-md rounded-xl"
-                        onClick={(e) => {
+                        className="h-9 w-9 rounded-xl bg-background/90 p-0 shadow-md backdrop-blur-sm hover:bg-muted"
+                        onClick={(e: MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation();
-                          onProductClick(product.id);
+                          onPostClick(post.id);
                         }}
-                        title={t.viewProduct || "View product"}
+                        title={t.viewPost}
                       >
-                        <Eye className="w-4 h-4 text-[#0A4ABF]" />
+                        <Eye className="w-4 h-4 text-primary" />
                       </Button>
                     ) : null}
 
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-9 w-9 p-0 bg-white/90 backdrop-blur-sm hover:bg-blue-50 shadow-md rounded-xl"
-                      onClick={(e) => {
+                      className="h-9 w-9 rounded-xl bg-background/90 p-0 shadow-md backdrop-blur-sm hover:bg-muted"
+                      onClick={(e: MouseEvent<HTMLButtonElement>) => {
                         e.stopPropagation();
-                        setProductToEdit(product);
+                        setPostToEdit(post);
                       }}
-                      title={t.editProduct || "Edit Post"}
+                      title={t.editPost}
                     >
-                      <Edit className="w-4 h-4 text-[#0A4ABF]" />
+                      <Edit className="w-4 h-4 text-primary" />
                     </Button>
 
-                    {onDeleteProduct ? (
+                    {onDeletePost ? (
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-9 w-9 p-0 bg-white/90 backdrop-blur-sm hover:bg-red-50 shadow-md rounded-xl"
-                        onClick={(e) => {
+                        className="h-9 w-9 rounded-xl bg-background/90 p-0 shadow-md backdrop-blur-sm hover:bg-destructive/10"
+                        onClick={(e: MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation();
-                          setProductToDelete(product.id);
+                          setPostToDelete(post.id);
                         }}
-                        title={t.deleteProduct || "Delete Post"}
+                        title={t.deletePost}
                       >
-                        <Trash2 className="w-4 h-4 text-[#EF4444]" />
+                        <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
                     ) : null}
                   </div>
@@ -274,60 +243,55 @@ export function ProfileListingsSection({
               ))}
             </div>
           ) : (
-            <EmptyListingsState
-              title={t.noSoldListings || "No Sold Listings"}
-              description={
-                t.noSoldListingsDescription ||
-                "You don't have any sold listings. Start selling by adding your first product!"
-              }
-              cta={t.addProduct || "Add Post"}
-              isRTL={isRTL}
-              onAddClick={handleAddPostAction}
+            <MarketplaceEmptyState
+              title={t.noSoldListings}
+              description={t.noSoldListingsDescription}
+              actionLabel={t.addPost}
+              onAction={handleAddPostAction}
+              icon={Package}
+              className="py-20"
             />
           )}
         </TabsContent>
       </Tabs>
 
       <AlertDialog
-        open={productToDelete !== null}
-        onOpenChange={() => setProductToDelete(null)}
+        open={postToDelete !== null}
+        onOpenChange={() => setPostToDelete(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t.deleteProduct || "Delete Post"}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t.deleteProductConfirm ||
-                "Are you sure you want to delete this post? This action cannot be undone."}
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t.deletePost}</AlertDialogTitle>
+            <AlertDialogDescription>{t.deletePostConfirm}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t.cancel || "Cancel"}</AlertDialogCancel>
+            <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (productToDelete && onDeleteProduct) {
-                  onDeleteProduct(productToDelete);
+                if (postToDelete && onDeletePost) {
+                  onDeletePost(postToDelete);
                 }
-                setProductToDelete(null);
+                setPostToDelete(null);
               }}
-              className="bg-red-500 text-white hover:bg-red-600"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {t.delete || "Delete"}
+              {t.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={productToEdit !== null} onOpenChange={() => setProductToEdit(null)}>
-        {productToEdit ? (
-          <EditProductDialog
-            product={productToEdit}
-            onSave={(updatedProduct) => {
-              setProductToEdit(null);
-              if (onUpdateProduct) {
-                onUpdateProduct(updatedProduct);
+      <Dialog open={postToEdit !== null} onOpenChange={() => setPostToEdit(null)}>
+        {postToEdit ? (
+          <EditPostDialog
+            post={postToEdit}
+            onSave={(updatedPost) => {
+              setPostToEdit(null);
+              if (onUpdatePost) {
+                onUpdatePost(updatedPost);
               }
             }}
-            onCancel={() => setProductToEdit(null)}
+            onCancel={() => setPostToEdit(null)}
             language={language}
           />
         ) : null}

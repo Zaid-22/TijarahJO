@@ -4,11 +4,14 @@ import { storage } from "../../../utils";
 import { useAuth } from "../../../contexts/AuthContext";
 import { api } from "../../../services/api";
 import {
+  getServerQueryData,
   invalidateServerQuery,
+  invalidateServerQueryTag,
   setServerQueryData,
+  updateServerQueryData,
   useServerQuery,
 } from "../../../shared/hooks/useServerQuery";
-import { logger } from "../../../shared/lib/logger";
+import { useServerMutation } from "../../../shared/hooks/useServerMutation";
 
 interface UseFavoritesOptions {
   enabled?: boolean;
@@ -24,8 +27,8 @@ function normalizeFavoriteIds(ids: Array<string | number>): string[] {
   );
 }
 
-function normalizeProductId(productId: string): string {
-  return productId.trim();
+function normalizePostId(postId: string): string {
+  return postId.trim();
 }
 
 export function useFavorites(options: UseFavoritesOptions = {}) {
@@ -39,6 +42,14 @@ export function useFavorites(options: UseFavoritesOptions = {}) {
     const normalizedUserId = String(user?.id || "self").trim() || "self";
     return `favorites:auth:${normalizedUserId}`;
   }, [user?.id]);
+  const favoritesTag = useMemo(() => {
+    const normalizedUserId = String(user?.id || "self").trim() || "self";
+    return `favorites:${normalizedUserId}`;
+  }, [user?.id]);
+  const favoriteQueryTags = useMemo(
+    () => ["favorites", favoritesTag],
+    [favoritesTag],
+  );
 
   const {
     data: authFavoriteIds,
@@ -47,12 +58,18 @@ export function useFavorites(options: UseFavoritesOptions = {}) {
     refetch: refetchAuthFavorites,
   } = useServerQuery<string[]>({
     key: authFavoritesCacheKey,
+    tags: favoriteQueryTags,
     enabled: enabled && isAuthenticated,
     staleTimeMs: 30_000,
     retryCount: 1,
     retryDelayMs: 600,
-    queryFn: async () => {
-      const serverFavorites = await api.favorites.getFavorites();
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    queryFn: async ({ signal }) => {
+      const serverFavorites = await api.favorites.getFavorites({
+        signal,
+        throwOnAbort: true,
+      });
       return normalizeFavoriteIds(serverFavorites);
     },
   });
@@ -99,91 +116,170 @@ export function useFavorites(options: UseFavoritesOptions = {}) {
     return normalizeFavoriteIds(guestFavoriteIds);
   }, [authFavoriteIds, enabled, guestFavoriteIds, isAuthenticated]);
 
+  const recoverAuthFavorites = useCallback(
+    async (snapshot: string[] | undefined) => {
+      if (snapshot) {
+        setServerQueryData(authFavoritesCacheKey, snapshot);
+      }
+
+      invalidateServerQuery(authFavoritesCacheKey, {
+        cancelInFlight: true,
+      });
+      invalidateServerQueryTag(favoritesTag, {
+        cancelInFlight: true,
+      });
+      await refetchAuthFavorites();
+    },
+    [authFavoritesCacheKey, favoritesTag, refetchAuthFavorites],
+  );
+
+  const addFavoriteMutation = useServerMutation<
+    string,
+    boolean,
+    string[] | undefined
+  >({
+    cancelInFlightOnMutate: false,
+    mutationFn: async (postId, { signal }) => {
+      const success = await api.favorites.addFavorite(postId, {
+        signal,
+        throwOnAbort: true,
+      });
+      if (!success) {
+        throw new Error(`Failed to add favorite ${postId}`);
+      }
+      return success;
+    },
+    onMutate: (postId) => {
+      const snapshot = normalizeFavoriteIds(
+        getServerQueryData<string[]>(authFavoritesCacheKey) || [],
+      );
+      updateServerQueryData<string[]>(
+        authFavoritesCacheKey,
+        (current) => {
+          const currentIds = normalizeFavoriteIds(current || []);
+          if (currentIds.includes(postId)) {
+            return currentIds;
+          }
+
+          return [...currentIds, postId];
+        },
+        { cancelInFlight: true },
+      );
+
+      return snapshot;
+    },
+    onError: async (_error, _postId, snapshot) => {
+      await recoverAuthFavorites(snapshot);
+    },
+  });
+
+  const removeFavoriteMutation = useServerMutation<
+    string,
+    boolean,
+    string[] | undefined
+  >({
+    cancelInFlightOnMutate: false,
+    mutationFn: async (postId, { signal }) => {
+      const success = await api.favorites.removeFavorite(postId, {
+        signal,
+        throwOnAbort: true,
+      });
+      if (!success) {
+        throw new Error(`Failed to remove favorite ${postId}`);
+      }
+      return success;
+    },
+    onMutate: (postId) => {
+      const snapshot = normalizeFavoriteIds(
+        getServerQueryData<string[]>(authFavoritesCacheKey) || [],
+      );
+      updateServerQueryData<string[]>(
+        authFavoritesCacheKey,
+        (current) => {
+          const currentIds = normalizeFavoriteIds(current || []);
+          if (!currentIds.includes(postId)) {
+            return currentIds;
+          }
+
+          return currentIds.filter((id) => id !== postId);
+        },
+        { cancelInFlight: true },
+      );
+
+      return snapshot;
+    },
+    onError: async (_error, _postId, snapshot) => {
+      await recoverAuthFavorites(snapshot);
+    },
+  });
+
   const addFavorite = useCallback(
-    (productId: string) => {
-      const normalizedProductId = normalizeProductId(productId);
-      if (!normalizedProductId || !enabled) {
+    (postId: string) => {
+      const normalizedPostId = normalizePostId(postId);
+      if (!normalizedPostId || !enabled) {
         return;
       }
 
       if (!isAuthenticated) {
         setGuestFavoriteIds((previous) =>
-          previous.includes(normalizedProductId)
+          previous.includes(normalizedPostId)
             ? previous
-            : [...previous, normalizedProductId],
+            : [...previous, normalizedPostId],
         );
         return;
       }
 
-      if (favoriteIds.includes(normalizedProductId)) {
+      if (favoriteIds.includes(normalizedPostId)) {
         return;
       }
 
-      setServerQueryData(authFavoritesCacheKey, [
-        ...favoriteIds,
-        normalizedProductId,
-      ]);
-
-      void (async () => {
-        const success = await api.favorites.addFavorite(normalizedProductId);
-        if (!success) {
-          logger.warn(`Failed to add favorite ${normalizedProductId}`);
-          invalidateServerQuery(authFavoritesCacheKey);
-          await refetchAuthFavorites();
-        }
-      })();
+      void addFavoriteMutation.mutate(normalizedPostId).catch(() => undefined);
     },
-    [authFavoritesCacheKey, enabled, favoriteIds, isAuthenticated, refetchAuthFavorites],
+    [addFavoriteMutation, enabled, favoriteIds, isAuthenticated],
   );
 
   const removeFavorite = useCallback(
-    (productId: string) => {
-      const normalizedProductId = normalizeProductId(productId);
-      if (!normalizedProductId || !enabled) {
+    (postId: string) => {
+      const normalizedPostId = normalizePostId(postId);
+      if (!normalizedPostId || !enabled) {
         return;
       }
 
       if (!isAuthenticated) {
         setGuestFavoriteIds((previous) =>
-          previous.filter((id) => id !== normalizedProductId),
+          previous.filter((id) => id !== normalizedPostId),
         );
         return;
       }
 
-      const nextFavorites = favoriteIds.filter((id) => id !== normalizedProductId);
-      setServerQueryData(authFavoritesCacheKey, nextFavorites);
+      if (!favoriteIds.includes(normalizedPostId)) {
+        return;
+      }
 
-      void (async () => {
-        const success = await api.favorites.removeFavorite(normalizedProductId);
-        if (!success) {
-          logger.warn(`Failed to remove favorite ${normalizedProductId}`);
-          invalidateServerQuery(authFavoritesCacheKey);
-          await refetchAuthFavorites();
-        }
-      })();
+      void removeFavoriteMutation.mutate(normalizedPostId).catch(() => undefined);
     },
-    [authFavoritesCacheKey, enabled, favoriteIds, isAuthenticated, refetchAuthFavorites],
+    [enabled, favoriteIds, isAuthenticated, removeFavoriteMutation],
   );
 
   const toggleFavorite = useCallback(
-    (productId: string) => {
-      const normalizedProductId = normalizeProductId(productId);
-      if (!normalizedProductId) {
+    (postId: string) => {
+      const normalizedPostId = normalizePostId(postId);
+      if (!normalizedPostId) {
         return;
       }
 
-      if (favoriteIds.includes(normalizedProductId)) {
-        removeFavorite(normalizedProductId);
+      if (favoriteIds.includes(normalizedPostId)) {
+        removeFavorite(normalizedPostId);
         return;
       }
 
-      addFavorite(normalizedProductId);
+      addFavorite(normalizedPostId);
     },
     [addFavorite, favoriteIds, removeFavorite],
   );
 
   const isFavorite = useCallback(
-    (productId: string) => favoriteIds.includes(normalizeProductId(productId)),
+    (postId: string) => favoriteIds.includes(normalizePostId(postId)),
     [favoriteIds],
   );
 
@@ -194,7 +290,9 @@ export function useFavorites(options: UseFavoritesOptions = {}) {
       return;
     }
 
-    setServerQueryData(authFavoritesCacheKey, []);
+    updateServerQueryData(authFavoritesCacheKey, () => [], {
+      cancelInFlight: true,
+    });
   }, [authFavoritesCacheKey, isAuthenticated]);
 
   const isLoading =

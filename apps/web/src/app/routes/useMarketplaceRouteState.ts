@@ -1,16 +1,15 @@
-import { Language, UserProfile, ViewMode } from "../../types";
+import { Language, UserProfile } from "../../types";
 import { DEBOUNCE_DELAY } from "../../constants";
 import { useDebounce } from "../../shared/hooks/useDebounce";
-import { useProducts } from "../../features/marketplace/hooks/useProducts";
+import { usePosts } from "../../features/marketplace/hooks/usePosts";
 import { useFavorites } from "../../features/marketplace/hooks/useFavorites";
-import { useInfiniteScroll } from "../../shared/hooks/useInfiniteScroll";
-import { useLocalStorage } from "../../shared/hooks/useLocalStorage";
+import { useMarketplaceDiscoveryState } from "../../shared/hooks/useMarketplaceDiscoveryState";
 import { translations } from "../../translations";
 import {
   getCategoryTranslation,
   resolveCurrentUserId,
   shouldLoadFavoritesForPath,
-  shouldLoadProductsForPath,
+  shouldLoadPostsForPath,
 } from "./appRoutesUtils";
 
 interface UseMarketplaceRouteStateParams {
@@ -26,7 +25,7 @@ export function useMarketplaceRouteState({
   language,
   userProfile,
 }: UseMarketplaceRouteStateParams) {
-  const shouldLoadProductsData = shouldLoadProductsForPath(pathname);
+  const shouldLoadPostsData = shouldLoadPostsForPath(pathname);
   const shouldLoadFavoritesData = shouldLoadFavoritesForPath(pathname);
 
   const debouncedSearchQuery = useDebounce(
@@ -34,19 +33,14 @@ export function useMarketplaceRouteState({
     DEBOUNCE_DELAY.SEARCH,
   );
 
-  const [viewMode, setViewMode] = useLocalStorage<ViewMode>(
-    "tijarahjo_view_mode",
-    "grid-4",
-  );
-
   const {
-    availableProducts,
-    isLoadingProducts: isLoadingProductsFromRouteData,
-    productsError,
-    filteredProducts,
+    availablePosts,
+    isLoadingPosts: isLoadingPostsFromRouteData,
+    postsError,
+    filteredPosts,
     fetchPostsFromBackend,
-  } = useProducts(debouncedSearchQuery, {
-    enabled: shouldLoadProductsData,
+  } = usePosts(debouncedSearchQuery, {
+    enabled: shouldLoadPostsData,
   });
 
   const { favoriteIds, toggleFavorite } = useFavorites({
@@ -54,14 +48,12 @@ export function useMarketplaceRouteState({
   });
 
   const {
-    displayedItems,
-    isLoading,
-    currentPage,
-    totalPages,
-    goToNextPage,
-    goToPreviousPage,
-  } = useInfiniteScroll({
-    items: filteredProducts,
+    viewMode,
+    setViewMode,
+    displayedResults: displayedPosts,
+    pagination,
+  } = useMarketplaceDiscoveryState({
+    items: filteredPosts,
     itemsPerPage: 12,
   });
 
@@ -72,21 +64,21 @@ export function useMarketplaceRouteState({
   const currentUserId = resolveCurrentUserId(userProfile) || undefined;
 
   return {
-    shouldLoadProductsData,
+    shouldLoadPostsData,
     shouldLoadFavoritesData,
-    availableProducts,
-    isLoadingProductsFromRouteData,
-    productsError,
-    displayedItems,
+    availablePosts,
+    isLoadingPostsFromRouteData,
+    postsError,
+    displayedPosts,
     favoriteIds,
     toggleFavorite,
     viewMode,
     setViewMode,
-    currentPage,
-    totalPages,
-    isLoading,
-    goToNextPage,
-    goToPreviousPage,
+    currentPage: pagination.currentPage,
+    totalPages: pagination.totalPages,
+    isLoading: pagination.isLoading,
+    goToNextPage: pagination.onNext,
+    goToPreviousPage: pagination.onPrevious,
     fetchPostsFromBackend,
     t,
     isRTL,

@@ -22,13 +22,16 @@ interface AuthInputFieldProps {
   showValue?: boolean;
   onToggleValue?: () => void;
   preventClipboardActions?: boolean;
+  showValueLabel?: string;
+  hideValueLabel?: string;
+  isRTL?: boolean;
 }
 
 const FIELD_ICON_CONTAINER_BASE =
-  "absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all duration-300";
+  "absolute top-1/2 transform -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all duration-300";
 
 const INPUT_BASE_CLASS =
-  "pl-11 sm:pl-16 h-12 sm:h-14 rounded-xl border-2 transition-all duration-300 text-sm sm:text-base text-black dark:text-white bg-white dark:bg-gray-700 placeholder:text-gray-400 dark:placeholder:text-gray-500";
+  "h-12 sm:h-14 rounded-xl border-2 transition-all duration-300 text-sm sm:text-base text-foreground bg-background placeholder:text-muted-foreground";
 
 export function AuthInputField({
   id,
@@ -50,28 +53,43 @@ export function AuthInputField({
   showValue = false,
   onToggleValue,
   preventClipboardActions = false,
+  showValueLabel = "Show password",
+  hideValueLabel = "Hide password",
+  isRTL = false,
 }: AuthInputFieldProps) {
   const isActive = focused || value.length > 0;
   const iconContainerClassName = isActive
-    ? "bg-[#0A4ABF1A]"
-    : "bg-[#F5F6FA] dark:bg-gray-700/60";
-  const iconClassName = isActive ? "text-[#0A4ABF]" : "text-gray-400";
+    ? "bg-primary/10"
+    : "bg-muted/70";
+  const iconClassName = isActive ? "text-primary" : "text-muted-foreground";
   const inputStateClassName = error
-    ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-100"
+    ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20"
     : focused
-      ? "border-[#0A4ABF] shadow-[0_0_0_4px_rgba(10,74,191,0.08)] focus-visible:border-[#0A4ABF]"
-      : "border-gray-200";
+      ? "border-primary ring-4 ring-primary/15 focus-visible:border-primary"
+      : "border-border";
+  const iconPositionClassName = isRTL ? "right-3 sm:right-4" : "left-3 sm:left-4";
+  const inputLeadingPaddingClassName = isRTL ? "pr-11 sm:pr-16" : "pl-11 sm:pl-16";
+  const inputTrailingPaddingClassName = showToggle
+    ? isRTL
+      ? "pl-12 sm:pl-14"
+      : "pr-12 sm:pr-14"
+    : "";
+  const inputTextAlignClassName = isRTL ? "text-right" : "text-left";
+  const togglePositionClassName = isRTL ? "left-3 sm:left-4" : "right-3 sm:right-4";
 
   const inputType = showToggle ? (showValue ? "text" : "password") : type;
 
   return (
     <div className="space-y-2">
-      <label htmlFor={id} className="text-sm text-black dark:text-white">
-        {label} {required && <span className="text-red-500">*</span>}
+      <label
+        htmlFor={id}
+        className={`text-sm text-foreground ${isRTL ? "text-right" : "text-left"}`}
+      >
+        {label} {required && <span className="text-destructive">*</span>}
       </label>
 
       <div className="relative">
-        <div className={`${FIELD_ICON_CONTAINER_BASE} ${iconContainerClassName}`}>
+        <div className={`${FIELD_ICON_CONTAINER_BASE} ${iconPositionClassName} ${iconContainerClassName}`}>
           <Icon className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors duration-300 ${iconClassName}`} />
         </div>
 
@@ -88,7 +106,7 @@ export function AuthInputField({
           onCopy={preventClipboardActions ? (event) => event.stopPropagation() : undefined}
           onCut={preventClipboardActions ? (event) => event.stopPropagation() : undefined}
           onPaste={preventClipboardActions ? (event) => event.stopPropagation() : undefined}
-          className={`${INPUT_BASE_CLASS} ${showToggle ? "pr-12 sm:pr-14" : ""} ${inputStateClassName}`}
+          className={`${INPUT_BASE_CLASS} ${inputLeadingPaddingClassName} ${inputTrailingPaddingClassName} ${inputTextAlignClassName} ${inputStateClassName}`}
           disabled={disabled}
         />
 
@@ -96,15 +114,15 @@ export function AuthInputField({
           <button
             type="button"
             onClick={onToggleValue}
-            className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 transition-colors p-1"
-            aria-label={showValue ? "Hide password" : "Show password"}
+            className={`absolute ${togglePositionClassName} top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1`}
+            aria-label={showValue ? hideValueLabel : showValueLabel}
           >
             {showValue ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
         )}
       </div>
 
-      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+      {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
     </div>
   );
 }

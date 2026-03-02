@@ -37,6 +37,7 @@ Start here:
 - `docs/README.md`
 - `docs/architecture/CURRENT_STRUCTURE_2026.md`
 - `docs/architecture/PATH_CONVENTIONS.md`
+- `docs/setup/PRODUCTION_DEPLOYMENT_DOCKER.md`
 
 ## Core Features
 

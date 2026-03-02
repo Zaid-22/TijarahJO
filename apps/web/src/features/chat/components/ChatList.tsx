@@ -1,5 +1,6 @@
 import { User } from "lucide-react";
 import { cn } from "@/shared/ui/utils";
+import type { Language } from "../../../types";
 
 interface ChatListProps {
   chats: {
@@ -11,24 +12,36 @@ interface ChatListProps {
   }[];
   selectedUserId: number | null;
   onSelectUser: (userId: number) => void;
+  language?: Language;
 }
 
 export function ChatList({
   chats,
   selectedUserId,
   onSelectUser,
+  language = "en",
 }: ChatListProps) {
+  const isRTL = language === "ar";
+  const labels = {
+    messages: language === "ar" ? "الرسائل" : "Messages",
+    noConversations:
+      language === "ar" ? "لا توجد محادثات." : "No conversations found.",
+    openChatWith: (name: string) =>
+      language === "ar" ? `فتح محادثة مع ${name}` : `Open chat with ${name}`,
+  };
+  const dateLocale = language === "ar" ? "ar-JO" : "en-US";
+
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-        <h2 className="font-semibold text-lg text-gray-900 dark:text-white">
-          Messages
+    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-md backdrop-blur-sm">
+      <div className="border-b border-border/60 bg-gradient-to-r from-muted/70 via-muted/50 to-transparent px-4 py-3">
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">
+          {labels.messages}
         </h2>
       </div>
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto bg-gradient-to-b from-background/30 to-transparent">
         {chats.length === 0 ? (
-          <div className="p-4 text-center text-gray-500">
-            No conversations found.
+          <div className="p-6 text-center text-sm text-muted-foreground">
+            {labels.noConversations}
           </div>
         ) : (
           chats.map((chat) => (
@@ -37,45 +50,65 @@ export function ChatList({
               key={chat.userId}
               onClick={() => onSelectUser(chat.userId)}
               className={cn(
-                "w-full text-left flex items-center p-4 transition-colors border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800",
+                "group flex w-full items-center border-b border-border/40 px-4 py-3 transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                isRTL ? "text-right" : "text-left",
                 selectedUserId === chat.userId
-                  ? "bg-blue-50 dark:bg-blue-900/20"
+                  ? "bg-primary/10"
                   : "",
               )}
-              aria-label={`Open chat with ${chat.displayName}`}
+              aria-label={labels.openChatWith(chat.displayName)}
             >
-              <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center mr-3 flex-shrink-0">
-                <User className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+              <div
+                className={cn(
+                  "flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border/60 bg-muted text-muted-foreground transition-colors group-hover:text-foreground",
+                  isRTL ? "ml-3" : "mr-3",
+                )}
+              >
+                <User className="h-6 w-6" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-baseline mb-1">
+                <div className="mb-1 flex items-baseline justify-between gap-2">
                   <h4
                     className={cn(
-                      "font-medium truncate",
+                      "truncate text-sm",
                       !chat.isRead
-                        ? "text-gray-900 dark:text-white font-bold"
-                        : "text-gray-700 dark:text-gray-300",
+                        ? "font-semibold text-foreground"
+                        : "text-muted-foreground",
                     )}
                   >
                     {chat.displayName}
                   </h4>
-                  <span className="text-xs text-gray-500 dark:text-gray-500 whitespace-nowrap ml-2">
-                    {new Date(chat.timestamp).toLocaleDateString()}
+                  <span
+                    className={cn(
+                      "whitespace-nowrap text-xs text-muted-foreground",
+                      isRTL ? "mr-2" : "ml-2",
+                    )}
+                  >
+                    {new Date(chat.timestamp).toLocaleTimeString(dateLocale, {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: language !== "ar",
+                    })}
                   </span>
                 </div>
                 <p
                   className={cn(
-                    "text-sm truncate",
+                    "truncate text-sm",
                     !chat.isRead
-                      ? "text-gray-900 dark:text-white font-medium"
-                      : "text-gray-500 dark:text-gray-400",
+                      ? "text-foreground font-medium"
+                      : "text-muted-foreground",
                   )}
                 >
                   {chat.lastMessage}
                 </p>
               </div>
               {!chat.isRead && (
-                <div className="w-3 h-3 bg-blue-600 rounded-full ml-2"></div>
+                <div
+                  className={cn(
+                    "h-2.5 w-2.5 rounded-full bg-primary",
+                    isRTL ? "mr-2" : "ml-2",
+                  )}
+                ></div>
               )}
             </button>
           ))

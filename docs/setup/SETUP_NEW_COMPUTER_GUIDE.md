@@ -55,15 +55,14 @@ This guide will help you set up the TijarahJo project on a new computer, includi
 
 4. Run the canonical bootstrap flow:
    - From repo root run: `./scripts/bootstrap_db.sh`
-   - This applies base schema + ordered migrations + canonical procedures automatically.
-   - It also applies seed data (`baseline/dev/test`).
+   - This applies base schema + ordered migrations automatically.
+   - It also applies baseline seed data by default (`seed_data.sql`).
    - This repository does not track `.bak` backup files.
    - Manual SQL execution is only needed for troubleshooting.
 
 5. Manual alternative (if not using bootstrap):
    - Run `apps/api/database/bundles/schema.sql`
    - Then run `apps/api/database/bundles/migrations.sql`
-   - Then run `apps/api/database/bundles/procedures.sql`
    - Optional: run `apps/api/database/bundles/seed_data.sql`
 
 6. (Optional) Add sample data:
@@ -205,12 +204,12 @@ npm install
 Create a `.env` file in the frontend root directory:
 
 ```env
-VITE_API_BASE_URL=http://localhost:5033/api
+VITE_API_BASE_URL=http://localhost:5033/api/v1
 ```
 
 **For HTTPS:**
 ```env
-VITE_API_BASE_URL=https://localhost:7064/api
+VITE_API_BASE_URL=https://localhost:7064/api/v1
 ```
 
 ### Step 4: Run the Frontend
@@ -229,7 +228,7 @@ The frontend should start on: `http://localhost:5173`
 - [ ] SQL Server is installed and running
 - [ ] Database `TijarahJoDB` exists
 - [ ] Can connect to database using SSMS
-- [ ] All stored procedures are created
+- [ ] Schema and migrations are applied (no runtime stored procedures required)
 - [ ] Test data is loaded (optional)
 
 ### Backend
@@ -360,7 +359,7 @@ The frontend should start on: `http://localhost:5173`
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `VITE_API_BASE_URL` | Backend API base URL | `http://localhost:5033/api` |
+| `VITE_API_BASE_URL` | Backend API base URL | `http://localhost:5033/api/v1` |
 
 ---
 

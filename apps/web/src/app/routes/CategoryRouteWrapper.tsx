@@ -1,5 +1,5 @@
 import { Navigate, useParams } from "react-router-dom";
-import { Product, Language } from "../../types";
+import { Post, Language } from "../../types";
 import { CategoryPage } from "../../pages/CategoryPage";
 import { decodeCategoryParam } from "./appRoutesUtils";
 
@@ -8,11 +8,11 @@ interface CategoryRouteWrapperProps {
   isAuthenticated: boolean;
   currentUserDisplayName: string;
   currentUserId?: string;
-  availableProducts: Product[];
+  availablePosts: Post[];
   favoriteIds: string[];
   onFavoriteToggle: (postId: string) => void;
   onBack: () => void;
-  onOpenProduct: (postId: string) => void;
+  onOpenPost: (postId: string) => void;
 }
 
 export function CategoryRouteWrapper({
@@ -20,11 +20,11 @@ export function CategoryRouteWrapper({
   isAuthenticated,
   currentUserDisplayName,
   currentUserId,
-  availableProducts,
+  availablePosts,
   favoriteIds,
   onFavoriteToggle,
   onBack,
-  onOpenProduct,
+  onOpenPost,
 }: CategoryRouteWrapperProps) {
   const { categoryName } = useParams();
   const decodedCategory = decodeCategoryParam(categoryName);
@@ -37,8 +37,8 @@ export function CategoryRouteWrapper({
     <CategoryPage
       categoryName={decodedCategory}
       onBack={onBack}
-      products={availableProducts}
-      onProductClick={onOpenProduct}
+      posts={availablePosts}
+      onPostClick={onOpenPost}
       favoriteIds={favoriteIds}
       onFavoriteToggle={onFavoriteToggle}
       language={language}

@@ -72,9 +72,9 @@ export function Logo({
   const isLight = finalVariant === "light";
   const isIconOnly = finalVariant === "icon";
 
-  const brandColorClass = isLight ? "text-[#3E7EFF]" : "text-[#0A4ABF]";
+  const brandColorClass = isLight ? "text-secondary" : "text-primary";
   const textColorClass = isLight || isDarkMode ? "text-white" : "text-black";
-  const glyphColorClass = isDarkMode ? "text-[#3E7EFF]" : brandColorClass;
+  const glyphColorClass = isDarkMode ? "text-secondary" : brandColorClass;
 
   if (isIconOnly) {
     return (
@@ -93,7 +93,7 @@ export function Logo({
             strokeLinecap="round"
             fill="none"
           />
-          <circle cx="50" cy="58" r="12" className={isDarkMode ? "fill-[#1a1a1a]" : "fill-white"} />
+          <circle cx="50" cy="58" r="12" className={isDarkMode ? "fill-gray-900" : "fill-white"} />
           <text
             x="50"
             y="64"
@@ -128,7 +128,7 @@ export function Logo({
             strokeLinecap="round"
             fill="none"
           />
-          <circle cx="50" cy="58" r="12" className={isDarkMode ? "fill-[#1a1a1a]" : "fill-white"} />
+          <circle cx="50" cy="58" r="12" className={isDarkMode ? "fill-gray-900" : "fill-white"} />
           <text
             x="50"
             y="64"

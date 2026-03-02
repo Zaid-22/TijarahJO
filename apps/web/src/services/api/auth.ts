@@ -1,15 +1,7 @@
-import type {
-  ApiResponse,
-  LoginRequest,
-  SignUpRequest,
-} from "../../types/api";
+import type { ApiResponse, LoginRequest, SignUpRequest } from "../../types/api";
 import { APP_CONFIG } from "../../constants/appConfig";
 import { normalizeJordanPhone } from "../../utils/phone";
-import {
-  apiRequest,
-  debugError,
-  debugLog,
-} from "./client";
+import { apiRequest, debugError, debugLog } from "./client";
 import { type UnknownRecord } from "./normalizers";
 import { resolveCityId, resolveAreaId } from "./posts/lookups";
 import {
@@ -240,9 +232,20 @@ export const authApi = {
     }
 
     const cityId = await resolveCityId(normalizedCity);
-    const areaId = cityId
-      ? await resolveAreaId(cityId, normalizedArea)
-      : undefined;
+    if (cityId === undefined || cityId === null) {
+      return toAuthFailure(
+        "VALIDATION_ERROR",
+        `Could not resolve city "${normalizedCity}". Please select a valid city.`,
+      );
+    }
+
+    const areaId = await resolveAreaId(cityId, normalizedArea);
+    if (areaId === undefined || areaId === null) {
+      return toAuthFailure(
+        "VALIDATION_ERROR",
+        `Could not resolve area "${normalizedArea}" in the selected city. Please select a valid area.`,
+      );
+    }
 
     const response = await apiRequest<unknown>("/auth/signup", {
       method: "POST",

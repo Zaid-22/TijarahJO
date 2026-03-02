@@ -1,7 +1,11 @@
 import { toPositiveIntegerId } from "../../utils/idValidation";
 import { apiRequest } from "./client";
+import {
+  parseRawReview,
+  parseRawReviewsCollection,
+} from "./schemas/reviewSchema";
 
-type RawReview = {
+export type RawReview = {
   ReviewID?: unknown;
   reviewID?: unknown;
   ReviewerID?: unknown;
@@ -29,15 +33,15 @@ export const reviewsApi = {
       return [];
     }
 
-    const response = await apiRequest<RawReview[]>(
+    const response = await apiRequest<unknown>(
       `/reviews/user/${normalizedUserId}`,
       {
         method: "GET",
       },
     );
 
-    if (response.success && Array.isArray(response.data)) {
-      return response.data;
+    if (response.success) {
+      return parseRawReviewsCollection(response.data);
     }
 
     return [];
@@ -69,7 +73,7 @@ export const reviewsApi = {
       Math.min(5, Math.round(payload.rating)),
     );
 
-    const response = await apiRequest<RawReview>("/reviews", {
+    const response = await apiRequest<unknown>("/reviews", {
       method: "POST",
       body: JSON.stringify({
         ReviewID: null,
@@ -82,7 +86,15 @@ export const reviewsApi = {
     });
 
     if (response.success) {
-      return { success: true, data: response.data };
+      const parsedReview = parseRawReview(response.data);
+      if (!parsedReview) {
+        return {
+          success: false,
+          message: "Invalid review response",
+        };
+      }
+
+      return { success: true, data: parsedReview };
     }
 
     return {

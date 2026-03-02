@@ -115,10 +115,10 @@
 - [ ] **Database Cleanup**
 
   - [ ] Run `./scripts/bootstrap_db.sh --no-verify --keep-backend` to apply canonical schema + migration state
-  - [ ] Run `./apps/api/database/scripts/audit_sql_files.sh` to confirm active SQL has no duplicate stored procedure definitions
+  - [ ] Run `./apps/api/database/scripts/audit_sql_files.sh` to confirm active SQL has no duplicate procedure/index definitions
   - [ ] Use `apps/api/database/scripts/archive/diagnostics/CHECK_AND_CLEAN_DUPLICATES.sql` only for legacy duplicate login/email investigations
   - [ ] Clean up any test data
-  - [ ] Verify all stored procedures are working correctly
+  - [ ] Verify EF Core runtime path is clean: `./apps/api/database/scripts/guard_runtime_proc_contract.sh`
   - [ ] Check for and fix any data inconsistencies
 
 - [ ] **Database Backups**
@@ -259,7 +259,7 @@
   - [ ] Review and optimize database queries
   - [ ] Implement pagination for all list endpoints (✅ Already done for posts)
   - [ ] Add response caching where appropriate
-  - [ ] Optimize SQL stored procedures
+  - [ ] Optimize high-traffic SQL query plans and indexes
 
 - [ ] **Frontend Performance**
 
@@ -271,7 +271,7 @@
 - [ ] **Database Performance**
   - [ ] Review slow query logs
   - [ ] Add missing indexes
-  - [ ] Optimize stored procedures
+  - [ ] Optimize read/write query paths and index selectivity
   - [ ] Consider database connection pooling
 
 ### Important (Should Fix Soon)

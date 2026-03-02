@@ -1,16 +1,24 @@
 import { useCallback } from "react";
 import { api } from "../../services/api";
 import { UserProfile } from "../../types";
+import type { PostImageInput } from "../../types/api";
 import { buildCreatePostPayload, CreatePostInput } from "./appRoutesUtils";
 
-export interface UpdateProductInput {
+export interface UpdatePostInput {
   id: string;
   name: string;
   description?: string;
   price: number;
   category: string;
+  location?: string;
+  area?: string;
   status?: "ACTIVE" | "SOLD" | "DELETED";
-  images?: string[];
+  images?: PostImageInput[];
+}
+
+export interface UpdatePostStatusInput {
+  id: string;
+  status: "ACTIVE" | "SOLD" | "DELETED" | "BLOCKED" | "INACTIVE";
 }
 
 interface UsePostActionsParams {
@@ -23,9 +31,9 @@ export function usePostActions({
   fetchPostsFromBackend,
 }: UsePostActionsParams) {
   const createPost = useCallback(
-    async (product: CreatePostInput) => {
+    async (post: CreatePostInput) => {
       const result = await api.posts.createPost(
-        buildCreatePostPayload(product, userProfile),
+        buildCreatePostPayload(post, userProfile),
       );
       if (!result.success) {
         throw new Error(result.message || "Failed to create post");
@@ -38,19 +46,37 @@ export function usePostActions({
   );
 
   const updatePost = useCallback(
-    async (updatedProduct: UpdateProductInput) => {
+    async (updatedPost: UpdatePostInput) => {
       const response = await api.posts.updatePost({
-        id: updatedProduct.id,
-        title: updatedProduct.name,
-        description: updatedProduct.description,
-        price: updatedProduct.price,
-        category: updatedProduct.category,
-        status: updatedProduct.status,
-        images: updatedProduct.images || [],
+        id: updatedPost.id,
+        title: updatedPost.name,
+        description: updatedPost.description,
+        price: updatedPost.price,
+        category: updatedPost.category,
+        location: updatedPost.location,
+        area: updatedPost.area,
+        status: updatedPost.status,
+        images: updatedPost.images || [],
       });
 
       if (!response.success) {
         throw new Error(response.message || "Failed to update post");
+      }
+
+      await fetchPostsFromBackend();
+    },
+    [fetchPostsFromBackend],
+  );
+
+  const updatePostStatus = useCallback(
+    async (statusData: UpdatePostStatusInput) => {
+      const response = await api.posts.updatePostStatus({
+        id: statusData.id,
+        status: statusData.status,
+      });
+
+      if (!response.success) {
+        throw new Error(response.message || "Failed to update post status");
       }
 
       await fetchPostsFromBackend();
@@ -73,6 +99,7 @@ export function usePostActions({
   return {
     createPost,
     updatePost,
+    updatePostStatus,
     deletePost,
   };
 }

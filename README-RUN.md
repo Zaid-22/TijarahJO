@@ -25,14 +25,19 @@ The script looks for:
 This script:
 - resets Docker SQL volume (`docker compose -f infra/docker-compose.yml down -v` + `up -d`)
 - recreates `TijarahJoDB`
-- builds and applies a consolidated SQL deployment bundle (`apps/api/database/bundles/master.sql`, which includes base schema + ordered migrations + canonical procedures)
-- applies `apps/api/database/bundles/seed_data.sql` (baseline/dev/test seeds)
+- builds and applies a consolidated SQL deployment bundle (`apps/api/database/bundles/master.sql`, which includes base schema + ordered migrations)
+- applies `apps/api/database/bundles/seed_data.sql` (baseline seeds by default)
 - starts backend on `http://localhost:5033`
 - runs `./scripts/verify_all_apis.sh`
 
 Required environment values for bootstrap:
 - `MSSQL_SA_PASSWORD`
 - `JWT_SIGNING_KEY`
+- `DB_APP_PASSWORD` (required when `DB_RUNTIME_PRINCIPAL=app`, which is the default)
+
+Runtime DB principal defaults:
+- `DB_RUNTIME_PRINCIPAL=app`
+- `DB_APP_LOGIN=tijarahjo_app`
 
 Useful flags:
 - `--no-volume-reset`

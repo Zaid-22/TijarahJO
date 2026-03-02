@@ -4,13 +4,7 @@ import path from "node:path";
 const SRC_DIR = path.resolve(process.cwd(), "src");
 const STYLE_TOKEN = "style={{";
 
-const ALLOWED_STYLE_USAGE = new Map([
-  ["src/pages/CategoryPage.tsx", 1],
-  ["src/features/home/components/HomeCategoriesSection.tsx", 1],
-  ["src/features/marketplace/components/ImageWithFallback.tsx", 3],
-  ["src/features/admin/components/categories/CategoriesTable.tsx", 2],
-  ["src/features/marketplace/components/Header.tsx", 1],
-]);
+const ALLOWED_STYLE_USAGE = new Map();
 
 function walkFiles(dirPath) {
   const entries = readdirSync(dirPath);
@@ -52,7 +46,7 @@ function main() {
     const allowedCount = ALLOWED_STYLE_USAGE.get(relativePath);
     if (allowedCount === undefined) {
       violations.push(
-        `${relativePath}: inline styles are not allowed here (${inlineStyleCount} found)`,
+        `${relativePath}: inline styles are not allowed (${inlineStyleCount} found)`,
       );
       continue;
     }
@@ -69,7 +63,7 @@ function main() {
   }
 
   console.error(
-    "Styling check failed: inline styles must stay within the approved dynamic-use list.",
+    "Styling check failed: inline styles are blocked project-wide.",
   );
   for (const violation of violations) {
     console.error(`- ${violation}`);

@@ -39,6 +39,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IMessageDataAccess, MessageDataAccessAdapter>();
         services.AddScoped<IConversationDataAccess, ConversationDataAccessAdapter>();
         services.AddScoped<IReviewDataAccess, ReviewDataAccessAdapter>();
+        services.AddScoped<IAdminDataAccess, AdminDataAccessAdapter>();
 
         services.AddScoped<IPostListingQueryService, PostListingQueryService>();
         services.AddScoped<ISearchReadService, SearchReadService>();

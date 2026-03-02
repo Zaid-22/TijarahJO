@@ -13,9 +13,9 @@ namespace Models;
                          int status,
                          DateTime createdat,
                          bool isdeleted,
-                         int views = 0,
-                         string? city = null,
-                         string? area = null)
+                         long views = 0,
+                         int? cityId = null,
+                         int? areaId = null)
         {
             this.PostID = postid;
             this.UserID = userid;
@@ -27,8 +27,8 @@ namespace Models;
             this.CreatedAt = createdat;
             this.IsDeleted = isdeleted;
             this.Views = views;
-            this.City = city;
-            this.Area = area;
+            this.CityId = cityId;
+            this.AreaId = areaId;
         }
 
         public int? PostID { get; set; }
@@ -40,10 +40,12 @@ namespace Models;
         public int Status { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsDeleted { get; set; }
-        public int Views { get; set; }
-        public string? City { get; set; }
-        public string? Area { get; set; }
-        
+        public long Views { get; set; }
+        /// <summary>FK to dbo.Cities. Null if no location set.</summary>
+        public int? CityId { get; set; }
+        /// <summary>FK to dbo.Areas. Null if no location set.</summary>
+        public int? AreaId { get; set; }
+
         // Added for image support
         public List<string> Images { get; set; } = new List<string>();
     }

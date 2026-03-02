@@ -18,6 +18,8 @@
     "src/services/api/posts/types.ts",
     "src/services/api/normalizers.ts",
     "src/services/api/schemas/authSchema.ts",
+    "src/services/api/schemas/categorySchema.ts",
+    "src/services/api/schemas/chatSchema.ts",
     "src/services/api/schemas/userSchema.ts",
     "src/services/api/shared.ts",
     "src/services/api/chatNormalization.ts",

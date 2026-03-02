@@ -10,6 +10,7 @@ import { CreateUserDialog } from "./users/CreateUserDialog";
 import { UsersTable } from "./users/UsersTable";
 import { CreateUserForm, initialCreateUserForm } from "./users/types";
 import { logger } from "../../../shared/lib/logger";
+import { useNavigate } from "react-router-dom";
 
 function formatJoinedDate(dateValue?: string): string {
   if (!dateValue) {
@@ -25,12 +26,14 @@ function formatJoinedDate(dateValue?: string): string {
 }
 
 export function UsersManagement() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<AdminUserRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
-  const [createForm, setCreateForm] =
-    useState<CreateUserForm>(initialCreateUserForm);
+  const [createForm, setCreateForm] = useState<CreateUserForm>(
+    initialCreateUserForm,
+  );
   const [pendingDeleteUser, setPendingDeleteUser] = useState<{
     id: string;
     displayName: string;
@@ -193,13 +196,11 @@ export function UsersManagement() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between gap-4 items-center">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Users Management
-        </h1>
+        <h1 className="text-2xl font-bold text-foreground">Users Management</h1>
 
         <div className="flex w-full sm:w-auto items-center gap-3">
           <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search users..."
               className="pl-10"
@@ -226,6 +227,9 @@ export function UsersManagement() {
         }}
         onChangeStatus={(userId, status) => {
           void handleStatusChange(userId, status);
+        }}
+        onViewDetails={(userId) => {
+          navigate(`/admin/users/${userId}`);
         }}
         onDeleteRequest={(user) => {
           setPendingDeleteUser({

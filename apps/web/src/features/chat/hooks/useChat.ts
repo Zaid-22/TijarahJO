@@ -5,6 +5,7 @@ import { useAuth } from "../../../contexts/AuthContext";
 import { api } from "../../../services/api";
 import { toPositiveIntegerId } from "../../../utils/idValidation";
 import { logger } from "../../../shared/lib/logger";
+import { serializeChatImageMessage } from "../chatMessageContent";
 
 export function useChat(otherUserId?: number) {
   const { user, isAuthenticated } = useAuth();
@@ -86,13 +87,13 @@ export function useChat(otherUserId?: number) {
     loadHistory();
   }, [loadHistory]);
 
-  const sendMessage = async (content: string, postId?: number) => {
-    if (!otherUserId) return;
+  const sendMessage = async (content: string, postId?: number): Promise<boolean> => {
+    if (!otherUserId) return false;
     const normalizedOtherUserId = toPositiveIntegerId(otherUserId);
-    if (!normalizedOtherUserId) return;
+    if (!normalizedOtherUserId) return false;
 
     const trimmedContent = content.trim();
-    if (!trimmedContent) return;
+    if (!trimmedContent) return false;
     const normalizedPostId =
       postId === undefined ? undefined : toPositiveIntegerId(postId);
 
@@ -104,11 +105,33 @@ export function useChat(otherUserId?: number) {
       );
       setMessages((prev) => [...prev, sentMessage]);
       setError(null);
+      return true;
     } catch (err) {
       logger.warn("[useChat] Failed to send message", err);
       setError("Failed to send message.");
+      return false;
     }
   };
 
-  return { messages, isLoading, error, sendMessage };
+  const sendImageMessage = async (
+    file: File,
+    caption?: string,
+    postId?: number,
+  ): Promise<boolean> => {
+    try {
+      const imageUrl = await api.chat.uploadImage(file);
+      if (!imageUrl) {
+        setError("Failed to upload image.");
+        return false;
+      }
+
+      return sendMessage(serializeChatImageMessage(imageUrl, caption), postId);
+    } catch (err) {
+      logger.warn("[useChat] Failed to upload image", err);
+      setError("Failed to upload image.");
+      return false;
+    }
+  };
+
+  return { messages, isLoading, error, sendMessage, sendImageMessage };
 }

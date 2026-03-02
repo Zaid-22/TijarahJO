@@ -1,32 +1,35 @@
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Models;
-using System;
 using System.Collections.Generic;
-using System.Security.Claims;
 using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.BLL;
+using TijarahJoDBAPI.Common.Utils;
+using TijarahJoDBAPI.Contracts.Requests;
+using TijarahJoDBAPI.Contracts.Responses;
 
 namespace TijarahJoDBAPI.Features.Reviews
 {
     [ApiController]
-    [Route("api/reviews")]
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/reviews")]
     public class ReviewsController : ControllerBase
     {
         private readonly IReviewService _reviews;
+        private readonly IReviewSubmissionService _reviewSubmissions;
 
-        public ReviewsController(IReviewService reviews)
+        public ReviewsController(IReviewService reviews, IReviewSubmissionService reviewSubmissions)
         {
             _reviews = reviews;
+            _reviewSubmissions = reviewSubmissions;
         }
 
-        [HttpGet("user/{userId}", Name = "GetUserReviews")]
+        [HttpGet("user/{userId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public ActionResult<IEnumerable<ReviewModel>> GetUserReviews(int userId)
+        public async Task<ActionResult<IEnumerable<ReviewResponseDTO>>> GetUserReviews(int userId)
         {
-            if (userId < 1) return BadRequest("Invalid user ID");
-            var reviews = _reviews.GetReviews(userId);
-            return Ok(reviews);
+            if (userId < 1) return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid user ID");
+            IReadOnlyList<Models.ReviewModel> reviews = await _reviews.GetReviewsAsync(userId, HttpContext.RequestAborted);
+            return Ok(reviews.Select(DTOMapper.ToReviewResponseDTO).ToList());
         }
 
         [Authorize]
@@ -35,54 +38,46 @@ namespace TijarahJoDBAPI.Features.Reviews
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public ActionResult<ReviewModel> AddReview([FromBody] ReviewModel? review)
+        public async Task<ActionResult<ReviewResponseDTO>> AddReview([FromBody] CreateReviewRequest? request)
         {
-             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("id")?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int currentUserId))
+            if (!ApiControllerHelpers.TryGetCurrentUserId(User, out int currentUserId))
             {
-                return Unauthorized();
+                return Problem(statusCode: StatusCodes.Status401Unauthorized, detail: "Invalid authentication token.");
             }
 
-            if (review == null)
+            if (request == null)
             {
-                return BadRequest("Review payload is required.");
+                return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Review payload is required.");
             }
 
-            if (review.ReviewedUserID <= 0)
+            ReviewSubmissionResult result = await _reviewSubmissions.SubmitAsync(
+                currentUserId,
+                request.ReviewedUserID,
+                request.Rating,
+                request.Comment,
+                HttpContext.RequestAborted
+            );
+            if (!result.Success || result.Review == null)
             {
-                return BadRequest("Reviewed user ID is required.");
+                return ToFailure(result);
             }
 
-            if (review.Rating < 1 || review.Rating > 5)
+            return CreatedAtAction(
+                nameof(GetUserReviews),
+                new { userId = result.Review.ReviewModel.ReviewedUserID },
+                DTOMapper.ToReviewResponseDTO(result.Review.ReviewModel)
+            );
+        }
+
+        private ActionResult<ReviewResponseDTO> ToFailure(ReviewSubmissionResult result)
+        {
+            return result.FailureReason switch
             {
-                return BadRequest("Rating must be between 1 and 5.");
-            }
-
-            if (string.IsNullOrWhiteSpace(review.Comment))
-            {
-                return BadRequest("Review comment is required.");
-            }
-
-            if (review.ReviewedUserID == currentUserId)
-            {
-                return BadRequest("You cannot review yourself.");
-            }
-
-            if (!_reviews.CanReview(currentUserId, review.ReviewedUserID))
-            {
-                 return StatusCode(StatusCodes.Status403Forbidden, "You have already reviewed this user.");
-            }
-
-            review.ReviewerID = currentUserId;
-            review.Timestamp = DateTime.UtcNow;
-
-            var newReview = _reviews.Create(review);
-            if (_reviews.Save(newReview))
-            {
-                return CreatedAtAction(nameof(GetUserReviews), new { userId = review.ReviewedUserID }, newReview.ReviewModel);
-            }
-
-            return StatusCode(StatusCodes.Status500InternalServerError, "Failed to save review");
+                ReviewSubmissionFailureReason.InvalidRequest => Problem(statusCode: StatusCodes.Status400BadRequest, detail: result.Message),
+                ReviewSubmissionFailureReason.SelfReviewForbidden => Problem(statusCode: StatusCodes.Status400BadRequest, detail: result.Message),
+                ReviewSubmissionFailureReason.AlreadyReviewed => Problem(statusCode: StatusCodes.Status403Forbidden, detail: result.Message),
+                _ => Problem(statusCode: StatusCodes.Status500InternalServerError, detail: result.Message ?? "Failed to save review.")
+            };
         }
     }
 }

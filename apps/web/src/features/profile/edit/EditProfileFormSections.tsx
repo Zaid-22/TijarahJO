@@ -1,5 +1,5 @@
 import type { ChangeEvent, RefObject } from "react";
-import { Save, Camera, Upload, X } from "lucide-react";
+import { Save, Camera, Upload, User, X } from "lucide-react";
 import { translations, type Language } from "../../../translations";
 import { Button } from "../../../shared/ui/button";
 import {
@@ -30,6 +30,9 @@ interface EditProfileFormSectionsProps {
   formData: EditProfileFormProfile;
   errors: EditProfileValidationErrors;
   cities: readonly string[];
+  areaSuggestions?: readonly string[];
+  isLoadingCities?: boolean;
+  isLoadingAreas?: boolean;
   hasChanges: boolean;
   fileInputRef: RefObject<HTMLInputElement>;
   onFieldChange: (field: keyof EditProfileFormProfile, value: string) => void;
@@ -46,6 +49,9 @@ export function EditProfileFormSections({
   formData,
   errors,
   cities,
+  areaSuggestions = [],
+  isLoadingCities = false,
+  isLoadingAreas = false,
   hasChanges,
   fileInputRef,
   onFieldChange,
@@ -59,8 +65,8 @@ export function EditProfileFormSections({
   const t = translations[language];
   const isRTL = language === "ar";
   const saveButtonClassName = hasChanges
-    ? "bg-[#0A4ABF] text-white hover:bg-[#083a95]"
-    : "bg-gray-200 text-gray-400 cursor-not-allowed hover:bg-gray-200";
+    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+    : "bg-muted text-muted-foreground cursor-not-allowed hover:bg-muted";
 
   return (
     <div className="space-y-6">
@@ -75,27 +81,28 @@ export function EditProfileFormSections({
           <div className="flex items-center gap-6">
             <div className="relative">
               <Avatar className="w-24 h-24">
-                <AvatarImage src={formData.avatar} />
-                <AvatarFallback className="text-2xl bg-[#0A4ABF20] text-[#0A4ABF]">
-                  {formData.firstName?.[0] || ""}
-                  {formData.lastName?.[0] || ""}
+                <AvatarImage src={formData.avatar} className="object-cover object-center" />
+                <AvatarFallback className="bg-muted text-muted-foreground">
+                  <User className="h-9 w-9" />
                 </AvatarFallback>
               </Avatar>
-              <button
+              <Button
                 type="button"
                 aria-label={t.uploadPhoto || "Upload Photo"}
-                className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center shadow-lg bg-[#0A4ABF] text-white"
+                variant="default"
+                size="icon"
+                className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
                 onClick={onUploadClick}
               >
                 <Camera className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
             <div className="flex-1">
               <div className="flex gap-2">
                 <Button
                   type="button"
                   variant="outline"
-                  className="border-[#0A4ABF] text-[#0A4ABF]"
+                  className="border-primary text-primary"
                   onClick={onUploadClick}
                 >
                   <Upload className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
@@ -104,14 +111,14 @@ export function EditProfileFormSections({
                 <Button
                   type="button"
                   variant="ghost"
-                  className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                   onClick={onPhotoRemove}
                 >
                   <X className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
                   {t.removePhoto || "Remove"}
                 </Button>
               </div>
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="mt-2 text-sm text-muted-foreground">
                 {t.photoRequirements || "JPG, PNG or GIF. Max size 5MB."}
               </p>
             </div>
@@ -137,24 +144,24 @@ export function EditProfileFormSections({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">
-                {t.firstName || "First Name"} <span className="text-red-500">*</span>
+                {t.firstName || "First Name"} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="firstName"
                 value={formData.firstName}
                 onChange={(e) => onFieldChange("firstName", e.target.value)}
                 placeholder={t.enterFirstName || "Enter your first name"}
-                className={errors.firstName ? "border-red-500" : ""}
+                className={errors.firstName ? "border-destructive" : ""}
               />
               {errors.firstName ? (
-                <p className="text-red-500 text-sm">{errors.firstName}</p>
+                <p className="text-sm text-destructive">{errors.firstName}</p>
               ) : null}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="middleName">
                 {t.middleName || "Middle Name"}{" "}
-                <span className="text-gray-400 text-xs">
+                <span className="text-xs text-muted-foreground">
                   ({language === "ar" ? "اختياري" : "optional"})
                 </span>
               </Label>
@@ -168,24 +175,24 @@ export function EditProfileFormSections({
 
             <div className="space-y-2">
               <Label htmlFor="lastName">
-                {t.lastName || "Last Name"} <span className="text-red-500">*</span>
+                {t.lastName || "Last Name"} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="lastName"
                 value={formData.lastName}
                 onChange={(e) => onFieldChange("lastName", e.target.value)}
                 placeholder={t.enterLastName || "Enter your last name"}
-                className={errors.lastName ? "border-red-500" : ""}
+                className={errors.lastName ? "border-destructive" : ""}
               />
               {errors.lastName ? (
-                <p className="text-red-500 text-sm">{errors.lastName}</p>
+                <p className="text-sm text-destructive">{errors.lastName}</p>
               ) : null}
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="phone">
-              {t.phone || "Phone Number"} <span className="text-red-500">*</span>
+              {t.phone || "Phone Number"} <span className="text-destructive">*</span>
             </Label>
             <Input
               id="phone"
@@ -193,42 +200,69 @@ export function EditProfileFormSections({
               value={formData.phone}
               onChange={(e) => onPhoneChange(e.target.value)}
               placeholder={t.enterPhone || "+962"}
-              className={errors.phone ? "border-red-500" : ""}
+              className={errors.phone ? "border-destructive" : ""}
             />
-            {errors.phone ? <p className="text-red-500 text-sm">{errors.phone}</p> : null}
+            {errors.phone ? <p className="text-sm text-destructive">{errors.phone}</p> : null}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="city">
-              {t.city || "City"} <span className="text-red-500">*</span>
+              {t.city || "City"} <span className="text-destructive">*</span>
             </Label>
             <Select value={formData.city} onValueChange={(value) => onFieldChange("city", value)}>
-              <SelectTrigger id="city" className={errors.city ? "border-red-500" : ""}>
+              <SelectTrigger id="city" className={errors.city ? "border-destructive" : ""}>
                 <SelectValue placeholder={t.selectCity || "Select your city"} />
               </SelectTrigger>
               <SelectContent>
-                {cities.map((city) => (
-                  <SelectItem key={city} value={city}>
-                    {city}
+                {cities.length > 0 ? (
+                  cities.map((city) => (
+                    <SelectItem key={city} value={city}>
+                      {city}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="__no_profile_cities__" disabled>
+                    {isLoadingCities
+                      ? language === "ar"
+                        ? "جارٍ تحميل المدن..."
+                        : "Loading cities..."
+                      : language === "ar"
+                        ? "لا توجد مدن متاحة"
+                        : "No cities available"}
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
-            {errors.city ? <p className="text-red-500 text-sm">{errors.city}</p> : null}
+            {errors.city ? <p className="text-sm text-destructive">{errors.city}</p> : null}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="area">
-              {t.area || "Area"} <span className="text-red-500">*</span>
+              {t.area || "Area"} <span className="text-destructive">*</span>
             </Label>
             <Input
               id="area"
+              list="edit-profile-area-options"
               value={formData.area}
               onChange={(e) => onFieldChange("area", e.target.value)}
               placeholder={t.enterArea || "Enter your area"}
-              className={errors.area ? "border-red-500" : ""}
+              className={errors.area ? "border-destructive" : ""}
             />
-            {errors.area ? <p className="text-red-500 text-sm">{errors.area}</p> : null}
+            {areaSuggestions.length > 0 ? (
+              <datalist id="edit-profile-area-options">
+                {areaSuggestions.map((area) => (
+                  <option key={area} value={area}>
+                    {area}
+                  </option>
+                ))}
+              </datalist>
+            ) : null}
+            {isLoadingAreas ? (
+              <p className="text-xs text-muted-foreground">
+                {language === "ar" ? "جارٍ تحميل المناطق..." : "Loading areas..."}
+              </p>
+            ) : null}
+            {errors.area ? <p className="text-sm text-destructive">{errors.area}</p> : null}
           </div>
 
           <div className="space-y-2">
@@ -241,7 +275,7 @@ export function EditProfileFormSections({
               rows={4}
               maxLength={500}
             />
-            <p className="text-sm text-gray-500 text-right">
+            <p className="text-right text-sm text-muted-foreground">
               {formData.bio.length}/500 {t.characters || "characters"}
             </p>
           </div>
@@ -257,15 +291,15 @@ export function EditProfileFormSections({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4">
-            <div className="text-center p-4 rounded-lg bg-gray-100 dark:bg-gray-800">
-              <div className="text-sm text-gray-600">{t.memberSince || "Member since"}</div>
-              <div className="text-[#0A4ABF]">{formData.joinedDate}</div>
+            <div className="rounded-lg border border-border bg-muted p-4 text-center">
+              <div className="text-sm text-muted-foreground">{t.memberSince || "Member since"}</div>
+              <div className="text-primary">{formData.joinedDate}</div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
         <Button type="button" variant="outline" onClick={onCancel}>
           {t.cancel || "Cancel"}
         </Button>

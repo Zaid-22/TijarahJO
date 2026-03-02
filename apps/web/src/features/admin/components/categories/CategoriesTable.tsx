@@ -10,6 +10,10 @@ import {
 } from "../../../../shared/ui/table";
 import { Badge } from "../../../../shared/ui/badge";
 import { Button } from "../../../../shared/ui/button";
+import {
+  resolveCategorySwatchClass,
+  resolveCategoryTextClass,
+} from "../../../../shared/lib/categoryVisuals";
 
 interface CategoriesTableProps {
   categories: Category[];
@@ -23,7 +27,7 @@ export function CategoriesTable({
   onDeleteRequest,
 }: CategoriesTableProps) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
       <Table>
         <TableHeader>
           <TableRow>
@@ -39,7 +43,7 @@ export function CategoriesTable({
         <TableBody>
           {categories.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+              <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                 No categories found
               </TableCell>
             </TableRow>
@@ -47,20 +51,22 @@ export function CategoriesTable({
             categories.map((category) => (
               <TableRow key={`category-${String(category.id || category.name || "unknown")}`}>
                 <TableCell>
-                  <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 w-fit">
-                    <Plus className="w-5 h-5" style={{ color: category.color }} />
+                  <div className="w-fit rounded-lg bg-muted p-2">
+                    <Plus
+                      className={`w-5 h-5 ${resolveCategoryTextClass(category.color)}`}
+                    />
                   </div>
-                  <div className="mt-1 text-xs text-gray-500">{category.icon || "box"}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{category.icon || "box"}</div>
                 </TableCell>
                 <TableCell>
                   {category.image ? (
                     <img
                       src={category.image}
                       alt={category.name}
-                      className="h-12 w-16 rounded object-cover border border-gray-200"
+                      className="h-12 w-16 rounded border border-border object-cover"
                     />
                   ) : (
-                    <span className="text-xs text-gray-400">No image</span>
+                    <span className="text-xs text-muted-foreground">No image</span>
                   )}
                 </TableCell>
                 <TableCell className="font-medium">{category.name}</TableCell>
@@ -68,10 +74,9 @@ export function CategoriesTable({
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <div
-                      className="w-4 h-4 rounded-full"
-                      style={{ backgroundColor: category.color }}
+                      className={`w-4 h-4 rounded-full ${resolveCategorySwatchClass(category.color)}`}
                     />
-                    <span className="text-xs text-gray-500">{category.color}</span>
+                    <span className="text-xs text-muted-foreground">{category.color}</span>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -85,14 +90,14 @@ export function CategoriesTable({
                       aria-label={`Edit category ${category.name}`}
                       onClick={() => onEdit(category)}
                     >
-                      <Pencil className="w-4 h-4 text-gray-500" />
+                      <Pencil className="w-4 h-4 text-muted-foreground" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
                       aria-label={`Delete category ${category.name}`}
                       onClick={() => onDeleteRequest(category)}
-                      className="hover:text-red-600 hover:bg-red-50"
+                      className="hover:bg-destructive/10 hover:text-destructive"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>

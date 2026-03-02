@@ -1,4 +1,4 @@
-import { Product } from "../../../types";
+import { Post } from "../../../types";
 
 type SearchError = {
   message?: string;
@@ -6,19 +6,19 @@ type SearchError = {
 
 type SearchResponse = {
   success: boolean;
-  posts: Product[];
+  posts: Post[];
   error?: SearchError;
 };
 
 type SearchPipelineParams = {
   request: () => Promise<SearchResponse>;
-  buildFallbackProducts: () => Product[];
+  buildFallbackPosts: () => Post[];
   fallbackErrorMessage: string;
-  transformRemoteProducts?: (products: Product[]) => Product[];
+  transformRemotePosts?: (posts: Post[]) => Post[];
 };
 
 export type SearchPipelineResult = {
-  products: Product[];
+  posts: Post[];
   error: string | null;
 };
 
@@ -28,39 +28,47 @@ function resolveErrorMessage(error: unknown, fallbackMessage: string): string {
     : fallbackMessage;
 }
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
+}
+
 export async function runSearchPipeline({
   request,
-  buildFallbackProducts,
+  buildFallbackPosts,
   fallbackErrorMessage,
-  transformRemoteProducts,
+  transformRemotePosts,
 }: SearchPipelineParams): Promise<SearchPipelineResult> {
   try {
     const response = await request();
     if (response.success) {
-      const products = transformRemoteProducts
-        ? transformRemoteProducts(response.posts)
+      const posts = transformRemotePosts
+        ? transformRemotePosts(response.posts)
         : response.posts;
 
       return {
-        products,
+        posts,
         error: null,
       };
     }
 
-    const fallbackProducts = buildFallbackProducts();
+    const fallbackPosts = buildFallbackPosts();
     return {
-      products: fallbackProducts,
+      posts: fallbackPosts,
       error:
-        fallbackProducts.length > 0
+        fallbackPosts.length > 0
           ? null
           : response.error?.message || fallbackErrorMessage,
     };
   } catch (error) {
-    const fallbackProducts = buildFallbackProducts();
+    if (isAbortError(error)) {
+      throw error;
+    }
+
+    const fallbackPosts = buildFallbackPosts();
     return {
-      products: fallbackProducts,
+      posts: fallbackPosts,
       error:
-        fallbackProducts.length > 0
+        fallbackPosts.length > 0
           ? null
           : resolveErrorMessage(error, fallbackErrorMessage),
     };

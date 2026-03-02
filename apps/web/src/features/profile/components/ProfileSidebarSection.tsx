@@ -15,13 +15,13 @@ export function ProfileSidebarSection({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>{t.contactInformation || "Contact Information"}</CardTitle>
+          <CardTitle>{t.contactInformation}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-3">
-            <Phone className="w-5 h-5 text-[#0A4ABF]" />
+            <Phone className="w-5 h-5 text-primary" />
             <div>
-              <div className="text-sm opacity-60">{t.phone || "Phone"}</div>
+              <div className="text-sm opacity-60">{t.phone}</div>
               <div>{userProfile.phone}</div>
             </div>
           </div>
@@ -30,7 +30,7 @@ export function ProfileSidebarSection({
 
       <Card>
         <CardHeader>
-          <CardTitle>{t.about || "About"}</CardTitle>
+          <CardTitle>{t.about}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm opacity-80">{userProfile.bio}</p>

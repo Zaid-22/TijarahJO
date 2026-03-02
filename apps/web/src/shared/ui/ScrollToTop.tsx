@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 
 export function ScrollToTop() {
   const [isVisible, setIsVisible] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     const toggleVisibility = () => {
@@ -20,7 +22,7 @@ export function ScrollToTop() {
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
-      behavior: "smooth",
+      behavior: prefersReducedMotion ? "auto" : "smooth",
     });
   };
 

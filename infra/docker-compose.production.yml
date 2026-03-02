@@ -1,0 +1,61 @@
+services:
+  sqlserver:
+    container_name: tijarahjo-db
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD}
+    volumes:
+      - mssql_data:/var/opt/mssql
+
+  redis:
+    container_name: tijarahjo-redis
+    image: redis:alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+  api:
+    container_name: tijarahjo-api
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - sqlserver
+      - redis
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DATABASE_CONNECTION_STRING: >-
+        Server=sqlserver,1433;Database=TijarahJoDB;User Id=sa;Password=${MSSQL_SA_PASSWORD};
+        Encrypt=True;TrustServerCertificate=True;
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY}
+      JWT_ISSUER: ${JWT_ISSUER:-https://your-production-domain.com}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-https://your-production-domain.com}
+      ConnectionStrings__Redis: redis:6379
+      FileStorage__RootPath: /var/lib/tijarahjo/uploads
+      FileStorage__PublicBasePath: /uploads
+      FeatureFlags__RequireRedis: "true"
+    volumes:
+      - api_uploads:/var/lib/tijarahjo/uploads
+    ports:
+      - "5033:5033"
+
+  web:
+    container_name: tijarahjo-web
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+
+volumes:
+  mssql_data:
+  redis_data:
+  api_uploads:

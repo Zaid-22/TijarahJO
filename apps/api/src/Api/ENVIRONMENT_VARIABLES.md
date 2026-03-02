@@ -15,6 +15,52 @@ JWT_AUDIENCE=https://your-production-domain.com
 PASSWORD_PEPPER=another-long-random-secret-at-least-32-characters
 ```
 
+#### Google OAuth Configuration (Optional)
+```bash
+GOOGLE_AUTH_ENABLED=true
+GOOGLE_AUTH_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
+GOOGLE_AUTH_CLIENT_SECRET=your-google-oauth-client-secret
+GOOGLE_AUTH_REDIRECT_URI=https://your-api-domain.com/api/v1/auth/google/callback
+GOOGLE_AUTH_FRONTEND_SUCCESS_URL=https://your-frontend-domain.com/
+GOOGLE_AUTH_FRONTEND_FAILURE_URL=https://your-frontend-domain.com/login
+# Optional overrides:
+# GOOGLE_AUTH_ALLOWED_AUDIENCES=client-id-1.apps.googleusercontent.com,client-id-2.apps.googleusercontent.com
+# GOOGLE_AUTH_ALLOWED_ISSUERS=https://accounts.google.com,accounts.google.com
+```
+
+#### Password Reset & Email Verification Configuration (Optional but Recommended)
+```bash
+# Password reset behavior
+PasswordReset__Enabled=true
+PasswordReset__CodeLength=6
+PasswordReset__CodeLifetimeMinutes=15
+PasswordReset__MaxAttempts=5
+PasswordReset__RequestCooldownSeconds=60
+
+# SMTP transport for reset codes
+PasswordResetEmail__Enabled=true
+PasswordResetEmail__Host=smtp.your-provider.com
+PasswordResetEmail__Port=587
+PasswordResetEmail__EnableSsl=true
+PasswordResetEmail__Username=your-smtp-username
+PasswordResetEmail__Password=your-smtp-password
+PasswordResetEmail__FromAddress=no-reply@your-domain.com
+PasswordResetEmail__FromName=TijarahJo Security
+PasswordResetEmail__LogCodesWhenEmailDisabled=false
+```
+
+#### Two-Factor Authentication Configuration (Optional)
+```bash
+TwoFactor__Issuer=TijarahJo
+TwoFactor__TimeStepSeconds=30
+TwoFactor__AllowedTimeDriftSteps=1
+TwoFactor__Digits=6
+TwoFactor__LoginChallengeLifetimeSeconds=300
+# Optional key overrides (defaults derive from JWT_SIGNING_KEY when omitted)
+TwoFactor__SecretEncryptionKey=your-random-secret-for-at-rest-totp-encryption
+TwoFactor__ChallengeSigningKey=your-random-secret-for-2fa-login-challenges
+```
+
 #### Database Configuration
 
 **Option 1: Full Connection String (Recommended)**
@@ -36,6 +82,36 @@ CORS__AllowedOrigins=https://your-frontend-domain.com,https://www.your-frontend-
 FrontendUrl=https://your-frontend-domain.com
 ```
 
+#### Runtime Feature Flags (Recommended for explicit behavior)
+```bash
+# API runtime controls
+FeatureFlags__EnableRateLimiting=true
+FeatureFlags__EnableHttpLogging=true
+FeatureFlags__EnableHealthChecks=true
+FeatureFlags__EnableInMemoryCaching=true
+
+# Redis behavior controls
+FeatureFlags__EnableRedisPresence=true
+FeatureFlags__EnableRedisBackplane=true
+FeatureFlags__RequireRedis=false
+```
+
+#### Redis Connection (when Redis features are enabled)
+```bash
+ConnectionStrings__Redis=localhost:6379
+```
+
+#### File Storage (post image uploads)
+```bash
+# Absolute or relative path for persisted uploads
+FileStorage__RootPath=/var/lib/tijarahjo/uploads
+# Public URL prefix served by API static files middleware
+FileStorage__PublicBasePath=/uploads
+# Optional overrides
+FileStorage__PostImagesPath=post-images
+FileStorage__MaxPostImageBytes=5242880
+```
+
 ## 🛠️ Development Setup
 
 For local development, you can still use `appsettings.Development.json` or set these environment variables:
@@ -46,6 +122,23 @@ JWT_SIGNING_KEY=your-local-dev-signing-key
 PASSWORD_PEPPER=your-local-dev-password-pepper
 DATABASE_CONNECTION_STRING=Data Source=localhost;Database=TijarahJoDB;User Id=sa;Password=your-local-dev-db-password;TrustServerCertificate=True;
 ```
+
+## Runtime Semantics
+
+### Startup mode behavior
+
+- If `FeatureFlags__RequireRedis=true` and Redis is unavailable: app startup fails.
+- If `FeatureFlags__RequireRedis=false` and Redis is unavailable: app starts in degraded mode.
+
+### Health probes
+
+- `GET /health/live` checks process liveness.
+- `GET /health/ready` checks dependency readiness (database connectivity).
+
+### API versioning contract
+
+- Canonical route prefix is `/api/v1`.
+- Query/header API version overrides are not part of the supported contract.
 
 ## ⚠️ Security Notes
 

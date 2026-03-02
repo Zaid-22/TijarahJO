@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { usePrefersReducedMotion } from './usePrefersReducedMotion';
 
 interface UseInfiniteScrollProps<T> {
   items: T[];
@@ -19,6 +20,7 @@ interface UseInfiniteScrollReturn<T> {
 }
 
 export function useInfiniteScroll<T>({ items, itemsPerPage = 12 }: UseInfiniteScrollProps<T>): UseInfiniteScrollReturn<T> {
+  const prefersReducedMotion = usePrefersReducedMotion();
   const [displayedItems, setDisplayedItems] = useState<T[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -72,9 +74,19 @@ export function useInfiniteScroll<T>({ items, itemsPerPage = 12 }: UseInfiniteSc
       pendingFrameRef.current = null;
 
       // Scroll to top of the page
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({
+        top: 0,
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+      });
     });
-  }, [items, itemsPerPage, isLoading, clearPendingFrame, safeTotalPages]);
+  }, [
+    items,
+    itemsPerPage,
+    isLoading,
+    clearPendingFrame,
+    safeTotalPages,
+    prefersReducedMotion,
+  ]);
 
   // Load more items (for backward compatibility)
   const loadMore = useCallback(() => {

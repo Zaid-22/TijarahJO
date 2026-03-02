@@ -1,4 +1,4 @@
-# Quick Start - Database Setup
+# Quick Start - Backend Bootstrap and Runtime
 
 ## Fast Path (Recommended)
 
@@ -8,9 +8,37 @@ From repo root, run:
 ./scripts/bootstrap_db.sh
 ```
 
+Required environment variables:
+- `MSSQL_SA_PASSWORD`
+- `JWT_SIGNING_KEY`
+- `DB_APP_PASSWORD` (required when using the default runtime principal `app`)
+
 This command builds bundles and applies:
-1. `apps/api/database/bundles/master.sql` (`base schema + ordered migrations + canonical procedures`)
-2. `apps/api/database/bundles/seed_data.sql` (`baseline + dev + test seeds`)
+1. `apps/api/database/bundles/master.sql` (`base schema + ordered migrations`)
+2. `apps/api/database/bundles/seed_data.sql` (`baseline seeds`)
+
+## Start API (local)
+
+From `apps/api/src/Api`:
+
+```bash
+dotnet run
+```
+
+Default local base URL is typically `http://localhost:5033`.
+
+## Quick Runtime Verification
+
+```bash
+curl -i http://localhost:5033/health/live
+curl -i http://localhost:5033/health/ready
+curl -i http://localhost:5033/api/v1/search
+```
+
+Expected behavior:
+- `health/live` checks process liveness only.
+- `health/ready` checks dependency readiness (currently database connectivity).
+- Canonical API route prefix is `/api/v1`.
 
 ## Manual Path
 
@@ -18,26 +46,29 @@ If you need manual execution, apply in this order:
 
 1. `apps/api/database/bundles/schema.sql`
 2. `apps/api/database/bundles/migrations.sql`
-3. `apps/api/database/bundles/procedures.sql`
-4. Optional: `apps/api/database/bundles/seed_data.sql`
+3. Optional: `apps/api/database/bundles/seed_data.sql`
 
-## Verify Stored Procedures
+## Verify Runtime Contract
 
 ```sql
-SELECT name AS ProcedureName
+SELECT COUNT(*) AS RuntimeStoredProcedures
 FROM sys.procedures
 WHERE schema_id = SCHEMA_ID('dbo')
-  AND name LIKE 'SP_%'
-ORDER BY name;
+  AND (name LIKE 'SP[_]%' OR name LIKE 'USP[_]%');
 ```
 
 ## Troubleshooting
 
-Problem: procedure not found
-- Solution: rerun `./scripts/bootstrap_db.sh` or re-apply `apps/api/database/bundles/procedures.sql`
+Problem: login/signup fails with SQL errors
+- Solution: rerun `./scripts/bootstrap_db.sh` to reapply schema + migrations and seeds
 
 Problem: categories/roles endpoints return empty arrays
 - Solution: apply `apps/api/database/bundles/seed_data.sql`
 
 Problem: migration error after partial manual run
-- Solution: rerun in canonical order: schema -> migrations -> procedures
+- Solution: rerun in canonical order: schema -> migrations -> seeds
+
+## Operational Modes
+
+For startup mode behavior (strict Redis vs degraded vs no Redis), see:
+- `docs/backend/OPERATIONS_RUNBOOK.md`

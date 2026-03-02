@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TijarahJo Status Enums",
+  "description": "Canonical status value definitions shared across frontend, backend, and database. Source of truth for all status-related logic.",
+  "definitions": {
+    "PostStatus": {
+      "type": "integer",
+      "description": "Post lifecycle status. Deletion is handled by IsDeleted flag, NOT by a status value.",
+      "enum": [0, 1, 3],
+      "x-enum-names": {
+        "0": "ACTIVE",
+        "1": "BLOCKED",
+        "3": "SOLD"
+      },
+      "x-enum-descriptions": {
+        "0": "Post is publicly visible and available for purchase.",
+        "1": "Post has been blocked by an admin and is not visible.",
+        "3": "Post has been marked as sold by the owner."
+      },
+      "x-db-table": "PostStatusLookup"
+    },
+    "UserStatus": {
+      "type": "integer",
+      "description": "User account status. Deletion is handled by IsDeleted flag, NOT by a status value.",
+      "enum": [1, 2, 3],
+      "x-enum-names": {
+        "1": "ACTIVE",
+        "2": "BANNED",
+        "3": "INACTIVE"
+      },
+      "x-enum-descriptions": {
+        "1": "User account is active and can log in.",
+        "2": "User account has been banned by an admin.",
+        "3": "User account is inactive (e.g., self-deactivated)."
+      },
+      "x-db-table": "UserStatusLookup"
+    }
+  }
+}

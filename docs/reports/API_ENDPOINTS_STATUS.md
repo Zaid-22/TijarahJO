@@ -1,159 +1,122 @@
 # API Endpoints Status Report
 
 **Base URL:** `http://localhost:5033`  
-**Test Date:** 2026-02-17  
-**Backend Status:** ✅ Running
+**Verified:** 2026-02-24  
+**Verification source:** `./scripts/verify_all_apis.sh` + CI backend checks
 
 ## Summary
 
-- **Total Endpoints Tested:** 18
-- **Working:** ✅ 16 endpoints
-- **Authentication Required:** ⚠️ 2 endpoints (expected behavior)
-- **No Routing Conflicts:** ✅ All ambiguous routes fixed
+- Canonical API version is exposed under:
+  - `/api/*`
+  - `/api/v1/*`
+- Legacy `Tb*` route namespaces are **not** part of the active runtime API.
+- Legacy `/All` and `/pagination` post routes are **removed** from canonical API.
 
----
+## Canonical Route Groups
 
-## Endpoint Details
+### Auth (`/api/auth`)
 
-### 🔐 Authentication Endpoints (`/api/auth`)
+- `POST /api/auth/login`
+- `POST /api/auth/signup`
+- `POST /api/auth/logout` (`[Authorize]`)
+- `GET /api/auth/me` (`[Authorize]`)
+- `GET /api/auth/google/start`
+- `GET /api/v1/auth/google/callback`
 
-| Method | Endpoint           | Status | Notes                                  |
-| ------ | ------------------ | ------ | -------------------------------------- |
-| POST   | `/api/auth/login`  | ⚠️ 401 | Requires valid credentials (expected)  |
-| POST   | `/api/auth/signup` | ✅ 201 | Working - User registration successful |
-| GET    | `/api/auth/me`     | ⚠️ 401 | Requires JWT token (expected)          |
+### Users (`/api/users`)
 
-**Route Name:** `Login`, `Signup`, `GetCurrentUser`
+- `GET /api/users` (admin only)
+- `GET /api/users/{id}`
+- `POST /api/users` (admin only)
+- `PUT /api/users/{id}` (`[Authorize]`, ownership/admin enforced)
+- `DELETE /api/users/{id}` (`[Authorize]`, ownership/admin enforced)
+- `GET /api/users/{id}/exists` (`[Authorize]`)
 
----
+### Posts (`/api/posts`)
 
-### 👥 User Endpoints (`/api/users`)
+- `GET /api/posts/feed`
+- `GET /api/posts/{id}`
+- `GET /api/posts/Exists/{id}`
+- `POST /api/posts/{id}/views`
+- `GET /api/posts/user/{userId}`
+- `GET /api/posts/category/{categoryId}`
+- `POST /api/posts` (`[Authorize]`)
+- `PUT /api/posts/{id}` (`[Authorize]`, ownership/admin enforced)
+- `DELETE /api/posts/{id}` (`[Authorize]`, ownership/admin enforced)
+- `PATCH /api/posts/{id}/status` (`[Authorize]`, ownership/admin enforced)
 
-| Method | Endpoint                 | Status     | Notes                           |
-| ------ | ------------------------ | ---------- | ------------------------------- |
-| GET    | `/api/users/All`         | ✅ 200     | Working - Returns all users     |
-| GET    | `/api/users/{id}`        | ✅ 200     | Working - Returns user by ID    |
-| POST   | `/api/users`             | ⏭️ Skipped | Requires valid UserModel        |
-| PUT    | `/api/users/{id}`        | ⏭️ Skipped | Requires valid UserModel and ID |
-| DELETE | `/api/users/{id}`        | ⏭️ Skipped | Requires ID                     |
-| GET    | `/api/users/Exists/{id}` | ⚠️ 401     | Requires authorization          |
+### Post Images (`/api/post-images`)
 
-**Route Names:** `GetAllUsers`, `GetUserById`, `RegisterUser`, `UpdateUser`, `DeleteUser`, `DoesUserExist`
+- `GET /api/post-images`
+- `GET /api/post-images/{id}`
+- `GET /api/post-images/post/{postId}`
+- `GET /api/post-images/Exists/{id}`
+- `POST /api/post-images` (`[Authorize]`)
+- `PUT /api/post-images/{id}` (`[Authorize]`, ownership/admin enforced)
+- `DELETE /api/post-images/{id}` (`[Authorize]`, ownership/admin enforced)
+- `POST /api/post-images/upload` (`[Authorize]`, multipart file upload)
 
----
+### Categories (`/api/categories`)
 
-### 📂 Category Endpoints (`/api/categories`)
+- `GET /api/categories`
+- `GET /api/categories/{id}`
+- `GET /api/categories/Exists/{id}`
+- `POST /api/categories` (admin only)
+- `PUT /api/categories/{id}` (admin only)
+- `DELETE /api/categories/{id}` (admin only)
 
-| Method | Endpoint                      | Status     | Notes                               |
-| ------ | ----------------------------- | ---------- | ----------------------------------- |
-| GET    | `/api/categories/All`         | ✅ 200     | Working - Returns all categories    |
-| GET    | `/api/categories/{id}`        | ✅ 200     | Working - Returns category by ID    |
-| POST   | `/api/categories`             | ⏭️ Skipped | Requires valid CategoryModel        |
-| PUT    | `/api/categories/{id}`        | ⏭️ Skipped | Requires valid CategoryModel and ID |
-| DELETE | `/api/categories/{id}`        | ⏭️ Skipped | Requires ID                         |
-| GET    | `/api/categories/Exists/{id}` | ✅ 200     | Working - Checks if category exists |
+### Roles (`/api/roles`)
 
-**Route Names:** `GetAllCategories`, `GetCategoryById`, `AddCategory`, `UpdateCategory`, `DeleteCategory`, `DoesCategoryExist`
+- `GET /api/roles`
+- `GET /api/roles/{id}`
+- `GET /api/roles/Exists/{id}`
+- `POST /api/roles` (admin only)
+- `PUT /api/roles/{id}` (admin only)
+- `DELETE /api/roles/{id}` (admin only)
 
----
+### Favorites (`/api/v1/favorites`)
 
-### 📝 Post Endpoints (`/api/posts`)
+- `GET /api/v1/favorites` (`[Authorize]`)
+- `POST /api/v1/favorites` (`[Authorize]`)
+- `DELETE /api/v1/favorites/{postId}` (`[Authorize]`)
 
-| Method | Endpoint                                                                 | Status     | Notes                               |
-| ------ | ------------------------------------------------------------------------ | ---------- | ----------------------------------- |
-| GET    | `/api/posts/All`                                                         | ✅ 200     | Working - Returns all posts         |
-| GET    | `/api/posts/{id}`                                                        | ✅ 200     | Working - Returns post by ID        |
-| GET    | `/api/posts/pagination?pageNumber=1&rowsPerPage=10&includeDeleted=false` | ✅ 200     | Working - Paginated posts           |
-| GET    | `/api/posts/Exists/{id}`                                                 | ✅ 200     | Working - Checks if post exists     |
-| GET    | `/api/posts/user/{userId}`                                               | ✅ 200     | Working - Returns posts by user     |
-| GET    | `/api/posts/category/{categoryId}`                                       | ✅ 200     | Working - Returns posts by category |
-| POST   | `/api/posts`                                                             | ⏭️ Skipped | Requires valid PostModel            |
-| PUT    | `/api/posts/{id}`                                                        | ⏭️ Skipped | Requires valid PostModel and ID     |
-| DELETE | `/api/posts/{id}`                                                        | ⏭️ Skipped | Requires ID                         |
-| PATCH  | `/api/posts/{id}/status`                                                 | ⏭️ Skipped | Requires UpdatePostStatusRequest    |
+### Chat (`/api/v1/chat`)
 
-**Route Names:** `GetAllPosts`, `GetPostById`, `GetPaginatedPosts`, `AddPost`, `UpdatePost`, `DeletePost`, `DoesPostExist`, `UpdatePostStatus`, `GetUserPosts`, `GetPostsByCategory`
+- `GET /api/v1/chat/recent` (`[Authorize]`)
+- `GET /api/v1/chat/history/{otherUserId}` (`[Authorize]`)
+- `GET /api/v1/chat/presence/{otherUserId}` (`[Authorize]`)
+- `POST /api/v1/chat/send` (`[Authorize]`)
+- `POST /api/v1/chat/upload-image` (`[Authorize]`, multipart file upload)
+- Realtime hub: `/chatHub`
 
-**Fixed:** Removed duplicate route attributes that could cause ambiguity
+### Search (`/api/search`)
 
----
+- `GET /api/search`
 
-### 🖼️ Post Image Endpoints (`/api/TbPostImages`)
+### Sellers (`/api/sellers`)
 
-| Method | Endpoint                        | Status     | Notes                                 |
-| ------ | ------------------------------- | ---------- | ------------------------------------- |
-| GET    | `/api/TbPostImages/All`         | ✅ 200     | Working - Returns all post images     |
-| GET    | `/api/TbPostImages/{id}`        | ✅ 200     | Working - Returns post image by ID    |
-| POST   | `/api/TbPostImages`             | ⏭️ Skipped | Requires valid PostImageModel         |
-| PUT    | `/api/TbPostImages/{id}`        | ⏭️ Skipped | Requires valid PostImageModel and ID  |
-| DELETE | `/api/TbPostImages/{id}`        | ⏭️ Skipped | Requires ID                           |
-| GET    | `/api/TbPostImages/Exists/{id}` | ✅ 200     | Working - Checks if post image exists |
+- `GET /api/sellers/{sellerId}`
+- `GET /api/sellers/top`
 
-**Route Names:** `GetAllTbPostImages`, `GetPostImageById`, `AddPostImage`, `UpdatePostImage`, `DeletePostImage`, `DoesPostImageExist`
+### Reviews (`/api/v1/reviews`)
 
----
+- `GET /api/v1/reviews/user/{userId}`
+- `POST /api/v1/reviews` (`[Authorize]`)
 
-### 🔑 Role Endpoints (`/api/TbRoles`)
+### Notifications (`/api/v1/notifications`)
 
-| Method | Endpoint                   | Status     | Notes                           |
-| ------ | -------------------------- | ---------- | ------------------------------- |
-| GET    | `/api/TbRoles/All`         | ✅ 200     | Working - Returns all roles     |
-| GET    | `/api/TbRoles/{id}`        | ✅ 200     | Working - Returns role by ID    |
-| POST   | `/api/TbRoles`             | ⏭️ Skipped | Requires valid RoleModel        |
-| PUT    | `/api/TbRoles/{id}`        | ⏭️ Skipped | Requires valid RoleModel and ID |
-| DELETE | `/api/TbRoles/{id}`        | ⏭️ Skipped | Requires ID                     |
-| GET    | `/api/TbRoles/Exists/{id}` | ✅ 200     | Working - Checks if role exists |
+- `GET /api/v1/notifications` (`[Authorize]`)
+- `GET /api/v1/notifications/unread-count` (`[Authorize]`)
+- `PUT /api/v1/notifications/{notificationId}/read` (`[Authorize]`)
+- `PUT /api/v1/notifications/read-all` (`[Authorize]`)
+- `GET /api/v1/notifications/push-config` (`[AllowAnonymous]`)
+- `POST /api/v1/notifications/push-subscriptions` (`[Authorize]`)
+- `DELETE /api/v1/notifications/push-subscriptions` (`[Authorize]`)
 
-**Route Names:** `GetAllTbRoles`, `GetRoleById`, `AddRole`, `UpdateRole`, `DeleteRole`, `DoesRoleExist`
+## Notes
 
----
-
-## 🔧 Fixes Applied
-
-### Routing Fixes
-
-1. ✅ **UsersController** - Added explicit route names to all endpoints
-2. ✅ **ItemCategoriesController** - Removed duplicate route attributes, added route names
-3. ✅ **UserPostsController** - Removed duplicate route attributes, added route names
-4. ✅ **AuthController** - Added route names to all endpoints
-5. ✅ **PostImagesController** - Already had route names
-6. ✅ **RolesController** - Already had route names
-
-### Issues Resolved
-
-- ❌ **AmbiguousMatchException** - Fixed by removing duplicate route attributes
-- ✅ All endpoints now have unique route names
-- ✅ All GET endpoints tested and working
-- ✅ No routing conflicts detected
-
----
-
-## ⚠️ Expected Behavior
-
-The following endpoints return 401 (Unauthorized) because they require authentication:
-
-- `/api/auth/login` - Requires valid login/email and password
-- `/api/auth/me` - Requires JWT token in Authorization header
-- `/api/users/Exists/{id}` - Requires `[Authorize]` attribute
-
-This is **correct behavior** and indicates the authentication system is working properly.
-
----
-
-## 📋 Testing Notes
-
-- All GET endpoints successfully return data or empty arrays
-- POST/PUT/DELETE endpoints require valid request bodies (not tested in this script)
-- Authentication is properly enforced on protected endpoints
-- CORS is configured for `http://localhost:5173` (frontend)
-
----
-
-## ✅ Conclusion
-
-**All API endpoints are properly configured and working!**
-
-- ✅ No routing ambiguities
-- ✅ All endpoints are accessible
-- ✅ Authentication is working as expected
-- ✅ Backend is ready for frontend integration
+- Authentication failures (`401/403`) on protected routes are expected behavior without valid credentials.
+- For full behavior coverage, use:
+  - `./scripts/verify_all_apis.sh`
+  - `./apps/api/tests/contracts/backend_smoke.sh`
+  - `./apps/api/tests/contracts/backend_integration_contract.sh`

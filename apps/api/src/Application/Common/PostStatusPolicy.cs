@@ -5,9 +5,9 @@ public static class PostStatusPolicy
     public const int Active = 0;
     public const int Blocked = 1;
     public const int Sold = 3;
-    public const int Deleted = 2; // API compatibility alias only; DB status=2 is legacy and should not be written.
     public const string AllowedApiStatuses = "ACTIVE, BLOCKED, SOLD";
     public const string SoftDeleteApiAliases = "DELETED, INACTIVE";
+    public const string AllowedPersistedStatusIds = "0, 1, 3";
 
     public static string ToClientStatus(int dbStatus, bool isDeleted)
     {
@@ -64,6 +64,11 @@ public static class PostStatusPolicy
     public static bool IsModerationState(int dbStatus)
     {
         return dbStatus == Blocked;
+    }
+
+    public static bool IsAllowedPersistedStatus(int dbStatus)
+    {
+        return dbStatus is Active or Blocked or Sold;
     }
 
     public static string ToSqlCaseExpression(string postAlias)

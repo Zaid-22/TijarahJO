@@ -20,6 +20,13 @@ Active canonical migrations (current order):
 - `V202602221240__conversation_participant_indexes.sql`
 - `V202602221250__align_post_status_lookup_with_soft_delete.sql`
 - `V202602221260__rationalize_conversation_indexes.sql`
+- `V202602221300__schema_corrections.sql`
+- `V202602221400__security_db_roles.sql`
+- `V202602221410__audit_log.sql`
+- `V202602241000__add_user_external_identities.sql`
+- `V202602241500__filtered_indexes_for_soft_deletes.sql`
+- `V202602241700__enforce_posts_status_domain.sql`
+- `V202602251000__add_user_totp_2fa_columns.sql`
 
 Legacy `Tb*` migration scripts were moved under `../archive/migrations-legacy/` and are excluded from bootstrap bundles.
 

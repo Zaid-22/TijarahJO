@@ -3,11 +3,22 @@ import { ChatList } from "../features/chat/components/ChatList";
 import { ChatWindow } from "../features/chat/components/ChatWindow";
 import { useAuth } from "../contexts/AuthContext";
 import { api } from "../services/api";
-import { useNavigate, useParams } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toPositiveIntegerId } from "../utils/idValidation";
 import { resolveUserDisplayName } from "../utils/userDisplayName";
 import { logger } from "../shared/lib/logger";
+import { chatService } from "../services/chatService";
+import { resolveDocumentLanguage } from "../shared/lib/locale";
+import type { Language } from "../types";
+import { Button } from "../shared/ui/button";
+import { SubpageHeader } from "../shared/ui/subpage-header";
+import { PageShell } from "../shared/ui/page-shell";
+import { LoadingState } from "../shared/ui/loading-state";
+import { formatChatPreviewText } from "../features/chat/chatMessageContent";
+import {
+  buildCurrentPath,
+  resolveBackPathFromLocationState,
+} from "../shared/lib/backNavigation";
 
 interface ChatSummary {
   userId: number;
@@ -17,10 +28,38 @@ interface ChatSummary {
   isRead: boolean;
 }
 
-export function ChatPage() {
+interface ChatPageProps {
+  language?: Language;
+}
+
+export function ChatPage({ language }: ChatPageProps) {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { userId } = useParams();
+  const resolvedLanguage = language || resolveDocumentLanguage();
+  const isRTL = resolvedLanguage === "ar";
+  const currentPath = buildCurrentPath(location.pathname, location.search);
+  const safeBackPath = resolveBackPathFromLocationState({
+    locationState: location.state,
+    currentPath,
+    fallbackPath: "/",
+  });
+  const labels = {
+    userPrefix: resolvedLanguage === "ar" ? "مستخدم" : "User",
+    me: resolvedLanguage === "ar" ? "أنا" : "Me",
+    messages: resolvedLanguage === "ar" ? "الرسائل" : "Messages",
+    pleaseLogin:
+      resolvedLanguage === "ar"
+        ? "يرجى تسجيل الدخول لعرض الرسائل."
+        : "Please login to view your messages.",
+    goHome: resolvedLanguage === "ar" ? "العودة للرئيسية" : "Go Home",
+    selectConversation:
+      resolvedLanguage === "ar"
+        ? "اختر محادثة للبدء بالدردشة"
+        : "Select a conversation to start chatting",
+    back: resolvedLanguage === "ar" ? "العودة" : "Back",
+  };
 
   const initialSelectedUserId = toPositiveIntegerId(userId);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(
@@ -32,9 +71,15 @@ export function ChatPage() {
   );
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [isLoadingChats, setIsLoadingChats] = useState(true);
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false,
+  );
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
     };
@@ -84,8 +129,8 @@ export function ChatPage() {
 
           chatsByUser.set(otherUser, {
             userId: otherUser,
-            displayName: `User ${otherUser}`,
-            lastMessage: message.content,
+            displayName: `${labels.userPrefix} ${otherUser}`,
+            lastMessage: formatChatPreviewText(message.content, resolvedLanguage),
             timestamp: message.timestamp,
             isRead:
               message.senderId === currentUserId ? true : Boolean(message.isRead),
@@ -122,7 +167,46 @@ export function ChatPage() {
     }
 
     fetchChats();
-  }, [isAuthenticated, user?.id]);
+  }, [isAuthenticated, labels.userPrefix, user?.id, resolvedLanguage]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) {
+      return;
+    }
+
+    const currentUserId = toPositiveIntegerId(user.id);
+    if (!currentUserId) {
+      return;
+    }
+
+    return chatService.onMessageReceived((message) => {
+      const otherUserId =
+        message.senderId === currentUserId
+          ? message.receiverId
+          : message.senderId;
+      if (!otherUserId || otherUserId === currentUserId) {
+        return;
+      }
+
+      setChats((prevChats) => {
+        const existingChat = prevChats.find((chat) => chat.userId === otherUserId);
+        const updatedChat: ChatSummary = {
+          userId: otherUserId,
+          displayName:
+            existingChat?.displayName || `${labels.userPrefix} ${otherUserId}`,
+          lastMessage: formatChatPreviewText(message.content, resolvedLanguage),
+          timestamp: message.timestamp,
+          isRead:
+            message.senderId === currentUserId || selectedUserId === otherUserId,
+        };
+
+        return [
+          updatedChat,
+          ...prevChats.filter((chat) => chat.userId !== otherUserId),
+        ];
+      });
+    });
+  }, [isAuthenticated, labels.userPrefix, user?.id, selectedUserId, resolvedLanguage]);
 
   useEffect(() => {
     if (!userId) {
@@ -146,7 +230,7 @@ export function ChatPage() {
       return;
     }
 
-    setSelectedDisplayName(`User ${selectedUserId}`);
+    setSelectedDisplayName(`${labels.userPrefix} ${selectedUserId}`);
 
     let isCancelled = false;
     (async () => {
@@ -169,7 +253,7 @@ export function ChatPage() {
     return () => {
       isCancelled = true;
     };
-  }, [selectedUserId, userDisplayNamesById]);
+  }, [labels.userPrefix, selectedUserId, userDisplayNamesById]);
 
   const handleSelectUser = (id: number) => {
     const normalizedUserId = toPositiveIntegerId(id);
@@ -179,68 +263,115 @@ export function ChatPage() {
 
     setSelectedUserId(normalizedUserId);
     setSelectedDisplayName(
-      userDisplayNamesById[normalizedUserId] || `User ${normalizedUserId}`,
+      userDisplayNamesById[normalizedUserId] ||
+        `${labels.userPrefix} ${normalizedUserId}`,
     );
-    navigate(`/chat/${normalizedUserId}`);
+    navigate(`/chat/${normalizedUserId}`, {
+      state: {
+        fromPath: safeBackPath,
+      },
+    });
+  };
+
+  const handlePageBack = () => {
+    if (isMobile && selectedUserId) {
+      setSelectedUserId(null);
+      navigate("/chat", {
+        state: {
+          fromPath: safeBackPath,
+        },
+      });
+      return;
+    }
+
+    navigate(safeBackPath, { replace: true });
   };
 
   if (!isAuthenticated) {
     return (
-      <div className="container mx-auto p-4 text-center mt-10">
-        <p>Please login to view your messages.</p>
-        <button
-          onClick={() => navigate("/")}
-          className="text-blue-600 underline"
-        >
-          Go Home
-        </button>
-      </div>
+      <PageShell tone="account">
+        <SubpageHeader
+          onBack={handlePageBack}
+          isRTL={isRTL}
+          backLabel={labels.back}
+          title={labels.messages}
+          showLogo={false}
+        />
+        <div className="max-w-4xl mx-auto px-4 py-10 text-center">
+          <p>{labels.pleaseLogin}</p>
+          <Button
+            variant="link"
+            onClick={() => navigate("/")}
+            className="text-primary"
+          >
+            {labels.goHome}
+          </Button>
+        </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 h-[calc(100vh-80px)] mt-20">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
-        {/* Chat List - Hidden on mobile if chat selected */}
-        <div
-          className={`h-full ${isMobile && selectedUserId ? "hidden" : "block"} md:col-span-1`}
-        >
-          {isLoadingChats ? (
-            <div className="flex justify-center p-10">
-              <Loader2 className="animate-spin" />
-            </div>
-          ) : (
-            <ChatList
-              chats={chats}
-              selectedUserId={selectedUserId}
-              onSelectUser={handleSelectUser}
-            />
-          )}
-        </div>
+    <PageShell tone="account">
+      <SubpageHeader
+        onBack={handlePageBack}
+        isRTL={isRTL}
+        backLabel={labels.back}
+        title={labels.messages}
+        showLogo={false}
+      />
+      <div className="max-w-7xl mx-auto px-4 py-4 h-full min-h-content-70vh">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+          {/* Chat List - Hidden on mobile if chat selected */}
+          <div
+            className={`h-full ${isMobile && selectedUserId ? "hidden" : "block"} md:col-span-1`}
+          >
+            {isLoadingChats ? (
+              <LoadingState
+                label={resolvedLanguage === "ar" ? "جارٍ تحميل المحادثات..." : "Loading chats..."}
+                minHeightClassName="min-h-64"
+              />
+            ) : (
+              <ChatList
+                chats={chats}
+                selectedUserId={selectedUserId}
+                onSelectUser={handleSelectUser}
+                language={resolvedLanguage}
+              />
+            )}
+          </div>
 
-        {/* Chat Window - Hidden on mobile if no chat selected */}
-        <div
-          className={`h-full ${isMobile && !selectedUserId ? "hidden" : "block"} md:col-span-2`}
-        >
-          {selectedUserId ? (
-            <ChatWindow
-              otherUserId={selectedUserId}
-              otherDisplayName={selectedDisplayName || `User ${selectedUserId}`}
-              currentUser={{ id: user?.id || "", name: user?.name || "Me" }}
-              onBack={() => {
-                setSelectedUserId(null);
-                navigate("/chat");
-              }}
-            />
-          ) : (
-            <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-              <p className="text-gray-500">
-                Select a conversation to start chatting
-              </p>
-            </div>
-          )}
+          {/* Chat Window - Hidden on mobile if no chat selected */}
+          <div
+            className={`h-full ${isMobile && !selectedUserId ? "hidden" : "block"} md:col-span-2`}
+          >
+            {selectedUserId ? (
+              <ChatWindow
+                otherUserId={selectedUserId}
+                otherDisplayName={
+                  selectedDisplayName || `${labels.userPrefix} ${selectedUserId}`
+                }
+                currentUser={{ id: user?.id || "", name: user?.name || labels.me }}
+                onBack={() => {
+                  setSelectedUserId(null);
+                  navigate("/chat", {
+                    state: {
+                      fromPath: safeBackPath,
+                    },
+                  });
+                }}
+                language={resolvedLanguage}
+              />
+            ) : (
+              <div className="h-full flex items-center justify-center rounded-lg border border-border bg-muted/40">
+                <p className="text-muted-foreground">
+                  {labels.selectConversation}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

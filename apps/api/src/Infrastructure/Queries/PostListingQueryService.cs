@@ -1,4 +1,5 @@
 using Microsoft.Data.SqlClient;
+using System.Collections.Concurrent;
 using System.Data;
 using System.Text;
 using TijarahJoDB.Application.Abstractions.Services;
@@ -10,14 +11,16 @@ namespace TijarahJoDB.DAL.Queries;
 public sealed class PostListingQueryService : IPostListingQueryService
 {
     private const char ImageSeparator = '\u001F';
+    private const int MaxPageSize = 200;
+    private static readonly ConcurrentDictionary<string, bool> FullTextCapabilityCache = new(StringComparer.OrdinalIgnoreCase);
 
     public async Task<PostListingPageResult> QueryAsync(PostListingQuery query, CancellationToken cancellationToken = default)
     {
         int page = query.Page < 1 ? 1 : query.Page;
         int limit = query.Limit < 1 ? 20 : query.Limit;
-        if (limit > 500)
+        if (limit > MaxPageSize)
         {
-            limit = 500;
+            limit = MaxPageSize;
         }
 
         int offset = (page - 1) * limit;
@@ -27,7 +30,7 @@ public sealed class PostListingQueryService : IPostListingQueryService
         using var command = connection.CreateCommand();
         await connection.OpenAsync(cancellationToken);
 
-        bool postsFullTextAvailable = await HasPostsFullTextIndexAsync(connection, cancellationToken);
+        bool postsFullTextAvailable = await GetCachedPostsFullTextAvailabilityAsync(connection, cancellationToken);
 
         AddIntParameter(command.Parameters, "@ActiveStatus", PostStatusPolicy.Active);
         AddIntParameter(command.Parameters, "@SoldStatus", PostStatusPolicy.Sold);
@@ -353,6 +356,19 @@ OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY;";
             .Replace("%", "\\%", StringComparison.Ordinal)
             .Replace("_", "\\_", StringComparison.Ordinal)
             .Replace("[", "\\[", StringComparison.Ordinal);
+    }
+
+    private static async Task<bool> GetCachedPostsFullTextAvailabilityAsync(SqlConnection connection, CancellationToken cancellationToken)
+    {
+        string cacheKey = $"{connection.DataSource}|{connection.Database}";
+        if (FullTextCapabilityCache.TryGetValue(cacheKey, out bool cachedCapability))
+        {
+            return cachedCapability;
+        }
+
+        bool detectedCapability = await HasPostsFullTextIndexAsync(connection, cancellationToken);
+        FullTextCapabilityCache.TryAdd(cacheKey, detectedCapability);
+        return detectedCapability;
     }
 
     private static async Task<bool> HasPostsFullTextIndexAsync(SqlConnection connection, CancellationToken cancellationToken)

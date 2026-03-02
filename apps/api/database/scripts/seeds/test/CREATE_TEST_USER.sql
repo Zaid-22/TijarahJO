@@ -2,16 +2,16 @@ USE TijarahJoDB;
 GO
 
 -- Make sure roles exist first
-IF NOT EXISTS (SELECT 1 FROM dbo.TbRoles WHERE RoleName = N'Admin')
+IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE RoleName = N'Admin')
 BEGIN
-    INSERT INTO dbo.TbRoles (RoleName)
+    INSERT INTO dbo.Roles (RoleName)
     VALUES (N'Admin');
 END
 GO
 
-IF NOT EXISTS (SELECT 1 FROM dbo.TbRoles WHERE RoleName = N'User')
+IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE RoleName = N'User')
 BEGIN
-    INSERT INTO dbo.TbRoles (RoleName)
+    INSERT INTO dbo.Roles (RoleName)
     VALUES (N'User');
 END
 GO
@@ -19,7 +19,7 @@ GO
 -- Insert test user
 -- Password: intentionally removed for security (no seeded credentials)
 -- Account requires manual password reset or API creation
-MERGE dbo.TbUsers AS target
+MERGE dbo.Users AS target
 USING
 (
     SELECT
@@ -36,7 +36,7 @@ WHEN MATCHED THEN
         LastName = source.LastName,
         JoinDate = source.JoinDate,
         Status = 1,
-        RoleID = (SELECT TOP (1) RoleID FROM dbo.TbRoles WHERE RoleName = N'User' ORDER BY RoleID),
+        RoleID = (SELECT TOP (1) RoleID FROM dbo.Roles WHERE RoleName = N'User' ORDER BY RoleID),
         IsDeleted = 0
 WHEN NOT MATCHED BY TARGET THEN
     INSERT (
@@ -56,7 +56,7 @@ WHEN NOT MATCHED BY TARGET THEN
         source.LastName,
         source.JoinDate,
         1,
-        (SELECT TOP (1) RoleID FROM dbo.TbRoles WHERE RoleName = N'User' ORDER BY RoleID),
+        (SELECT TOP (1) RoleID FROM dbo.Roles WHERE RoleName = N'User' ORDER BY RoleID),
         0
     );
 GO
@@ -82,6 +82,6 @@ SELECT
     Status,
     RoleID,
     IsDeleted
-FROM dbo.TbUsers 
+FROM dbo.Users 
 WHERE Email = 'test@example.com';
 GO

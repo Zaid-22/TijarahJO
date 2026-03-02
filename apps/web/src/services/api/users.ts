@@ -2,6 +2,7 @@ import { toPositiveIntegerId } from "../../utils/idValidation";
 import { apiRequest, debugError, debugLog } from "./client";
 import { readString, toIntegerOrDefault, toRecord } from "./normalizers";
 import { parseUserSchema, parseUsersCollection } from "./schemas/userSchema";
+import { resolveCityId, resolveAreaId } from "./posts/lookups";
 
 type RawUser = {
   Id?: unknown;
@@ -300,23 +301,34 @@ export const usersApi = {
       1,
     );
 
+    const userCityString =
+      userModel.City === null || userModel.city === null
+        ? null
+        : readString(userModel.City ?? userModel.city);
+    const userAreaString =
+      userModel.Area === null || userModel.area === null
+        ? null
+        : readString(userModel.Area ?? userModel.area);
+
+    const cityId = userCityString
+      ? await resolveCityId(userCityString)
+      : undefined;
+    const areaId =
+      cityId && userAreaString
+        ? await resolveAreaId(cityId, userAreaString)
+        : undefined;
+
     const payload = {
       Password: password,
       Email: email,
       FirstName: firstName,
       LastName: readString(userModel.LastName ?? userModel.lastName),
+      CityId: cityId,
+      AreaId: areaId,
       Phone:
         userModel.Phone === null || userModel.phone === null
           ? null
           : readString(userModel.Phone ?? userModel.phone) || null,
-      City:
-        userModel.City === null || userModel.city === null
-          ? null
-          : readString(userModel.City ?? userModel.city) || null,
-      Area:
-        userModel.Area === null || userModel.area === null
-          ? null
-          : readString(userModel.Area ?? userModel.area) || null,
       Bio:
         userModel.Bio === null || userModel.bio === null
           ? null

@@ -1,9 +1,9 @@
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using TijarahJoDB.DAL.Entities;
+using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDBAPI.Common.Configuration;
-using TijarahJoDBAPI.Common.Services;
 using TijarahJoDBAPI.Common.Utils;
 using TijarahJoDBAPI.Contracts.Requests;
 using TijarahJoDBAPI.Contracts.Responses;
@@ -12,18 +12,18 @@ namespace TijarahJoDBAPI.Features.Notifications;
 
 [Authorize]
 [ApiController]
-[Route("api/notifications")]
-[Route("api/v1/notifications")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/notifications")]
 public sealed class NotificationsController : ControllerBase
 {
-    private readonly INotificationService _notifications;
+    private readonly INotificationQueryHandler _notificationQueries;
     private readonly WebPushOptions _webPushOptions;
 
     public NotificationsController(
-        INotificationService notifications,
+        INotificationQueryHandler notificationQueries,
         IOptions<WebPushOptions> webPushOptions)
     {
-        _notifications = notifications;
+        _notificationQueries = notificationQueries;
         _webPushOptions = webPushOptions.Value;
     }
 
@@ -34,19 +34,23 @@ public sealed class NotificationsController : ControllerBase
         [FromQuery] bool unreadOnly = false,
         CancellationToken cancellationToken = default)
     {
-        if (!ApiControllerHelpers.TryGetCurrentUserId(User, out int currentUserId))
+        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int currentUserId, out ActionResult? failureResult))
         {
-            return Unauthorized();
+            return failureResult!;
         }
 
-        IReadOnlyList<NotificationEntity> rows = await _notifications.GetUserNotificationsAsync(
+        NotificationListQueryResult result = await _notificationQueries.GetNotificationsAsync(
             currentUserId,
             take,
             unreadOnly,
             cancellationToken
         );
+        if (!result.Success)
+        {
+            return this.ToNotificationListQueryProblem(result, "Failed to fetch notifications.");
+        }
 
-        return Ok(rows.Select(ToDto).ToList());
+        return Ok(result.Notifications.Select(DTOMapper.ToNotificationResponseDTO).ToList());
     }
 
     [HttpGet("unread-count")]
@@ -54,15 +58,20 @@ public sealed class NotificationsController : ControllerBase
     public async Task<ActionResult<NotificationUnreadCountResponseDTO>> GetUnreadCount(
         CancellationToken cancellationToken = default)
     {
-        if (!ApiControllerHelpers.TryGetCurrentUserId(User, out int currentUserId))
+        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int currentUserId, out ActionResult? failureResult))
         {
-            return Unauthorized();
+            return failureResult!;
         }
 
-        int unreadCount = await _notifications.GetUnreadCountAsync(currentUserId, cancellationToken);
+        NotificationUnreadCountQueryResult result = await _notificationQueries.GetUnreadCountAsync(currentUserId, cancellationToken);
+        if (!result.Success)
+        {
+            return this.ToNotificationUnreadCountQueryProblem(result, "Failed to fetch unread count.");
+        }
+
         return Ok(new NotificationUnreadCountResponseDTO
         {
-            UnreadCount = unreadCount
+            UnreadCount = result.UnreadCount
         });
     }
 
@@ -73,20 +82,23 @@ public sealed class NotificationsController : ControllerBase
         int notificationId,
         CancellationToken cancellationToken = default)
     {
-        if (!ApiControllerHelpers.TryGetCurrentUserId(User, out int currentUserId))
+        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int currentUserId, out ActionResult? failureResult))
         {
-            return Unauthorized();
+            return failureResult!;
         }
 
-        if (notificationId < 1)
+        NotificationMutationQueryResult result = await _notificationQueries.MarkAsReadAsync(
+            currentUserId,
+            notificationId,
+            cancellationToken);
+        if (!result.Success)
         {
-            return BadRequest("Invalid notification ID.");
+            return this.ToNotificationMutationQueryProblem(result, "Failed to mark notification as read.");
         }
 
-        bool updated = await _notifications.MarkAsReadAsync(currentUserId, notificationId, cancellationToken);
         return Ok(new OperationSuccessResponse
         {
-            Success = updated
+            Success = result.Updated
         });
     }
 
@@ -95,15 +107,20 @@ public sealed class NotificationsController : ControllerBase
     public async Task<ActionResult<NotificationMarkReadAllResponseDTO>> MarkAllAsRead(
         CancellationToken cancellationToken = default)
     {
-        if (!ApiControllerHelpers.TryGetCurrentUserId(User, out int currentUserId))
+        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int currentUserId, out ActionResult? failureResult))
         {
-            return Unauthorized();
+            return failureResult!;
         }
 
-        int updatedCount = await _notifications.MarkAllAsReadAsync(currentUserId, cancellationToken);
+        NotificationMutationQueryResult result = await _notificationQueries.MarkAllAsReadAsync(currentUserId, cancellationToken);
+        if (!result.Success)
+        {
+            return this.ToNotificationMutationQueryProblem(result, "Failed to mark notifications as read.");
+        }
+
         return Ok(new NotificationMarkReadAllResponseDTO
         {
-            UpdatedCount = updatedCount
+            UpdatedCount = result.UpdatedCount
         });
     }
 
@@ -126,30 +143,29 @@ public sealed class NotificationsController : ControllerBase
         [FromBody] UpsertPushSubscriptionRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (!ApiControllerHelpers.TryGetCurrentUserId(User, out int currentUserId))
+        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int currentUserId, out ActionResult? failureResult))
         {
-            return Unauthorized();
+            return failureResult!;
         }
 
-        if (string.IsNullOrWhiteSpace(request.Endpoint) ||
-            string.IsNullOrWhiteSpace(request.Keys.P256dh) ||
-            string.IsNullOrWhiteSpace(request.Keys.Auth))
+        NotificationMutationQueryResult result = await _notificationQueries.UpsertPushSubscriptionAsync(
+            new PushSubscriptionUpsertCommand
+            {
+                UserId = currentUserId,
+                Endpoint = request.Endpoint,
+                P256dh = request.Keys.P256dh,
+                Auth = request.Keys.Auth,
+                UserAgent = request.UserAgent
+            },
+            cancellationToken);
+        if (!result.Success)
         {
-            return BadRequest("Endpoint and keys are required.");
+            return this.ToNotificationMutationQueryProblem(result, "Failed to update push subscription.");
         }
-
-        await _notifications.UpsertPushSubscriptionAsync(
-            currentUserId,
-            request.Endpoint,
-            request.Keys.P256dh,
-            request.Keys.Auth,
-            request.UserAgent,
-            cancellationToken
-        );
 
         return Ok(new OperationSuccessResponse
         {
-            Success = true
+            Success = result.Updated
         });
     }
 
@@ -160,43 +176,25 @@ public sealed class NotificationsController : ControllerBase
         [FromBody] RemovePushSubscriptionRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (!ApiControllerHelpers.TryGetCurrentUserId(User, out int currentUserId))
+        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int currentUserId, out ActionResult? failureResult))
         {
-            return Unauthorized();
+            return failureResult!;
         }
 
-        if (string.IsNullOrWhiteSpace(request.Endpoint))
-        {
-            return BadRequest("Endpoint is required.");
-        }
-
-        bool removed = await _notifications.DeactivatePushSubscriptionAsync(
+        NotificationMutationQueryResult result = await _notificationQueries.RemovePushSubscriptionAsync(
             currentUserId,
             request.Endpoint,
             cancellationToken
         );
+        if (!result.Success)
+        {
+            return this.ToNotificationMutationQueryProblem(result, "Failed to remove push subscription.");
+        }
 
         return Ok(new OperationSuccessResponse
         {
-            Success = removed
+            Success = result.Updated
         });
     }
 
-    private static NotificationResponseDTO ToDto(NotificationEntity notification)
-    {
-        return new NotificationResponseDTO
-        {
-            NotificationId = notification.NotificationID,
-            NotificationType = notification.NotificationType,
-            Title = notification.Title,
-            Body = notification.Body,
-            SenderUserId = notification.SenderUserID,
-            ConversationId = notification.ConversationID,
-            MessageId = notification.MessageID,
-            RouteUrl = notification.RouteUrl,
-            IsRead = notification.IsRead,
-            CreatedAt = notification.CreatedAt,
-            ReadAt = notification.ReadAt
-        };
-    }
 }

@@ -1,29 +1,16 @@
 import { PostsListResponse, SearchRequest } from "../../types/api";
-import { apiRequest } from "./client";
-import { transformPostModelToProduct } from "./posts/mappers";
-import { RawPost } from "./posts/types";
+import { ApiRequestOptions, apiRequest } from "./client";
+import { transformPostModelToPost } from "./posts/mappers";
+import {
+  parsePaginationPayload,
+  parsePostsEnvelope,
+} from "./schemas/postSchema";
 
-interface PaginationPayload {
-  currentPage?: unknown;
-  totalPages?: unknown;
-  totalPosts?: unknown;
-  postsPerPage?: unknown;
-}
-
-interface SearchPayload {
-  success?: unknown;
-  posts?: RawPost[];
-  pagination?: PaginationPayload;
-}
+type SearchApiOptions = Pick<ApiRequestOptions, "signal" | "throwOnAbort">;
 
 function toPositiveInteger(value: unknown, fallback: number): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : fallback;
-}
-
-function toNonNegativeInteger(value: unknown, fallback: number): number {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? Math.trunc(parsed) : fallback;
 }
 
 function normalizeImages(images: unknown): string[] {
@@ -37,7 +24,10 @@ function normalizeImages(images: unknown): string[] {
 }
 
 export const searchApi = {
-  search: async (params: SearchRequest): Promise<PostsListResponse> => {
+  search: async (
+    params: SearchRequest,
+    options: SearchApiOptions = {},
+  ): Promise<PostsListResponse> => {
     const requestedPage = toPositiveInteger(params.page, 1);
     const requestedLimit = toPositiveInteger(params.limit, 20);
 
@@ -80,30 +70,37 @@ export const searchApi = {
     queryParams.set("limit", String(requestedLimit));
 
     const queryString = queryParams.toString();
-    const response = await apiRequest<SearchPayload>(
+    const response = await apiRequest<unknown>(
       `/search${queryString ? `?${queryString}` : ""}`,
-      { method: "GET" },
+      {
+        method: "GET",
+        signal: options.signal,
+        throwOnAbort: options.throwOnAbort,
+      },
     );
 
-    if (response.success && response.data && Array.isArray(response.data.posts)) {
-      const posts = response.data.posts.map((post, index) =>
-        transformPostModelToProduct(
+    const parsedPayload = response.success
+      ? parsePostsEnvelope(response.data)
+      : null;
+
+    if (parsedPayload) {
+      const posts = parsedPayload.posts.map((post, index) =>
+        transformPostModelToPost(
           post,
           normalizeImages(post?.images ?? post?.Images),
           index,
         ),
       );
-      const pagination = response.data.pagination;
 
       return {
         success: true,
         posts,
-        pagination: {
-          currentPage: toPositiveInteger(pagination?.currentPage, requestedPage),
-          totalPages: toNonNegativeInteger(pagination?.totalPages, 0),
-          totalPosts: toNonNegativeInteger(pagination?.totalPosts, posts.length),
-          postsPerPage: toPositiveInteger(pagination?.postsPerPage, requestedLimit),
-        },
+        pagination: parsePaginationPayload(
+          parsedPayload.pagination,
+          requestedPage,
+          requestedLimit,
+          posts.length,
+        ),
       };
     }
 

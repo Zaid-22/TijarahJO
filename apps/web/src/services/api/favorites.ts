@@ -1,31 +1,19 @@
-import { apiRequest } from "./client";
+import { ApiRequestOptions, apiRequest } from "./client";
+import {
+  parseFavoriteMutationSuccess,
+  parseFavoritesEnvelope,
+} from "./schemas/favoritesSchema";
 
-type FavoritesEnvelope = {
-  success?: boolean;
-  favorites?: Array<string | number>;
-};
+type FavoriteApiOptions = Pick<ApiRequestOptions, "signal" | "throwOnAbort">;
 
 function normalizePostId(postId: unknown): string {
   return String(postId ?? "").trim();
 }
 
-function normalizeFavoritesPayload(payload: FavoritesEnvelope | undefined): string[] {
-  if (!payload || payload.success !== true || !Array.isArray(payload.favorites)) {
-    return [];
-  }
-
-  return Array.from(
-    new Set(
-      payload.favorites
-        .map((value) => normalizePostId(value))
-        .filter((value) => value.length > 0),
-    ),
-  );
-}
-
 async function mutateFavorite(
   method: "POST" | "DELETE",
   postId: string,
+  options: FavoriteApiOptions = {},
 ): Promise<boolean> {
   const normalizedPostId = normalizePostId(postId);
   if (!normalizedPostId) {
@@ -37,34 +25,45 @@ async function mutateFavorite(
       ? "/favorites"
       : `/favorites/${encodeURIComponent(normalizedPostId)}`;
 
-  const response = await apiRequest<{ success?: boolean }>(endpoint, {
+  const response = await apiRequest<unknown>(endpoint, {
     method,
     body: method === "POST" ? JSON.stringify({ postId: normalizedPostId }) : undefined,
+    signal: options.signal,
+    throwOnAbort: options.throwOnAbort,
   });
 
-  return response.success && response.data?.success === true;
+  return response.success && parseFavoriteMutationSuccess(response.data);
 }
 
 export const favoritesApi = {
-  getFavorites: async (): Promise<string[]> => {
-    const response = await apiRequest<FavoritesEnvelope>("/favorites", {
+  getFavorites: async (options: FavoriteApiOptions = {}): Promise<string[]> => {
+    const response = await apiRequest<unknown>("/favorites", {
       method: "GET",
+      signal: options.signal,
+      throwOnAbort: options.throwOnAbort,
     });
 
     if (!response.success) {
       throw new Error(response.error?.message || "Failed to load favorites");
     }
 
-    if (response.data?.success === true && Array.isArray(response.data.favorites)) {
-      return normalizeFavoritesPayload(response.data);
+    const parsedPayload = parseFavoritesEnvelope(response.data);
+    if (parsedPayload?.success === true) {
+      return parsedPayload.favorites;
     }
 
     throw new Error("Invalid favorites response");
   },
 
-  addFavorite: async (postId: string): Promise<boolean> =>
-    mutateFavorite("POST", postId),
+  addFavorite: async (
+    postId: string,
+    options: FavoriteApiOptions = {},
+  ): Promise<boolean> =>
+    mutateFavorite("POST", postId, options),
 
-  removeFavorite: async (postId: string): Promise<boolean> =>
-    mutateFavorite("DELETE", postId),
+  removeFavorite: async (
+    postId: string,
+    options: FavoriteApiOptions = {},
+  ): Promise<boolean> =>
+    mutateFavorite("DELETE", postId, options),
 };

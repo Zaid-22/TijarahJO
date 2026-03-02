@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
-  transformPostModelToProduct,
+  transformPostModelToPost,
 } = require("../../.unit-dist/services/api/posts/mappers.js");
 const {
   normalizeChatMessage,
@@ -12,7 +12,7 @@ const {
 } = require("../../.unit-dist/utils/idValidation.js");
 
 test("post + chat integration keeps IDs and status normalized across modules", () => {
-  const product = transformPostModelToProduct({
+  const post = transformPostModelToPost({
     PostID: "200",
     UserID: "42",
     CategoryID: "7",
@@ -36,10 +36,10 @@ test("post + chat integration keeps IDs and status normalized across modules", (
     IsRead: false,
   });
 
-  assert.equal(product.id, "200");
-  assert.equal(product.sellerId, "42");
-  assert.equal(product.status, "SOLD");
-  assert.equal(toPositiveIntegerId(product.id), 200);
+  assert.equal(post.id, "200");
+  assert.equal(post.sellerId, "42");
+  assert.equal(post.status, "SOLD");
+  assert.equal(toPositiveIntegerId(post.id), 200);
 
   assert.ok(chatMessage);
   assert.equal(chatMessage.postId, 200);

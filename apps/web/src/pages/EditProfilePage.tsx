@@ -1,14 +1,15 @@
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { translations, Language } from "../translations";
 import { Button } from "../shared/ui/button";
-import { ArrowLeft, Save } from "lucide-react";
+import { Save } from "lucide-react";
+import { SubpageHeader } from "../shared/ui/subpage-header";
+import { PageShell } from "../shared/ui/page-shell";
 import { EditProfileFormSections } from "../features/profile/edit/EditProfileFormSections";
 import {
   applyProfileFieldChange,
   createInitialEditProfileForm,
-  JORDANIAN_CITIES,
   normalizeJordanPhoneInput,
   validateEditProfileForm,
 } from "../features/profile/edit/editProfileUtils";
@@ -16,6 +17,7 @@ import type {
   EditProfileFormProfile,
   EditProfileValidationErrors,
 } from "../features/profile/types";
+import { useLocationOptions } from "../shared/hooks/useLocationOptions";
 
 export type UserProfile = EditProfileFormProfile;
 
@@ -41,6 +43,40 @@ export function EditProfilePage({
   );
   const [hasChanges, setHasChanges] = useState(false);
   const [errors, setErrors] = useState<EditProfileValidationErrors>({});
+  const { cityNames, areaNames, isLoadingCities, isLoadingAreas } =
+    useLocationOptions(formData.city);
+  const cityOptions = useMemo(() => {
+    const normalizedOptionSet = new Set(
+      cityNames
+        .map((city) => city.trim().toLocaleLowerCase())
+        .filter((city) => city.length > 0),
+    );
+    const normalizedCurrentCity = formData.city.trim();
+    if (
+      normalizedCurrentCity &&
+      !normalizedOptionSet.has(normalizedCurrentCity.toLocaleLowerCase())
+    ) {
+      return [normalizedCurrentCity, ...cityNames];
+    }
+
+    return cityNames;
+  }, [cityNames, formData.city]);
+  const areaSuggestions = useMemo(() => {
+    const normalizedOptionSet = new Set(
+      areaNames
+        .map((area) => area.trim().toLocaleLowerCase())
+        .filter((area) => area.length > 0),
+    );
+    const normalizedCurrentArea = formData.area.trim();
+    if (
+      normalizedCurrentArea &&
+      !normalizedOptionSet.has(normalizedCurrentArea.toLocaleLowerCase())
+    ) {
+      return [normalizedCurrentArea, ...areaNames];
+    }
+
+    return areaNames;
+  }, [areaNames, formData.area]);
 
   const handleFieldChange = (field: keyof UserProfile, value: string) => {
     setFormData((current) => applyProfileFieldChange(current, field, value));
@@ -127,49 +163,39 @@ export function EditProfilePage({
   };
 
   return (
-    <div className="bg-gray-50 dark:bg-[#1a1a1a]">
-      <div className="sticky top-0 z-50 bg-white dark:bg-[#111111] shadow-sm border-b dark:border-gray-800">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                onClick={handleCancel}
-                className="text-[#0A4ABF] hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all duration-200 hover:scale-105 -ml-2"
-              >
-                <ArrowLeft className={`w-5 h-5 ${isRTL ? "ml-2" : "mr-2"}`} />
-                <span>{t.cancel || "Cancel"}</span>
-              </Button>
-              <h1 className="text-black dark:text-white">
-                {t.editProfile || "Edit Profile"}
-              </h1>
-            </div>
-
-            {hasChanges ? (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Button
-                  onClick={handleSave}
-                  className="bg-[#0A4ABF] text-white hover:bg-[#083a95]"
-                >
-                  <Save className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
-                  {t.saveChanges || "Save Changes"}
-                </Button>
-              </motion.div>
-            ) : null}
-          </div>
-        </div>
-      </div>
+    <PageShell tone="account">
+      <SubpageHeader
+        onBack={handleCancel}
+        isRTL={isRTL}
+        backLabel={t.cancel || "Cancel"}
+        showLogo={false}
+        title={t.editProfile || "Edit Profile"}
+        rightContent={hasChanges ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.2 }}
+          >
+            <Button
+              onClick={handleSave}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <Save className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+              {t.saveChanges || "Save Changes"}
+            </Button>
+          </motion.div>
+        ) : null}
+      />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <EditProfileFormSections
           language={language}
           formData={formData}
           errors={errors}
-          cities={JORDANIAN_CITIES}
+          cities={cityOptions}
+          areaSuggestions={areaSuggestions}
+          isLoadingCities={isLoadingCities}
+          isLoadingAreas={isLoadingAreas}
           hasChanges={hasChanges}
           fileInputRef={fileInputRef}
           onFieldChange={handleFieldChange}
@@ -181,6 +207,6 @@ export function EditProfilePage({
           onSave={handleSave}
         />
       </div>
-    </div>
+    </PageShell>
   );
 }

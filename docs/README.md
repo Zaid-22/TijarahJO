@@ -50,6 +50,7 @@ Frontend-focused implementation notes and QA matrices.
 - `setup/SETUP_NEW_COMPUTER_GUIDE.md`
 - `setup/QUICK_SETUP_CHECKLIST.md`
 - `setup/WILL_IT_WORK_ON_ANOTHER_COMPUTER.md`
+- `setup/PRODUCTION_DEPLOYMENT_DOCKER.md`
 - `setup/ENV_TEMPLATE.txt`
 - `setup/BACKEND_SETUP_STEP_BY_STEP.md`
 - `setup/DATABASE_SETUP_CHECKLIST.md`
@@ -82,6 +83,7 @@ Launch/readiness and PR quality checklists.
 ## Quick Navigation
 
 - Setup project: `setup/SETUP_NEW_COMPUTER_GUIDE.md`
+- Production containers: `setup/PRODUCTION_DEPLOYMENT_DOCKER.md`
 - Understand project integration: `reports/INTEGRATION_REPORT.md`
 - Backend docs index: `backend/README.md`
 - Frontend docs index: `frontend/README.md`

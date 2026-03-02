@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.Extensions.Caching.Memory;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Common;
 
@@ -6,14 +7,16 @@ namespace TijarahJoDB.DAL.Queries;
 
 public sealed class SearchReadService : ISearchReadService
 {
-    private readonly PostListingQueryService _postListingQueries;
+    private readonly IPostListingQueryService _postListingQueries;
+    private readonly IMemoryCache _cache;
 
-    public SearchReadService(PostListingQueryService postListingQueries)
+    public SearchReadService(IPostListingQueryService postListingQueries, IMemoryCache cache)
     {
         _postListingQueries = postListingQueries;
+        _cache = cache;
     }
 
-    public SearchResult Search(SearchQueryRequestModel query)
+    public async Task<SearchReadResult> SearchAsync(SearchQueryModel query, CancellationToken cancellationToken = default)
     {
         int page = query.Page.GetValueOrDefault(1);
         if (page < 1)
@@ -60,7 +63,7 @@ public sealed class SearchReadService : ISearchReadService
         {
             if (!PostStatusPolicy.TryNormalizeClientStatus(query.Status, out string normalizedStatus))
             {
-                throw new ArgumentException("Invalid status. Allowed values: ACTIVE, SOLD, DELETED.", nameof(query.Status));
+                throw new ArgumentException("Invalid status. Allowed values: ACTIVE, SOLD.", nameof(query.Status));
             }
 
             if (normalizedStatus == "ACTIVE")
@@ -73,11 +76,17 @@ public sealed class SearchReadService : ISearchReadService
             }
             else
             {
-                visibility = PostListingVisibilityMode.DeletedOnly;
+                throw new ArgumentException("Invalid status. Allowed values: ACTIVE, SOLD.", nameof(query.Status));
             }
         }
 
-        PostListingPageResult pageResult = _postListingQueries.Query(new PostListingQuery
+        string cacheKey = BuildCacheKey(query, page, limit, visibility, sortField, ascending, categoryId, categoryNameLike);
+        if (_cache.TryGetValue(cacheKey, out SearchReadResult? cachedResult) && cachedResult is not null)
+        {
+            return cachedResult;
+        }
+
+        PostListingPageResult pageResult = await _postListingQueries.QueryAsync(new PostListingQuery
         {
             Page = page,
             Limit = limit,
@@ -90,13 +99,13 @@ public sealed class SearchReadService : ISearchReadService
             CityLike = query.City,
             MinPrice = query.MinPrice,
             MaxPrice = query.MaxPrice
-        });
+        }, cancellationToken);
 
-        var posts = new List<SearchPostResult>();
+        var posts = new List<SearchPostReadModel>();
         foreach (PostListingRow row in pageResult.Posts)
         {
             IReadOnlyList<string> images = row.Images;
-            posts.Add(new SearchPostResult
+            posts.Add(new SearchPostReadModel
             {
                 Id = row.PostId.ToString(CultureInfo.InvariantCulture),
                 Name = row.PostTitle,
@@ -119,11 +128,11 @@ public sealed class SearchReadService : ISearchReadService
         }
 
         int totalPages = pageResult.TotalPosts > 0 ? (int)Math.Ceiling(pageResult.TotalPosts / (double)limit) : 0;
-        return new SearchResult
+        SearchReadResult result = new SearchReadResult
         {
             Success = true,
             Posts = posts,
-            Pagination = new SearchPaginationResult
+            Pagination = new SearchPaginationReadModel
             {
                 CurrentPage = page,
                 TotalPages = totalPages,
@@ -131,5 +140,41 @@ public sealed class SearchReadService : ISearchReadService
                 PostsPerPage = limit
             }
         };
+
+        _cache.Set(
+            cacheKey,
+            result,
+            new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30)
+            });
+
+        return result;
+    }
+
+    private static string BuildCacheKey(
+        SearchQueryModel query,
+        int page,
+        int limit,
+        PostListingVisibilityMode visibility,
+        PostListingSortField sortField,
+        bool ascending,
+        int? categoryId,
+        string? categoryNameLike)
+    {
+        return string.Join('|',
+            "search",
+            page,
+            limit,
+            visibility,
+            sortField,
+            ascending,
+            query.Query?.Trim() ?? string.Empty,
+            categoryId?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+            categoryNameLike?.Trim() ?? string.Empty,
+            query.City?.Trim() ?? string.Empty,
+            query.MinPrice?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+            query.MaxPrice?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+            query.Status?.Trim() ?? string.Empty);
     }
 }

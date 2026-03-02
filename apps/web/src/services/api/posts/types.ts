@@ -1,10 +1,15 @@
-import { Product } from "../../../types";
+import { Post } from "../../../types";
 
 export interface RawPostImage {
   PostID?: unknown;
+  postId?: unknown;
   PostImageID?: unknown;
+  postImageID?: unknown;
+  postImageId?: unknown;
   PostImageURL?: unknown;
+  postImageURL?: unknown;
   IsDeleted?: unknown;
+  isDeleted?: unknown;
 }
 
 export interface RawCategory {
@@ -58,10 +63,17 @@ export interface RawPost {
   Location?: unknown;
   location?: unknown;
   City?: unknown;
+  city?: unknown;
+  CityId?: unknown;
+  cityId?: unknown;
   Area?: unknown;
   area?: unknown;
+  AreaId?: unknown;
+  areaId?: unknown;
   PostImageURL?: unknown;
   postImageURL?: unknown;
+  Image?: unknown;
+  image?: unknown;
   Images?: unknown;
   images?: unknown;
   CreatedAt?: unknown;
@@ -73,4 +85,4 @@ export interface RawPost {
   IsDeleted?: unknown;
 }
 
-export type ProductStatus = NonNullable<Product["status"]>;
+export type PostStatus = NonNullable<Post["status"]>;

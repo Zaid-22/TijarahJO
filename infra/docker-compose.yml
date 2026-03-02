@@ -11,5 +11,12 @@ services:
     volumes:
       - mssql_data:/var/opt/mssql
 
+  redis:
+    container_name: tijarahjo-redis
+    image: redis:alpine
+    restart: always
+    ports:
+      - "6379:6379"
+
 volumes:
   mssql_data:

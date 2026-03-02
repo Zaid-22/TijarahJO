@@ -1,4 +1,4 @@
-import type { Product } from "../../types";
+import type { Post } from "../../types";
 import type { ProfilePageUserProfile } from "./types";
 
 function normalizeValue(value: unknown): string {
@@ -10,13 +10,13 @@ function normalizeLowercase(value: unknown): string {
 }
 
 export interface ProfileListingsResult {
-  activeListings: Product[];
-  soldListings: Product[];
+  activeListings: Post[];
+  soldListings: Post[];
   normalizedCurrentUserId: string;
 }
 
 export function getProfileListings(
-  products: Product[],
+  posts: Post[],
   userProfile: ProfilePageUserProfile,
   currentUserDisplayName?: string,
 ): ProfileListingsResult {
@@ -26,9 +26,9 @@ export function getProfileListings(
   );
   const normalizedProfileName = normalizeLowercase(userProfile.name);
 
-  const myProducts = products.filter((product) => {
-    const normalizedSellerId = normalizeValue(product.sellerId);
-    const normalizedSellerName = normalizeLowercase(product.seller);
+  const myPosts = posts.filter((post) => {
+    const normalizedSellerId = normalizeValue(post.sellerId);
+    const normalizedSellerName = normalizeLowercase(post.seller);
 
     return (
       (normalizedCurrentUserId.length > 0 &&
@@ -41,10 +41,10 @@ export function getProfileListings(
   });
 
   return {
-    activeListings: myProducts.filter(
-      (product) => product.status !== "SOLD" && product.status !== "DELETED",
+    activeListings: myPosts.filter(
+      (post) => post.status !== "SOLD" && post.status !== "DELETED",
     ),
-    soldListings: myProducts.filter((product) => product.status === "SOLD"),
+    soldListings: myPosts.filter((post) => post.status === "SOLD"),
     normalizedCurrentUserId,
   };
 }

@@ -1,23 +1,24 @@
 import { APP_CONFIG } from "../../constants/appConfig";
 import { categoryNameToArabic } from "../../data/categoryTranslations";
-import { Language, Product, UserProfile } from "../../types";
+import { Language, Post, UserProfile } from "../../types";
+import type { PostImageInput } from "../../types/api";
 import type {
   EditProfileFormProfile,
   ProfilePageUserProfile,
 } from "../../features/profile/types";
 
-const PRODUCT_DATA_ROUTE_PATTERNS = [
+const POST_DATA_ROUTE_PATTERNS = [
   /^\/$/,
   /^\/favorites$/,
-  /^\/products$/,
+  /^\/posts$/,
   /^\/search$/,
   /^\/profile$/,
   /^\/category\/[^/]+$/,
 ];
 
 const FAVORITES_DATA_ROUTE_PATTERNS = [
-  ...PRODUCT_DATA_ROUTE_PATTERNS,
-  /^\/product\/[^/]+$/,
+  ...POST_DATA_ROUTE_PATTERNS,
+  /^\/post\/[^/]+$/,
 ];
 
 export type CreatePostInput = {
@@ -28,8 +29,12 @@ export type CreatePostInput = {
   location?: string;
   area?: string;
   image?: string;
-  images?: string[];
+  images?: PostImageInput[];
 };
+
+function isFileInput(value: unknown): value is File {
+  return typeof File !== "undefined" && value instanceof File;
+}
 
 interface LoginUserData {
   id?: string;
@@ -53,10 +58,10 @@ function matchesAnyRoutePattern(
   return patterns.some((pattern) => pattern.test(pathname));
 }
 
-export function shouldLoadProductsForPath(pathname: string): boolean {
+export function shouldLoadPostsForPath(pathname: string): boolean {
   return matchesAnyRoutePattern(
     normalizePathname(pathname),
-    PRODUCT_DATA_ROUTE_PATTERNS,
+    POST_DATA_ROUTE_PATTERNS,
   );
 }
 
@@ -128,24 +133,25 @@ const resolvePostPhone = (userProfile: UserProfile): string => {
 };
 
 export const buildCreatePostPayload = (
-  product: CreatePostInput,
+  post: CreatePostInput,
   userProfile: UserProfile,
 ) => ({
-  images: (product.images?.length ? product.images : [product.image]).filter(
-    (value): value is string =>
-      typeof value === "string" && value.trim().length > 0,
+  images: (post.images?.length ? post.images : [post.image]).filter(
+    (value): value is PostImageInput =>
+      (typeof value === "string" && value.trim().length > 0) ||
+      isFileInput(value),
   ),
-  title: product.name,
-  description: product.description || "",
-  price: product.price,
-  category: product.category,
-  city: resolvePostCity(userProfile, product.location),
-  area: resolvePostArea(userProfile, product.area),
+  title: post.name,
+  description: post.description || "",
+  price: post.price,
+  category: post.category,
+  city: resolvePostCity(userProfile, post.location),
+  area: resolvePostArea(userProfile, post.area),
   phone: resolvePostPhone(userProfile),
 });
 
-export const isOwnProductForUser = (
-  product: Product,
+export const isOwnPostForUser = (
+  post: Post,
   userProfile: UserProfile,
   isAuthenticated: boolean,
 ): boolean => {
@@ -153,7 +159,7 @@ export const isOwnProductForUser = (
     return false;
   }
 
-  const normalizedSellerName = String(product.seller || "")
+  const normalizedSellerName = String(post.seller || "")
     .trim()
     .toLowerCase();
   const normalizedCurrentUserDisplayName = String(userProfile.name || "")
@@ -161,7 +167,7 @@ export const isOwnProductForUser = (
     .toLowerCase();
 
   return (
-    product.sellerId === userProfile.id ||
+    post.sellerId === userProfile.id ||
     (normalizedSellerName.length > 0 &&
       normalizedSellerName === normalizedCurrentUserDisplayName)
   );

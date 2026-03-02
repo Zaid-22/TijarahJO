@@ -1,6 +1,7 @@
-import { Product } from "../../../types";
+import { Post } from "../../../types";
 import { apiRequest } from "../client";
-import { transformPostModelToProduct } from "./mappers";
+import { parseRawPost, parseRawPostsCollection } from "../schemas/postSchema";
+import { transformPostModelToPost } from "./mappers";
 import { RawPost } from "./types";
 import {
   getPostImagesByPostId,
@@ -34,34 +35,39 @@ function postHasEmbeddedImages(post: RawPost): boolean {
   return singleImageCandidate.trim().length > 0;
 }
 
-export async function getPostById(id: string): Promise<Product | null> {
-  const response = await apiRequest<RawPost>(`/posts/${id}`, {
+export async function getPostById(id: string): Promise<Post | null> {
+  const response = await apiRequest<unknown>(`/posts/${id}`, {
     method: "GET",
   });
 
-  if (response.success && response.data) {
+  const parsedPost = response.success ? parseRawPost(response.data) : null;
+  if (parsedPost) {
     const postImages = await getPostImagesByPostId(id);
 
     const enrichedPost = await enrichPostsWithCategoryAndSeller([
-      response.data,
+      parsedPost,
     ]);
-    const enrichedPostData = enrichedPost[0] || response.data;
+    const enrichedPostData = enrichedPost[0] || parsedPost;
 
-    return transformPostModelToProduct(enrichedPostData, postImages);
+    return transformPostModelToPost(enrichedPostData, postImages);
   }
 
   return null;
 }
 
-export async function getPostsByUserId(userId: string): Promise<Product[]> {
-  const response = await apiRequest<RawPost[]>(`/posts/user/${userId}`, {
+export async function getPostsByUserId(userId: string): Promise<Post[]> {
+  const response = await apiRequest<unknown>(`/posts/user/${userId}`, {
     method: "GET",
   });
 
-  if (response.success && response.data && Array.isArray(response.data)) {
+  const parsedPosts = response.success
+    ? parseRawPostsCollection(response.data)
+    : [];
+
+  if (parsedPosts.length > 0) {
     const missingImagePostIds = Array.from(
       new Set(
-        response.data
+        parsedPosts
           .filter((post) => !postHasEmbeddedImages(post))
           .map((post) => getPostId(post))
           .filter((postId) => postId.length > 0),
@@ -76,13 +82,17 @@ export async function getPostsByUserId(userId: string): Promise<Product[]> {
     );
     const imagesByPostId = Object.fromEntries(imageEntries);
 
-    return response.data.map((post, index) =>
-      transformPostModelToProduct(
+    return parsedPosts.map((post, index) =>
+      transformPostModelToPost(
         post,
         imagesByPostId[getPostId(post)] || [],
         index,
       ),
     );
+  }
+
+  if (response.success && Array.isArray(response.data)) {
+    return [];
   }
 
   return [];

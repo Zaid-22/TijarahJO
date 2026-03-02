@@ -36,7 +36,7 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0a0a0a] p-4">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black p-4">
           <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
               <svg
@@ -84,9 +84,9 @@ export class ErrorBoundary extends Component<Props, State> {
                 Try Again
               </button>
               <button
-                onClick={() => window.location.reload()}
                 type="button"
-                className="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium bg-[#0A4ABF] text-white hover:bg-[#083a95]"
+                onClick={() => window.location.reload()}
+                className="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium bg-primary text-white hover:bg-primary/90"
               >
                 Refresh Page
               </button>

@@ -1,0 +1,44 @@
+name: Frontend Storybook Governance
+
+on:
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - ".github/workflows/frontend-storybook-governance.yml"
+      - ".github/pull_request_template.md"
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/web/**"
+      - ".github/workflows/frontend-storybook-governance.yml"
+      - ".github/pull_request_template.md"
+
+permissions:
+  contents: read
+
+jobs:
+  storybook-governance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "apps/web/package-lock.json"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate Storybook workflow baseline
+        run: npm run storybook:check
+

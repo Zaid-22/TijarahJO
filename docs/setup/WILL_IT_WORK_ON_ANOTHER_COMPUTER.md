@@ -40,7 +40,7 @@
 
 1. Create database: `CREATE DATABASE TijarahJoDB;`
 2. From repo root run: `./scripts/bootstrap_db.sh` (recommended).
-3. Manual fallback: run `apps/api/database/bundles/schema.sql`, then `apps/api/database/bundles/migrations.sql`, then `apps/api/database/bundles/procedures.sql` (optional: `apps/api/database/bundles/seed_data.sql`).
+3. Manual fallback: run `apps/api/database/bundles/schema.sql`, then `apps/api/database/bundles/migrations.sql` (optional: `apps/api/database/bundles/seed_data.sql`).
 
 ### 4. Configure Backend
 
@@ -70,7 +70,7 @@ export DB_PASSWORD=YourPassword
 
 Create `.env` file in `apps/web/`:
 ```
-VITE_API_BASE_URL=http://localhost:5033/api
+VITE_API_BASE_URL=http://localhost:5033/api/v1
 ```
 
 ### 6. Install Dependencies
