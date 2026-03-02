@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TijarahJoDB.Application.Abstractions.DataAccess;
 using TijarahJoDB.Application.Abstractions.Services;
@@ -11,12 +12,14 @@ namespace TijarahJoDB.Bootstrap;
 
 public static class InfrastructureServiceCollectionExtensions
 {
-    public static IServiceCollection AddTijarahJoInfrastructure(this IServiceCollection services)
+    public static IServiceCollection AddTijarahJoInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
         string connectionString;
         try
         {
-            connectionString = DataAccessSettings.ConnectionString;
+            connectionString = DataAccessSettings.ResolveConnectionString(configuration);
         }
         catch (Exception ex)
         {
@@ -41,6 +44,9 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IReviewDataAccess, ReviewDataAccessAdapter>();
         services.AddScoped<IAdminDataAccess, AdminDataAccessAdapter>();
 
+        // Register the resolved connection string so raw-SQL services can inject it.
+        services.AddSingleton(new DatabaseConnectionString(connectionString));
+
         services.AddScoped<IPostListingQueryService, PostListingQueryService>();
         services.AddScoped<ISearchReadService, SearchReadService>();
         services.AddScoped<ISellerReadService, SellerReadService>();
@@ -49,4 +55,14 @@ public static class InfrastructureServiceCollectionExtensions
 
         return services;
     }
+}
+
+/// <summary>
+/// Strongly-typed wrapper for injecting the resolved connection string
+/// into services that use raw SQL (e.g. PostListingQueryService).
+/// </summary>
+public sealed class DatabaseConnectionString
+{
+    public string Value { get; }
+    public DatabaseConnectionString(string value) => Value = value;
 }
