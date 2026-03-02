@@ -145,7 +145,7 @@ public sealed class AuthCommandService : IAuthCommandService
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(command.Avatar) && !IsValidAvatarUrl(command.Avatar))
+        if (!string.IsNullOrWhiteSpace(command.Avatar) && !ValidationHelpers.IsValidAvatarUrl(command.Avatar))
         {
             return Failure(AuthCommandFailureReason.InvalidRequest, "Avatar must be a valid http or https URL.");
         }
@@ -486,11 +486,7 @@ public sealed class AuthCommandService : IAuthCommandService
         return $"phone_{digitsOnly}@tijarahjo.local";
     }
 
-    private static bool IsValidAvatarUrl(string avatar)
-    {
-        return Uri.TryCreate(avatar.Trim(), UriKind.Absolute, out Uri? uri)
-               && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
-    }
+
 
     private async Task<string?> ResolveRoleNameForTokenAsync(int roleId, CancellationToken cancellationToken)
     {
@@ -526,7 +522,7 @@ public sealed class AuthCommandService : IAuthCommandService
 
         if (string.IsNullOrWhiteSpace(user.Avatar) &&
             !string.IsNullOrWhiteSpace(avatar) &&
-            IsValidAvatarUrl(avatar))
+            ValidationHelpers.IsValidAvatarUrl(avatar))
         {
             user.Avatar = avatar.Trim();
             changed = true;

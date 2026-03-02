@@ -105,7 +105,7 @@ public sealed class PostMutationService : IPostMutationService
             return Failure(PostMutationFailureReason.Forbidden, "You can only delete your own posts.");
         }
 
-        bool deleted = await _posts.DeletePostAsync(postId, cancellationToken);
+        bool deleted = await _posts.DeletePostAsync(postId, actorUserId, cancellationToken);
         if (!deleted)
         {
             return Failure(PostMutationFailureReason.PersistenceFailed, "Failed to delete post.");

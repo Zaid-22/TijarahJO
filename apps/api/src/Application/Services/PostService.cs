@@ -40,8 +40,8 @@ public sealed class PostService : IPostService
         return await _posts.UpdatePostAsync(post.PostModel, cancellationToken);
     }
 
-    public Task<bool> DeletePostAsync(int? postId, CancellationToken cancellationToken = default)
-        => _posts.DeletePostAsync(postId, cancellationToken);
+    public Task<bool> DeletePostAsync(int? postId, int actorUserId, CancellationToken cancellationToken = default)
+        => _posts.DeletePostAsync(postId, actorUserId, cancellationToken);
 
     public Task<bool> DoesPostExistAsync(int? postId, CancellationToken cancellationToken = default)
         => _posts.DoesPostExistAsync(postId, cancellationToken);

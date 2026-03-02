@@ -56,13 +56,3 @@ public static class InfrastructureServiceCollectionExtensions
         return services;
     }
 }
-
-/// <summary>
-/// Strongly-typed wrapper for injecting the resolved connection string
-/// into services that use raw SQL (e.g. PostListingQueryService).
-/// </summary>
-public sealed class DatabaseConnectionString
-{
-    public string Value { get; }
-    public DatabaseConnectionString(string value) => Value = value;
-}

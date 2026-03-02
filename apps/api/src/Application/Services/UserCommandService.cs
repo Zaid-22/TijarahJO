@@ -35,7 +35,7 @@ public sealed class UserCommandService : IUserCommandService
             return Failure(UserCommandFailureReason.InvalidStatus, $"Invalid status. Allowed values: {UserStatusPolicy.AllowedStatusIds}.");
         }
 
-        if (!string.IsNullOrWhiteSpace(command.Avatar) && !IsValidAvatarUrl(command.Avatar))
+        if (!string.IsNullOrWhiteSpace(command.Avatar) && !ValidationHelpers.IsValidAvatarUrl(command.Avatar))
         {
             return Failure(UserCommandFailureReason.InvalidRequest, "Avatar must be a valid http or https URL.");
         }
@@ -153,7 +153,7 @@ public sealed class UserCommandService : IUserCommandService
 
         if (command.Avatar != null)
         {
-            if (!string.IsNullOrWhiteSpace(command.Avatar) && !IsValidAvatarUrl(command.Avatar))
+            if (!string.IsNullOrWhiteSpace(command.Avatar) && !ValidationHelpers.IsValidAvatarUrl(command.Avatar))
             {
                 return Failure(UserCommandFailureReason.InvalidRequest, "Avatar must be a valid http or https URL.");
             }
@@ -225,12 +225,6 @@ public sealed class UserCommandService : IUserCommandService
             Success = true,
             User = user
         };
-    }
-
-    private static bool IsValidAvatarUrl(string avatar)
-    {
-        return Uri.TryCreate(avatar.Trim(), UriKind.Absolute, out Uri? uri)
-               && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     }
 
     private static bool IsValidRegisterCommand(RegisterUserCommand command, out string? invalidMessage)

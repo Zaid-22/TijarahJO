@@ -87,7 +87,7 @@ public sealed class PostDataAccessAdapter : IPostDataAccess
         return await _dbContext.SaveChangesAsync(cancellationToken) > 0;
     }
 
-    public async Task<bool> DeletePostAsync(int? postId, CancellationToken cancellationToken = default)
+    public async Task<bool> DeletePostAsync(int? postId, int actorUserId, CancellationToken cancellationToken = default)
     {
         if (!postId.HasValue || postId.Value < 1)
         {
@@ -110,7 +110,7 @@ public sealed class PostDataAccessAdapter : IPostDataAccess
         {
             post.IsDeleted = true;
 
-            _dbContext.AuditActorUserId = post.UserID > 0 ? post.UserID : null;
+            _dbContext.AuditActorUserId = actorUserId > 0 ? actorUserId : (post.UserID > 0 ? post.UserID : null);
             await _dbContext.PostImages
                 .Where(item => item.PostID == postId.Value && !item.IsDeleted)
                 .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.IsDeleted, true), cancellationToken);

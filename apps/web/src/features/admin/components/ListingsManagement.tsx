@@ -9,6 +9,8 @@ import { AdminPostListResult } from "../../../services/api/admin";
 import { ConfirmActionDialog } from "../../../shared/ui/confirm-action-dialog";
 import { logger } from "../../../shared/lib/logger";
 import { exportToCsv } from "../utils/exportCsv";
+import { ListingDetailModal } from "./ListingDetailModal";
+import { useAdminKeyboardShortcuts } from "../hooks/useAdminKeyboardShortcuts";
 
 export function ListingsManagement() {
   const [postsResult, setPostsResult] = useState<AdminPostListResult>({
@@ -28,6 +30,15 @@ export function ListingsManagement() {
     newStatus: number;
     label: string;
   } | null>(null);
+
+  // Bulk actions state
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  // Listing detail modal
+  const [detailPost, setDetailPost] = useState<
+    AdminPostListResult["posts"][0] | null
+  >(null);
+  // j/k navigation
+  const [focusedIndex, setFocusedIndex] = useState(-1);
 
   const fetchPosts = async (currentPage: number, currentStatus?: number) => {
     try {
@@ -116,6 +127,62 @@ export function ListingsManagement() {
       post.sellerName.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
+  // Bulk select helpers
+  const allSelected =
+    filteredPosts.length > 0 &&
+    filteredPosts.every((p) => selectedIds.has(p.postId));
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredPosts.map((p) => p.postId)));
+    }
+  };
+
+  const handleBulkBlock = async () => {
+    try {
+      for (const id of selectedIds) {
+        await api.admin.updatePostStatus(id, 1);
+      }
+      toast.success(`Blocked ${selectedIds.size} listings`);
+      setSelectedIds(new Set());
+      await fetchPosts(page, statusFilter);
+    } catch {
+      toast.error("Failed to bulk block listings");
+    }
+  };
+
+  // j/k keyboard navigation
+  useAdminKeyboardShortcuts([
+    {
+      key: "j",
+      handler: () =>
+        setFocusedIndex((prev) => Math.min(prev + 1, filteredPosts.length - 1)),
+      ignoreInputs: true,
+    },
+    {
+      key: "k",
+      handler: () => setFocusedIndex((prev) => Math.max(prev - 1, 0)),
+      ignoreInputs: true,
+    },
+    {
+      key: "Enter",
+      handler: () => {
+        if (focusedIndex >= 0 && focusedIndex < filteredPosts.length)
+          setDetailPost(filteredPosts[focusedIndex]);
+      },
+      ignoreInputs: true,
+    },
+  ]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between gap-4 items-center">
@@ -175,6 +242,15 @@ export function ListingsManagement() {
           <table className="w-full text-sm text-left">
             <thead className="text-xs uppercase bg-muted text-muted-foreground sticky top-0">
               <tr>
+                <th scope="col" className="px-3 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleSelectAll}
+                    className="rounded border-border"
+                    aria-label="Select all listings"
+                  />
+                </th>
                 <th scope="col" className="px-6 py-3">
                   ID
                 </th>
@@ -202,7 +278,7 @@ export function ListingsManagement() {
               {isLoading ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-6 py-12 text-center text-muted-foreground"
                   >
                     <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -211,18 +287,27 @@ export function ListingsManagement() {
               ) : filteredPosts.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-6 py-8 text-center text-muted-foreground"
                   >
                     No listings found.
                   </td>
                 </tr>
               ) : (
-                filteredPosts.map((post) => (
+                filteredPosts.map((post, idx) => (
                   <tr
                     key={post.postId}
-                    className="border-b border-border hover:bg-muted/50 transition-colors"
+                    className={`border-b border-border hover:bg-muted/50 transition-colors ${focusedIndex === idx ? "ring-2 ring-primary ring-inset" : ""}`}
                   >
+                    <td className="px-3 py-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(post.postId)}
+                        onChange={() => toggleSelect(post.postId)}
+                        className="rounded border-border"
+                        aria-label={`Select listing ${post.title}`}
+                      />
+                    </td>
                     <td className="px-6 py-4 font-medium">{post.postId}</td>
                     <td
                       className="px-6 py-4 font-medium text-foreground max-w-[200px] truncate"
@@ -241,11 +326,9 @@ export function ListingsManagement() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          title="View Post"
-                          aria-label={`View Post ${post.title}`}
-                          onClick={() =>
-                            window.open(`/post/${post.postId}`, "_blank")
-                          }
+                          title="View Details"
+                          aria-label={`View Details ${post.title}`}
+                          onClick={() => setDetailPost(post)}
                         >
                           <Eye className="w-4 h-4 text-muted-foreground" />
                         </Button>
@@ -336,6 +419,50 @@ export function ListingsManagement() {
         confirmLabel="Confirm"
         onConfirm={handleUpdateStatus}
       />
+
+      {/* Listing Detail Modal */}
+      <ListingDetailModal
+        post={detailPost}
+        open={detailPost !== null}
+        onOpenChange={(open) => {
+          if (!open) setDetailPost(null);
+        }}
+        onBlock={(id) =>
+          setActionPost({
+            id,
+            title: detailPost?.title || "",
+            newStatus: 1,
+            label: "Blocked",
+          })
+        }
+        onApprove={(id) =>
+          setActionPost({
+            id,
+            title: detailPost?.title || "",
+            newStatus: 0,
+            label: "Active",
+          })
+        }
+      />
+
+      {/* Floating Bulk Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-card border border-border rounded-lg shadow-lg px-6 py-3 flex items-center gap-4">
+          <span className="text-sm font-medium">
+            {selectedIds.size} selected
+          </span>
+          <Button variant="destructive" size="sm" onClick={handleBulkBlock}>
+            <Ban className="w-3.5 h-3.5 mr-1.5" /> Bulk Block
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            Clear
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 using TijarahJoDBAPI.Common.Services;
 using TijarahJoDB.DAL.Queries;
+using TijarahJoDB_DataAccess;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace TijarahJoDBAPI.Tests;
@@ -7,7 +8,7 @@ namespace TijarahJoDBAPI.Tests;
 public sealed class PostsFeedServiceTests
 {
     private readonly PostsFeedService _service = new(
-        new PostListingQueryService(),
+        new PostListingQueryService(new DatabaseConnectionString("Data Source=fake;Database=fake;")),
         new MemoryCache(new MemoryCacheOptions())
     );
 

@@ -122,7 +122,7 @@ public sealed class PostReadServiceTests
         public Task<bool> SaveAsync(Post post, CancellationToken cancellationToken = default)
             => Task.FromResult(true);
 
-        public Task<bool> DeletePostAsync(int? postId, CancellationToken cancellationToken = default)
+        public Task<bool> DeletePostAsync(int? postId, int actorUserId, CancellationToken cancellationToken = default)
             => Task.FromResult(true);
 
         public Task<bool> DoesPostExistAsync(int? postId, CancellationToken cancellationToken = default)
