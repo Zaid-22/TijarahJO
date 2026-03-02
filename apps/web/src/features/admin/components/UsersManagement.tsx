@@ -5,12 +5,12 @@ import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
 import { api } from "../../../services/api";
 import { AdminUserRecord } from "../../../services/api/users";
-import { ConfirmActionDialog } from "../../../shared/ui/confirm-action-dialog";
 import { CreateUserDialog } from "./users/CreateUserDialog";
 import { UsersTable } from "./users/UsersTable";
 import { CreateUserForm, initialCreateUserForm } from "./users/types";
 import { logger } from "../../../shared/lib/logger";
 import { useNavigate } from "react-router-dom";
+import { TypeToConfirmDialog } from "../../../shared/ui/type-to-confirm-dialog";
 
 function formatJoinedDate(dateValue?: string): string {
   if (!dateValue) {
@@ -260,20 +260,25 @@ export function UsersManagement() {
         }}
       />
 
-      <ConfirmActionDialog
+      <TypeToConfirmDialog
         open={pendingDeleteUser !== null}
         onOpenChange={(open) => {
           if (!open) {
             setPendingDeleteUser(null);
           }
         }}
-        title="Delete user?"
+        title="Delete User"
         description={
           pendingDeleteUser
             ? `Delete user "${pendingDeleteUser.displayName}"? This action cannot be undone.`
             : ""
         }
-        confirmLabel="Delete"
+        impactItems={[
+          "All active listings",
+          "All chat conversations",
+          "All submitted reviews",
+        ]}
+        confirmPhrase="DELETE"
         onConfirm={() => {
           if (!pendingDeleteUser) {
             return;
