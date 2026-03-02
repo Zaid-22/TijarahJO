@@ -32,6 +32,8 @@ interface UsersTableProps {
   onDeleteRequest: (user: AdminUserRecord) => void;
   onViewDetails: (userId: string) => void;
   formatJoinedDate: (value?: string) => string;
+  selectedIds?: Set<string>;
+  onSelectionChange?: (ids: Set<string>) => void;
 }
 
 export function UsersTable({
@@ -41,12 +43,51 @@ export function UsersTable({
   onDeleteRequest,
   onViewDetails,
   formatJoinedDate,
+  selectedIds,
+  onSelectionChange,
 }: UsersTableProps) {
+  const selectable =
+    selectedIds !== undefined && onSelectionChange !== undefined;
+
+  const allSelected =
+    selectable && users.length > 0 && users.every((u) => selectedIds.has(u.id));
+
+  const toggleAll = () => {
+    if (!onSelectionChange) return;
+    if (allSelected) {
+      onSelectionChange(new Set());
+    } else {
+      onSelectionChange(new Set(users.map((u) => u.id)));
+    }
+  };
+
+  const toggleOne = (id: string) => {
+    if (!onSelectionChange || !selectedIds) return;
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    onSelectionChange(next);
+  };
+
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
       <Table>
         <TableHeader>
           <TableRow>
+            {selectable && (
+              <TableHead className="w-10">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={toggleAll}
+                  aria-label="Select all users"
+                  className="h-4 w-4 rounded border-border"
+                />
+              </TableHead>
+            )}
             <TableHead>User</TableHead>
             <TableHead>Joined</TableHead>
             <TableHead>Role</TableHead>
@@ -58,7 +99,7 @@ export function UsersTable({
           {users.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={5}
+                colSpan={selectable ? 6 : 5}
                 className="py-8 text-center text-muted-foreground"
               >
                 No users found
@@ -66,7 +107,23 @@ export function UsersTable({
             </TableRow>
           ) : (
             users.map((user) => (
-              <TableRow key={user.id}>
+              <TableRow
+                key={user.id}
+                className={
+                  selectable && selectedIds?.has(user.id) ? "bg-primary/5" : ""
+                }
+              >
+                {selectable && (
+                  <TableCell>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds?.has(user.id) ?? false}
+                      onChange={() => toggleOne(user.id)}
+                      aria-label={`Select ${user.name || user.email}`}
+                      className="h-4 w-4 rounded border-border"
+                    />
+                  </TableCell>
+                )}
                 <TableCell>
                   <div className="flex flex-col">
                     <span className="font-medium text-foreground">

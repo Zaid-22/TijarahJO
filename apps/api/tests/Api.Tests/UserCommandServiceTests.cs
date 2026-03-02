@@ -327,9 +327,10 @@ public sealed class UserCommandServiceTests
 
         var users = new FakeUserDataAccess(findUserReturnsNull ? null : model);
         var roles = new FakeRoleService();
+        var locations = new FakeLocationReadService();
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<UserCommandService>.Instance;
 
-        return new UserCommandService(users, roles, logger);
+        return new UserCommandService(users, roles, locations, logger);
     }
 
     // -------------------------------------------------------------------------
@@ -387,5 +388,21 @@ public sealed class UserCommandServiceTests
 
         public Task<bool> DoesRoleExistAsync(int? roleId, CancellationToken ct = default)
             => Task.FromResult(true);
+    }
+
+    private sealed class FakeLocationReadService : ILocationReadService
+    {
+        public Task<IReadOnlyList<CityLookupResult>> GetCitiesAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<CityLookupResult>>(new[]
+            {
+                new CityLookupResult { CityId = 1, CityName = "Amman" },
+                new CityLookupResult { CityId = 2, CityName = "Irbid" }
+            });
+
+        public Task<IReadOnlyList<AreaLookupResult>> GetAreasByCityAsync(int cityId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<AreaLookupResult>>(new[]
+            {
+                new AreaLookupResult { AreaId = 10, AreaName = "Downtown", CityId = cityId }
+            });
     }
 }

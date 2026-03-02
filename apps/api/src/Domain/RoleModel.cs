@@ -2,7 +2,7 @@ using System;
 
 namespace TijarahJo.Domain.Models;
 
-    public class RoleModel
+    public record RoleModel
     {
         public RoleModel(int? roleid, string rolename, DateTime createdat, bool isdeleted)
         {
@@ -12,8 +12,8 @@ namespace TijarahJo.Domain.Models;
             this.IsDeleted = isdeleted;
         }
 
-        public int? RoleID { get; set; }
-        public string RoleName { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public bool IsDeleted { get; set; }
+        public int? RoleID { get; init; }
+        public string RoleName { get; init; }
+        public DateTime CreatedAt { get; init; }
+        public bool IsDeleted { get; init; }
     }

@@ -1,4 +1,3 @@
-/* eslint-disable jsx-a11y/no-static-element-interactions */
 import { useEffect, useState } from "react";
 import {
   MapPin,
@@ -205,7 +204,9 @@ export function LocationsManagement() {
                   </div>
                   <div
                     className="flex items-center gap-2"
+                    role="toolbar"
                     onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
                   >
                     <Button
                       variant="ghost"

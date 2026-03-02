@@ -13,12 +13,14 @@ public sealed class UserCommandService : IUserCommandService
 
     private readonly IUserDataAccess _users;
     private readonly IRoleService _roles;
+    private readonly ILocationReadService _locations;
     private readonly ILogger<UserCommandService> _logger;
 
-    public UserCommandService(IUserDataAccess users, IRoleService roles, ILogger<UserCommandService> logger)
+    public UserCommandService(IUserDataAccess users, IRoleService roles, ILocationReadService locations, ILogger<UserCommandService> logger)
     {
         _users = users;
         _roles = roles;
+        _locations = locations;
         _logger = logger;
     }
 
@@ -71,7 +73,7 @@ public sealed class UserCommandService : IUserCommandService
         {
             return Failure(UserCommandFailureReason.PersistenceFailed, "Error adding user.");
         }
-        user.UserID = newUserId;
+        user = user with { UserID = newUserId };
 
         return new UserCommandResult
         {
@@ -100,27 +102,27 @@ public sealed class UserCommandService : IUserCommandService
 
         if (!string.IsNullOrWhiteSpace(command.Password))
         {
-            user.HashedPassword = PasswordHelper.HashPassword(command.Password.Trim());
+            user = user with { HashedPassword = PasswordHelper.HashPassword(command.Password.Trim()) };
         }
 
         if (!string.IsNullOrWhiteSpace(command.Email))
         {
-            user.Email = command.Email.Trim().ToLowerInvariant();
+            user = user with { Email = command.Email.Trim().ToLowerInvariant() };
         }
 
         if (!string.IsNullOrWhiteSpace(command.FirstName))
         {
-            user.FirstName = command.FirstName.Trim();
+            user = user with { FirstName = command.FirstName.Trim() };
         }
 
         if (command.LastName != null)
         {
-            user.LastName = string.IsNullOrWhiteSpace(command.LastName) ? string.Empty : command.LastName.Trim();
+            user = user with { LastName = string.IsNullOrWhiteSpace(command.LastName) ? string.Empty : command.LastName.Trim() };
         }
 
         if (command.Phone != null)
         {
-            user.Phone = PhoneNumberNormalizer.NormalizeJordanPhone(command.Phone);
+            user = user with { Phone = PhoneNumberNormalizer.NormalizeJordanPhone(command.Phone) };
         }
 
         if (command.CityId.HasValue || command.AreaId.HasValue)
@@ -142,13 +144,19 @@ public sealed class UserCommandService : IUserCommandService
                 return Failure(UserCommandFailureReason.InvalidRequest, "CityId is required when AreaId is provided.");
             }
 
-            user.CityId = nextCityId;
-            user.AreaId = nextAreaId;
+            var (locationValid, locationMessage) = await ValidationHelpers.ValidateLocationAsync(
+                _locations, nextCityId, nextAreaId, cancellationToken);
+            if (!locationValid)
+            {
+                return Failure(UserCommandFailureReason.InvalidRequest, locationMessage);
+            }
+
+            user = user with { CityId = nextCityId, AreaId = nextAreaId };
         }
 
         if (command.Bio != null)
         {
-            user.Bio = string.IsNullOrWhiteSpace(command.Bio) ? null : command.Bio.Trim();
+            user = user with { Bio = string.IsNullOrWhiteSpace(command.Bio) ? null : command.Bio.Trim() };
         }
 
         if (command.Avatar != null)
@@ -157,7 +165,7 @@ public sealed class UserCommandService : IUserCommandService
             {
                 return Failure(UserCommandFailureReason.InvalidRequest, "Avatar must be a valid http or https URL.");
             }
-            user.Avatar = string.IsNullOrWhiteSpace(command.Avatar) ? null : command.Avatar.Trim();
+            user = user with { Avatar = string.IsNullOrWhiteSpace(command.Avatar) ? null : command.Avatar.Trim() };
         }
 
         if (command.ActorIsAdmin)
@@ -169,17 +177,17 @@ public sealed class UserCommandService : IUserCommandService
                     return Failure(UserCommandFailureReason.InvalidStatus, $"Invalid status. Allowed values: {UserStatusPolicy.AllowedStatusIds}.");
                 }
 
-                user.Status = command.Status.Value;
+                user = user with { Status = command.Status.Value };
             }
 
             if (command.RoleId.HasValue && command.RoleId.Value > 0)
             {
-                user.RoleID = command.RoleId.Value;
+                user = user with { RoleID = command.RoleId.Value };
             }
 
             if (command.IsDeleted.HasValue)
             {
-                user.IsDeleted = command.IsDeleted.Value;
+                user = user with { IsDeleted = command.IsDeleted.Value };
             }
         }
 

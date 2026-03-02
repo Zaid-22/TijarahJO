@@ -1,8 +1,10 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using TijarahJoDB.Application.Abstractions.DataAccess;
 using TijarahJoDB.Application.Abstractions.Services;
+using TijarahJoDB.DAL.Persistence;
 using TijarahJoDBAPI.Common.Authorization;
 
 namespace TijarahJoDBAPI.Features.Admin;
@@ -14,10 +16,12 @@ namespace TijarahJoDBAPI.Features.Admin;
 public class AdminUsersController : ControllerBase
 {
     private readonly IAdminQueryHandler _adminQueries;
+    private readonly TijarahJoDbContext _dbContext;
 
-    public AdminUsersController(IAdminQueryHandler adminQueries)
+    public AdminUsersController(IAdminQueryHandler adminQueries, TijarahJoDbContext dbContext)
     {
         _adminQueries = adminQueries;
+        _dbContext = dbContext;
     }
 
     [HttpGet("{id}/details")]
@@ -40,4 +44,51 @@ public class AdminUsersController : ControllerBase
 
         return Ok(result.Result);
     }
+
+    /// <summary>Bulk update user statuses (ban or activate multiple users at once).</summary>
+    [HttpPut("bulk-status")]
+    public async Task<ActionResult> BulkUpdateUserStatus([FromBody] BulkUserStatusRequest request)
+    {
+        if (request.UserIds == null || request.UserIds.Count == 0)
+        {
+            return BadRequest(new { Message = "No user IDs provided." });
+        }
+
+        // Map status string to StatusID
+        int newStatusId = request.Status?.ToLowerInvariant() switch
+        {
+            "banned" => 2,
+            "active" => 1,
+            _ => 0
+        };
+
+        if (newStatusId == 0)
+        {
+            return BadRequest(new { Message = "Invalid status. Use 'banned' or 'active'." });
+        }
+
+        var userIds = request.UserIds
+            .Select(id => int.TryParse(id, out var parsed) ? parsed : -1)
+            .Where(id => id > 0)
+            .ToList();
+
+        var users = await _dbContext.Users
+            .Where(u => userIds.Contains(u.UserID) && !u.IsDeleted)
+            .ToListAsync(HttpContext.RequestAborted);
+
+        foreach (var user in users)
+        {
+            user.Status = newStatusId;
+        }
+
+        await _dbContext.SaveChangesAsync(HttpContext.RequestAborted);
+
+        return Ok(new { Message = $"{users.Count} users updated to {request.Status}.", AffectedCount = users.Count });
+    }
+}
+
+public sealed class BulkUserStatusRequest
+{
+    public List<string> UserIds { get; set; } = new();
+    public string? Status { get; set; }
 }

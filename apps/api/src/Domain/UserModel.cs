@@ -2,7 +2,7 @@ using System;
 
 namespace TijarahJo.Domain.Models;
 
-    public class UserModel
+    public record UserModel
     {
         public UserModel(
             int? userid,
@@ -42,24 +42,24 @@ namespace TijarahJo.Domain.Models;
             this.TwoFactorPendingSecret = twoFactorPendingSecret;
         }
 
-        public int? UserID { get; set; }
+        public int? UserID { get; init; }
 
-        public string HashedPassword { get; set; }
-        public string Email { get; set; }
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
-        public string? Phone { get; set; }
+        public string HashedPassword { get; init; }
+        public string Email { get; init; }
+        public string FirstName { get; init; }
+        public string LastName { get; init; }
+        public string? Phone { get; init; }
         /// <summary>FK to dbo.Cities. Null if the user has not set a city.</summary>
-        public int? CityId { get; set; }
+        public int? CityId { get; init; }
         /// <summary>FK to dbo.Areas. Null if the user has not set an area.</summary>
-        public int? AreaId { get; set; }
-        public string? Bio { get; set; }
-        public string? Avatar { get; set; }
-        public DateTime JoinDate { get; set; }
-        public int Status { get; set; }
-        public int RoleID { get; set; }
-        public bool IsDeleted { get; set; }
-        public bool TwoFactorEnabled { get; set; }
-        public string? TwoFactorSecret { get; set; }
-        public string? TwoFactorPendingSecret { get; set; }
+        public int? AreaId { get; init; }
+        public string? Bio { get; init; }
+        public string? Avatar { get; init; }
+        public DateTime JoinDate { get; init; }
+        public int Status { get; init; }
+        public int RoleID { get; init; }
+        public bool IsDeleted { get; init; }
+        public bool TwoFactorEnabled { get; init; }
+        public string? TwoFactorSecret { get; init; }
+        public string? TwoFactorPendingSecret { get; init; }
     }

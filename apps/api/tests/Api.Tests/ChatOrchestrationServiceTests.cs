@@ -279,7 +279,7 @@ public sealed class ChatOrchestrationServiceTests
             SaveAsyncCalls++;
             if (message.MessageModel.MessageId is null)
             {
-                message.MessageModel.MessageId = 123;
+                message.MessageModel = message.MessageModel with { MessageId = 123 };
             }
 
             return Task.FromResult(SaveAsyncResult);

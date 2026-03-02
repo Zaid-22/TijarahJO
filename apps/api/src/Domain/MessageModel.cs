@@ -2,7 +2,7 @@ using System;
 
 namespace TijarahJo.Domain.Models
 {
-    public class MessageModel
+    public record MessageModel
     {
         public MessageModel() { }
 
@@ -26,13 +26,13 @@ namespace TijarahJo.Domain.Models
             this.PostId = postId;
         }
 
-        public int? MessageId { get; set; }
-        public int SenderId { get; set; }
-        public int ConversationId { get; set; }
-        public int? ReceiverId { get; set; }
-        public int? PostId { get; set; }
-        public string Content { get; set; } = string.Empty;
-        public DateTime Timestamp { get; set; }
-        public bool IsRead { get; set; }
+        public int? MessageId { get; init; }
+        public int SenderId { get; init; }
+        public int ConversationId { get; init; }
+        public int? ReceiverId { get; init; }
+        public int? PostId { get; init; }
+        public string Content { get; init; } = string.Empty;
+        public DateTime Timestamp { get; init; }
+        public bool IsRead { get; init; }
     }
 }

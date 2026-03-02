@@ -80,6 +80,11 @@ const ReportsQueue = lazy(() =>
     default: m.ReportsQueue,
   })),
 );
+const FraudDetectionPanel = lazy(() =>
+  import("../features/admin/components/FraudDetectionPanel").then((m) => ({
+    default: m.FraudDetectionPanel,
+  })),
+);
 const Toaster = lazy(() =>
   import("../shared/ui/sonner").then((m) => ({ default: m.Toaster })),
 );
@@ -123,6 +128,7 @@ ReactDOM.createRoot(rootElement).render(
                 <Route path="chats" element={<ChatInspection />} />
                 <Route path="locations" element={<LocationsManagement />} />
                 <Route path="reports" element={<ReportsQueue />} />
+                <Route path="fraud" element={<FraudDetectionPanel />} />
               </Route>
             </Route>
             <Route path="/*" element={<App />} />

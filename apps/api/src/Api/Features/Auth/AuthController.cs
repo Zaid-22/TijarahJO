@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
@@ -25,6 +26,7 @@ public class AuthController : ControllerBase
     private readonly IUserQueryHandler _userQueries;
     private readonly IRoleService _roles;
     private readonly TwoFactorService _twoFactorService;
+    private readonly ITokenBlacklistService _tokenBlacklistService;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
@@ -33,6 +35,7 @@ public class AuthController : ControllerBase
         IUserQueryHandler userQueries,
         IRoleService roles,
         TwoFactorService twoFactorService,
+        ITokenBlacklistService tokenBlacklistService,
         ILogger<AuthController> logger)
     {
         _tokenService = tokenService;
@@ -40,6 +43,7 @@ public class AuthController : ControllerBase
         _userQueries = userQueries;
         _roles = roles;
         _twoFactorService = twoFactorService;
+        _tokenBlacklistService = tokenBlacklistService;
         _logger = logger;
     }
 
@@ -204,8 +208,17 @@ public class AuthController : ControllerBase
     [Authorize]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public ActionResult Logout()
+    public async Task<ActionResult> Logout(CancellationToken cancellationToken)
     {
+        string? jti = User.FindFirstValue(JwtRegisteredClaimNames.Jti);
+        string? expClaim = User.FindFirstValue(JwtRegisteredClaimNames.Exp);
+
+        if (!string.IsNullOrWhiteSpace(jti) && long.TryParse(expClaim, out long expSeconds))
+        {
+            DateTimeOffset expiration = DateTimeOffset.FromUnixTimeSeconds(expSeconds);
+            await _tokenBlacklistService.AddToBlacklistAsync(jti, expiration, cancellationToken);
+        }
+
         Response.Cookies.Delete("jwt");
         Response.Cookies.Delete("tj-csrf");
         Response.Cookies.Delete("XSRF-TOKEN");

@@ -2,18 +2,18 @@ using System;
 
 namespace TijarahJo.Domain.Models
 {
-    public class ReviewModel
+    public record ReviewModel
     {
-        public int? ReviewID { get; set; }
-        public int ReviewerID { get; set; }
-        public int ReviewedUserID { get; set; }
-        public int Rating { get; set; } // 1 to 5
-        public string Comment { get; set; } = string.Empty;
-        public DateTime Timestamp { get; set; }
+        public int? ReviewID { get; init; }
+        public int ReviewerID { get; init; }
+        public int ReviewedUserID { get; init; }
+        public int Rating { get; init; } // 1 to 5
+        public string Comment { get; init; } = string.Empty;
+        public DateTime Timestamp { get; init; }
         
         // Optional: Enriched data
-        public string? ReviewerName { get; set; }
-        public string? ReviewerAvatar { get; set; }
+        public string? ReviewerName { get; init; }
+        public string? ReviewerAvatar { get; init; }
 
         public ReviewModel() { }
 

@@ -6,6 +6,7 @@ using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.DAL.Persistence;
 using TijarahJoDB.DAL.Queries;
 using TijarahJoDB.DAL.Services;
+using TijarahJoDB.Infrastructure.Caching;
 using TijarahJoDB_DataAccess;
 
 namespace TijarahJoDB.Bootstrap;
@@ -52,6 +53,11 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<ISellerReadService, SellerReadService>();
         services.AddScoped<ILocationReadService, LocationReadService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddSingleton<ICacheService, HybridCacheService>();
+
+        services.AddSingleton<TijarahJoDB.Infrastructure.Jobs.ChannelBackgroundJobService>();
+        services.AddSingleton<IBackgroundJobService>(sp => sp.GetRequiredService<TijarahJoDB.Infrastructure.Jobs.ChannelBackgroundJobService>());
+        services.AddHostedService<TijarahJoDB.Infrastructure.Jobs.BackgroundJobWorker>();
 
         return services;
     }

@@ -138,7 +138,7 @@ public class TwoFactorController : ControllerBase
         string protectedSecret = _twoFactorService.ProtectSecret(secretKey);
         string otpAuthUri = _twoFactorService.BuildOtpAuthUri(user.Email, secretKey);
 
-        user.TwoFactorPendingSecret = protectedSecret;
+        user = user with { TwoFactorPendingSecret = protectedSecret };
         bool persisted = await _users.UpdateUserAsync(user, userId, cancellationToken);
         if (!persisted)
         {
@@ -189,9 +189,12 @@ public class TwoFactorController : ControllerBase
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid verification code.");
         }
 
-        user.TwoFactorSecret = user.TwoFactorPendingSecret;
-        user.TwoFactorPendingSecret = null;
-        user.TwoFactorEnabled = true;
+        user = user with
+        {
+            TwoFactorSecret = user.TwoFactorPendingSecret,
+            TwoFactorPendingSecret = null,
+            TwoFactorEnabled = true
+        };
 
         bool persisted = await _users.UpdateUserAsync(user, userId, cancellationToken);
         if (!persisted)
@@ -240,9 +243,12 @@ public class TwoFactorController : ControllerBase
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid verification code.");
         }
 
-        user.TwoFactorEnabled = false;
-        user.TwoFactorSecret = null;
-        user.TwoFactorPendingSecret = null;
+        user = user with
+        {
+            TwoFactorEnabled = false,
+            TwoFactorSecret = null,
+            TwoFactorPendingSecret = null
+        };
 
         bool persisted = await _users.UpdateUserAsync(user, userId, cancellationToken);
         if (!persisted)

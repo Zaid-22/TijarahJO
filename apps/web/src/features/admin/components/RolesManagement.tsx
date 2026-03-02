@@ -10,7 +10,7 @@ import {
 import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
 import { Badge } from "../../../shared/ui/badge";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Shield } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { api } from "../../../services/api";
 import { ConfirmActionDialog } from "../../../shared/ui/confirm-action-dialog";
 import { logger } from "../../../shared/lib/logger";
+import { PermissionsDialog } from "./PermissionsDialog";
 
 type RoleRecord = {
   id: string;
@@ -46,7 +47,9 @@ type RoleLike = {
 const initialFormData = { roleName: "" };
 
 function normalizeRole(role: RoleLike | null | undefined): RoleRecord {
-  const resolvedId = String(role?.RoleID ?? role?.roleID ?? role?.id ?? "").trim();
+  const resolvedId = String(
+    role?.RoleID ?? role?.roleID ?? role?.id ?? "",
+  ).trim();
   return {
     id: resolvedId,
     name: String(role?.RoleName ?? role?.roleName ?? role?.name ?? "").trim(),
@@ -67,7 +70,9 @@ function formatDate(value: string): string {
 
 function isSystemRoleId(roleId: string): boolean {
   const normalizedId = Number(roleId);
-  return Number.isInteger(normalizedId) && (normalizedId === 1 || normalizedId === 2);
+  return (
+    Number.isInteger(normalizedId) && (normalizedId === 1 || normalizedId === 2)
+  );
 }
 
 export function RolesManagement() {
@@ -81,6 +86,9 @@ export function RolesManagement() {
   const [pendingDeleteRole, setPendingDeleteRole] = useState<RoleRecord | null>(
     null,
   );
+
+  // Permissions dialog state
+  const [permDialogRole, setPermDialogRole] = useState<RoleRecord | null>(null);
 
   const fetchRoles = async () => {
     try {
@@ -152,7 +160,9 @@ export function RolesManagement() {
           );
 
           setRoles((prevRoles) =>
-            prevRoles.map((role) => (role.id === selectedRole.id ? updatedRole : role)),
+            prevRoles.map((role) =>
+              role.id === selectedRole.id ? updatedRole : role,
+            ),
           );
           toast.success("Role updated");
           setIsEditOpen(false);
@@ -234,9 +244,7 @@ export function RolesManagement() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between gap-4 items-center">
-        <h1 className="text-2xl font-bold text-foreground">
-          Roles Management
-        </h1>
+        <h1 className="text-2xl font-bold text-foreground">Roles Management</h1>
         <div className="flex items-center gap-4 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
@@ -282,7 +290,10 @@ export function RolesManagement() {
                     id="roleName"
                     value={formData.roleName}
                     onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, roleName: e.target.value }))
+                      setFormData((prev) => ({
+                        ...prev,
+                        roleName: e.target.value,
+                      }))
                     }
                     className="col-span-3"
                   />
@@ -336,10 +347,23 @@ export function RolesManagement() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          aria-label={`Manage permissions for ${role.name}`}
+                          onClick={() => setPermDialogRole(role)}
+                          title="Manage Permissions"
+                        >
+                          <Shield className="w-4 h-4 text-primary" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           aria-label={`Edit role ${role.name}`}
                           onClick={() => openEdit(role)}
                           disabled={isSystemRole}
-                          title={isSystemRole ? "System roles cannot be edited" : "Edit role"}
+                          title={
+                            isSystemRole
+                              ? "System roles cannot be edited"
+                              : "Edit role"
+                          }
                         >
                           <Pencil className="w-4 h-4 text-muted-foreground" />
                         </Button>
@@ -350,7 +374,11 @@ export function RolesManagement() {
                           onClick={() => setPendingDeleteRole(role)}
                           disabled={isSystemRole}
                           className="hover:bg-destructive/10 hover:text-destructive"
-                          title={isSystemRole ? "System roles cannot be deleted" : "Delete role"}
+                          title={
+                            isSystemRole
+                              ? "System roles cannot be deleted"
+                              : "Delete role"
+                          }
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -424,6 +452,18 @@ export function RolesManagement() {
           setPendingDeleteRole(null);
         }}
       />
+
+      {/* Permissions Matrix Dialog */}
+      {permDialogRole && (
+        <PermissionsDialog
+          roleName={permDialogRole.name}
+          roleId={Number(permDialogRole.id)}
+          open
+          onOpenChange={(open) => {
+            if (!open) setPermDialogRole(null);
+          }}
+        />
+      )}
     </div>
   );
 }

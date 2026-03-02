@@ -2,7 +2,7 @@ using System;
 
 namespace TijarahJo.Domain.Models;
 
-    public class PostModel
+    public record PostModel
     {
         public PostModel(int? postid,
                          int userid,
@@ -31,19 +31,19 @@ namespace TijarahJo.Domain.Models;
             this.AreaId = areaId;
         }
 
-        public int? PostID { get; set; }
-        public int UserID { get; set; }
-        public int CategoryID { get; set; }
-        public string PostTitle { get; set; }
-        public string PostDescription { get; set; }
-        public decimal? Price { get; set; }
-        public int Status { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public bool IsDeleted { get; set; }
-        public long Views { get; set; }
+        public int? PostID { get; init; }
+        public int UserID { get; init; }
+        public int CategoryID { get; init; }
+        public string PostTitle { get; init; }
+        public string PostDescription { get; init; }
+        public decimal? Price { get; init; }
+        public int Status { get; init; }
+        public DateTime CreatedAt { get; init; }
+        public bool IsDeleted { get; init; }
+        public long Views { get; init; }
         /// <summary>FK to dbo.Cities. Null if no location set.</summary>
-        public int? CityId { get; set; }
+        public int? CityId { get; init; }
         /// <summary>FK to dbo.Areas. Null if no location set.</summary>
-        public int? AreaId { get; set; }
+        public int? AreaId { get; init; }
 
     }
