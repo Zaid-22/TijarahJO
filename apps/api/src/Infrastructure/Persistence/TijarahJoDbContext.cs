@@ -29,6 +29,7 @@ public sealed class TijarahJoDbContext : DbContext
     public DbSet<AreaEntity> Areas => Set<AreaEntity>();
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
     public DbSet<SystemSettingEntity> SystemSettings => Set<SystemSettingEntity>();
+    public DbSet<ReportEntity> Reports => Set<ReportEntity>();
 
     // Set this to the current actor's UserID before calling SaveChangesAsync on a
     // mutating operation so that AuditLog entries carry the correct ChangedByUserID.

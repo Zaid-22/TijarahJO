@@ -417,6 +417,44 @@ export const adminApi = {
     });
     return response.success;
   },
+
+  // ── Reports ──
+
+  getReports: async (
+    status?: number,
+    reportType?: string,
+    page = 1,
+    pageSize = 50,
+  ): Promise<AdminReportListResult> => {
+    try {
+      const params = new URLSearchParams();
+      if (status !== undefined) params.set("status", String(status));
+      if (reportType) params.set("reportType", reportType);
+      params.set("page", String(page));
+      params.set("pageSize", String(pageSize));
+      const response = await apiRequest<AdminReportListResult>(
+        `/admin/reports?${params.toString()}`,
+        { method: "GET" },
+      );
+      if (response.success && response.data) return response.data;
+      throw new Error("Failed to fetch reports");
+    } catch (error) {
+      debugError("Failed to fetch reports:", error);
+      throw error;
+    }
+  },
+
+  updateReportStatus: async (
+    reportId: number,
+    status: number,
+    resolutionNotes?: string,
+  ): Promise<boolean> => {
+    const response = await apiRequest(`/admin/reports/${reportId}/status`, {
+      method: "PUT",
+      body: JSON.stringify({ status, resolutionNotes }),
+    });
+    return response.success;
+  },
 };
 
 // ── Phase 3 Types ──
@@ -471,4 +509,26 @@ export type AdminCityItem = {
   cityID: number;
   cityName: string;
   areas: AdminAreaItem[];
+};
+
+export type AdminReportItem = {
+  reportID: number;
+  reportType: string;
+  targetID: number;
+  reason: string;
+  description: string | null;
+  reporterUserID: number;
+  reporterName: string;
+  status: number;
+  statusLabel: string;
+  resolvedByUserID: number | null;
+  resolvedByName: string | null;
+  resolutionNotes: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+};
+
+export type AdminReportListResult = {
+  reports: AdminReportItem[];
+  totalCount: number;
 };

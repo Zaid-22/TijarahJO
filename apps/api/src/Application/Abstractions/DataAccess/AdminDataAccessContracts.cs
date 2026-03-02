@@ -126,6 +126,10 @@ public interface IAdminDataAccess
     Task<int> CreateAreaAsync(int cityId, string areaName, CancellationToken cancellationToken = default);
     Task<bool> UpdateAreaAsync(int areaId, string areaName, CancellationToken cancellationToken = default);
     Task<bool> DeleteAreaAsync(int areaId, CancellationToken cancellationToken = default);
+
+    // Reports
+    Task<AdminReportListResult> GetReportsAsync(int? status = null, string? reportType = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
+    Task<bool> UpdateReportStatusAsync(int reportId, int newStatus, int adminUserId, string? resolutionNotes = null, CancellationToken cancellationToken = default);
 }
 
 // ── Phase 3: System Settings ──
@@ -191,4 +195,30 @@ public sealed class AdminCityItem
     public int CityID { get; init; }
     public string CityName { get; init; } = string.Empty;
     public System.Collections.Generic.IReadOnlyList<AdminAreaItem> Areas { get; init; } = System.Array.Empty<AdminAreaItem>();
+}
+
+// ── Reports ──
+
+public sealed class AdminReportItem
+{
+    public int ReportID { get; init; }
+    public string ReportType { get; init; } = string.Empty;
+    public int TargetID { get; init; }
+    public string Reason { get; init; } = string.Empty;
+    public string? Description { get; init; }
+    public int ReporterUserID { get; init; }
+    public string ReporterName { get; init; } = string.Empty;
+    public int Status { get; init; }
+    public string StatusLabel { get; init; } = string.Empty;
+    public int? ResolvedByUserID { get; init; }
+    public string? ResolvedByName { get; init; }
+    public string? ResolutionNotes { get; init; }
+    public System.DateTime CreatedAt { get; init; }
+    public System.DateTime? ResolvedAt { get; init; }
+}
+
+public sealed class AdminReportListResult
+{
+    public System.Collections.Generic.IReadOnlyList<AdminReportItem> Reports { get; init; } = System.Array.Empty<AdminReportItem>();
+    public int TotalCount { get; init; }
 }
