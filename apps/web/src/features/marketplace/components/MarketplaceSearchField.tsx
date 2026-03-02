@@ -9,7 +9,7 @@ interface MarketplaceSearchFieldProps {
   placeholder: string;
   clearLabel: string;
   onChange: (value: string) => void;
-  onSubmit?: () => void;
+  onSubmit?: (value: string) => void;
   isRTL?: boolean;
   size?: "default" | "compact";
   className?: string;
@@ -47,7 +47,7 @@ export function MarketplaceSearchField({
     }
 
     event.preventDefault();
-    onSubmit();
+    onSubmit(value);
   };
 
   return (
@@ -90,7 +90,10 @@ export function MarketplaceSearchField({
           size="icon"
           aria-label={clearLabel}
           title={clearLabel}
-          onClick={() => onChange("")}
+          onClick={() => {
+            onChange("");
+            onSubmit?.("");
+          }}
           className={cn(
             "absolute top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-foreground",
             isRTL ? "left-4" : "right-4",

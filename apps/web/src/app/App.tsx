@@ -96,6 +96,7 @@ export default function App() {
     "tijarahjo_active_search_query",
     "",
   );
+  const searchQueryRef = useRef(searchQuery);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
   // Effects
@@ -114,6 +115,10 @@ export default function App() {
       };
     }
   }, []);
+
+  useEffect(() => {
+    searchQueryRef.current = searchQuery;
+  }, [searchQuery]);
 
   useEffect(() => {
     const normalizedAuthError = authError?.trim();
@@ -284,9 +289,13 @@ export default function App() {
         showLogo={true}
         showSearch={true}
         searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
+        onSearchChange={(query) => {
+          searchQueryRef.current = query;
+          setSearchQuery(query);
+        }}
         onSearchSubmit={() => {
-          const normalizedQuery = searchQuery.trim();
+          const normalizedQuery = searchQueryRef.current.trim();
+          searchQueryRef.current = normalizedQuery;
           setSearchQuery(normalizedQuery);
           setActiveSearchQuery(normalizedQuery);
           if (!normalizedQuery) {
@@ -360,7 +369,6 @@ export default function App() {
             setSearchQuery={setSearchQuery}
             setActiveSearchQuery={setActiveSearchQuery}
             activeSearchQuery={activeSearchQuery}
-            searchQuery={searchQuery}
           />
         </Suspense>
       </main>
