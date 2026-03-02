@@ -10,6 +10,7 @@ import { renderAppRouteElements } from "./AppRouteElements";
 import { usePostActions } from "./usePostActions";
 import { useProfileSaveAction } from "./useProfileSaveAction";
 import { useMarketplaceRouteState } from "./useMarketplaceRouteState";
+import { LoadingState } from "../../shared/ui/loading-state";
 
 interface AppRoutesProps {
   language: Language;
@@ -33,7 +34,7 @@ export function AppRoutes(props: AppRoutesProps) {
 
   const routeState = useMarketplaceRouteState({
     pathname: location.pathname,
-    searchQuery: props.searchQuery,
+    searchQuery: props.activeSearchQuery,
     language: props.language,
     userProfile: props.userProfile,
   });
@@ -51,19 +52,19 @@ export function AppRoutes(props: AppRoutesProps) {
 
   const redirectToLogin = () => navigate("/login");
   const requireAuth = (element: ReactElement) =>
-    props.isAuthenticated ? element : <Navigate to="/login" replace />;
+    props.isAuthenticated
+      ? element
+      : (
+          <Navigate
+            to="/login"
+            replace
+            state={{ fromPath: `${location.pathname}${location.search}` }}
+          />
+        );
 
   return (
     <Suspense
-      fallback={
-        <div className="min-h-screen flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 gap-3">
-          <span
-            aria-hidden="true"
-            className="h-7 w-7 rounded-full border-2 border-blue-200 border-t-blue-600 animate-spin"
-          />
-          <span>Loading...</span>
-        </div>
-      }
+      fallback={<LoadingState minHeightClassName="min-h-[40vh]" />}
     >
       <Routes>
         {renderAppRouteElements({
