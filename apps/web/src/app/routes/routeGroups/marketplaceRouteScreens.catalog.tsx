@@ -2,6 +2,7 @@ import { lazy } from "react";
 import { CategoryRouteWrapper } from "../CategoryRouteWrapper";
 import { useMarketplaceRouteContext } from "./marketplaceRouteContext";
 import { type MarketplaceRouteDefinition } from "./marketplaceRouteDefinitions";
+import { useSearch } from "../../../contexts/SearchContext";
 
 const AllPostsPage = lazy(() =>
   import("../../../pages/AllPostsPage").then((m) => ({
@@ -15,8 +16,13 @@ const SearchResultsPage = lazy(() =>
 );
 
 export function AllPostsMarketplaceRouteScreen() {
-  const { appProps, navigate, navigateToPost, sharedPostRouteProps, sharedUserRouteProps } =
-    useMarketplaceRouteContext();
+  const {
+    appProps,
+    navigate,
+    navigateToPost,
+    sharedPostRouteProps,
+    sharedUserRouteProps,
+  } = useMarketplaceRouteContext();
 
   return (
     <AllPostsPage
@@ -35,12 +41,19 @@ export function AllPostsMarketplaceRouteScreen() {
 }
 
 export function SearchResultsMarketplaceRouteScreen() {
-  const { appProps, navigate, navigateToPost, sharedPostRouteProps, sharedUserRouteProps } =
-    useMarketplaceRouteContext();
+  const {
+    appProps,
+    navigate,
+    navigateToPost,
+    sharedPostRouteProps,
+    sharedUserRouteProps,
+  } = useMarketplaceRouteContext();
+  const { activeSearchQuery, setActiveSearchQuery, setSearchQuery } =
+    useSearch();
 
   return (
     <SearchResultsPage
-      searchQuery={appProps.activeSearchQuery}
+      searchQuery={activeSearchQuery}
       posts={sharedPostRouteProps.availablePosts}
       onBack={() => navigate("/")}
       onPostClick={(id) => navigateToPost(id, "/search")}
@@ -51,16 +64,21 @@ export function SearchResultsMarketplaceRouteScreen() {
       currentUserId={sharedUserRouteProps.currentUserId}
       currentUserDisplayName={sharedUserRouteProps.currentUserDisplayName}
       onSearch={(newQuery) => {
-        appProps.setActiveSearchQuery(newQuery);
-        appProps.setSearchQuery(newQuery);
+        setActiveSearchQuery(newQuery);
+        setSearchQuery(newQuery);
       }}
     />
   );
 }
 
 export function CategoryMarketplaceRouteScreen() {
-  const { appProps, navigate, navigateToPost, sharedPostRouteProps, sharedUserRouteProps } =
-    useMarketplaceRouteContext();
+  const {
+    appProps,
+    navigate,
+    navigateToPost,
+    sharedPostRouteProps,
+    sharedUserRouteProps,
+  } = useMarketplaceRouteContext();
 
   return (
     <CategoryRouteWrapper

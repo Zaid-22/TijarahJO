@@ -15,9 +15,6 @@ export interface BaseAppRouteProps {
   logout: () => Promise<void>;
   setUserProfile: (profile: UserProfile) => void;
   currentUserDisplayName: string;
-  setSearchQuery: (query: string) => void;
-  setActiveSearchQuery: (query: string) => void;
-  activeSearchQuery: string;
 }
 
 export interface MarketplaceRouteState {
