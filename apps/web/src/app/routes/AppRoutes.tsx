@@ -1,16 +1,12 @@
 import { Suspense, type ReactElement } from "react";
-import {
-  Routes,
-  useNavigate,
-  useLocation,
-  Navigate,
-} from "react-router-dom";
+import { Routes, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { Language, UserProfile } from "../../types";
 import { renderAppRouteElements } from "./AppRouteElements";
 import { usePostActions } from "./usePostActions";
 import { useProfileSaveAction } from "./useProfileSaveAction";
 import { useMarketplaceRouteState } from "./useMarketplaceRouteState";
 import { LoadingState } from "../../shared/ui/loading-state";
+import { useSearch } from "../../contexts/SearchContext";
 
 interface AppRoutesProps {
   language: Language;
@@ -22,18 +18,17 @@ interface AppRoutesProps {
   logout: () => Promise<void>;
   setUserProfile: (profile: UserProfile) => void;
   currentUserDisplayName: string;
-  setSearchQuery: (q: string) => void;
-  setActiveSearchQuery: (q: string) => void;
-  activeSearchQuery: string;
 }
 
 export function AppRoutes(props: AppRoutesProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const { activeSearchQuery } = useSearch();
+
   const routeState = useMarketplaceRouteState({
     pathname: location.pathname,
-    searchQuery: props.activeSearchQuery,
+    searchQuery: activeSearchQuery,
     language: props.language,
     userProfile: props.userProfile,
   });
@@ -51,20 +46,18 @@ export function AppRoutes(props: AppRoutesProps) {
 
   const redirectToLogin = () => navigate("/login");
   const requireAuth = (element: ReactElement) =>
-    props.isAuthenticated
-      ? element
-      : (
-          <Navigate
-            to="/login"
-            replace
-            state={{ fromPath: `${location.pathname}${location.search}` }}
-          />
-        );
+    props.isAuthenticated ? (
+      element
+    ) : (
+      <Navigate
+        to="/login"
+        replace
+        state={{ fromPath: `${location.pathname}${location.search}` }}
+      />
+    );
 
   return (
-    <Suspense
-      fallback={<LoadingState minHeightClassName="min-h-[40vh]" />}
-    >
+    <Suspense fallback={<LoadingState minHeightClassName="min-h-[40vh]" />}>
       <Routes>
         {renderAppRouteElements({
           appProps: props,

@@ -1,6 +1,7 @@
 import { lazy } from "react";
 import { useMarketplaceRouteContext } from "./marketplaceRouteContext";
 import { type MarketplaceRouteDefinition } from "./marketplaceRouteDefinitions";
+import { useSearch } from "../../../contexts/SearchContext";
 
 const HomePage = lazy(() =>
   import("../../../pages/HomePage").then((m) => ({ default: m.HomePage })),
@@ -15,6 +16,8 @@ export function HomeMarketplaceRouteScreen() {
     navigateToPost,
     sharedUserRouteProps,
   } = useMarketplaceRouteContext();
+  const { activeSearchQuery, setSearchQuery, setActiveSearchQuery } =
+    useSearch();
 
   return (
     <HomePage
@@ -23,10 +26,10 @@ export function HomeMarketplaceRouteScreen() {
       t={routeState.t}
       isRTL={routeState.isRTL}
       darkMode={appProps.darkMode}
-      searchQuery={appProps.activeSearchQuery}
+      searchQuery={activeSearchQuery}
       setSearchQuery={(query) => {
-        appProps.setSearchQuery(query);
-        appProps.setActiveSearchQuery(query);
+        setSearchQuery(query);
+        setActiveSearchQuery(query);
       }}
       setShowLoginPrompt={(show) => show && redirectToLogin()}
       setShowSellItem={(show) => {
@@ -43,7 +46,8 @@ export function HomeMarketplaceRouteScreen() {
       }}
       setShowAllPosts={(show) => show && navigate("/posts")}
       setSelectedCategoryForPage={(categoryName) =>
-        categoryName && navigate(`/category/${encodeURIComponent(categoryName)}`)
+        categoryName &&
+        navigate(`/category/${encodeURIComponent(categoryName)}`)
       }
       isLoadingPosts={routeState.isLoadingPostsFromRouteData}
       postsError={routeState.postsError}

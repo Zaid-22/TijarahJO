@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+/* eslint-disable max-lines */
+import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { APP_CONFIG } from "../constants/appConfig";
 import { useAuth } from "../contexts/AuthContext";
@@ -19,13 +20,12 @@ import {
   parseAuthIdentifier,
 } from "../features/auth/loginUtils";
 import {
-  createEmptyLoginErrors,
   LoginField,
   LoginFormErrors,
-  LoginFormValues,
   validateLoginForm,
   validateLoginField,
 } from "../features/auth/loginValidation";
+import { useLoginReducer } from "../features/auth/useLoginReducer";
 import type { Language } from "../types";
 
 interface LoginPageProps {
@@ -102,29 +102,10 @@ export function LoginPage({
   const copy = getLoginCopy(language);
   const googleAuthEnabled = APP_CONFIG.googleAuthEnabled;
   const validationMessages = copy.validation;
-  const backendConnectionMessage =
-    `${copy.errors.backendConnection} ${APP_CONFIG.backendHostUrl}`;
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [generalError, setGeneralError] = useState("");
-  const [twoFactorToken, setTwoFactorToken] = useState("");
-  const [twoFactorCode, setTwoFactorCode] = useState("");
-  const [focusedField, setFocusedField] = useState<LoginField | null>(null);
-  const [values, setValues] = useState<LoginFormValues>({
-    identifier: "",
-    password: "",
-    confirmPassword: "",
-    firstName: "",
-    lastName: "",
+  const backendConnectionMessage = `${copy.errors.backendConnection} ${APP_CONFIG.backendHostUrl}`;
+  const [state, dispatch] = useLoginReducer({
     phone: APP_CONFIG.defaultPhonePrefix,
-    city: "",
-    area: "",
   });
-  const [errors, setErrors] = useState<LoginFormErrors>(
-    createEmptyLoginErrors(),
-  );
   const isRTL = language === "ar";
   const currentPath = buildCurrentPath(location.pathname, location.search);
   const backPath = resolveBackPathFromLocationState({
@@ -143,14 +124,15 @@ export function LoginPage({
     if (googleError) {
       const normalizedMessage =
         googleError.trim() || copy.errors.googleAuthFailedFallback;
-      setGeneralError(normalizedMessage);
+      dispatch({ type: "SET_GENERAL_ERROR", error: normalizedMessage });
     }
 
     if (twoFactorRequired === "1" && queryTwoFactorToken) {
-      setIsSignUp(false);
-      setTwoFactorToken(queryTwoFactorToken.trim());
-      setTwoFactorCode("");
-      setGeneralError(copy.errors.twoFactorRequiredPrompt);
+      dispatch({
+        type: "ENTER_TWO_FACTOR",
+        token: queryTwoFactorToken.trim(),
+        message: copy.errors.twoFactorRequiredPrompt,
+      });
     }
 
     if (!googleError && !(twoFactorRequired === "1" && queryTwoFactorToken)) {
@@ -166,38 +148,47 @@ export function LoginPage({
   }, [
     copy.errors.googleAuthFailedFallback,
     copy.errors.twoFactorRequiredPrompt,
+    dispatch,
   ]);
 
   const setFieldValue = (field: LoginField, value: string) => {
-    setValues((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }));
-    }
+    dispatch({ type: "SET_FIELD", field, value });
   };
 
   const setFieldError = (field: LoginField, value: string) => {
-    setErrors((prev) => ({ ...prev, [field]: value }));
+    dispatch({ type: "SET_ERROR", field, error: value });
   };
 
   const validateField = (field: LoginField): string => {
-    return validateLoginField(field, values, isSignUp, validationMessages);
+    return validateLoginField(
+      field,
+      state.values,
+      state.mode === "signUp",
+      validationMessages,
+    );
   };
 
   const validateForSubmit = (): LoginFormErrors => {
-    return validateLoginForm(values, isSignUp, validationMessages);
+    return validateLoginForm(
+      state.values,
+      state.mode === "signUp",
+      validationMessages,
+    );
   };
 
   const canSubmit = (() => {
-    if (isLoading) {
+    if (state.isLoading) {
       return false;
     }
 
-    if (!isSignUp && twoFactorToken) {
-      return normalizeTwoFactorCode(twoFactorCode).length === 6;
+    if (state.step === "twoFactor") {
+      return normalizeTwoFactorCode(state.twoFactorCode).length === 6;
     }
 
-    if (!isSignUp) {
-      return values.identifier.trim() !== "" && values.password !== "";
+    if (state.mode === "signIn") {
+      return (
+        state.values.identifier.trim() !== "" && state.values.password !== ""
+      );
     }
 
     const validationErrors = validateForSubmit();
@@ -205,39 +196,51 @@ export function LoginPage({
   })();
 
   const handleSignUp = async () => {
-    const parsedIdentifier = parseAuthIdentifier(values.identifier);
-    const normalizedPhone = normalizeJordanPhone(values.phone);
-    const normalizedCity = values.city.trim();
-    const normalizedArea = values.area.trim();
+    const parsedIdentifier = parseAuthIdentifier(state.values.identifier);
+    const normalizedPhone = normalizeJordanPhone(state.values.phone);
+    const normalizedCity = state.values.city.trim();
+    const normalizedArea = state.values.area.trim();
 
     if (!parsedIdentifier.email && !parsedIdentifier.phone) {
       setFieldError("identifier", validationMessages.identifierInvalid);
-      setGeneralError(copy.errors.signUpInvalidIdentifierPrompt);
+      dispatch({
+        type: "SET_GENERAL_ERROR",
+        error: copy.errors.signUpInvalidIdentifierPrompt,
+      });
       return;
     }
 
     if (!normalizedPhone) {
       setFieldError("phone", validationMessages.phoneInvalid);
-      setGeneralError(copy.errors.signUpInvalidPhonePrompt);
+      dispatch({
+        type: "SET_GENERAL_ERROR",
+        error: copy.errors.signUpInvalidPhonePrompt,
+      });
       return;
     }
 
     if (!normalizedCity) {
       setFieldError("city", validationMessages.cityRequired);
-      setGeneralError(copy.errors.signUpCityRequiredPrompt);
+      dispatch({
+        type: "SET_GENERAL_ERROR",
+        error: copy.errors.signUpCityRequiredPrompt,
+      });
       return;
     }
 
     if (!normalizedArea) {
       setFieldError("area", validationMessages.areaRequired);
-      setGeneralError(copy.errors.signUpAreaRequiredPrompt);
+      dispatch({
+        type: "SET_GENERAL_ERROR",
+        error: copy.errors.signUpAreaRequiredPrompt,
+      });
       return;
     }
 
     const response = await api.auth.register(
       parsedIdentifier.email || "",
-      values.password,
-      `${values.firstName.trim()} ${values.lastName.trim()}`,
+      state.values.password,
+      `${state.values.firstName.trim()} ${state.values.lastName.trim()}`,
       normalizedPhone,
       normalizedCity,
       normalizedArea,
@@ -251,9 +254,13 @@ export function LoginPage({
           copy.errors.registrationFailedFallback,
           backendConnectionMessage,
         );
-      setGeneralError(
-        appendDuplicateAccountHint(baseMessage, copy.errors.duplicateHintSuffix),
-      );
+      dispatch({
+        type: "SET_GENERAL_ERROR",
+        error: appendDuplicateAccountHint(
+          baseMessage,
+          copy.errors.duplicateHintSuffix,
+        ),
+      });
       return;
     }
 
@@ -263,9 +270,10 @@ export function LoginPage({
 
     onLogin({
       id: user?.id,
-      firstName: user?.firstName || values.firstName.trim(),
-      lastName: user?.lastName || values.lastName.trim(),
-      email: user?.email || parsedIdentifier.email || values.identifier.trim(),
+      firstName: user?.firstName || state.values.firstName.trim(),
+      lastName: user?.lastName || state.values.lastName.trim(),
+      email:
+        user?.email || parsedIdentifier.email || state.values.identifier.trim(),
       phone: user?.phone || normalizedPhone,
       avatar: user?.avatar,
       joinedDate: formatJoinedDateLabel(user?.joinedDate, language),
@@ -274,8 +282,8 @@ export function LoginPage({
 
   const handleSignIn = async () => {
     const response = await api.auth.login({
-      email: values.identifier.trim(),
-      password: values.password,
+      email: state.values.identifier.trim(),
+      password: state.values.password,
     });
 
     if (!response.success) {
@@ -284,21 +292,24 @@ export function LoginPage({
         copy.errors.loginFailedFallback,
         backendConnectionMessage,
       );
-      setGeneralError(message);
+      dispatch({ type: "SET_GENERAL_ERROR", error: message });
       return;
     }
 
     if (response.requiresTwoFactor) {
       if (!response.twoFactorToken) {
-        setGeneralError(copy.errors.twoFactorSessionExpired);
+        dispatch({
+          type: "SET_GENERAL_ERROR",
+          error: copy.errors.twoFactorSessionExpired,
+        });
         return;
       }
 
-      setTwoFactorToken(response.twoFactorToken);
-      setTwoFactorCode("");
-      setGeneralError(
-        response.message || copy.errors.twoFactorRequiredPrompt,
-      );
+      dispatch({
+        type: "ENTER_TWO_FACTOR",
+        token: response.twoFactorToken,
+        message: response.message || copy.errors.twoFactorRequiredPrompt,
+      });
       return;
     }
 
@@ -310,7 +321,7 @@ export function LoginPage({
       id: user?.id,
       firstName: user?.firstName || "",
       lastName: user?.lastName || "",
-      email: user?.email || values.identifier.trim(),
+      email: user?.email || state.values.identifier.trim(),
       phone: user?.phone || "",
       avatar: user?.avatar,
       joinedDate: formatJoinedDateLabel(user?.joinedDate, language),
@@ -318,19 +329,25 @@ export function LoginPage({
   };
 
   const handleTwoFactorVerification = async () => {
-    const normalizedCode = normalizeTwoFactorCode(twoFactorCode);
+    const normalizedCode = normalizeTwoFactorCode(state.twoFactorCode);
     if (normalizedCode.length !== 6) {
-      setGeneralError(copy.errors.twoFactorCodeInvalid);
+      dispatch({
+        type: "SET_GENERAL_ERROR",
+        error: copy.errors.twoFactorCodeInvalid,
+      });
       return;
     }
 
-    if (!twoFactorToken.trim()) {
-      setGeneralError(copy.errors.twoFactorSessionExpired);
+    if (!state.twoFactorToken.trim()) {
+      dispatch({
+        type: "SET_GENERAL_ERROR",
+        error: copy.errors.twoFactorSessionExpired,
+      });
       return;
     }
 
     const response = await api.auth.verifyTwoFactorLogin(
-      twoFactorToken,
+      state.twoFactorToken,
       normalizedCode,
     );
 
@@ -340,17 +357,17 @@ export function LoginPage({
         copy.errors.twoFactorCodeInvalid,
         backendConnectionMessage,
       );
-      setGeneralError(message);
+      dispatch({ type: "SET_GENERAL_ERROR", error: message });
       return;
     }
 
     if (response.requiresTwoFactor) {
-      setGeneralError(copy.errors.twoFactorSessionExpired);
+      dispatch({
+        type: "SET_GENERAL_ERROR",
+        error: copy.errors.twoFactorSessionExpired,
+      });
       return;
     }
-
-    setTwoFactorToken("");
-    setTwoFactorCode("");
 
     await checkAuth();
 
@@ -359,7 +376,7 @@ export function LoginPage({
       id: user?.id,
       firstName: user?.firstName || "",
       lastName: user?.lastName || "",
-      email: user?.email || values.identifier.trim(),
+      email: user?.email || state.values.identifier.trim(),
       phone: user?.phone || "",
       avatar: user?.avatar,
       joinedDate: formatJoinedDateLabel(user?.joinedDate, language),
@@ -368,39 +385,43 @@ export function LoginPage({
 
   const handleGoogleAuth = () => {
     if (!googleAuthEnabled) {
-      setGeneralError(copy.errors.googleAuthFailedFallback);
+      dispatch({
+        type: "SET_GENERAL_ERROR",
+        error: copy.errors.googleAuthFailedFallback,
+      });
       return;
     }
 
-    setGeneralError("");
-    const mode = isSignUp ? "signup" : "login";
-    window.location.assign(api.auth.getGoogleAuthStartUrl(mode));
+    dispatch({ type: "SET_GENERAL_ERROR", error: "" });
+    const authModeStr = state.mode === "signUp" ? "signup" : "login";
+    window.location.assign(api.auth.getGoogleAuthStartUrl(authModeStr));
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setGeneralError("");
+    dispatch({ type: "SET_GENERAL_ERROR", error: "" });
 
-    if (!isSignUp && twoFactorToken) {
-      setIsLoading(true);
+    if (state.step === "twoFactor") {
+      dispatch({ type: "START_LOADING" });
       try {
         await handleTwoFactorVerification();
       } catch (error) {
-        setGeneralError(
-          toExceptionMessage(
+        dispatch({
+          type: "SET_GENERAL_ERROR",
+          error: toExceptionMessage(
             error,
             copy.errors.twoFactorCodeInvalid,
             backendConnectionMessage,
           ),
-        );
+        });
       } finally {
-        setIsLoading(false);
+        dispatch({ type: "STOP_LOADING" });
       }
       return;
     }
 
     const validationErrors = validateForSubmit();
-    setErrors(validationErrors);
+    dispatch({ type: "SET_ERRORS", errors: validationErrors });
 
     const hasValidationErrors = Object.values(validationErrors).some(
       (value) => value !== "",
@@ -410,42 +431,41 @@ export function LoginPage({
       return;
     }
 
-    setIsLoading(true);
+    dispatch({ type: "START_LOADING" });
     try {
-      if (isSignUp) {
+      if (state.mode === "signUp") {
         await handleSignUp();
       } else {
         await handleSignIn();
       }
     } catch (error) {
-      setGeneralError(
-        toExceptionMessage(
+      dispatch({
+        type: "SET_GENERAL_ERROR",
+        error: toExceptionMessage(
           error,
           copy.errors.unexpected,
           backendConnectionMessage,
         ),
-      );
+      });
     } finally {
-      setIsLoading(false);
+      dispatch({ type: "STOP_LOADING" });
     }
   };
 
   const toggleAuthMode = () => {
-    setIsSignUp((prev) => !prev);
-    setTwoFactorToken("");
-    setTwoFactorCode("");
-    setGeneralError("");
-    setErrors(createEmptyLoginErrors());
-    setFocusedField(null);
+    dispatch({
+      type: "SET_MODE",
+      mode: state.mode === "signUp" ? "signIn" : "signUp",
+    });
   };
 
   const handleFieldFocus = (field: LoginField) => {
-    setFocusedField(field);
+    dispatch({ type: "SET_FOCUSED_FIELD", field });
   };
 
   const handleFieldBlur = (field: LoginField) => {
-    setFocusedField(null);
-    if (field === "password" && !isSignUp) {
+    dispatch({ type: "SET_FOCUSED_FIELD", field: null });
+    if (field === "password" && state.mode === "signIn") {
       return;
     }
 
@@ -453,9 +473,7 @@ export function LoginPage({
   };
 
   const handleCancelTwoFactor = () => {
-    setTwoFactorToken("");
-    setTwoFactorCode("");
-    setGeneralError("");
+    dispatch({ type: "CANCEL_TWO_FACTOR" });
   };
 
   return (
@@ -468,32 +486,37 @@ export function LoginPage({
       />
       <LoginForm
         language={language}
-        isSignUp={isSignUp}
+        isSignUp={state.mode === "signUp"}
         showGoogleAuth={googleAuthEnabled}
-        isLoading={isLoading}
-        generalError={generalError}
+        isLoading={state.isLoading}
+        generalError={state.generalError}
         canSubmit={canSubmit}
-        values={values}
-        errors={errors}
+        values={state.values}
+        errors={state.errors}
         copy={copy}
-        focusedField={focusedField}
-        showPassword={showPassword}
-        showConfirmPassword={showConfirmPassword}
-        isTwoFactorStep={!isSignUp && !!twoFactorToken}
-        twoFactorCode={twoFactorCode}
+        focusedField={state.focusedField}
+        showPassword={state.showPassword}
+        showConfirmPassword={state.showConfirmPassword}
+        isTwoFactorStep={state.step === "twoFactor"}
+        twoFactorCode={state.twoFactorCode}
         onSubmit={handleSubmit}
         onToggleAuthMode={toggleAuthMode}
         onForgotPassword={() => navigate("/forgot-password")}
         onContinueWithGoogle={handleGoogleAuth}
         onContinueAsGuest={onContinueAsGuest}
         onCancelTwoFactor={handleCancelTwoFactor}
-        onTwoFactorCodeChange={(value) => setTwoFactorCode(normalizeTwoFactorCode(value))}
+        onTwoFactorCodeChange={(value) =>
+          dispatch({
+            type: "SET_TWO_FACTOR_CODE",
+            code: normalizeTwoFactorCode(value),
+          })
+        }
         onFieldChange={setFieldValue}
         onFieldFocus={handleFieldFocus}
         onFieldBlur={handleFieldBlur}
-        onTogglePasswordVisibility={() => setShowPassword((prev) => !prev)}
+        onTogglePasswordVisibility={() => dispatch({ type: "TOGGLE_PASSWORD" })}
         onToggleConfirmPasswordVisibility={() =>
-          setShowConfirmPassword((prev) => !prev)
+          dispatch({ type: "TOGGLE_CONFIRM_PASSWORD" })
         }
       />
     </PageShell>

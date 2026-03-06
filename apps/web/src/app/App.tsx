@@ -6,12 +6,13 @@ import {
   useRef,
   useState,
 } from "react";
+import { SearchProvider, useSearch } from "../contexts/SearchContext";
 import { useNavigate, useLocation } from "react-router-dom";
 
 import { ScrollToTop } from "../shared/ui/ScrollToTop";
 
 // Hooks
-import { useLocalStorage } from "../shared/hooks/useLocalStorage";
+// useLocalStorage for search state is now in SearchContext
 import { useAuth } from "../contexts/AuthContext";
 import { useUserProfile } from "../features/auth/hooks/useUserProfile";
 import { useAppTheme } from "../hooks/useAppTheme";
@@ -61,6 +62,14 @@ const AUTH_TOAST_COOLDOWN_MS = 12_000;
 const UNREAD_COUNT_REFRESH_MS = 30_000;
 
 export default function App() {
+  return (
+    <SearchProvider>
+      <AppContent />
+    </SearchProvider>
+  );
+}
+
+function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
   const {
@@ -94,16 +103,8 @@ export default function App() {
     useUserProfile();
   const { darkMode, setDarkMode, language, toggleLanguage } = useAppTheme();
 
-  // Search State
-  const [searchQuery, setSearchQuery] = useLocalStorage(
-    "tijarahjo_search_query",
-    "",
-  );
-  const [activeSearchQuery, setActiveSearchQuery] = useLocalStorage(
-    "tijarahjo_active_search_query",
-    "",
-  );
-  const searchQueryRef = useRef(searchQuery);
+  // Search state lives in SearchContext
+  const { searchQuery, setSearchQuery, submitSearch } = useSearch();
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
   // Effects
@@ -122,10 +123,6 @@ export default function App() {
       };
     }
   }, []);
-
-  useEffect(() => {
-    searchQueryRef.current = searchQuery;
-  }, [searchQuery]);
 
   useEffect(() => {
     const normalizedAuthError = authError?.trim();
@@ -296,20 +293,8 @@ export default function App() {
         showLogo={true}
         showSearch={true}
         searchQuery={searchQuery}
-        onSearchChange={(query) => {
-          searchQueryRef.current = query;
-          setSearchQuery(query);
-        }}
-        onSearchSubmit={() => {
-          const normalizedQuery = searchQueryRef.current.trim();
-          searchQueryRef.current = normalizedQuery;
-          setSearchQuery(normalizedQuery);
-          setActiveSearchQuery(normalizedQuery);
-          if (!normalizedQuery) {
-            return;
-          }
-          navigate("/search");
-        }}
+        onSearchChange={setSearchQuery}
+        onSearchSubmit={submitSearch}
         onShowFavorites={() => navigate("/favorites")}
         onShowMessages={() => navigate("/chat")}
         onShowProfile={() => {
@@ -377,9 +362,6 @@ export default function App() {
             logout={logout}
             setUserProfile={setUserProfile}
             currentUserDisplayName={currentUserDisplayName}
-            setSearchQuery={setSearchQuery}
-            setActiveSearchQuery={setActiveSearchQuery}
-            activeSearchQuery={activeSearchQuery}
           />
         </Suspense>
       </main>
