@@ -148,11 +148,14 @@ export function Header({
                 className="h-10 rounded-full bg-primary px-2 text-primary-foreground shadow-lg hover:bg-primary/95 hover:shadow-xl active:scale-95 sm:px-5"
                 onClick={onShowSellItem}
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-4 w-4" aria-hidden="true" />
                 <span
-                  className={`text-sm font-semibold ${isRTL ? "mr-2 hidden sm:inline" : "ml-2 hidden sm:inline"}`}
+                  className={`text-sm font-semibold ${isRTL ? "mr-1 sm:mr-2" : "ml-1 sm:ml-2"}`}
                 >
-                  {t.sellItem}
+                  <span className="sr-only sm:not-sr-only">{t.sellItem}</span>
+                  <span className="sm:hidden" aria-hidden="true">
+                    {language === "ar" ? "بيع" : "Sell"}
+                  </span>
                 </span>
               </Button>
             )}

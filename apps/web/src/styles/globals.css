@@ -4,7 +4,9 @@
 
 :root {
   --font-size: 16px;
-  --font-family-sans: "Noto Sans Arabic", "Noto Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-family-sans:
+    "Noto Sans Arabic", "Noto Sans", "Segoe UI", "Helvetica Neue", Arial,
+    sans-serif;
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;
@@ -137,8 +139,16 @@
 
   .dark body {
     background-image:
-      radial-gradient(1100px 420px at 10% -12%, rgba(110, 168, 255, 0.18), transparent 58%),
-      radial-gradient(900px 360px at 92% -20%, rgba(58, 118, 232, 0.16), transparent 60%);
+      radial-gradient(
+        1100px 420px at 10% -12%,
+        rgba(110, 168, 255, 0.18),
+        transparent 58%
+      ),
+      radial-gradient(
+        900px 360px at 92% -20%,
+        rgba(58, 118, 232, 0.16),
+        transparent 60%
+      );
     background-attachment: fixed;
   }
 }
@@ -359,6 +369,16 @@ textarea {
   background: #4d6e95;
 }
 
+/* Firefox scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #888 #f1f1f1;
+}
+
+.dark * {
+  scrollbar-color: #385272 #111a2b;
+}
+
 /* Remove spinner arrows from number inputs */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
@@ -372,7 +392,8 @@ input[type="number"] {
 }
 
 /* Ensure no horizontal scrolling */
-html, body {
+html,
+body {
   overflow-x: hidden;
   max-width: 100vw;
 }
@@ -385,7 +406,7 @@ html, body {
   textarea {
     min-height: 44px;
   }
-  
+
   /* Ensure clickable elements are large enough */
   button:not(.p-0) {
     min-width: 44px;

@@ -1,6 +1,4 @@
-import {
-  Loader2,
-} from "lucide-react";
+import { PostGridSkeleton } from "../shared/ui/post-card-skeleton";
 import { PostResultsGrid } from "../features/marketplace/components/PostResultsGrid";
 import { MarketplaceResultsPagination } from "../features/marketplace/components/MarketplaceResultsPagination";
 import { Language, Post, ViewMode } from "../types";
@@ -116,7 +114,10 @@ export function HomePage({
       />
 
       {/* Main Content */}
-      <main id="home-marketplace-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <section
+        id="home-marketplace-content"
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+      >
         {/* View Controls Only */}
         <MarketplaceDiscoveryControls
           language={language}
@@ -127,21 +128,7 @@ export function HomePage({
         />
 
         {/* Loading State */}
-        {isLoadingPosts && (
-          <div className="col-span-full flex flex-col items-center justify-center py-16 px-4">
-            <Loader2 className="mb-4 h-16 w-16 animate-spin text-primary" />
-            <h3 className="mb-2 text-foreground">
-              {language === "ar"
-                ? "جارٍ تحميل المنشورات..."
-                : "Loading posts..."}
-            </h3>
-            <p className="max-w-md text-center text-muted-foreground">
-              {language === "ar"
-                ? "جاري جلب البيانات من قاعدة البيانات"
-                : "Fetching data from database"}
-            </p>
-          </div>
-        )}
+        {isLoadingPosts && <PostGridSkeleton viewMode={viewMode} />}
 
         {/* Error State */}
         {!isLoadingPosts && postsError && (
@@ -192,9 +179,7 @@ export function HomePage({
                   ? "مسح البحث"
                   : "Clear Search"
                 : undefined,
-              onAction: searchQuery
-                ? () => setSearchQuery("")
-                : undefined,
+              onAction: searchQuery ? () => setSearchQuery("") : undefined,
             }}
           />
         )}
@@ -211,7 +196,7 @@ export function HomePage({
             showLoadingIndicator
           />
         ) : null}
-      </main>
+      </section>
     </PageShell>
   );
 }

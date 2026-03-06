@@ -1,5 +1,11 @@
-import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { COLORS } from "../constants/colors";
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 import { ScrollToTop } from "../shared/ui/ScrollToTop";
@@ -16,10 +22,14 @@ import { deferredToast } from "../utils/toast";
 import { toPositiveIntegerId } from "../utils/idValidation";
 
 const Header = lazy(() =>
-  import("../features/marketplace/components/Header").then((m) => ({ default: m.Header })),
+  import("../features/marketplace/components/Header").then((m) => ({
+    default: m.Header,
+  })),
 );
 const Footer = lazy(() =>
-  import("../features/marketplace/components/Footer").then((m) => ({ default: m.Footer })),
+  import("../features/marketplace/components/Footer").then((m) => ({
+    default: m.Footer,
+  })),
 );
 const AppRoutes = lazy(() =>
   import("./routes/AppRoutes").then((m) => ({ default: m.AppRoutes })),
@@ -76,16 +86,13 @@ export default function App() {
     primarySegment !== "" && !KNOWN_PRIMARY_SEGMENTS.has(primarySegment);
   const shouldShowGlobalHeader =
     !isAuthRoute && !hasLocalPageHeader && !isUnknownPrimarySegment;
-  const isChatRoute = normalizedPathname === "/chat" || normalizedPathname.startsWith("/chat/");
+  const isChatRoute =
+    normalizedPathname === "/chat" || normalizedPathname.startsWith("/chat/");
 
   // Custom Hooks
-  const { userProfile, setUserProfile, currentUserDisplayName } = useUserProfile();
-  const {
-    darkMode,
-    setDarkMode,
-    language,
-    toggleLanguage,
-  } = useAppTheme();
+  const { userProfile, setUserProfile, currentUserDisplayName } =
+    useUserProfile();
+  const { darkMode, setDarkMode, language, toggleLanguage } = useAppTheme();
 
   // Search State
   const [searchQuery, setSearchQuery] = useLocalStorage(
@@ -180,7 +187,10 @@ export default function App() {
     };
 
     void refreshUnreadCount();
-    const intervalId = window.setInterval(refreshUnreadCount, UNREAD_COUNT_REFRESH_MS);
+    const intervalId = window.setInterval(
+      refreshUnreadCount,
+      UNREAD_COUNT_REFRESH_MS,
+    );
 
     return () => {
       isCancelled = true;
@@ -197,9 +207,10 @@ export default function App() {
       const routeConversationId = toPositiveIntegerId(
         new URLSearchParams(location.search).get("conversationId"),
       );
-      const inChatWithSender = isChatRoute
-        && typeof notification.senderUserId === "number"
-        && normalizedPathname.endsWith(`/${notification.senderUserId}`);
+      const inChatWithSender =
+        isChatRoute &&
+        typeof notification.senderUserId === "number" &&
+        normalizedPathname.endsWith(`/${notification.senderUserId}`);
       const inSameConversation =
         !notification.conversationId ||
         !routeConversationId ||
@@ -226,13 +237,25 @@ export default function App() {
         };
       }
 
-      void api.notifications.getUnreadCount().then((count) => {
-        setUnreadNotificationsCount(count);
-      }).catch((error) => {
-        logger.warn("[App] Failed to refresh unread count after realtime notification:", error);
-      });
+      void api.notifications
+        .getUnreadCount()
+        .then((count) => {
+          setUnreadNotificationsCount(count);
+        })
+        .catch((error) => {
+          logger.warn(
+            "[App] Failed to refresh unread count after realtime notification:",
+            error,
+          );
+        });
     });
-  }, [isAuthenticated, isChatRoute, location.search, navigate, normalizedPathname]);
+  }, [
+    isAuthenticated,
+    isChatRoute,
+    location.search,
+    navigate,
+    normalizedPathname,
+  ]);
 
   useEffect(() => {
     if (!isAuthenticated || !isChatRoute) {
@@ -240,11 +263,17 @@ export default function App() {
     }
 
     const timeoutId = window.setTimeout(() => {
-      void api.notifications.getUnreadCount().then((count) => {
-        setUnreadNotificationsCount(count);
-      }).catch((error) => {
-        logger.warn("[App] Failed to refresh unread count on chat route:", error);
-      });
+      void api.notifications
+        .getUnreadCount()
+        .then((count) => {
+          setUnreadNotificationsCount(count);
+        })
+        .catch((error) => {
+          logger.warn(
+            "[App] Failed to refresh unread count on chat route:",
+            error,
+          );
+        });
     }, 1200);
 
     return () => {
@@ -254,26 +283,6 @@ export default function App() {
 
   useEffect(() => {
     document.title = "TijarahJo - Jordan's Marketplace";
-    // Favicon Setup
-    const svg = `
-      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="20" y="32" width="60" height="56" rx="6" fill="${COLORS.PRIMARY}"/>
-        <path d="M32 32V24C32 17.373 37.373 12 44 12H56C62.627 12 68 17.373 68 24V32" stroke="${COLORS.PRIMARY}" stroke-width="6" stroke-linecap="round" fill="none"/>
-        <circle cx="50" cy="58" r="12" fill="white"/>
-        <text x="50" y="64" font-size="18" font-weight="700" fill="${COLORS.PRIMARY}" text-anchor="middle">T</text>
-      </svg>
-    `;
-    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
-    let favicon = document.querySelector(
-      "link[rel*='icon']",
-    ) as HTMLLinkElement;
-    if (!favicon) {
-      favicon = document.createElement("link");
-      favicon.rel = "icon";
-      document.head.appendChild(favicon);
-    }
-    favicon.href = url;
-    return () => URL.revokeObjectURL(url);
   }, []);
 
   const globalHeader = shouldShowGlobalHeader ? (
@@ -311,7 +320,9 @@ export default function App() {
         onShowAdminDashboard={() => navigate("/admin")}
         onShowSellItem={() => navigate("/sell")}
         onLogout={logout}
-        onCategoryClick={(cat) => navigate(`/category/${encodeURIComponent(cat)}`)}
+        onCategoryClick={(cat) =>
+          navigate(`/category/${encodeURIComponent(cat)}`)
+        }
         darkMode={darkMode}
         isAdmin={user?.role === "admin"}
         unreadMessagesCount={unreadNotificationsCount}
@@ -339,7 +350,9 @@ export default function App() {
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-3 focus:py-2 focus:rounded-md focus:bg-primary focus:text-primary-foreground"
       >
-        {language === "ar" ? "تخطي إلى المحتوى الرئيسي" : "Skip to main content"}
+        {language === "ar"
+          ? "تخطي إلى المحتوى الرئيسي"
+          : "Skip to main content"}
       </a>
       {globalHeader}
 

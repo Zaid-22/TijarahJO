@@ -3,7 +3,138 @@ import { Language } from "./types";
 // Re-export Language type for convenience
 export type { Language };
 
-export const translations: Record<Language, Record<string, string>> = {
+/** All valid translation keys — use this type for compile-time safety. */
+export type TranslationKey =
+  | "heroTitle"
+  | "heroSubtitle"
+  | "browseItems"
+  | "startSelling"
+  | "categoriesTitle"
+  | "categoriesSubtitle"
+  | "viewAll"
+  | "searchPlaceholder"
+  | "backToMarketplace"
+  | "back"
+  | "filters"
+  | "priceRange"
+  | "allPrices"
+  | "sortBy"
+  | "mostRecent"
+  | "priceLowToHigh"
+  | "priceHighToLow"
+  | "nameAZ"
+  | "activeFilters"
+  | "clearAll"
+  | "clearFilters"
+  | "favorites"
+  | "noFavorites"
+  | "noFavoritesDescription"
+  | "browseListing"
+  | "myProfile"
+  | "memberSince"
+  | "editProfile"
+  | "activeListings"
+  | "soldListings"
+  | "addPost"
+  | "postYourItem"
+  | "noActiveListings"
+  | "noActiveListingsDescription"
+  | "noSoldListings"
+  | "noSoldListingsDescription"
+  | "viewPost"
+  | "editPost"
+  | "deletePostConfirm"
+  | "cancel"
+  | "delete"
+  | "contactInformation"
+  | "phone"
+  | "about"
+  | "chatWithSeller"
+  | "postSoldMessage"
+  | "sellItem"
+  | "sellItemDescription"
+  | "itemTitle"
+  | "itemTitlePlaceholder"
+  | "price"
+  | "pricePlaceholder"
+  | "category"
+  | "categoryPlaceholder"
+  | "location"
+  | "locationPlaceholder"
+  | "itemImages"
+  | "uploadImages"
+  | "imagesHint"
+  | "description"
+  | "descriptionPlaceholder"
+  | "postItemButton"
+  | "backToListings"
+  | "marketplace"
+  | "markAsSold"
+  | "viewMyProfile"
+  | "viewSellerProfile"
+  | "deletePost"
+  | "relist"
+  | "callSeller"
+  | "sendMessage"
+  | "soldOut"
+  | "descriptionTitle"
+  | "locationTitle"
+  | "postedDaysAgo"
+  | "views"
+  | "jordan"
+  | "memberSinceShort"
+  | "activeListingsShort"
+  | "items"
+  | "postStatisticsTitle"
+  | "totalViewsLabel"
+  | "postStatusLabel"
+  | "imagesCountLabel"
+  | "postedAtLabel"
+  | "updatedAtLabel"
+  | "statusActive"
+  | "statusSold"
+  | "statusDeleted"
+  | "notAvailable"
+  // Menu
+  | "menu"
+  | "menuDescription"
+  // Form validation
+  | "titleRequired"
+  | "categoryRequired"
+  | "locationRequired"
+  | "imagesRequired"
+  | "fileSizeTooLarge"
+  | "invalidFileType"
+  // Profile edit
+  | "profilePicture"
+  | "profilePictureDesc"
+  | "uploadPhoto"
+  | "removePhoto"
+  | "photoRequirements"
+  | "personalInformation"
+  | "personalInformationDesc"
+  | "firstName"
+  | "enterFirstName"
+  | "middleName"
+  | "enterMiddleName"
+  | "lastName"
+  | "enterLastName"
+  | "enterPhone"
+  | "city"
+  | "selectCity"
+  | "area"
+  | "enterArea"
+  | "bio"
+  | "enterBio"
+  | "characters"
+  | "accountStatistics"
+  | "accountStatisticsDesc"
+  | "saveChanges";
+
+/** Typed translation map — guarantees all keys exist. */
+export type TranslationMap = Record<TranslationKey, string>;
+
+export const translations: Record<Language, TranslationMap> = {
   en: {
     heroTitle: "Buy & Sell Anything in Jordan",
     heroSubtitle: "Your trusted marketplace for new and used posts",
@@ -101,6 +232,41 @@ export const translations: Record<Language, Record<string, string>> = {
     statusSold: "Sold",
     statusDeleted: "Deleted",
     notAvailable: "N/A",
+    // Menu
+    menu: "Menu",
+    menuDescription: "Navigate through TijarahJo",
+    // Form validation
+    titleRequired: "Title is required",
+    categoryRequired: "Category is required",
+    locationRequired: "Location is required",
+    imagesRequired: "At least one image is required",
+    fileSizeTooLarge: "File size is too large",
+    invalidFileType: "Invalid file type",
+    // Profile edit
+    profilePicture: "Profile Picture",
+    profilePictureDesc: "Upload a photo to personalize your profile",
+    uploadPhoto: "Upload Photo",
+    removePhoto: "Remove Photo",
+    photoRequirements: "JPG, PNG or WebP. Max 5MB.",
+    personalInformation: "Personal Information",
+    personalInformationDesc: "Update your personal details",
+    firstName: "First Name",
+    enterFirstName: "Enter first name",
+    middleName: "Middle Name",
+    enterMiddleName: "Enter middle name",
+    lastName: "Last Name",
+    enterLastName: "Enter last name",
+    enterPhone: "Enter phone number",
+    city: "City",
+    selectCity: "Select city",
+    area: "Area",
+    enterArea: "Enter area",
+    bio: "Bio",
+    enterBio: "Tell us about yourself...",
+    characters: "characters",
+    accountStatistics: "Account Statistics",
+    accountStatisticsDesc: "Overview of your account activity",
+    saveChanges: "Save Changes",
   },
   ar: {
     heroTitle: "اشتري وبيع أي شيء في الأردن",
@@ -144,7 +310,8 @@ export const translations: Record<Language, Record<string, string>> = {
       "ليس لديك أي إعلانات مباعة. ابدأ البيع بإضافة أول منشور لك!",
     viewPost: "عرض المنشور",
     editPost: "تعديل المنشور",
-    deletePostConfirm: "هل أنت متأكد من حذف هذا المنشور؟ لا يمكن التراجع عن هذا الإجراء.",
+    deletePostConfirm:
+      "هل أنت متأكد من حذف هذا المنشور؟ لا يمكن التراجع عن هذا الإجراء.",
     cancel: "إلغاء",
     delete: "حذف",
     contactInformation: "معلومات التواصل",
@@ -198,5 +365,40 @@ export const translations: Record<Language, Record<string, string>> = {
     statusSold: "مباع",
     statusDeleted: "محذوف",
     notAvailable: "غير متاح",
+    // Menu
+    menu: "القائمة",
+    menuDescription: "تصفح تجارة جو",
+    // Form validation
+    titleRequired: "العنوان مطلوب",
+    categoryRequired: "الفئة مطلوبة",
+    locationRequired: "الموقع مطلوب",
+    imagesRequired: "يجب إضافة صورة واحدة على الأقل",
+    fileSizeTooLarge: "حجم الملف كبير جداً",
+    invalidFileType: "نوع الملف غير صالح",
+    // Profile edit
+    profilePicture: "صورة الملف الشخصي",
+    profilePictureDesc: "ارفع صورة لتخصيص ملفك الشخصي",
+    uploadPhoto: "رفع صورة",
+    removePhoto: "إزالة الصورة",
+    photoRequirements: "JPG، PNG أو WebP. الحد الأقصى 5 ميغا.",
+    personalInformation: "المعلومات الشخصية",
+    personalInformationDesc: "حدّث بياناتك الشخصية",
+    firstName: "الاسم الأول",
+    enterFirstName: "أدخل الاسم الأول",
+    middleName: "الاسم الأوسط",
+    enterMiddleName: "أدخل الاسم الأوسط",
+    lastName: "الاسم الأخير",
+    enterLastName: "أدخل الاسم الأخير",
+    enterPhone: "أدخل رقم الهاتف",
+    city: "المدينة",
+    selectCity: "اختر المدينة",
+    area: "المنطقة",
+    enterArea: "أدخل المنطقة",
+    bio: "النبذة",
+    enterBio: "أخبرنا عن نفسك...",
+    characters: "حرف",
+    accountStatistics: "إحصائيات الحساب",
+    accountStatisticsDesc: "نظرة عامة على نشاط حسابك",
+    saveChanges: "حفظ التغييرات",
   },
 };

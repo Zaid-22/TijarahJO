@@ -1,3 +1,11 @@
+/**
+ * Brand colors — sourced from CSS custom properties in globals.css.
+ * These constants exist for JS contexts where CSS vars aren't available
+ * (e.g. canvas drawing, SVG generation). For all other cases, use
+ * Tailwind's `bg-primary`, `text-primary`, etc.
+ *
+ * @deprecated Prefer CSS-based `var(--primary)` or Tailwind classes.
+ */
 export const COLORS = {
   PRIMARY: "#0A4ABF",
   PRIMARY_HOVER: "#083A99",

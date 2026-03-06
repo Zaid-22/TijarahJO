@@ -79,19 +79,19 @@ type SocialLink = {
 
 const socialLinks: SocialLink[] = [
   {
-    href: "https://www.facebook.com/",
+    href: "https://www.facebook.com/TijarahJo",
     labelEn: "Facebook",
     labelAr: "فيسبوك",
     icon: Facebook,
   },
   {
-    href: "https://x.com/",
+    href: "https://x.com/TijarahJo",
     labelEn: "X",
     labelAr: "إكس",
     icon: Twitter,
   },
   {
-    href: "https://www.instagram.com/",
+    href: "https://www.instagram.com/TijarahJo",
     labelEn: "Instagram",
     labelAr: "إنستغرام",
     icon: Instagram,
@@ -117,11 +117,7 @@ export function Footer({ language }: FooterProps) {
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
         <div className="grid grid-cols-1 gap-10 border-b border-white/10 pb-10 md:grid-cols-2 lg:grid-cols-12 lg:gap-8">
           <section className="space-y-5 lg:col-span-5">
-            <Logo
-              size="md"
-              variant="light"
-              className="drop-shadow-md"
-            />
+            <Logo size="md" variant="light" className="drop-shadow-md" />
             <p className="max-w-md text-sm leading-7 text-slate-300">
               {content.aboutText}
             </p>
@@ -138,7 +134,9 @@ export function Footer({ language }: FooterProps) {
                       href={link.href}
                       target="_blank"
                       rel="noreferrer"
-                      aria-label={language === "ar" ? link.labelAr : link.labelEn}
+                      aria-label={
+                        language === "ar" ? link.labelAr : link.labelEn
+                      }
                       className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/12 bg-white/5 text-slate-300 transition-colors hover:border-primary/45 hover:bg-primary/15 hover:text-primary focus-visible:text-primary"
                     >
                       <Icon className="h-4 w-4" />

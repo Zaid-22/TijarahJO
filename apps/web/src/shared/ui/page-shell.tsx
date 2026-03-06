@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "./utils";
+import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 
 type PageShellTone = "marketplace" | "account";
 
@@ -21,10 +22,23 @@ export function PageShell({
   className,
   tone = "marketplace",
 }: PageShellProps) {
+  const prefersReducedMotion = usePrefersReducedMotion();
+
   return (
-    <div className={cn("min-h-screen relative overflow-x-clip", shellToneClass[tone], className)}>
-      <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-secondary/10 blur-3xl" />
+    <div
+      className={cn(
+        "min-h-screen relative overflow-x-clip",
+        shellToneClass[tone],
+        className,
+      )}
+    >
+      {/* Decorative blurs — skip for reduced-motion users to improve perf on lower-end devices */}
+      {!prefersReducedMotion && (
+        <>
+          <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-primary/10 blur-3xl will-change-transform" />
+          <div className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-secondary/10 blur-3xl will-change-transform" />
+        </>
+      )}
       <div className="relative">{children}</div>
     </div>
   );
