@@ -8,6 +8,7 @@ namespace TijarahJoDB.DAL.Entities;
 /// </summary>
 public sealed class ReportEntity
 {
+    [System.ComponentModel.DataAnnotations.Key]
     public int ReportID { get; set; }
 
     /// <summary>Type of report: "LISTING", "USER", "REVIEW", "CHAT".</summary>

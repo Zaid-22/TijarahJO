@@ -103,7 +103,7 @@ export function PermissionsDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-full overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             <Shield className="inline w-5 h-5 mr-2 text-primary" />
@@ -134,6 +134,7 @@ export function PermissionsDialog({
                         type="checkbox"
                         checked={checked}
                         onChange={() => togglePermission(perm.permissionID)}
+                        aria-label={perm.permissionKey}
                         className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                       />
                       <div className="flex-1 min-w-0">

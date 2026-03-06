@@ -303,7 +303,15 @@ export function useAuthProviderController(): AuthContextType {
         "network_error",
       );
       debugAuthWarn("[AuthContext] Backend unavailable during auth check");
-      emitAuthError(currentUserResult.message);
+
+      const wasAuthenticated =
+        authState.isAuthenticated ||
+        AUTH_LEGACY_KEYS.some((k) => localStorage.getItem(k) !== null);
+
+      if (wasAuthenticated) {
+        emitAuthError(currentUserResult.message);
+      }
+
       setAuthState((prev) => {
         if (prev.isAuthenticated && prev.user) {
           return prev;

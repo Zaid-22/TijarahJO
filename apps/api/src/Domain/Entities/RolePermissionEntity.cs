@@ -5,6 +5,7 @@ namespace TijarahJoDB.DAL.Entities;
 /// </summary>
 public sealed class RolePermissionEntity
 {
+    [System.ComponentModel.DataAnnotations.Key]
     public int RolePermissionID { get; set; }
     public int RoleID { get; set; }
     public int PermissionID { get; set; }

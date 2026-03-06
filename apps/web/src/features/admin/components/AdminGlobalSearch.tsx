@@ -167,7 +167,7 @@ export function AdminGlobalSearch() {
                     : group.charAt(0).toUpperCase() + group.slice(1);
                 return (
                   <div key={group}>
-                    <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30">
+                    <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30">
                       {groupLabel}
                     </div>
                     {items.map((item) => {

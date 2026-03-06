@@ -92,7 +92,7 @@ export function ChatInspection() {
             )}
           </div>
 
-          <div className="max-h-[500px] overflow-y-auto p-4 space-y-3">
+          <div className="max-h-96 overflow-y-auto p-4 space-y-3">
             {selectedConversation.messages.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
                 No messages in this conversation.
@@ -119,7 +119,7 @@ export function ChatInspection() {
                         {msg.content}
                       </p>
                       <p
-                        className={`text-[10px] mt-1 ${
+                        className={`text-xs mt-1 ${
                           isUser1
                             ? "text-muted-foreground"
                             : "text-primary-foreground/70"
@@ -162,7 +162,7 @@ export function ChatInspection() {
       </div>
 
       <div className="rounded-md border border-border">
-        <div className="overflow-x-auto min-h-[400px]">
+        <div className="overflow-x-auto min-h-96">
           <table className="w-full text-sm text-left">
             <thead className="text-xs uppercase bg-muted text-muted-foreground sticky top-0">
               <tr>

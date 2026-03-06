@@ -6,6 +6,7 @@ namespace TijarahJoDB.DAL.Entities;
 /// </summary>
 public sealed class PermissionEntity
 {
+    [System.ComponentModel.DataAnnotations.Key]
     public int PermissionID { get; set; }
 
     /// <summary>Unique permission key, e.g., "users.view", "users.ban", "posts.block".</summary>

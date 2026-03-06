@@ -101,7 +101,7 @@ export function ReviewsModeration() {
       </div>
 
       <div className="rounded-md border border-border">
-        <div className="overflow-x-auto min-h-[400px]">
+        <div className="overflow-x-auto min-h-96">
           <table className="w-full text-sm text-left">
             <thead className="text-xs uppercase bg-muted text-muted-foreground sticky top-0">
               <tr>
