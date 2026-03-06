@@ -8,6 +8,7 @@ namespace TijarahJoDB.DAL.Entities;
 /// </summary>
 public sealed class SystemSettingEntity
 {
+    [System.ComponentModel.DataAnnotations.Key]
     public int SettingID { get; set; }
 
     /// <summary>Unique machine-readable key (e.g. "MaintenanceMode", "Force2FA").</summary>

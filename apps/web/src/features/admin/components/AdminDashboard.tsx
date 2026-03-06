@@ -139,23 +139,23 @@ export function AdminDashboard() {
     switch (action) {
       case "INSERT":
         return (
-          <Badge className="bg-emerald-100 text-emerald-800 text-[10px]">
+          <Badge className="bg-emerald-100 text-emerald-800 text-xs">
             CREATE
           </Badge>
         );
       case "UPDATE":
         return (
-          <Badge className="bg-blue-100 text-blue-800 text-[10px]">
+          <Badge className="bg-blue-100 text-blue-800 text-xs">
             UPDATE
           </Badge>
         );
       case "DELETE":
         return (
-          <Badge className="bg-red-100 text-red-800 text-[10px]">DELETE</Badge>
+          <Badge className="bg-red-100 text-red-800 text-xs">DELETE</Badge>
         );
       default:
         return (
-          <Badge variant="outline" className="text-[10px]">
+          <Badge variant="outline" className="text-xs">
             {action}
           </Badge>
         );
@@ -224,11 +224,11 @@ export function AdminDashboard() {
                     <Tooltip
                       contentStyle={{
                         borderRadius: "8px",
-                        border: "1px solid #e2e8f0",
+                        border: "1px solid var(--border)",
                         boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                       }}
                       cursor={{
-                        stroke: "#94a3b8",
+                        stroke: "var(--muted-foreground)",
                         strokeWidth: 1,
                         strokeDasharray: "3 3",
                       }}
@@ -237,13 +237,13 @@ export function AdminDashboard() {
                       type="monotone"
                       dataKey="count"
                       name="New Users"
-                      stroke="#10b981"
+                      stroke="var(--primary)"
                       strokeWidth={3}
                       dot={{
                         r: 4,
-                        fill: "#10b981",
+                        fill: "var(--primary)",
                         strokeWidth: 2,
-                        stroke: "#fff",
+                        stroke: "var(--background)",
                       }}
                       activeDot={{ r: 6 }}
                       animationDuration={1500}
@@ -292,17 +292,17 @@ export function AdminDashboard() {
                       allowDecimals={false}
                     />
                     <Tooltip
-                      cursor={{ fill: "#f1f5f9" }}
+                      cursor={{ fill: "var(--muted)" }}
                       contentStyle={{
                         borderRadius: "8px",
-                        border: "1px solid #e2e8f0",
+                        border: "1px solid var(--border)",
                         boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                       }}
                     />
                     <Bar
                       dataKey="count"
                       name="Active Listings"
-                      fill="#8b5cf6"
+                      fill="var(--primary)"
                       radius={[4, 4, 0, 0]}
                       animationDuration={1500}
                     />

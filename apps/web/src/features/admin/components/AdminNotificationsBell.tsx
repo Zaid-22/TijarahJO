@@ -94,14 +94,13 @@ export function AdminNotificationsBell() {
     <div className="relative">
       <Button
         variant="ghost"
-        size="icon"
         onClick={() => setIsOpen(!isOpen)}
-        className="relative"
         aria-label="Notifications"
+        className="relative h-10 w-10 p-0"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white">
+          <span className="absolute -top-0.5 -right-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs font-bold text-white">
             {unreadCount}
           </span>
         )}
@@ -161,7 +160,7 @@ export function AdminNotificationsBell() {
                           type="button"
                           onClick={() => dismissNotification(n.id)}
                           className="p-0.5 rounded hover:bg-muted flex-shrink-0"
-                          aria-label="Dismiss"
+                          aria-label={`Dismiss ${n.title} notification`}
                         >
                           <X className="w-3.5 h-3.5 text-muted-foreground" />
                         </button>

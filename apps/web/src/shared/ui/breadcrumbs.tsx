@@ -62,6 +62,7 @@ export function Breadcrumbs({
               <button
                 type="button"
                 onClick={item.onClick}
+                aria-label={isFirst && !item.label ? "Home" : undefined}
                 className="flex items-center gap-1 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded"
               >
                 {isFirst && <Home className="h-3.5 w-3.5" />}

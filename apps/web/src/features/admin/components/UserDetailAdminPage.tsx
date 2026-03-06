@@ -48,7 +48,7 @@ export function UserDetailAdminPage() {
     return (
       <LoadingState
         label="Loading user details..."
-        minHeightClassName="min-h-[50vh]"
+        minHeightClassName="min-h-screen"
       />
     );
   }

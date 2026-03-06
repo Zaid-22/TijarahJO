@@ -343,9 +343,9 @@ export function ReportsQueue() {
                 </div>
               )}
               <div>
-                <label className="text-sm font-medium text-foreground">
+                <div className="text-sm font-medium text-foreground mb-1.5">
                   Update Status
-                </label>
+                </div>
                 <Select
                   value={String(newStatus)}
                   onValueChange={(v) => setNewStatus(Number(v))}

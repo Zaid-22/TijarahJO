@@ -152,7 +152,7 @@ function AdminLayoutInner() {
             <AdminNotificationsBell />
             <span className="text-xs text-muted-foreground">
               Press{" "}
-              <kbd className="px-1.5 py-0.5 text-[10px] bg-muted border border-border rounded">
+              <kbd className="px-1.5 py-0.5 text-xs bg-muted border border-border rounded">
                 /
               </kbd>{" "}
               to search
