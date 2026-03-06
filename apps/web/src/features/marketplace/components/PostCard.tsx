@@ -29,7 +29,7 @@ export function PostCard({
   isFavorite = false,
   onFavoriteToggle,
   isAuthenticated = false,
-  currentUserDisplayName,
+  currentUserDisplayName: _currentUserDisplayName,
   currentUserId,
   hideCategoryBadge,
   language,
@@ -80,23 +80,13 @@ export function PostCard({
     onPostClick?.(post.id);
   };
 
-  // Determine ownership primarily by user ID, with display-name fallback for legacy data.
+  // Determine ownership by user ID only — display-name comparison is fragile.
   const normalizedCurrentUserId = String(currentUserId || "").trim();
   const normalizedSellerId = String(post.sellerId || "").trim();
-  const normalizedCurrentUserDisplayName = String(currentUserDisplayName || "")
-    .trim()
-    .toLowerCase();
-  const normalizedSellerName = String(post.seller || "")
-    .trim()
-    .toLowerCase();
-  const isOwnerById =
+  const isOwner =
     normalizedCurrentUserId.length > 0 &&
     normalizedSellerId.length > 0 &&
     normalizedCurrentUserId === normalizedSellerId;
-  const isOwnerByDisplayName =
-    normalizedCurrentUserDisplayName.length > 0 &&
-    normalizedCurrentUserDisplayName === normalizedSellerName;
-  const isOwner = isOwnerById || isOwnerByDisplayName;
   // Only show favorite button if authenticated AND not the owner
   const showFavoriteButton = isAuthenticated && !isOwner;
 

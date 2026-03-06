@@ -1,4 +1,13 @@
-import { AlertCircle, Loader2, Lock, Mail, MapPin, Phone, Shield, User } from "lucide-react";
+import {
+  AlertCircle,
+  Loader2,
+  Lock,
+  Mail,
+  MapPin,
+  Phone,
+  Shield,
+  User,
+} from "lucide-react";
 import { Alert, AlertDescription } from "../../shared/ui/alert";
 import { Button } from "../../shared/ui/button";
 import { Logo } from "../../shared/ui/logo";
@@ -100,9 +109,15 @@ export function LoginForm({
 
         <div className="rounded-2xl border border-border bg-card shadow-xl p-4 sm:p-6 lg:p-8">
           {generalError && (
-            <Alert variant="destructive" className="mb-4 sm:mb-6">
+            <Alert
+              variant="destructive"
+              className="mb-4 sm:mb-6"
+              aria-live="polite"
+            >
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-sm">{generalError}</AlertDescription>
+              <AlertDescription className="text-sm">
+                {generalError}
+              </AlertDescription>
             </Alert>
           )}
 

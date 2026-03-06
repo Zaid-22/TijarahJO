@@ -16,6 +16,7 @@ import { api } from "../services/api";
 import { normalizeSellerDisplayName } from "../utils/sellerDisplayName";
 import { logger } from "../shared/lib/logger";
 import { PageShell } from "../shared/ui/page-shell";
+import { Breadcrumbs } from "../shared/ui/breadcrumbs";
 import type {
   UpdatePostInput,
   UpdatePostStatusInput,
@@ -56,11 +57,14 @@ export function PostDetailsPage({
   onFavoriteToggle,
   isAuthenticated = false,
 }: PostDetailsPageProps) {
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showPhoneDialog, setShowPhoneDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showMarkAsSoldDialog, setShowMarkAsSoldDialog] = useState(false);
-  const [showRelistDialog, setShowRelistDialog] = useState(false);
+  type ActiveDialog =
+    | "delete"
+    | "edit"
+    | "phone"
+    | "markAsSold"
+    | "relist"
+    | null;
+  const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
   const [sellerJoinDate, setSellerJoinDate] = useState<string | null>(null);
   const [sellerAvatar, setSellerAvatar] = useState<string | null>(null);
   const [sellerPhone, setSellerPhone] = useState<string | null>(null);
@@ -246,6 +250,20 @@ export function PostDetailsPage({
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {/* Breadcrumbs — navigation context for deep-linked users */}
+        <Breadcrumbs
+          isRTL={isRTL}
+          className="mb-4"
+          items={[
+            {
+              label: isRTL ? "الرئيسية" : "Home",
+              onClick: onBack,
+            },
+            ...(post.category ? [{ label: post.category }] : []),
+            { label: post.name },
+          ]}
+        />
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
           <div className="lg:col-span-2 space-y-6">
             <PostImageGallery post={post} language={language} />
@@ -275,11 +293,11 @@ export function PostDetailsPage({
             displayLocationLabel={displayLocationLabel}
             onSellerClick={onSellerClick}
             onChatWithSeller={onChatWithSeller}
-            onShowPhoneDialog={() => setShowPhoneDialog(true)}
-            onShowMarkAsSoldDialog={() => setShowMarkAsSoldDialog(true)}
-            onShowRelistDialog={() => setShowRelistDialog(true)}
-            onShowEditDialog={() => setShowEditDialog(true)}
-            onShowDeleteDialog={() => setShowDeleteDialog(true)}
+            onShowPhoneDialog={() => setActiveDialog("phone")}
+            onShowMarkAsSoldDialog={() => setActiveDialog("markAsSold")}
+            onShowRelistDialog={() => setActiveDialog("relist")}
+            onShowEditDialog={() => setActiveDialog("edit")}
+            onShowDeleteDialog={() => setActiveDialog("delete")}
             hasOwnerActions={hasOwnerActions}
             labels={{
               memberSinceShort: t.memberSinceShort,
@@ -306,16 +324,18 @@ export function PostDetailsPage({
         isRTL={isRTL}
         post={post}
         sellerPhone={sellerPhone}
-        showEditDialog={showEditDialog}
-        setShowEditDialog={setShowEditDialog}
-        showDeleteDialog={showDeleteDialog}
-        setShowDeleteDialog={setShowDeleteDialog}
-        showPhoneDialog={showPhoneDialog}
-        setShowPhoneDialog={setShowPhoneDialog}
-        showMarkAsSoldDialog={showMarkAsSoldDialog}
-        setShowMarkAsSoldDialog={setShowMarkAsSoldDialog}
-        showRelistDialog={showRelistDialog}
-        setShowRelistDialog={setShowRelistDialog}
+        showEditDialog={activeDialog === "edit"}
+        setShowEditDialog={(open) => setActiveDialog(open ? "edit" : null)}
+        showDeleteDialog={activeDialog === "delete"}
+        setShowDeleteDialog={(open) => setActiveDialog(open ? "delete" : null)}
+        showPhoneDialog={activeDialog === "phone"}
+        setShowPhoneDialog={(open) => setActiveDialog(open ? "phone" : null)}
+        showMarkAsSoldDialog={activeDialog === "markAsSold"}
+        setShowMarkAsSoldDialog={(open) =>
+          setActiveDialog(open ? "markAsSold" : null)
+        }
+        showRelistDialog={activeDialog === "relist"}
+        setShowRelistDialog={(open) => setActiveDialog(open ? "relist" : null)}
         onUpdatePost={onUpdatePost}
         onUpdatePostStatus={onUpdatePostStatus}
         onDeletePost={onDeletePost}

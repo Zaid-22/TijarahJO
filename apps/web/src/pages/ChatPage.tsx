@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { MessageSquare } from "lucide-react";
 import { ChatList } from "../features/chat/components/ChatList";
 import { ChatWindow } from "../features/chat/components/ChatWindow";
 import { useAuth } from "../contexts/AuthContext";
@@ -14,6 +15,7 @@ import { Button } from "../shared/ui/button";
 import { SubpageHeader } from "../shared/ui/subpage-header";
 import { PageShell } from "../shared/ui/page-shell";
 import { LoadingState } from "../shared/ui/loading-state";
+import { useMediaQuery } from "../shared/hooks/useMediaQuery";
 import { formatChatPreviewText } from "../features/chat/chatMessageContent";
 import {
   buildCurrentPath,
@@ -66,27 +68,12 @@ export function ChatPage({ language }: ChatPageProps) {
     initialSelectedUserId ?? null,
   );
   const [selectedDisplayName, setSelectedDisplayName] = useState("");
-  const [userDisplayNamesById, setUserDisplayNamesById] = useState<Record<number, string>>(
-    {},
-  );
+  const [userDisplayNamesById, setUserDisplayNamesById] = useState<
+    Record<number, string>
+  >({});
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [isLoadingChats, setIsLoadingChats] = useState(true);
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth < 768 : false,
-  );
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  const isMobile = useMediaQuery("(max-width: 767px)");
 
   useEffect(() => {
     async function fetchChats() {
@@ -130,10 +117,15 @@ export function ChatPage({ language }: ChatPageProps) {
           chatsByUser.set(otherUser, {
             userId: otherUser,
             displayName: `${labels.userPrefix} ${otherUser}`,
-            lastMessage: formatChatPreviewText(message.content, resolvedLanguage),
+            lastMessage: formatChatPreviewText(
+              message.content,
+              resolvedLanguage,
+            ),
             timestamp: message.timestamp,
             isRead:
-              message.senderId === currentUserId ? true : Boolean(message.isRead),
+              message.senderId === currentUserId
+                ? true
+                : Boolean(message.isRead),
           });
         });
 
@@ -189,7 +181,9 @@ export function ChatPage({ language }: ChatPageProps) {
       }
 
       setChats((prevChats) => {
-        const existingChat = prevChats.find((chat) => chat.userId === otherUserId);
+        const existingChat = prevChats.find(
+          (chat) => chat.userId === otherUserId,
+        );
         const updatedChat: ChatSummary = {
           userId: otherUserId,
           displayName:
@@ -197,7 +191,8 @@ export function ChatPage({ language }: ChatPageProps) {
           lastMessage: formatChatPreviewText(message.content, resolvedLanguage),
           timestamp: message.timestamp,
           isRead:
-            message.senderId === currentUserId || selectedUserId === otherUserId,
+            message.senderId === currentUserId ||
+            selectedUserId === otherUserId,
         };
 
         return [
@@ -206,7 +201,13 @@ export function ChatPage({ language }: ChatPageProps) {
         ];
       });
     });
-  }, [isAuthenticated, labels.userPrefix, user?.id, selectedUserId, resolvedLanguage]);
+  }, [
+    isAuthenticated,
+    labels.userPrefix,
+    user?.id,
+    selectedUserId,
+    resolvedLanguage,
+  ]);
 
   useEffect(() => {
     if (!userId) {
@@ -328,7 +329,11 @@ export function ChatPage({ language }: ChatPageProps) {
           >
             {isLoadingChats ? (
               <LoadingState
-                label={resolvedLanguage === "ar" ? "جارٍ تحميل المحادثات..." : "Loading chats..."}
+                label={
+                  resolvedLanguage === "ar"
+                    ? "جارٍ تحميل المحادثات..."
+                    : "Loading chats..."
+                }
                 minHeightClassName="min-h-64"
               />
             ) : (
@@ -349,9 +354,13 @@ export function ChatPage({ language }: ChatPageProps) {
               <ChatWindow
                 otherUserId={selectedUserId}
                 otherDisplayName={
-                  selectedDisplayName || `${labels.userPrefix} ${selectedUserId}`
+                  selectedDisplayName ||
+                  `${labels.userPrefix} ${selectedUserId}`
                 }
-                currentUser={{ id: user?.id || "", name: user?.name || labels.me }}
+                currentUser={{
+                  id: user?.id || "",
+                  name: user?.name || labels.me,
+                }}
                 onBack={() => {
                   setSelectedUserId(null);
                   navigate("/chat", {
@@ -363,9 +372,17 @@ export function ChatPage({ language }: ChatPageProps) {
                 language={resolvedLanguage}
               />
             ) : (
-              <div className="h-full flex items-center justify-center rounded-lg border border-border bg-muted/40">
-                <p className="text-muted-foreground">
+              <div className="h-full flex flex-col items-center justify-center rounded-lg border border-border bg-muted/40 p-8 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mb-4">
+                  <MessageSquare className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-lg font-medium text-foreground mb-2">
                   {labels.selectConversation}
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  {resolvedLanguage === "ar"
+                    ? "اختر محادثة من القائمة أو ابدأ محادثة جديدة من صفحة أي منتج"
+                    : "Pick a conversation from the list, or start a new one from any listing page"}
                 </p>
               </div>
             )}
