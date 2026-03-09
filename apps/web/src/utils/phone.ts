@@ -17,8 +17,9 @@ export function normalizeJordanPhone(value: string): string | null {
   if (localNumber.startsWith("0") && localNumber.length === 10) {
     localNumber = localNumber.slice(1);
   }
-
-  if (!/^\d{9}$/.test(localNumber)) {
+  // At this point, if it was directly entered from the form, it will be 9 digits starting with 7
+  // e.g., 79xxxxxxx, 78xxxxxxx, 77xxxxxxx => 9 digits
+  if (!/^7[789]\d{7}$/.test(localNumber)) {
     return null;
   }
 

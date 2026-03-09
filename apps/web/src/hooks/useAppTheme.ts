@@ -6,7 +6,7 @@ export function useAppTheme() {
   const [darkMode, setDarkMode] = useLocalStorage("tijarahjo_dark_mode", false);
   const [language, setLanguage] = useLocalStorage<Language>(
     "tijarahjo_language",
-    "en",
+    "ar",
   );
 
   const isRTL = language === "ar";

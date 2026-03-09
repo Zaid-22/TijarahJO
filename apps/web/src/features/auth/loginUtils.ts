@@ -1,6 +1,36 @@
 import { normalizeJordanPhone } from "../../utils/phone";
 import type { Language } from "../../types";
 
+export const JORDAN_CITIES = [
+  "Amman",
+  "Irbid",
+  "Zarqa",
+  "Aqaba",
+  "Madaba",
+  "Jerash",
+  "Ajloun",
+  "Karak",
+  "Mafraq",
+  "Tafilah",
+  "Ma'an",
+  "Balqa",
+];
+
+export const JORDAN_CITIES_AR: Record<string, string> = {
+  Amman: "عمّان",
+  Irbid: "إربد",
+  Zarqa: "الزرقاء",
+  Aqaba: "العقبة",
+  Madaba: "مادبا",
+  Jerash: "جرش",
+  Ajloun: "عجلون",
+  Karak: "الكرك",
+  Mafraq: "المفرق",
+  Tafilah: "الطفيلة",
+  "Ma'an": "معان",
+  Balqa: "البلقاء",
+};
+
 interface ParsedAuthIdentifier {
   email: string | null;
   phone: string | null;
@@ -105,10 +135,20 @@ export const calculatePasswordStrength = (
   }
 
   if (metRequirements === 4) {
-    return { score: 75, label: "Strong", color: "rgb(16 185 129)", requirements };
+    return {
+      score: 75,
+      label: "Strong",
+      color: "rgb(16 185 129)",
+      requirements,
+    };
   }
 
-  return { score: 100, label: "Very Strong", color: "rgb(16 185 129)", requirements };
+  return {
+    score: 100,
+    label: "Very Strong",
+    color: "rgb(16 185 129)",
+    requirements,
+  };
 };
 
 export const extractApiMessage = (payload: unknown): string | null => {

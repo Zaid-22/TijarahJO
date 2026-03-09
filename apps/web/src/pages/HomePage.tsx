@@ -138,9 +138,7 @@ export function HomePage({
       {/* 3. Featured Items Carousel */}
       {!isLoadingPosts && featuredPosts.length > 0 && (
         <PostCarousel
-          title={
-            language === "ar" ? "🔥 المنتجات المميزة" : "🔥 Featured Items"
-          }
+          title={language === "ar" ? "المنتجات المميزة" : "Featured Items"}
           subtitle={
             language === "ar"
               ? "أبرز المنتجات المتوفرة حالياً"
@@ -176,7 +174,7 @@ export function HomePage({
       {/* 5. Recent Items Carousel */}
       {!isLoadingPosts && recentPosts.length > 0 && (
         <PostCarousel
-          title={language === "ar" ? "🆕 أحدث الإعلانات" : "🆕 Recently Added"}
+          title={language === "ar" ? "أحدث الإعلانات" : "Recently Added"}
           subtitle={
             language === "ar"
               ? "أحدث ما تمت إضافته للمنصة"

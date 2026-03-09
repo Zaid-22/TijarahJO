@@ -39,10 +39,7 @@ type LoginAction =
   | { type: "SET_FOCUSED_FIELD"; field: LoginField | null }
   | { type: "RESET"; initialValues?: Partial<LoginFormValues> };
 
-function loginReducer(
-  state: LoginState,
-  action: LoginAction,
-): LoginState {
+function loginReducer(state: LoginState, action: LoginAction): LoginState {
   switch (action.type) {
     case "SET_MODE":
       return {
@@ -163,7 +160,7 @@ function createInitialLoginState(
       confirmPassword: "",
       firstName: "",
       lastName: "",
-      phone: "+962", // Default APP_CONFIG.defaultPhonePrefix logic handles this normally, keeping hardcoded for simplicity in reducer initial state if not provided
+      phone: "", // Default APP_CONFIG.defaultPhonePrefix logic handles this normally, keeping empty for prefix input
       city: "",
       area: "",
       ...initialValues,

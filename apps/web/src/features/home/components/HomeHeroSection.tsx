@@ -52,8 +52,8 @@ export function HomeHeroSection({
             <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 dark:bg-primary/20 px-4 py-1.5 text-sm font-medium text-primary border border-primary/20">
               <ShoppingBag className="h-4 w-4" />
               {language === "ar"
-                ? "🇯🇴 سوق الأردن الأول"
-                : "🇯🇴 Jordan's #1 Marketplace"}
+                ? "سوق الأردن الأول"
+                : "Jordan's #1 Marketplace"}
             </div>
 
             <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl xl:text-6xl !leading-[1.15]">
