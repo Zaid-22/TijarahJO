@@ -34,15 +34,18 @@ function main() {
     return;
   }
 
+  // eslint-disable-next-line no-console
   console.error(
     "Storybook workflow check failed: required baseline stories are missing or malformed.",
   );
 
   for (const file of missingFiles) {
+    // eslint-disable-next-line no-console
     console.error(`- missing: ${file}`);
   }
 
   for (const file of malformedFiles) {
+    // eslint-disable-next-line no-console
     console.error(`- malformed: ${file}`);
   }
 

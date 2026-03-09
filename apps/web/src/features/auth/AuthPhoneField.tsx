@@ -57,8 +57,8 @@ export function AuthPhoneField({
   const prefix = APP_CONFIG.defaultPhonePrefix;
 
   const inputPaddingClassName = isRTL
-    ? "pl-4 pr-[5.5rem] sm:pr-[6.5rem] text-right"
-    : "pr-4 pl-[5.5rem] sm:pl-[6.5rem] text-left";
+    ? "pl-4 pr-22 sm:pr-26 text-right"
+    : "pr-4 pl-22 sm:pl-26 text-left";
 
   const prefixPositionClassName = isRTL
     ? "right-12 sm:right-14 pr-2 border-r border-transparent"

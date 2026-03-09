@@ -134,7 +134,7 @@ export function HeaderNotificationsDropdown({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-80 sm:w-96 p-0 max-h-[480px] overflow-hidden flex flex-col"
+        className="w-80 sm:w-96 p-0 max-h-96 overflow-hidden flex flex-col"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">

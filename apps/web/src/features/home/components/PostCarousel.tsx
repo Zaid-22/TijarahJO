@@ -144,7 +144,6 @@ export function PostCarousel({
         <div
           ref={scrollRef}
           className="flex gap-4 sm:gap-5 overflow-x-auto scrollbar-none pb-2 snap-x snap-mandatory"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {posts.map((post) => (
             <div
