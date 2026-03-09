@@ -14,10 +14,19 @@ const TermsPage = lazy(() =>
   import("../../../pages/TermsPage").then((m) => ({ default: m.TermsPage })),
 );
 const PrivacyPage = lazy(() =>
-  import("../../../pages/PrivacyPage").then((m) => ({ default: m.PrivacyPage })),
+  import("../../../pages/PrivacyPage").then((m) => ({
+    default: m.PrivacyPage,
+  })),
 );
 const HelpCenterPage = lazy(() =>
-  import("../../../pages/HelpCenterPage").then((m) => ({ default: m.HelpCenterPage })),
+  import("../../../pages/HelpCenterPage").then((m) => ({
+    default: m.HelpCenterPage,
+  })),
+);
+const NotificationsPage = lazy(() =>
+  import("../../../pages/NotificationsPage").then((m) => ({
+    default: m.NotificationsPage,
+  })),
 );
 
 export function FaqMarketplaceRouteScreen() {
@@ -29,7 +38,9 @@ export function FaqMarketplaceRouteScreen() {
     fallbackPath: "/",
   });
 
-  return <FAQPage language={appProps.language} onBack={() => navigate(backPath)} />;
+  return (
+    <FAQPage language={appProps.language} onBack={() => navigate(backPath)} />
+  );
 }
 
 export function TermsMarketplaceRouteScreen() {
@@ -41,7 +52,9 @@ export function TermsMarketplaceRouteScreen() {
     fallbackPath: "/",
   });
 
-  return <TermsPage language={appProps.language} onBack={() => navigate(backPath)} />;
+  return (
+    <TermsPage language={appProps.language} onBack={() => navigate(backPath)} />
+  );
 }
 
 export function PrivacyMarketplaceRouteScreen() {
@@ -53,7 +66,12 @@ export function PrivacyMarketplaceRouteScreen() {
     fallbackPath: "/",
   });
 
-  return <PrivacyPage language={appProps.language} onBack={() => navigate(backPath)} />;
+  return (
+    <PrivacyPage
+      language={appProps.language}
+      onBack={() => navigate(backPath)}
+    />
+  );
 }
 
 export function HelpMarketplaceRouteScreen() {
@@ -65,7 +83,24 @@ export function HelpMarketplaceRouteScreen() {
     fallbackPath: "/",
   });
 
-  return <HelpCenterPage language={appProps.language} onBack={() => navigate(backPath)} />;
+  return (
+    <HelpCenterPage
+      language={appProps.language}
+      onBack={() => navigate(backPath)}
+    />
+  );
+}
+
+export function NotificationsMarketplaceRouteScreen() {
+  const { appProps, navigate } = useMarketplaceRouteContext();
+
+  return (
+    <NotificationsPage
+      language={appProps.language}
+      onBack={() => navigate("/")}
+      onNavigate={(path) => navigate(path)}
+    />
+  );
 }
 
 export const marketplaceContentRoutes: MarketplaceRouteDefinition[] = [
@@ -84,5 +119,9 @@ export const marketplaceContentRoutes: MarketplaceRouteDefinition[] = [
   {
     path: "/help",
     Screen: HelpMarketplaceRouteScreen,
+  },
+  {
+    path: "/notifications",
+    Screen: NotificationsMarketplaceRouteScreen,
   },
 ];

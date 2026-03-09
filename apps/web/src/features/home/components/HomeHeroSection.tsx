@@ -1,4 +1,4 @@
-import { User } from "lucide-react";
+import { ShoppingBag, TrendingUp, Shield, Zap } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
 import { Language } from "../../../types";
 
@@ -13,106 +13,188 @@ type HomeHeroSectionProps = {
   onBrowseItems: () => void;
 };
 
+const HERO_FEATURES_EN = [
+  { icon: Shield, label: "Trusted Sellers" },
+  { icon: Zap, label: "Fast Deals" },
+  { icon: TrendingUp, label: "Best Prices" },
+];
+const HERO_FEATURES_AR = [
+  { icon: Shield, label: "بائعون موثوقون" },
+  { icon: Zap, label: "صفقات سريعة" },
+  { icon: TrendingUp, label: "أفضل الأسعار" },
+];
+
 export function HomeHeroSection({
   language,
   isAuthenticated,
   t,
   isRTL,
-  darkMode,
+  darkMode: _darkMode,
   setShowLoginPrompt,
   setShowSellItem,
   onBrowseItems,
 }: HomeHeroSectionProps) {
-  const sectionBackgroundClass = darkMode
-    ? "bg-gradient-to-br from-slate-950 via-primary/85 to-secondary/85"
-    : "bg-gradient-to-br from-primary via-primary/90 to-secondary";
-
-  const headingClassName = isRTL
-    ? "text-3xl font-semibold leading-[1.34] sm:text-4xl lg:text-5xl"
-    : "text-3xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl";
-
-  const subtitleClassName = isRTL
-    ? "mx-auto mt-5 max-w-3xl text-base leading-8 text-primary-foreground/85 sm:text-lg"
-    : "mx-auto mt-5 max-w-3xl text-base leading-7 text-primary-foreground/85 sm:text-lg";
+  const features = language === "ar" ? HERO_FEATURES_AR : HERO_FEATURES_EN;
 
   return (
-    <section
-      className={`relative overflow-hidden px-4 py-12 sm:py-14 lg:py-16 ${sectionBackgroundClass}`}
-    >
-      <div className="pointer-events-none absolute inset-0 opacity-[0.16] [background-image:linear-gradient(rgba(255,255,255,0.22)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.18)_1px,transparent_1px)] [background-size:42px_42px]" />
-      <div className="absolute -top-24 right-10 h-72 w-72 rounded-full bg-white/20 blur-3xl dark:bg-white/10" />
-      <div className="absolute -bottom-24 left-6 h-72 w-72 rounded-full bg-white/15 blur-3xl dark:bg-white/10" />
-      <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/10 to-transparent dark:from-black/20" />
+    <section className="relative overflow-hidden">
+      {/* Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-secondary/5 dark:from-primary/10 dark:via-background dark:to-secondary/10" />
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/8 rounded-full blur-[100px] dark:bg-primary/15" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-secondary/8 rounded-full blur-[100px] dark:bg-secondary/15" />
 
-      <div className="relative mx-auto max-w-5xl text-center text-primary-foreground">
-        <h2 className="animate-fade-in text-sm font-semibold tracking-[0.14em] text-primary-foreground/85 sm:text-base">
-          {t.heroTitle}
-        </h2>
-        <p className={`animate-fade-in-soft mt-4 ${headingClassName}`}>
-          {t.heroSubtitle}
-        </p>
-        <p className={subtitleClassName}>
-          {language === "ar"
-            ? "منصة موثوقة وسريعة لعرض منشوراتك والوصول للمشترين في كل المحافظات."
-            : "A trusted and fast place to list your posts and reach buyers across Jordan."}
-        </p>
-
-        {!isAuthenticated && (
-          <div className="animate-fade-in-soft mx-auto mt-7 max-w-2xl rounded-2xl border border-white/35 bg-background/10 p-5 shadow-xl backdrop-blur-md sm:p-6">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <User className="h-5 w-5 text-primary-foreground" />
-              <h3 className="text-lg text-primary-foreground sm:text-xl">
-                {language === "ar" ? "ابدأ البيع اليوم" : "Start Selling Today"}
-              </h3>
-            </div>
-            <p className="mb-6 text-primary-foreground/85">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+          {/* Left: Text Content */}
+          <div
+            className={`space-y-6 ${isRTL ? "lg:order-2 text-right" : "lg:order-1"}`}
+          >
+            <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 dark:bg-primary/20 px-4 py-1.5 text-sm font-medium text-primary border border-primary/20">
+              <ShoppingBag className="h-4 w-4" />
               {language === "ar"
-                ? "انشر منشوراتك واصل إلى المشترين في جميع أنحاء الأردن"
-                : "Post your items and reach buyers across Jordan"}
+                ? "🇯🇴 سوق الأردن الأول"
+                : "🇯🇴 Jordan's #1 Marketplace"}
+            </div>
+
+            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl xl:text-6xl !leading-[1.15]">
+              {language === "ar" ? (
+                <>
+                  اكتشف، تسوّق
+                  <span className="text-primary"> وبيع </span>
+                  بسهولة
+                </>
+              ) : (
+                <>
+                  Discover, Shop &<span className="text-primary"> Sell </span>
+                  with Ease
+                </>
+              )}
+            </h1>
+
+            <p className="max-w-lg text-base sm:text-lg text-muted-foreground leading-relaxed">
+              {language === "ar"
+                ? "منصة موثوقة وسريعة لعرض منتجاتك والوصول للمشترين في كل المحافظات الأردنية."
+                : "A trusted and fast platform to list your products and reach buyers across all of Jordan."}
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <Button
-                size="lg"
-                className="h-12 min-w-[10.5rem] rounded-xl border border-white/30 bg-white text-primary shadow-lg transition-all hover:-translate-y-0.5 hover:bg-white/95 hover:shadow-xl"
-                onClick={() => {
-                  setShowLoginPrompt(true);
-                }}
-              >
-                <User className={`h-4 w-4 ${isRTL ? "ml-2" : "mr-2"}`} />
-                {language === "ar" ? "ابدأ البيع" : "Start Selling"}
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-12 min-w-[10.5rem] rounded-xl border-white/60 bg-background/8 text-primary-foreground transition-all hover:-translate-y-0.5 hover:bg-background/18"
-                onClick={onBrowseItems}
-              >
-                {t.browseItems}
-              </Button>
+
+            {/* Feature Pills */}
+            <div className="flex flex-wrap gap-3">
+              {features.map((feature) => {
+                const Icon = feature.icon;
+                return (
+                  <span
+                    key={feature.label}
+                    className="inline-flex items-center gap-2 rounded-xl bg-card border border-border px-3.5 py-2 text-sm font-medium text-foreground shadow-sm"
+                  >
+                    <Icon className="h-4 w-4 text-primary" />
+                    {feature.label}
+                  </span>
+                );
+              })}
+            </div>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-wrap gap-3 pt-2">
+              {isAuthenticated ? (
+                <>
+                  <Button
+                    size="lg"
+                    className="h-12 min-w-[11rem] rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all hover:-translate-y-0.5"
+                    onClick={() => setShowSellItem(true)}
+                  >
+                    {t.startSelling}
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="h-12 min-w-[11rem] rounded-xl transition-all hover:-translate-y-0.5"
+                    onClick={onBrowseItems}
+                  >
+                    {t.browseItems}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    size="lg"
+                    className="h-12 min-w-[11rem] rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all hover:-translate-y-0.5"
+                    onClick={() => setShowLoginPrompt(true)}
+                  >
+                    {language === "ar" ? "ابدأ الآن" : "Get Started"}
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="h-12 min-w-[11rem] rounded-xl transition-all hover:-translate-y-0.5"
+                    onClick={onBrowseItems}
+                  >
+                    {t.browseItems}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
-        )}
 
-        {isAuthenticated && (
-          <div className="animate-fade-in-soft mx-auto mt-8 flex w-fit flex-wrap items-center justify-center gap-3 rounded-2xl border border-white/30 bg-background/10 p-2.5 shadow-xl backdrop-blur-sm">
-            <Button
-              size="lg"
-              className="h-11 min-w-[11.5rem] rounded-xl border border-white/35 bg-white px-5 text-primary shadow-lg transition-all hover:-translate-y-0.5 hover:bg-white/95 hover:shadow-xl"
-              onClick={() => setShowSellItem(true)}
-            >
-              {t.startSelling}
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-11 min-w-[11.5rem] rounded-xl border-white/60 bg-background/8 px-5 text-primary-foreground transition-all hover:-translate-y-0.5 hover:bg-background/16 dark:hover:bg-background/14"
-              onClick={onBrowseItems}
-            >
-              {t.browseItems}
-            </Button>
+          {/* Right: Stats / Visual Card */}
+          <div className={`${isRTL ? "lg:order-1" : "lg:order-2"}`}>
+            <div className="relative">
+              {/* Main Card */}
+              <div className="rounded-3xl bg-card border border-border p-6 sm:p-8 shadow-xl">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                  <StatCard
+                    value={language === "ar" ? "+١٠ آلاف" : "10K+"}
+                    label={language === "ar" ? "منتج نشط" : "Active Listings"}
+                    gradient="from-blue-500 to-cyan-500"
+                  />
+                  <StatCard
+                    value={language === "ar" ? "+٥ آلاف" : "5K+"}
+                    label={language === "ar" ? "مستخدم سعيد" : "Happy Users"}
+                    gradient="from-violet-500 to-purple-500"
+                  />
+                  <StatCard
+                    value={language === "ar" ? "+١٢" : "12+"}
+                    label={language === "ar" ? "محافظة" : "Governorates"}
+                    gradient="from-emerald-500 to-green-500"
+                  />
+                  <StatCard
+                    value={language === "ar" ? "+٢٠" : "20+"}
+                    label={language === "ar" ? "فئة" : "Categories"}
+                    gradient="from-amber-500 to-orange-500"
+                  />
+                </div>
+              </div>
+
+              {/* Decorative floating elements */}
+              <div className="absolute -top-4 -right-4 h-20 w-20 rounded-2xl bg-primary/10 dark:bg-primary/20 blur-xl" />
+              <div className="absolute -bottom-4 -left-4 h-16 w-16 rounded-2xl bg-secondary/15 dark:bg-secondary/25 blur-xl" />
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </section>
+  );
+}
+
+function StatCard({
+  value,
+  label,
+  gradient,
+}: {
+  value: string;
+  label: string;
+  gradient: string;
+}) {
+  return (
+    <div className="group rounded-2xl bg-gradient-to-br from-muted/50 to-muted/30 dark:from-muted/20 dark:to-muted/10 border border-border/50 p-4 sm:p-5 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5">
+      <div
+        className={`mb-2 text-2xl sm:text-3xl font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}
+      >
+        {value}
+      </div>
+      <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+        {label}
+      </p>
+    </div>
   );
 }

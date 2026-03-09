@@ -41,6 +41,7 @@ interface SettingsPageProps {
   onReportIssue?: () => void;
   onOpenTerms?: () => void;
   onOpenPrivacy?: () => void;
+  onNavigate?: (path: string) => void;
 }
 
 export function SettingsPage({
@@ -58,6 +59,7 @@ export function SettingsPage({
   onReportIssue,
   onOpenTerms,
   onOpenPrivacy,
+  onNavigate,
 }: SettingsPageProps) {
   const isRTL = language === "ar";
   const [settingsPreferences, setSettingsPreferences] =
@@ -65,7 +67,8 @@ export function SettingsPage({
       STORAGE_KEYS.SETTINGS_PREFERENCES,
       defaultSettingsPreferences,
     );
-  const [isDeleteAccountDialogOpen, setIsDeleteAccountDialogOpen] = useState(false);
+  const [isDeleteAccountDialogOpen, setIsDeleteAccountDialogOpen] =
+    useState(false);
   const [isDeleteAccountPending, setIsDeleteAccountPending] = useState(false);
 
   const displayName = userProfile.name || "-";
@@ -73,9 +76,10 @@ export function SettingsPage({
   const displayPhone = userProfile.phone || "-";
   const displayLocation = userProfile.location || "-";
   const text = settingsTranslations[language];
-  const introDescription = language === "ar"
-    ? "تحكم في إعدادات الحساب، الإشعارات، والخصوصية من لوحة واحدة."
-    : "Manage account preferences, notifications, and privacy from one place.";
+  const introDescription =
+    language === "ar"
+      ? "تحكم في إعدادات الحساب، الإشعارات، والخصوصية من لوحة واحدة."
+      : "Manage account preferences, notifications, and privacy from one place.";
   const {
     isPushStatusLoading,
     isPushUpdatePending,
@@ -176,6 +180,7 @@ export function SettingsPage({
           onReportIssue={onReportIssue}
           onOpenTerms={onOpenTerms}
           onOpenPrivacy={onOpenPrivacy}
+          onNavigate={onNavigate}
           text={text}
           settingsPreferences={settingsPreferences}
           updatePreference={updatePreference}
@@ -198,7 +203,7 @@ export function SettingsPage({
               : undefined
           }
           twoFactorDescription={twoFactorDescription}
-          twoFactorControl={(
+          twoFactorControl={
             <Button
               variant="outline"
               size="sm"
@@ -208,7 +213,7 @@ export function SettingsPage({
             >
               {twoFactorActionLabel}
             </Button>
-          )}
+          }
         />
 
         <TwoFactorDialog

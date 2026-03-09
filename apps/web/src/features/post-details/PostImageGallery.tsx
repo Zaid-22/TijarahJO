@@ -2,24 +2,23 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "../../shared/ui/button";
 import { Card } from "../../shared/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../../shared/ui/dialog";
+import { ImageLightbox } from "../../shared/ui/image-lightbox";
 import { ImageWithFallback } from "../../features/marketplace/components/ImageWithFallback";
-import type { Language, Post } from "../../types";
+import type { Post } from "../../types";
 import { getDisplayImages } from "./postDetailsUtils";
 
 interface PostImageGalleryProps {
   post: Post;
-  language: Language;
 }
 
-export function PostImageGallery({ post, language }: PostImageGalleryProps) {
+export function PostImageGallery({ post }: PostImageGalleryProps) {
   const [selectedImage, setSelectedImage] = useState(0);
-  const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const { displayImages, hasMultipleImages } = getDisplayImages(post);
 
   useEffect(() => {
     setSelectedImage(0);
-    setImageDialogOpen(false);
+    setLightboxOpen(false);
   }, [post.id]);
 
   useEffect(() => {
@@ -41,10 +40,14 @@ export function PostImageGallery({ post, language }: PostImageGalleryProps) {
       return;
     }
 
-    setSelectedImage((prev) =>
-      (prev - 1 + displayImages.length) % displayImages.length,
+    setSelectedImage(
+      (prev) => (prev - 1 + displayImages.length) % displayImages.length,
     );
   };
+
+  const lightboxImages = displayImages.filter(
+    (img) => img && img.trim() !== "",
+  );
 
   return (
     <>
@@ -76,7 +79,7 @@ export function PostImageGallery({ post, language }: PostImageGalleryProps) {
               src={displayImages[selectedImage] || ""}
               alt={post.name}
               className="absolute inset-0 w-full h-full object-contain cursor-pointer"
-              onClick={() => setImageDialogOpen(true)}
+              onClick={() => setLightboxOpen(true)}
               fallbackSrc="https://via.placeholder.com/800x600?text=No+Image+Available"
             />
 
@@ -135,7 +138,7 @@ export function PostImageGallery({ post, language }: PostImageGalleryProps) {
                 type="button"
                 onClick={() => {
                   setSelectedImage(index);
-                  setImageDialogOpen(true);
+                  setLightboxOpen(true);
                 }}
                 className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 hover:scale-105 active:scale-95 cursor-pointer ${
                   index === selectedImage
@@ -156,65 +159,12 @@ export function PostImageGallery({ post, language }: PostImageGalleryProps) {
         )}
       </Card>
 
-      <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
-        <DialogContent>
-          <DialogTitle>{language === "ar" ? "عرض الصورة" : "View Image"}</DialogTitle>
-          <DialogDescription className="sr-only">
-            {language === "ar"
-              ? "عرض الصورة بالحجم الكامل"
-              : "View full-size image"}
-          </DialogDescription>
-          <div className="flex flex-col items-center justify-center space-y-4">
-            <div className="relative aspect-square w-full max-w-4xl bg-muted">
-              <ImageWithFallback
-                src={displayImages[selectedImage] || ""}
-                alt={post.name}
-                className="w-full h-full object-contain"
-                fallbackSrc="https://via.placeholder.com/800x800?text=No+Image+Available"
-              />
-
-              {hasMultipleImages && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/85 hover:bg-background"
-                    onClick={prevImage}
-                    aria-label={language === "ar" ? "الصورة السابقة" : "Previous image"}
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/85 hover:bg-background"
-                    onClick={nextImage}
-                    aria-label={language === "ar" ? "الصورة التالية" : "Next image"}
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                    {displayImages.map((_, index) => (
-                      <button
-                        key={`dialog-dot-${displayImages[index] || "image"}-${index}`}
-                        type="button"
-                        onClick={() => setSelectedImage(index)}
-                        className={`w-2 h-2 rounded-full transition-all ${
-                          index === selectedImage
-                            ? "bg-primary"
-                            : "bg-muted-foreground/50"
-                        }`}
-                        aria-label={`Open image ${index + 1}`}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ImageLightbox
+        images={lightboxImages}
+        initialIndex={selectedImage < lightboxImages.length ? selectedImage : 0}
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
     </>
   );
 }

@@ -308,6 +308,7 @@ function AppContent() {
         onCategoryClick={(cat) =>
           navigate(`/category/${encodeURIComponent(cat)}`)
         }
+        onNotificationsNavigate={(url) => navigate(url)}
         darkMode={darkMode}
         isAdmin={user?.role === "admin"}
         unreadMessagesCount={unreadNotificationsCount}
