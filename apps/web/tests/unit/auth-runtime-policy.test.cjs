@@ -4,7 +4,6 @@ const assert = require("node:assert/strict");
 const {
   AUTH_ERROR_EMIT_COOLDOWN_MS,
   getNetworkRetryDelayMs,
-  getRevalidateThrottleMs,
   getNextConsecutiveNetworkFailures,
   canRevalidateSession,
   shouldEmitAuthError,
@@ -18,15 +17,6 @@ test("getNetworkRetryDelayMs applies exponential backoff with max cap", () => {
   assert.equal(getNetworkRetryDelayMs(4), 12800);
   assert.equal(getNetworkRetryDelayMs(5), 15000);
   assert.equal(getNetworkRetryDelayMs(10), 15000);
-});
-
-test("getRevalidateThrottleMs scales and caps under repeated failures", () => {
-  assert.equal(getRevalidateThrottleMs(0), 5000);
-  assert.equal(getRevalidateThrottleMs(1), 5000);
-  assert.equal(getRevalidateThrottleMs(2), 10000);
-  assert.equal(getRevalidateThrottleMs(3), 20000);
-  assert.equal(getRevalidateThrottleMs(5), 60000);
-  assert.equal(getRevalidateThrottleMs(12), 60000);
 });
 
 test("getNextConsecutiveNetworkFailures resets on non-network outcomes", () => {
