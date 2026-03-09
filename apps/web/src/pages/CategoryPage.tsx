@@ -9,6 +9,10 @@ import {
   resolveCategoryName,
   resolveCategoryTextClass,
 } from "../shared/lib/categoryVisuals";
+import {
+  AdvancedSearchFilters,
+  type SearchFilters,
+} from "../features/marketplace/components/AdvancedSearchFilters";
 import { SubpageHeader } from "../shared/ui/subpage-header";
 import { MarketplaceDiscoveryControls } from "../features/marketplace/components/MarketplaceDiscoveryControls";
 import { MarketplaceResultsPagination } from "../features/marketplace/components/MarketplaceResultsPagination";
@@ -54,6 +58,7 @@ export function CategoryPage({
   );
 
   const [sortBy, setSortBy] = useState<PostSortMode>("newest");
+  const [searchFilters, setSearchFilters] = useState<SearchFilters>({});
 
   const normalizedCategoryName = categoryName.trim().toLowerCase();
   const currentCategory = categories.find(
@@ -76,8 +81,28 @@ export function CategoryPage({
   }, [posts, normalizedCategoryName]);
 
   const sortedPosts = useMemo(() => {
-    return sortMarketplacePosts(filteredPosts, sortBy, language);
-  }, [filteredPosts, sortBy, language]);
+    let results = [...filteredPosts];
+
+    if (searchFilters.city) {
+      results = results.filter((p) =>
+        p.location?.toLowerCase().includes(searchFilters.city!.toLowerCase()),
+      );
+    }
+    if (searchFilters.minPrice != null) {
+      results = results.filter((p) => p.price >= searchFilters.minPrice!);
+    }
+    if (searchFilters.maxPrice != null) {
+      results = results.filter((p) => p.price <= searchFilters.maxPrice!);
+    }
+    if (searchFilters.condition) {
+      results = results.filter(
+        (p) =>
+          p.condition?.toLowerCase() === searchFilters.condition?.toLowerCase(),
+      );
+    }
+
+    return sortMarketplacePosts(results, sortBy, language);
+  }, [filteredPosts, searchFilters, sortBy, language]);
 
   const {
     viewMode,
@@ -103,64 +128,88 @@ export function CategoryPage({
             ? `تصفح جميع ${displayCategoryName}`
             : `Browse all ${categoryName.toLowerCase()}`
         }
-        rightContent={(
+        rightContent={
           <div className="rounded-xl border border-border bg-muted/70 p-2">
             <CategoryIcon className={`w-6 h-6 ${categoryTextClass}`} />
           </div>
-        )}
+        }
       />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Controls Bar */}
-        <MarketplaceDiscoveryControls
-          language={language}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          toolbarClassName="mb-6"
-          leftSlotClassName="gap-2 flex-1 sm:flex-initial"
-          leftControls={(
-            <MarketplaceSortSelect
-              value={sortBy}
-              options={categorySortOptions}
-              onValueChange={(value) => setSortBy(value as typeof sortBy)}
-              placeholder={language === "ar" ? "ترتيب حسب" : "Sort by"}
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Sidebar Filters (Desktop) */}
+          <aside className="hidden lg:block w-72 flex-shrink-0">
+            <div className="sticky top-24">
+              <AdvancedSearchFilters
+                language={language}
+                filters={{ ...searchFilters, category: displayCategoryName }}
+                onFiltersChange={(f) => {
+                  // Ignore category changes here, it's fixed
+                  const { category: _c, ...rest } = f;
+                  setSearchFilters(rest);
+                }}
+                onApply={() => {
+                  /* filters apply reactively */
+                }}
+                onClear={() => setSearchFilters({})}
+              />
+            </div>
+          </aside>
+
+          {/* Main Results Area */}
+          <div className="flex-1 min-w-0">
+            {/* Controls Bar */}
+            <MarketplaceDiscoveryControls
+              language={language}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              toolbarClassName="mb-6"
+              leftSlotClassName="gap-2 flex-1 sm:flex-initial"
+              leftControls={
+                <MarketplaceSortSelect
+                  value={sortBy}
+                  options={categorySortOptions}
+                  onValueChange={(value) => setSortBy(value as typeof sortBy)}
+                  placeholder={language === "ar" ? "ترتيب حسب" : "Sort by"}
+                />
+              }
             />
-          )}
-        />
 
-        <PostResultsGrid
-          posts={displayedPosts}
-          viewMode={viewMode}
-          onPostClick={onPostClick}
-          favoriteIds={favoriteIds}
-          onFavoriteToggle={onFavoriteToggle}
-          isAuthenticated={isAuthenticated}
-          currentUserId={currentUserId}
-          currentUserDisplayName={currentUserDisplayName}
-          hideCategoryBadge
-          language={language}
-          emptyState={{
-            title: language === "ar" ? "لا توجد نتائج" : "No results found",
-            description:
-              language === "ar"
-                ? "لا توجد منشورات متاحة في هذه الفئة"
-                : "No posts available in this category",
-          }}
-        />
+            <PostResultsGrid
+              posts={displayedPosts}
+              viewMode={viewMode}
+              onPostClick={onPostClick}
+              favoriteIds={favoriteIds}
+              onFavoriteToggle={onFavoriteToggle}
+              isAuthenticated={isAuthenticated}
+              currentUserId={currentUserId}
+              currentUserDisplayName={currentUserDisplayName}
+              hideCategoryBadge
+              language={language}
+              emptyState={{
+                title: language === "ar" ? "لا توجد نتائج" : "No results found",
+                description:
+                  language === "ar"
+                    ? "لا توجد منشورات متاحة في هذه الفئة"
+                    : "No posts available in this category",
+              }}
+            />
 
-        {shouldShowPagination ? (
-          <MarketplaceResultsPagination
-            currentPage={pagination.currentPage}
-            totalPages={pagination.totalPages}
-            isLoading={pagination.isLoading}
-            language={language}
-            onPrevious={pagination.onPrevious}
-            onNext={pagination.onNext}
-            className="mt-12 mb-8"
-            showLoadingIndicator
-          />
-        ) : null}
+            {shouldShowPagination ? (
+              <MarketplaceResultsPagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                isLoading={pagination.isLoading}
+                language={language}
+                onPrevious={pagination.onPrevious}
+                onNext={pagination.onNext}
+                className="mt-12 mb-8"
+                showLoadingIndicator
+              />
+            ) : null}
+          </div>
+        </div>
       </main>
     </PageShell>
   );

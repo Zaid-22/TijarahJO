@@ -7,6 +7,7 @@ import { useCatalogCategories } from "../../../shared/hooks/useCatalogCategories
 import { HeaderDesktopProfileMenu } from "./header/HeaderDesktopProfileMenu";
 import { HeaderMobileMenuSheet } from "./header/HeaderMobileMenuSheet";
 import { HeaderSearchInput } from "./header/HeaderSearchInput";
+import { HeaderNotificationsDropdown } from "./header/HeaderNotificationsDropdown";
 
 export interface HeaderProps {
   language: Language;
@@ -28,6 +29,7 @@ export interface HeaderProps {
   onShowSellItem?: () => void;
   onLogout?: () => void;
   onCategoryClick?: (categoryName: string) => void;
+  onNotificationsNavigate?: (url: string) => void;
   darkMode?: boolean;
   isAdmin?: boolean;
   unreadMessagesCount?: number;
@@ -53,6 +55,7 @@ export function Header({
   onShowSellItem,
   onLogout,
   onCategoryClick,
+  onNotificationsNavigate,
   darkMode = false,
   isAdmin = false,
   unreadMessagesCount = 0,
@@ -124,6 +127,14 @@ export function Header({
 
           <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
             {isAuthenticated && (
+              <HeaderNotificationsDropdown
+                language={language}
+                unreadCount={normalizedUnreadMessagesCount}
+                onNavigate={onNotificationsNavigate}
+              />
+            )}
+
+            {isAuthenticated && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -132,13 +143,6 @@ export function Header({
                 aria-label={language === "ar" ? "الرسائل" : "Messages"}
               >
                 <MessageCircle className="w-5 h-5 transition-transform group-hover:scale-110" />
-                {normalizedUnreadMessagesCount > 0 && (
-                  <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-xs font-bold leading-none text-destructive-foreground animate-in zoom-in duration-300 ring-2 ring-background">
-                    {normalizedUnreadMessagesCount > 99
-                      ? "99+"
-                      : normalizedUnreadMessagesCount}
-                  </span>
-                )}
               </Button>
             )}
 

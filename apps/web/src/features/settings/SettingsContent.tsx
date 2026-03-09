@@ -30,6 +30,7 @@ import { SettingsTranslations } from "../../translations/settings";
 import { SettingsPreferences } from "./types";
 import type { AppNotification } from "../../types";
 import { SettingsNotificationsPreview } from "./SettingsNotificationsPreview";
+import { SavedSearchesSection } from "./SavedSearchesSection";
 
 interface SettingsContentProps {
   language: Language;
@@ -63,6 +64,7 @@ interface SettingsContentProps {
   displayLocation: string;
   twoFactorDescription?: string;
   twoFactorControl?: ReactNode;
+  onNavigate?: (path: string) => void;
 }
 
 interface SettingsActionRowProps {
@@ -122,6 +124,7 @@ export function SettingsContent({
   displayLocation,
   twoFactorDescription,
   twoFactorControl,
+  onNavigate,
 }: SettingsContentProps) {
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -151,13 +154,17 @@ export function SettingsContent({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-sm text-muted-foreground">{text.fullName}</Label>
+            <Label className="text-sm text-muted-foreground">
+              {text.fullName}
+            </Label>
             <div className="text-foreground">{displayName}</div>
           </div>
 
           <Separator />
           <div className="space-y-2">
-            <Label className="text-sm text-muted-foreground">{text.email}</Label>
+            <Label className="text-sm text-muted-foreground">
+              {text.email}
+            </Label>
             <div className="flex items-center gap-2 text-foreground">
               <Mail className="w-4 h-4 opacity-50" />
               {displayEmail}
@@ -165,7 +172,9 @@ export function SettingsContent({
           </div>
           <Separator />
           <div className="space-y-2">
-            <Label className="text-sm text-muted-foreground">{text.phone}</Label>
+            <Label className="text-sm text-muted-foreground">
+              {text.phone}
+            </Label>
             <div className="flex items-center gap-2 text-foreground">
               <Phone className="w-4 h-4 opacity-50" />
               {displayPhone}
@@ -173,7 +182,9 @@ export function SettingsContent({
           </div>
           <Separator />
           <div className="space-y-2">
-            <Label className="text-sm text-muted-foreground">{text.currentLocation}</Label>
+            <Label className="text-sm text-muted-foreground">
+              {text.currentLocation}
+            </Label>
             <div className="flex items-center gap-2 text-foreground">
               <MapPin className="w-4 h-4 opacity-50" />
               {displayLocation}
@@ -181,6 +192,8 @@ export function SettingsContent({
           </div>
         </CardContent>
       </Card>
+
+      <SavedSearchesSection language={language} onNavigate={onNavigate} />
 
       <Card>
         <CardHeader>
@@ -199,49 +212,52 @@ export function SettingsContent({
             icon={Mail}
             label={text.emailNotifications}
             description={text.emailNotificationsDesc}
-            control={(
+            control={
               <Switch
                 checked={settingsPreferences.emailNotifications}
                 onCheckedChange={updatePreference("emailNotifications")}
               />
-            )}
+            }
           />
           <Separator />
           <SettingsActionRow
             icon={Bell}
             label={text.pushNotifications}
             description={text.pushNotificationsDesc}
-            control={(
+            control={
               <Switch
                 checked={settingsPreferences.pushNotifications}
-                onCheckedChange={onPushNotificationsChange ?? updatePreference("pushNotifications")}
+                onCheckedChange={
+                  onPushNotificationsChange ??
+                  updatePreference("pushNotifications")
+                }
                 disabled={isPushNotificationsDisabled}
               />
-            )}
+            }
           />
           <Separator />
           <SettingsActionRow
             icon={Mail}
             label={text.messageNotifications}
             description={text.messageNotificationsDesc}
-            control={(
+            control={
               <Switch
                 checked={settingsPreferences.messageNotifications}
                 onCheckedChange={updatePreference("messageNotifications")}
               />
-            )}
+            }
           />
           <Separator />
           <SettingsActionRow
             icon={Bell}
             label={text.newListings}
             description={text.newListingsDesc}
-            control={(
+            control={
               <Switch
                 checked={settingsPreferences.newListingNotifications}
                 onCheckedChange={updatePreference("newListingNotifications")}
               />
-            )}
+            }
           />
           <Separator />
           <SettingsNotificationsPreview
@@ -272,30 +288,32 @@ export function SettingsContent({
             icon={Mail}
             label={text.showEmail}
             description={text.showEmailDesc}
-            control={(
+            control={
               <Switch
                 checked={settingsPreferences.showEmail}
                 onCheckedChange={updatePreference("showEmail")}
               />
-            )}
+            }
           />
           <Separator />
           <SettingsActionRow
             icon={Shield}
             label={text.twoFactor}
             description={twoFactorDescription ?? text.twoFactorDesc}
-            control={twoFactorControl ?? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-primary border-primary"
-                disabled
-                title={text.comingSoon}
-                aria-label={`${text.twoFactor} - ${text.comingSoon}`}
-              >
-                {text.comingSoon}
-              </Button>
-            )}
+            control={
+              twoFactorControl ?? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-primary border-primary"
+                  disabled
+                  title={text.comingSoon}
+                  aria-label={`${text.twoFactor} - ${text.comingSoon}`}
+                >
+                  {text.comingSoon}
+                </Button>
+              )
+            }
           />
         </CardContent>
       </Card>
@@ -317,14 +335,16 @@ export function SettingsContent({
             icon={Moon}
             label={text.darkMode}
             description={text.darkModeDesc}
-            control={<Switch checked={darkMode} onCheckedChange={onDarkModeChange} />}
+            control={
+              <Switch checked={darkMode} onCheckedChange={onDarkModeChange} />
+            }
           />
           <Separator />
           <SettingsActionRow
             icon={Globe}
             label={text.languageSetting}
             description={text.languageDesc}
-            control={(
+            control={
               <Button
                 variant="outline"
                 size="sm"
@@ -333,7 +353,7 @@ export function SettingsContent({
               >
                 {language === "en" ? "العربية" : "English"}
               </Button>
-            )}
+            }
           />
         </CardContent>
       </Card>
@@ -400,7 +420,9 @@ export function SettingsContent({
               <Trash2 className="w-5 h-5 text-destructive" />
             </div>
             <div>
-              <CardTitle className="text-destructive">{text.dangerZone}</CardTitle>
+              <CardTitle className="text-destructive">
+                {text.dangerZone}
+              </CardTitle>
               <CardDescription>{text.dangerDesc}</CardDescription>
             </div>
           </div>
@@ -413,7 +435,9 @@ export function SettingsContent({
                   <LogOut className="w-4 h-4 text-destructive" />
                   <Label className="text-destructive">{text.logout}</Label>
                 </div>
-                <p className="text-sm text-muted-foreground">{text.logoutDesc}</p>
+                <p className="text-sm text-muted-foreground">
+                  {text.logoutDesc}
+                </p>
               </div>
               <Button
                 variant="outline"
@@ -431,9 +455,13 @@ export function SettingsContent({
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <Trash2 className="w-4 h-4 text-destructive" />
-                  <Label className="text-destructive">{text.deleteAccount}</Label>
+                  <Label className="text-destructive">
+                    {text.deleteAccount}
+                  </Label>
                 </div>
-                <p className="text-sm text-muted-foreground">{text.deleteAccountDesc}</p>
+                <p className="text-sm text-muted-foreground">
+                  {text.deleteAccountDesc}
+                </p>
               </div>
               <Button
                 variant="outline"

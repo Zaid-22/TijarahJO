@@ -69,13 +69,18 @@ export type TranslationKey =
   | "postItemButton"
   | "backToListings"
   | "marketplace"
-  | "markAsSold"
+  | "removePost"
+  | "whyRemovingPost"
+  | "reasonSold"
+  | "reasonNoLongerAvailable"
+  | "reasonMistake"
+  | "reasonOther"
+  | "otherReasonPlaceholder"
+  | "confirmRemove"
   | "viewMyProfile"
   | "viewSellerProfile"
   | "deletePost"
-  | "relist"
   | "callSeller"
-  | "sendMessage"
   | "soldOut"
   | "descriptionTitle"
   | "locationTitle"
@@ -206,13 +211,18 @@ export const translations: Record<Language, TranslationMap> = {
     // Post Details Page
     backToListings: "Back to Listings",
     marketplace: "Marketplace",
-    markAsSold: "Mark as Sold",
+    removePost: "Remove Post",
+    whyRemovingPost: "Why are you removing this post?",
+    reasonSold: "It was sold",
+    reasonNoLongerAvailable: "No longer available",
+    reasonMistake: "Listed by mistake",
+    reasonOther: "Other",
+    otherReasonPlaceholder: "Tell us more...",
+    confirmRemove: "Confirm Removal",
     viewMyProfile: "View My Profile",
     viewSellerProfile: "View Seller Profile",
     deletePost: "Delete Post",
-    relist: "Re-list Post",
     callSeller: "Call Seller",
-    sendMessage: "Send Message",
     soldOut: "SOLD OUT",
     descriptionTitle: "Description",
     locationTitle: "Location",
@@ -339,13 +349,18 @@ export const translations: Record<Language, TranslationMap> = {
     // Post Details Page
     backToListings: "العودة إلى القوائم",
     marketplace: "السوق",
-    markAsSold: "تمييز كمباع",
+    removePost: "إزالة المنشور",
+    whyRemovingPost: "لماذا تريد إزالة هذا المنشور؟",
+    reasonSold: "تم بيعه",
+    reasonNoLongerAvailable: "لم يعد متاحاً",
+    reasonMistake: "تم إدراجه بالخطأ",
+    reasonOther: "أخرى",
+    otherReasonPlaceholder: "أخبرنا المزيد...",
+    confirmRemove: "تأكيد الإزالة",
     viewMyProfile: "عرض ملفي الشخصي",
     viewSellerProfile: "عرض ملف البائع",
     deletePost: "حذف المنشور",
-    relist: "إعادة إدراج المنشور",
     callSeller: "اتصل بالبائع",
-    sendMessage: "إرسال رسالة",
     soldOut: "تم البيع",
     descriptionTitle: "الوصف",
     locationTitle: "الموقع",

@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
+import { Flag, Share2 } from "lucide-react";
 import { PostActionDialogs } from "../features/post-details/PostActionDialogs";
 import { PostDetailsHeader } from "../features/post-details/PostDetailsHeader";
 import { PostImageGallery } from "../features/post-details/PostImageGallery";
 import { PostSellerSidebar } from "../features/post-details/PostSellerSidebar";
 import { PostSummaryCard } from "../features/post-details/PostSummaryCard";
+import { SimilarItemsSection } from "../features/post-details/SimilarItemsSection";
+import { ReportPostDialog } from "../features/marketplace/components/ReportPostDialog";
+import { ShareListingDialog } from "../features/marketplace/components/ShareListingDialog";
 import {
   countActiveListings,
   formatMemberSince,
@@ -47,6 +51,7 @@ export function PostDetailsPage({
   onBack,
   allPosts,
   language,
+  onPostClick,
   onSellerClick,
   onUpdatePost,
   onUpdatePostStatus,
@@ -57,13 +62,7 @@ export function PostDetailsPage({
   onFavoriteToggle,
   isAuthenticated = false,
 }: PostDetailsPageProps) {
-  type ActiveDialog =
-    | "delete"
-    | "edit"
-    | "phone"
-    | "markAsSold"
-    | "relist"
-    | null;
+  type ActiveDialog = "delete" | "edit" | "phone" | "report" | "share" | null;
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
   const [sellerJoinDate, setSellerJoinDate] = useState<string | null>(null);
   const [sellerAvatar, setSellerAvatar] = useState<string | null>(null);
@@ -266,7 +265,7 @@ export function PostDetailsPage({
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <PostImageGallery post={post} language={language} />
+            <PostImageGallery post={post} />
 
             <PostSummaryCard
               post={post}
@@ -294,8 +293,6 @@ export function PostDetailsPage({
             onSellerClick={onSellerClick}
             onChatWithSeller={onChatWithSeller}
             onShowPhoneDialog={() => setActiveDialog("phone")}
-            onShowMarkAsSoldDialog={() => setActiveDialog("markAsSold")}
-            onShowRelistDialog={() => setActiveDialog("relist")}
             onShowEditDialog={() => setActiveDialog("edit")}
             onShowDeleteDialog={() => setActiveDialog("delete")}
             hasOwnerActions={hasOwnerActions}
@@ -303,8 +300,7 @@ export function PostDetailsPage({
               memberSinceShort: t.memberSinceShort,
               activeListingsShort: t.activeListingsShort,
               items: t.items,
-              relist: t.relist,
-              markAsSold: t.markAsSold,
+              removePost: t.removePost,
               viewMyProfile: t.viewMyProfile,
               soldOut: t.soldOut,
               callSeller: t.callSeller,
@@ -313,11 +309,21 @@ export function PostDetailsPage({
               postSoldMessage: t.postSoldMessage,
               locationTitle: t.locationTitle,
               editPost: t.editPost,
-              deletePost: t.deletePost,
             }}
           />
         </div>
       </div>
+
+      {/* Similar Items & More from Seller */}
+      <SimilarItemsSection
+        currentPost={post}
+        allPosts={allPosts}
+        language={language}
+        isAuthenticated={isAuthenticated}
+        favoriteIds={favoriteIds}
+        onFavoriteToggle={onFavoriteToggle}
+        onPostClick={onPostClick}
+      />
 
       <PostActionDialogs
         language={language}
@@ -330,15 +336,53 @@ export function PostDetailsPage({
         setShowDeleteDialog={(open) => setActiveDialog(open ? "delete" : null)}
         showPhoneDialog={activeDialog === "phone"}
         setShowPhoneDialog={(open) => setActiveDialog(open ? "phone" : null)}
-        showMarkAsSoldDialog={activeDialog === "markAsSold"}
-        setShowMarkAsSoldDialog={(open) =>
-          setActiveDialog(open ? "markAsSold" : null)
-        }
-        showRelistDialog={activeDialog === "relist"}
-        setShowRelistDialog={(open) => setActiveDialog(open ? "relist" : null)}
         onUpdatePost={onUpdatePost}
         onUpdatePostStatus={onUpdatePostStatus}
         onDeletePost={onDeletePost}
+      />
+
+      {/* Report Listing Dialog */}
+      {!isOwnPost && isAuthenticated && (
+        <ReportPostDialog
+          open={activeDialog === "report"}
+          onOpenChange={(open) => setActiveDialog(open ? "report" : null)}
+          postId={post.id}
+          postTitle={post.name}
+          language={language}
+        />
+      )}
+
+      {/* Share & Report buttons */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => setActiveDialog("share")}
+          className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5"
+        >
+          <Share2 className="h-4 w-4" />
+          {language === "ar" ? "مشاركة" : "Share"}
+        </button>
+        {!isOwnPost && isAuthenticated && (
+          <button
+            type="button"
+            onClick={() => setActiveDialog("report")}
+            className="text-sm text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1.5"
+          >
+            <Flag className="h-4 w-4" />
+            {language === "ar"
+              ? "الإبلاغ عن هذا الإعلان"
+              : "Report this listing"}
+          </button>
+        )}
+      </div>
+
+      {/* Share Dialog */}
+      <ShareListingDialog
+        open={activeDialog === "share"}
+        onOpenChange={(open) => setActiveDialog(open ? "share" : null)}
+        postTitle={post.name}
+        postUrl={typeof window !== "undefined" ? window.location.href : ""}
+        language={language}
       />
     </PageShell>
   );

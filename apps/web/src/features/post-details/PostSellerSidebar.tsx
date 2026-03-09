@@ -18,8 +18,6 @@ interface PostSellerSidebarProps {
   onSellerClick?: () => void;
   onChatWithSeller?: () => void;
   onShowPhoneDialog: () => void;
-  onShowMarkAsSoldDialog: () => void;
-  onShowRelistDialog: () => void;
   onShowEditDialog: () => void;
   onShowDeleteDialog: () => void;
   hasOwnerActions: boolean;
@@ -27,8 +25,7 @@ interface PostSellerSidebarProps {
     memberSinceShort: string;
     activeListingsShort: string;
     items: string;
-    relist: string;
-    markAsSold: string;
+    removePost: string;
     viewMyProfile: string;
     soldOut: string;
     callSeller: string;
@@ -37,7 +34,6 @@ interface PostSellerSidebarProps {
     postSoldMessage: string;
     locationTitle: string;
     editPost: string;
-    deletePost: string;
   };
 }
 
@@ -53,8 +49,6 @@ export function PostSellerSidebar({
   onSellerClick,
   onChatWithSeller,
   onShowPhoneDialog,
-  onShowMarkAsSoldDialog,
-  onShowRelistDialog,
   onShowEditDialog,
   onShowDeleteDialog,
   hasOwnerActions,
@@ -66,7 +60,9 @@ export function PostSellerSidebar({
         <CardContent className="pt-6">
           <div className="text-center mb-4">
             <Avatar className="w-20 h-20 mx-auto mb-3">
-              {sellerAvatar && <AvatarImage src={sellerAvatar} alt={publicSellerName} />}
+              {sellerAvatar && (
+                <AvatarImage src={sellerAvatar} alt={publicSellerName} />
+              )}
               <AvatarFallback>{publicSellerName.charAt(0)}</AvatarFallback>
             </Avatar>
             <h3 className="mb-1 text-lg font-bold text-foreground">
@@ -106,24 +102,37 @@ export function PostSellerSidebar({
           <div className="space-y-3">
             {hasOwnerActions ? (
               <>
-                {post.status === "SOLD" ? (
-                  <Button
-                    className="w-full text-base font-semibold"
-                    type="button"
-                    onClick={onShowRelistDialog}
-                  >
-                    {labels.relist}
-                  </Button>
-                ) : (
-                  <Button
-                    variant="secondary"
-                    className="w-full text-base font-semibold"
-                    type="button"
-                    onClick={onShowMarkAsSoldDialog}
-                  >
-                    {labels.markAsSold}
-                  </Button>
+                {post.status === "SOLD" && (
+                  <div className="rounded-lg bg-muted p-4 text-center mb-2">
+                    <Badge className="border border-border bg-muted/95 px-4 py-2 text-base font-semibold text-muted-foreground backdrop-blur-md">
+                      🏷️ {labels.soldOut}
+                    </Badge>
+                  </div>
                 )}
+
+                <Button
+                  className="group w-full text-base font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                  onClick={onShowEditDialog}
+                  disabled={post.status === "SOLD"}
+                >
+                  <Edit
+                    className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"} ${
+                      post.status !== "SOLD" ? "group-hover:scale-110" : ""
+                    } transition-transform`}
+                  />
+                  {labels.editPost}
+                </Button>
+
+                <Button
+                  variant="destructive"
+                  className="group w-full text-base font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                  onClick={onShowDeleteDialog}
+                >
+                  <Trash2
+                    className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"} group-hover:scale-110 transition-transform`}
+                  />
+                  {labels.removePost}
+                </Button>
 
                 <Button
                   variant="outline"
@@ -157,7 +166,9 @@ export function PostSellerSidebar({
                       className="w-full text-base font-semibold"
                       onClick={onChatWithSeller}
                     >
-                      <MessageSquare className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+                      <MessageSquare
+                        className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`}
+                      />
                       {labels.chatWithSeller}
                     </Button>
                   </>
@@ -187,44 +198,6 @@ export function PostSellerSidebar({
           </p>
         </CardContent>
       </Card>
-
-      {hasOwnerActions && (
-        <Card className="overflow-hidden border-2 border-primary/20">
-          <CardContent className="pt-6 space-y-3">
-            {post.status === "SOLD" && (
-              <div className="mb-3 rounded-lg bg-muted p-4 text-center">
-                <Badge className="border border-border bg-muted/95 px-4 py-2 text-base font-semibold text-muted-foreground backdrop-blur-md">
-                  🏷️ {labels.soldOut}
-                </Badge>
-              </div>
-            )}
-
-            <Button
-              className="group w-full transition-all duration-300 hover:scale-105 hover:shadow-lg"
-              onClick={onShowEditDialog}
-              disabled={post.status === "SOLD"}
-              >
-              <Edit
-                className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"} ${
-                  post.status !== "SOLD" ? "group-hover:scale-110" : ""
-                } transition-transform`}
-              />
-              {labels.editPost}
-            </Button>
-
-            <Button
-              variant="destructive"
-              className="group w-full text-base font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg"
-              onClick={onShowDeleteDialog}
-            >
-              <Trash2
-                className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"} group-hover:scale-110 transition-transform`}
-              />
-              {labels.deletePost}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

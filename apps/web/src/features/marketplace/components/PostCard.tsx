@@ -130,6 +130,15 @@ export function PostCard({
               </Badge>
             </div>
           )}
+
+          {/* Condition Badge */}
+          {post.condition && post.status !== "SOLD" && (
+            <div className="absolute bottom-3 left-3 z-10">
+              <Badge className="backdrop-blur-md border border-border/60 bg-background/95 px-2 py-0.5 text-xs text-foreground shadow-sm">
+                {post.condition}
+              </Badge>
+            </div>
+          )}
         </button>
 
         {/* Content - Expanded in list view */}
@@ -243,6 +252,15 @@ export function PostCard({
           >
             <Badge className="backdrop-blur-md border border-border/60 bg-muted/95 px-2.5 py-1 text-xs text-muted-foreground shadow-sm font-semibold sm:px-3 sm:py-1 sm:text-sm">
               {labels.soldOut}
+            </Badge>
+          </div>
+        )}
+
+        {/* Condition Badge */}
+        {post.condition && post.status !== "SOLD" && (
+          <div className="absolute bottom-3 left-3 z-10">
+            <Badge className="backdrop-blur-md border border-border/60 bg-background/95 px-2 py-0.5 text-xs text-foreground shadow-sm">
+              {post.condition}
             </Badge>
           </div>
         )}

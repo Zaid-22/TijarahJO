@@ -1,9 +1,8 @@
+import { useState } from "react";
 import { Phone } from "lucide-react";
 import { EditPostDialog } from "../../features/marketplace/components/EditPostDialog";
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -17,11 +16,14 @@ import {
   DialogDescription,
   DialogTitle,
 } from "../../shared/ui/dialog";
+import { Label } from "../../shared/ui/label";
 import type { Language, Post } from "../../types";
 import type {
   UpdatePostInput,
   UpdatePostStatusInput,
 } from "../../app/routes/usePostActions";
+
+type RemoveReason = "sold" | "no_longer_available" | "mistake" | "other";
 
 interface PostActionDialogsProps {
   language: Language;
@@ -34,10 +36,6 @@ interface PostActionDialogsProps {
   setShowDeleteDialog: (open: boolean) => void;
   showPhoneDialog: boolean;
   setShowPhoneDialog: (open: boolean) => void;
-  showMarkAsSoldDialog: boolean;
-  setShowMarkAsSoldDialog: (open: boolean) => void;
-  showRelistDialog: boolean;
-  setShowRelistDialog: (open: boolean) => void;
   onUpdatePost?: (post: UpdatePostInput) => void | Promise<void>;
   onUpdatePostStatus?: (
     statusData: UpdatePostStatusInput,
@@ -56,14 +54,64 @@ export function PostActionDialogs({
   setShowDeleteDialog,
   showPhoneDialog,
   setShowPhoneDialog,
-  showMarkAsSoldDialog,
-  setShowMarkAsSoldDialog,
-  showRelistDialog,
-  setShowRelistDialog,
   onUpdatePost,
   onUpdatePostStatus,
   onDeletePost,
 }: PostActionDialogsProps) {
+  const [selectedReason, setSelectedReason] = useState<RemoveReason | null>(
+    null,
+  );
+  const [otherText, setOtherText] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const reasons: { value: RemoveReason; label: string }[] = [
+    {
+      value: "sold",
+      label: language === "ar" ? "تم بيعه" : "It was sold",
+    },
+    {
+      value: "no_longer_available",
+      label: language === "ar" ? "لم يعد متاحاً" : "No longer available",
+    },
+    {
+      value: "mistake",
+      label: language === "ar" ? "تم إدراجه بالخطأ" : "Listed by mistake",
+    },
+    {
+      value: "other",
+      label: language === "ar" ? "أخرى" : "Other",
+    },
+  ];
+
+  const handleRemoveConfirm = async () => {
+    if (!selectedReason) return;
+    setIsSubmitting(true);
+    try {
+      if (selectedReason === "sold") {
+        if (onUpdatePostStatus) {
+          await onUpdatePostStatus({ id: post.id, status: "SOLD" });
+        }
+      } else {
+        if (onDeletePost) {
+          await onDeletePost(post.id);
+        }
+      }
+      setShowDeleteDialog(false);
+      setSelectedReason(null);
+      setOtherText("");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteDialogClose = (open: boolean) => {
+    if (!open) {
+      setSelectedReason(null);
+      setOtherText("");
+    }
+    setShowDeleteDialog(open);
+  };
+
   return (
     <>
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
@@ -80,33 +128,87 @@ export function PostActionDialogs({
         />
       </Dialog>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
+      {/* Remove Post with Reason Dialog */}
+      <AlertDialog
+        open={showDeleteDialog}
+        onOpenChange={handleDeleteDialogClose}
+      >
+        <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {language === "ar" ? "هل أنت متأكد؟" : "Are you sure?"}
+            <AlertDialogTitle className="text-xl">
+              {language === "ar"
+                ? "لماذا تريد إزالة هذا المنشور؟"
+                : "Why are you removing this post?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {language === "ar"
-                ? "لا يمكن التراجع عن هذا الإجراء. سيتم حذف المنشور نهائياً."
-                : "This action cannot be undone. This will permanently delete the post."}
+                ? "اختر السبب لمساعدتنا في تحسين تجربة الاستخدام."
+                : "Select a reason to help us improve your experience."}
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          <div className="space-y-3 py-4">
+            {reasons.map((reason) => (
+              <label
+                key={reason.value}
+                className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-all duration-200 ${
+                  selectedReason === reason.value
+                    ? "border-primary bg-primary/5 shadow-sm"
+                    : "border-border hover:border-primary/40 hover:bg-muted/50"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="remove-reason"
+                  value={reason.value}
+                  checked={selectedReason === reason.value}
+                  onChange={() => setSelectedReason(reason.value)}
+                  className="h-4 w-4 accent-primary"
+                />
+                <span className="text-sm font-medium">{reason.label}</span>
+              </label>
+            ))}
+
+            {selectedReason === "other" && (
+              <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                <Label htmlFor="other-reason" className="sr-only">
+                  {language === "ar" ? "أخبرنا المزيد" : "Tell us more"}
+                </Label>
+                <textarea
+                  id="other-reason"
+                  value={otherText}
+                  onChange={(e) => setOtherText(e.target.value)}
+                  placeholder={
+                    language === "ar" ? "أخبرنا المزيد..." : "Tell us more..."
+                  }
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"
+                  rows={3}
+                />
+              </div>
+            )}
+          </div>
+
           <AlertDialogFooter>
-            <AlertDialogCancel>
-              {language === "ar" ? "إلغاء" : "Cancel"}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                if (onDeletePost) {
-                  await onDeletePost(post.id);
-                }
-                setShowDeleteDialog(false);
-              }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            <Button
+              variant="outline"
+              onClick={() => handleDeleteDialogClose(false)}
             >
-              {language === "ar" ? "حذف" : "Delete"}
-            </AlertDialogAction>
+              {language === "ar" ? "إلغاء" : "Cancel"}
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!selectedReason || isSubmitting}
+              onClick={() => void handleRemoveConfirm()}
+              className="transition-all duration-300 hover:scale-105 hover:shadow-lg"
+            >
+              {isSubmitting
+                ? language === "ar"
+                  ? "جاري الإزالة..."
+                  : "Removing..."
+                : language === "ar"
+                  ? "تأكيد الإزالة"
+                  : "Confirm Removal"}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -162,71 +264,6 @@ export function PostActionDialogs({
           </div>
         </DialogContent>
       </Dialog>
-
-      <AlertDialog
-        open={showMarkAsSoldDialog}
-        onOpenChange={setShowMarkAsSoldDialog}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {language === "ar" ? "تأكيد البيع" : "Confirm Sale"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {language === "ar"
-                ? "هل تريد تأكيد بيع هذا المنشور؟ سيتم وضع علامة 'مُباع' على المنشور ولن يتمكن المشترون من رؤيته."
-                : "Are you sure you want to mark this post as sold? The post will be marked as 'SOLD' and buyers won't be able to view it."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>
-              {language === "ar" ? "إلغاء" : "Cancel"}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (onUpdatePostStatus) {
-                  void onUpdatePostStatus({ id: post.id, status: "SOLD" });
-                }
-                setShowMarkAsSoldDialog(false);
-              }}
-              className="bg-primary text-primary-foreground transition-all duration-300 hover:scale-105 hover:bg-primary/90 hover:shadow-lg"
-            >
-              {language === "ar" ? "تأكيد البيع" : "Mark as Sold"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={showRelistDialog} onOpenChange={setShowRelistDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {language === "ar" ? "تأكيد إعادة الإدراج" : "Confirm Re-listing"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {language === "ar"
-                ? "هل تريد إعادة إدراج هذا المنشور؟ سيتم تنشيط المنشور مرة أخرى ويمكن للمشترين مشاهدته."
-                : "Are you sure you want to re-list this post? The post will become active again and buyers will be able to view it."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>
-              {language === "ar" ? "إلغاء" : "Cancel"}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (onUpdatePostStatus) {
-                  void onUpdatePostStatus({ id: post.id, status: "ACTIVE" });
-                }
-                setShowRelistDialog(false);
-              }}
-              className="bg-primary text-primary-foreground transition-all duration-300 hover:scale-105 hover:bg-primary/90 hover:shadow-lg"
-            >
-              {language === "ar" ? "إعادة الإداج" : "Re-list Post"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

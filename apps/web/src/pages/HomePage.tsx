@@ -1,10 +1,13 @@
-import { PostGridSkeleton } from "../shared/ui/post-card-skeleton";
+import { useMemo } from "react";
+import { Loader2, Globe, Star } from "lucide-react";
 import { PostResultsGrid } from "../features/marketplace/components/PostResultsGrid";
 import { MarketplaceResultsPagination } from "../features/marketplace/components/MarketplaceResultsPagination";
 import { Language, Post, ViewMode } from "../types";
 import { APP_CONFIG } from "../constants/appConfig";
 import { HomeHeroSection } from "../features/home/components/HomeHeroSection";
 import { HomeCategoriesSection } from "../features/home/components/HomeCategoriesSection";
+import { PostCarousel } from "../features/home/components/PostCarousel";
+import { HomePromotionalBanner } from "../features/home/components/HomePromotionalBanner";
 import { MarketplaceDiscoveryControls } from "../features/marketplace/components/MarketplaceDiscoveryControls";
 import { usePrefersReducedMotion } from "../shared/hooks/usePrefersReducedMotion";
 import { PageShell } from "../shared/ui/page-shell";
@@ -93,8 +96,25 @@ export function HomePage({
     });
   };
 
+  // Split posts for "Featured" carousel and main grid
+  const featuredPosts = useMemo(() => {
+    return displayedPosts.filter((p) => p.status !== "SOLD").slice(0, 10);
+  }, [displayedPosts]);
+
+  const recentPosts = useMemo(() => {
+    return displayedPosts
+      .filter((p) => p.status !== "SOLD")
+      .sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      })
+      .slice(0, 10);
+  }, [displayedPosts]);
+
   return (
     <PageShell>
+      {/* 1. Hero Section */}
       <HomeHeroSection
         language={language}
         isAuthenticated={isAuthenticated}
@@ -105,6 +125,8 @@ export function HomePage({
         setShowSellItem={setShowSellItem}
         onBrowseItems={scrollToTop}
       />
+
+      {/* 2. Categories - Circular icons */}
       <HomeCategoriesSection
         language={language}
         t={t}
@@ -113,12 +135,113 @@ export function HomePage({
         setShowAllPosts={setShowAllPosts}
       />
 
-      {/* Main Content */}
-      <section
+      {/* 3. Featured Items Carousel */}
+      {!isLoadingPosts && featuredPosts.length > 0 && (
+        <PostCarousel
+          title={
+            language === "ar" ? "🔥 المنتجات المميزة" : "🔥 Featured Items"
+          }
+          subtitle={
+            language === "ar"
+              ? "أبرز المنتجات المتوفرة حالياً"
+              : "Top picks available right now"
+          }
+          posts={featuredPosts}
+          language={language}
+          isAuthenticated={isAuthenticated}
+          currentUserId={currentUserId}
+          currentUserDisplayName={currentUserDisplayName}
+          favoriteIds={favoriteIds}
+          onFavoriteToggle={toggleFavorite}
+          onPostClick={(id) => onPostClick(id, "featured")}
+          onViewAll={() => setShowAllPosts(true)}
+          viewAllLabel={language === "ar" ? "عرض الكل" : "View All"}
+        />
+      )}
+
+      {/* 4. Promotional Banner */}
+      <HomePromotionalBanner
+        title={language === "ar" ? "تسوّق بثقة وأمان" : "Shop with Confidence"}
+        subtitle={
+          language === "ar"
+            ? "تحقق من التقييمات واتصل بالبائعين مباشرة"
+            : "Verified reviews & direct seller communication"
+        }
+        buttonLabel={language === "ar" ? "ابدأ التسوق" : "Start Shopping"}
+        onButtonClick={scrollToTop}
+        icon={Star}
+        variant="accent"
+      />
+
+      {/* 5. Recent Items Carousel */}
+      {!isLoadingPosts && recentPosts.length > 0 && (
+        <PostCarousel
+          title={language === "ar" ? "🆕 أحدث الإعلانات" : "🆕 Recently Added"}
+          subtitle={
+            language === "ar"
+              ? "أحدث ما تمت إضافته للمنصة"
+              : "The latest listings on TijarahJO"
+          }
+          posts={recentPosts}
+          language={language}
+          isAuthenticated={isAuthenticated}
+          currentUserId={currentUserId}
+          currentUserDisplayName={currentUserDisplayName}
+          favoriteIds={favoriteIds}
+          onFavoriteToggle={toggleFavorite}
+          onPostClick={(id) => onPostClick(id, "recent")}
+          onViewAll={() => setShowAllPosts(true)}
+          viewAllLabel={language === "ar" ? "عرض الكل" : "View All"}
+        />
+      )}
+
+      {/* 6. Bottom Promotional Banner */}
+      <HomePromotionalBanner
+        title={
+          language === "ar"
+            ? "بيع في كل مكان بالأردن"
+            : "Sell Across All of Jordan"
+        }
+        subtitle={
+          language === "ar"
+            ? "اعرض منتجاتك واوصل للمشترين في كل المحافظات"
+            : "List your items and reach buyers in every governorate"
+        }
+        buttonLabel={
+          isAuthenticated
+            ? language === "ar"
+              ? "أضف إعلان"
+              : "Post a Listing"
+            : language === "ar"
+              ? "سجل الآن"
+              : "Sign Up Now"
+        }
+        onButtonClick={() =>
+          isAuthenticated ? setShowSellItem(true) : setShowLoginPrompt(true)
+        }
+        icon={Globe}
+        variant="gradient"
+      />
+
+      {/* 7. Main Content - All Posts Grid */}
+      <main
         id="home-marketplace-content"
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
       >
-        {/* View Controls Only */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground">
+              {language === "ar" ? "جميع المنتجات" : "All Listings"}
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {language === "ar"
+                ? "تصفح جميع الإعلانات المتاحة"
+                : "Browse all available listings"}
+            </p>
+          </div>
+        </div>
+
+        {/* View Controls */}
         <MarketplaceDiscoveryControls
           language={language}
           viewMode={viewMode}
@@ -128,7 +251,21 @@ export function HomePage({
         />
 
         {/* Loading State */}
-        {isLoadingPosts && <PostGridSkeleton viewMode={viewMode} />}
+        {isLoadingPosts && (
+          <div className="col-span-full flex flex-col items-center justify-center py-16 px-4">
+            <Loader2 className="mb-4 h-16 w-16 animate-spin text-primary" />
+            <h3 className="mb-2 text-foreground">
+              {language === "ar"
+                ? "جارٍ تحميل المنشورات..."
+                : "Loading posts..."}
+            </h3>
+            <p className="max-w-md text-center text-muted-foreground">
+              {language === "ar"
+                ? "جاري جلب البيانات من قاعدة البيانات"
+                : "Fetching data from database"}
+            </p>
+          </div>
+        )}
 
         {/* Error State */}
         {!isLoadingPosts && postsError && (
@@ -196,7 +333,7 @@ export function HomePage({
             showLoadingIndicator
           />
         ) : null}
-      </section>
+      </main>
     </PageShell>
   );
 }
