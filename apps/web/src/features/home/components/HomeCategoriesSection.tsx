@@ -168,7 +168,6 @@ export function HomeCategoriesSection({
         <div
           ref={scrollRef}
           className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-none pb-2 snap-x snap-mandatory"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {categories.map((category) => {
             const Icon = resolveCategoryIcon(category.icon);
@@ -191,7 +190,7 @@ export function HomeCategoriesSection({
                   className={`relative w-[68px] h-[68px] sm:w-[80px] sm:h-[80px] rounded-2xl bg-gradient-to-br ${gradient.from} ${gradient.to} flex items-center justify-center shadow-md group-hover:shadow-xl transition-all duration-300 group-hover:scale-105`}
                 >
                   {/* Glassmorphism inner glow */}
-                  <div className="absolute inset-[3px] rounded-[13px] bg-white/15 dark:bg-white/10 backdrop-blur-sm" />
+                  <div className="absolute inset-1 rounded-[13px] bg-white/15 dark:bg-white/10 backdrop-blur-sm" />
                   <Icon
                     className="relative z-10 h-7 w-7 sm:h-8 sm:w-8 text-white drop-shadow-sm transition-transform duration-300 group-hover:scale-110"
                     strokeWidth={1.75}

@@ -127,7 +127,6 @@ BEGIN
         SearchFirstNameNormalized AS CONVERT(NVARCHAR(100), UPPER(LTRIM(RTRIM(ISNULL(FirstName, N''))))) PERSISTED,
         SearchLastNameNormalized  AS CONVERT(NVARCHAR(100), UPPER(LTRIM(RTRIM(ISNULL(LastName, N''))))) PERSISTED,
         SearchFullNameNormalized  AS CONVERT(NVARCHAR(201), UPPER(LTRIM(RTRIM(CONCAT(ISNULL(FirstName, N''), N' ', ISNULL(LastName, N'')))))) PERSISTED,
-        CONSTRAINT UQ_Users_Email          UNIQUE (Email),
         CONSTRAINT FK_Users_RoleID         FOREIGN KEY (RoleID)  REFERENCES dbo.Roles(RoleID),
         CONSTRAINT FK_Users_StatusLookup   FOREIGN KEY (Status)  REFERENCES dbo.UserStatusLookup(StatusID),
         CONSTRAINT FK_Users_Cities         FOREIGN KEY (CityID)  REFERENCES dbo.Cities(CityID),
@@ -138,6 +137,19 @@ BEGIN
         CONSTRAINT CK_Users_AreaRequiresCity CHECK (AreaID IS NULL OR CityID IS NOT NULL)
         -- NOTE: No CK_Users_Status — FK_Users_StatusLookup is the authority
     );
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.Users')
+      AND name = N'UQ_Users_Email'
+)
+BEGIN
+    CREATE UNIQUE NONCLUSTERED INDEX UQ_Users_Email
+    ON dbo.Users(Email)
+    WHERE IsDeleted = 0;
 END
 GO
 
@@ -179,9 +191,21 @@ BEGIN
         Image        NVARCHAR(1000) NULL,
         CreatedAt    DATETIME2     NOT NULL CONSTRAINT DF_Categories_CreatedAt DEFAULT SYSUTCDATETIME(),
         IsDeleted    BIT           NOT NULL CONSTRAINT DF_Categories_IsDeleted DEFAULT 0,
-        SearchCategoryNameNormalized AS CONVERT(NVARCHAR(100), UPPER(LTRIM(RTRIM(ISNULL(CategoryName, N''))))) PERSISTED,
-        CONSTRAINT UQ_Categories_CategoryName UNIQUE (CategoryName)
+        SearchCategoryNameNormalized AS CONVERT(NVARCHAR(100), UPPER(LTRIM(RTRIM(ISNULL(CategoryName, N''))))) PERSISTED
     );
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.Categories')
+      AND name = N'UQ_Categories_CategoryName'
+)
+BEGIN
+    CREATE UNIQUE NONCLUSTERED INDEX UQ_Categories_CategoryName
+    ON dbo.Categories(CategoryName)
+    WHERE IsDeleted = 0;
 END
 GO
 

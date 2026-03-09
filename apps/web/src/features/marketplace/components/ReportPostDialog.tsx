@@ -133,7 +133,7 @@ export function ReportPostDialog({
             placeholder={labels.placeholder}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="min-h-[80px]"
+            className="min-h-20"
           />
         </div>
 

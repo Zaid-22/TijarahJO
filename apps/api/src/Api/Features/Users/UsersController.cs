@@ -174,7 +174,7 @@ public class UsersController : ControllerBase
     }
 
     [Authorize]
-    [HttpGet("{id:int}/exists")]
+    [HttpGet("Exists/{id:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<bool>> DoesUserExist(int id)

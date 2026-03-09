@@ -72,7 +72,7 @@ export function Header({
     "group relative h-10 w-10 rounded-full border border-border/60 bg-background/70 p-0 text-muted-foreground shadow-sm hover:border-primary/35 hover:bg-primary/5 hover:text-primary hover:shadow-md transition-all";
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/20 bg-background/80 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 transition-all duration-300">
+    <header className="sticky top-0 z-50 border-b border-border/20 bg-background/80 shadow-md backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 transition-all duration-300">
       <div className="relative mx-auto max-w-7xl px-3 sm:px-4 lg:px-8">
         <div className="flex h-16 items-center justify-between gap-3 sm:h-[4.5rem] sm:gap-5">
           {/* Left section: Logo & Mobile Menu */}

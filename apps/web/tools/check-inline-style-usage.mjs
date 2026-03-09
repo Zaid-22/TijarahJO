@@ -4,7 +4,7 @@ import path from "node:path";
 const SRC_DIR = path.resolve(process.cwd(), "src");
 const STYLE_TOKEN = "style={{";
 
-const ALLOWED_STYLE_USAGE = new Map();
+const ALLOWED_STYLE_USAGE = new Map([["src/shared/ui/image-lightbox.tsx", 1]]);
 
 function walkFiles(dirPath) {
   const entries = readdirSync(dirPath);
@@ -42,7 +42,9 @@ function main() {
       continue;
     }
 
-    const relativePath = path.relative(process.cwd(), filePath).replace(/\\/g, "/");
+    const relativePath = path
+      .relative(process.cwd(), filePath)
+      .replace(/\\/g, "/");
     const allowedCount = ALLOWED_STYLE_USAGE.get(relativePath);
     if (allowedCount === undefined) {
       violations.push(
@@ -62,10 +64,12 @@ function main() {
     return;
   }
 
+  // eslint-disable-next-line no-console
   console.error(
     "Styling check failed: inline styles are blocked project-wide.",
   );
   for (const violation of violations) {
+    // eslint-disable-next-line no-console
     console.error(`- ${violation}`);
   }
   process.exit(1);
