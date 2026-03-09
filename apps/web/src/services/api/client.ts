@@ -110,6 +110,7 @@ const AUTH_ENDPOINTS_NO_RETRY = [
   "/auth/login",
   "/auth/signup",
   "/auth/refresh",
+  "/auth/me",
   "/auth/logout",
   "/auth/forgot-password/request",
   "/auth/forgot-password/confirm",

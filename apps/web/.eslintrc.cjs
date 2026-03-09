@@ -15,12 +15,7 @@ module.exports = {
       jsx: true,
     },
   },
-  plugins: [
-    "@typescript-eslint",
-    "react-hooks",
-    "react-refresh",
-    "jsx-a11y",
-  ],
+  plugins: ["@typescript-eslint", "react-hooks", "react-refresh", "jsx-a11y"],
   extends: [
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
@@ -66,6 +61,13 @@ module.exports = {
       files: ["src/shared/lib/logger.ts"],
       rules: {
         "no-console": "off",
+      },
+    },
+    {
+      files: ["**/*.cjs"],
+      rules: {
+        "@typescript-eslint/no-var-requires": "off",
+        "@typescript-eslint/no-require-imports": "off",
       },
     },
   ],
