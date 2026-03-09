@@ -1,14 +1,14 @@
 import { RawPost } from "../posts/types";
 import { asRecord, toIntegerOrDefault } from "../normalizers";
 
-export type ParsedPagination = {
+type ParsedPagination = {
   currentPage: number;
   totalPages: number;
   totalPosts: number;
   postsPerPage: number;
 };
 
-export type ParsedPostsEnvelope = {
+type ParsedPostsEnvelope = {
   posts: RawPost[];
   pagination: Record<string, unknown>;
 };

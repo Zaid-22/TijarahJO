@@ -1,7 +1,7 @@
 import { ChevronRight, Home } from "lucide-react";
 import { cn } from "./utils";
 
-export interface BreadcrumbItem {
+interface BreadcrumbItem {
   label: string;
   href?: string;
   onClick?: () => void;

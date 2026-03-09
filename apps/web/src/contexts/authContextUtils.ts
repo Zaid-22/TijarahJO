@@ -1,7 +1,7 @@
 import { User } from "../types";
 import { logger } from "../shared/lib/logger";
 
-export const DEBUG_AUTH =
+const DEBUG_AUTH =
   Boolean(import.meta.env.DEV) && import.meta.env.VITE_DEBUG_AUTH === "true";
 
 export const debugAuthLog = (...args: unknown[]) => {

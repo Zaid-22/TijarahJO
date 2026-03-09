@@ -9,7 +9,7 @@ const SellerProfilePage = lazy(() =>
   })),
 );
 
-export function PostDetailsMarketplaceRouteScreen() {
+function PostDetailsMarketplaceRouteScreen() {
   const {
     appProps,
     routeState,
@@ -55,7 +55,7 @@ export function PostDetailsMarketplaceRouteScreen() {
   );
 }
 
-export function SellerMarketplaceRouteScreen() {
+function SellerMarketplaceRouteScreen() {
   return <SellerProfilePage />;
 }
 

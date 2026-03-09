@@ -15,7 +15,7 @@ const SearchResultsPage = lazy(() =>
   })),
 );
 
-export function AllPostsMarketplaceRouteScreen() {
+function AllPostsMarketplaceRouteScreen() {
   const {
     appProps,
     navigate,
@@ -40,7 +40,7 @@ export function AllPostsMarketplaceRouteScreen() {
   );
 }
 
-export function SearchResultsMarketplaceRouteScreen() {
+function SearchResultsMarketplaceRouteScreen() {
   const {
     appProps,
     navigate,
@@ -71,7 +71,7 @@ export function SearchResultsMarketplaceRouteScreen() {
   );
 }
 
-export function CategoryMarketplaceRouteScreen() {
+function CategoryMarketplaceRouteScreen() {
   const {
     appProps,
     navigate,

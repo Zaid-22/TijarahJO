@@ -9,7 +9,7 @@ export type PostSortMode =
   | "name-az"
   | "name-za";
 
-export type AllPostsUiSort = "recent" | "price-low" | "price-high" | "name";
+type AllPostsUiSort = "recent" | "price-low" | "price-high" | "name";
 
 function parseTimestamp(value: string | undefined): number {
   return Date.parse(value || "") || 0;

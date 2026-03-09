@@ -3,7 +3,7 @@ import { asRecord, readString } from "../normalizers";
 import { toPositiveIntegerId } from "../../../utils/idValidation";
 import { COLORS } from "../../../constants/colors";
 
-export type RawCategory = {
+type RawCategory = {
   CategoryID?: unknown;
   categoryID?: unknown;
   id?: unknown;
@@ -23,7 +23,7 @@ export type RawCategory = {
 
 const DEFAULT_CATEGORY_COLOR = COLORS.PRIMARY;
 
-export function parseRawCategory(value: unknown): RawCategory | null {
+function parseRawCategory(value: unknown): RawCategory | null {
   const record = asRecord(value);
   if (!record) {
     return null;
@@ -59,7 +59,7 @@ export function parseRawCategory(value: unknown): RawCategory | null {
   };
 }
 
-export function parseRawCategoryCollection(value: unknown): RawCategory[] {
+function parseRawCategoryCollection(value: unknown): RawCategory[] {
   if (!Array.isArray(value)) {
     return [];
   }

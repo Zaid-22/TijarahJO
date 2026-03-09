@@ -9,7 +9,7 @@ import { HeaderMobileMenuSheet } from "./header/HeaderMobileMenuSheet";
 import { HeaderSearchInput } from "./header/HeaderSearchInput";
 import { HeaderNotificationsDropdown } from "./header/HeaderNotificationsDropdown";
 
-export interface HeaderProps {
+interface HeaderProps {
   language: Language;
   isAuthenticated?: boolean;
   currentUserDisplayName?: string;

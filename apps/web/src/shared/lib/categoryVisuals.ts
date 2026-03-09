@@ -131,6 +131,3 @@ export function resolveCategoryName(
 
   return category.name;
 }
-
-export const categoryImageFallback =
-  "https://images.unsplash.com/photo-1523275335684-37898b6baf30?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080";

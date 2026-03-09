@@ -21,7 +21,7 @@ export type ParsedAuthUser = {
   isDeleted: boolean;
 };
 
-export type ParsedAuthEnvelope = {
+type ParsedAuthEnvelope = {
   successFlag: boolean | null;
   message: string;
   user: ParsedAuthUser | null;

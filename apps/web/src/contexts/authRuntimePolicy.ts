@@ -1,9 +1,9 @@
-export const AUTH_NETWORK_RETRY_BASE_DELAY_MS = 800;
-export const AUTH_NETWORK_RETRY_MAX_DELAY_MS = 15_000;
-export const AUTH_REVALIDATE_BASE_THROTTLE_MS = 5_000;
-export const AUTH_REVALIDATE_MAX_THROTTLE_MS = 60_000;
+const AUTH_NETWORK_RETRY_BASE_DELAY_MS = 800;
+const AUTH_NETWORK_RETRY_MAX_DELAY_MS = 15_000;
+const AUTH_REVALIDATE_BASE_THROTTLE_MS = 5_000;
+const AUTH_REVALIDATE_MAX_THROTTLE_MS = 60_000;
 export const AUTH_ERROR_EMIT_COOLDOWN_MS = 12_000;
-export const AUTH_MAX_CONSECUTIVE_NETWORK_FAILURES = 8;
+const AUTH_MAX_CONSECUTIVE_NETWORK_FAILURES = 8;
 
 export const OFFLINE_SESSION_MESSAGE =
   "You are offline. Session verification will resume when connection is restored.";
@@ -44,7 +44,7 @@ export function getNextConsecutiveNetworkFailures(
   );
 }
 
-export function getRevalidateThrottleMs(consecutiveFailures: number): number {
+function getRevalidateThrottleMs(consecutiveFailures: number): number {
   const normalizedFailures = normalizeFailureCount(consecutiveFailures);
   const exponent = Math.max(0, normalizedFailures - 1);
   const throttle = AUTH_REVALIDATE_BASE_THROTTLE_MS * 2 ** exponent;

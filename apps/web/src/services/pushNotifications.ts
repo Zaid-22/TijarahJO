@@ -12,11 +12,11 @@ export type PushNotificationErrorCode =
   | "SYNC_FAILED"
   | "UNKNOWN";
 
-export type PushNotificationActionResult =
+type PushNotificationActionResult =
   | { success: true }
   | { success: false; code: PushNotificationErrorCode };
 
-export type PushNotificationStatus = {
+type PushNotificationStatus = {
   supported: boolean;
   configEnabled: boolean;
   subscribed: boolean;

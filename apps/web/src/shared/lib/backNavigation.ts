@@ -85,7 +85,7 @@ export function buildCurrentPath(pathname: string, search = ""): string {
   return `${normalizedPathname || DEFAULT_FALLBACK_PATH}${normalizedSearch}`;
 }
 
-export function resolveSafeBackPath({
+function resolveSafeBackPath({
   candidatePath,
   currentPath,
   fallbackPath = DEFAULT_FALLBACK_PATH,

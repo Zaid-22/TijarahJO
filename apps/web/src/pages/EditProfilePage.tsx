@@ -19,7 +19,7 @@ import type {
 } from "../features/profile/types";
 import { useLocationOptions } from "../shared/hooks/useLocationOptions";
 
-export type UserProfile = EditProfileFormProfile;
+type UserProfile = EditProfileFormProfile;
 
 interface EditProfilePageProps {
   onBack: () => void;

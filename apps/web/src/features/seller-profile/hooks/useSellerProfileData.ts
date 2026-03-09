@@ -45,7 +45,7 @@ function normalizeListingToPost(
   };
 }
 
-export interface SellerReview {
+interface SellerReview {
   reviewID: number | string;
   reviewerID: number;
   reviewerName: string;
@@ -54,7 +54,7 @@ export interface SellerReview {
   timestamp: string;
 }
 
-export interface SellerProfileState {
+interface SellerProfileState {
   name: string;
   joinDate: string;
   location: string;

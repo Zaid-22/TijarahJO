@@ -1,7 +1,7 @@
 import { asRecord } from "../normalizers";
 import type { RawChatMessage } from "../chatNormalization";
 
-export type PresencePayload = {
+type PresencePayload = {
   isOnline?: unknown;
   IsOnline?: unknown;
   lastSeenAtUtc?: unknown;
@@ -10,7 +10,7 @@ export type PresencePayload = {
   StatusText?: unknown;
 };
 
-export function parseRawChatMessage(value: unknown): RawChatMessage | null {
+function parseRawChatMessage(value: unknown): RawChatMessage | null {
   const record = asRecord(value);
   if (!record) {
     return null;
@@ -49,7 +49,7 @@ export function parseRawChatMessage(value: unknown): RawChatMessage | null {
   };
 }
 
-export function parseRawChatMessagesCollection(
+function parseRawChatMessagesCollection(
   value: unknown,
 ): RawChatMessage[] {
   if (!Array.isArray(value)) {

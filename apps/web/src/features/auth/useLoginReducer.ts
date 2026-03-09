@@ -6,10 +6,10 @@ import {
   createEmptyLoginErrors,
 } from "./loginValidation";
 
-export type LoginStep = "credentials" | "twoFactor";
-export type AuthMode = "signIn" | "signUp";
+type LoginStep = "credentials" | "twoFactor";
+type AuthMode = "signIn" | "signUp";
 
-export interface LoginState {
+interface LoginState {
   step: LoginStep;
   mode: AuthMode;
   isLoading: boolean;
@@ -23,7 +23,7 @@ export interface LoginState {
   focusedField: LoginField | null;
 }
 
-export type LoginAction =
+type LoginAction =
   | { type: "SET_MODE"; mode: AuthMode }
   | { type: "SET_FIELD"; field: LoginField; value: string }
   | { type: "SET_ERROR"; field: LoginField; error: string }
@@ -39,7 +39,7 @@ export type LoginAction =
   | { type: "SET_FOCUSED_FIELD"; field: LoginField | null }
   | { type: "RESET"; initialValues?: Partial<LoginFormValues> };
 
-export function loginReducer(
+function loginReducer(
   state: LoginState,
   action: LoginAction,
 ): LoginState {
@@ -149,7 +149,7 @@ export function loginReducer(
   }
 }
 
-export function createInitialLoginState(
+function createInitialLoginState(
   initialValues?: Partial<LoginFormValues>,
 ): LoginState {
   return {
