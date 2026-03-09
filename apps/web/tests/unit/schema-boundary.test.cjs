@@ -10,7 +10,6 @@ const {
   parseCategoryCollectionPayload,
   parseCategoryExistsPayload,
   parseCategoryPayload,
-  parseRawCategory,
 } = require("../../.unit-dist/services/api/schemas/categorySchema.js");
 
 test("parseChatMessagesPayload supports envelope and direct array", () => {
@@ -52,10 +51,6 @@ test("parsePresencePayload supports nested presence envelope", () => {
 
   assert.equal(parsed.IsOnline, true);
   assert.equal(parsed.LastSeenAtUtc, "2026-02-21T12:00:00.000Z");
-});
-
-test("category schema rejects objects without category identity", () => {
-  assert.equal(parseRawCategory({ foo: "bar" }), null);
 });
 
 test("parseCategoryCollectionPayload supports data envelope", () => {

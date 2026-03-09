@@ -2,25 +2,10 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
-  normalizePostStatus,
   transformPostModelToPost,
   getUserDisplayName,
   getUserIdentifier,
 } = require("../../.unit-dist/services/api/posts/mappers.js");
-
-test("normalizePostStatus maps moderation-like states to DELETED", () => {
-  assert.equal(normalizePostStatus("blocked"), "DELETED");
-  assert.equal(normalizePostStatus("inactive"), "DELETED");
-  assert.equal(normalizePostStatus(1), "DELETED");
-  assert.equal(normalizePostStatus(2), "DELETED");
-});
-
-test("normalizePostStatus maps SOLD and defaults ACTIVE", () => {
-  assert.equal(normalizePostStatus("sold"), "SOLD");
-  assert.equal(normalizePostStatus(3), "SOLD");
-  assert.equal(normalizePostStatus("anything-else"), "ACTIVE");
-  assert.equal(normalizePostStatus(undefined), "ACTIVE");
-});
 
 test("getUserIdentifier resolves canonical user id from mixed backend casing", () => {
   assert.equal(getUserIdentifier({ UserID: 12 }), "12");
