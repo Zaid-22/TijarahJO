@@ -28,9 +28,9 @@ export function HeaderSearchInput({
       isRTL={isRTL}
       size="compact"
       className="w-full"
-      inputClassName="h-11 border-border/55 bg-background/90 shadow-sm focus-visible:border-primary/45 focus-visible:ring-primary/15 focus-visible:shadow-md"
-      iconClassName="h-4 w-4"
-      clearButtonClassName="h-7 w-7"
+      inputClassName="h-[2.85rem] rounded-full border-transparent bg-muted/40 shadow-inner hover:bg-muted/60 focus-visible:bg-background focus-visible:border-primary/50 focus-visible:ring-primary/20 focus-visible:shadow-md transition-all duration-300"
+      iconClassName="h-[1.15rem] w-[1.15rem] text-muted-foreground group-hover:text-primary transition-colors"
+      clearButtonClassName="h-7 w-7 text-muted-foreground hover:bg-muted/50 rounded-full"
     />
   );
 }

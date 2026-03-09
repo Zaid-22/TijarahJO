@@ -12,6 +12,10 @@ import { Alert, AlertDescription } from "../../shared/ui/alert";
 import { Button } from "../../shared/ui/button";
 import { Logo } from "../../shared/ui/logo";
 import { AuthInputField } from "./AuthInputField";
+import { AuthPhoneField } from "./AuthPhoneField";
+import { AuthSelectField } from "./AuthSelectField";
+import { AuthGoogleButton } from "./AuthGoogleButton";
+import { JORDAN_CITIES, JORDAN_CITIES_AR } from "./loginUtils";
 import type { Language } from "../../types";
 import {
   LoginField,
@@ -78,6 +82,12 @@ export function LoginForm({
   onToggleConfirmPasswordVisibility,
 }: LoginFormProps) {
   const isRTL = language === "ar";
+
+  const cityOptions = JORDAN_CITIES.map((city) => ({
+    value: city,
+    label: isRTL ? JORDAN_CITIES_AR[city] || city : city,
+  }));
+
   const canInteract = canSubmit && !isLoading;
   const submitButtonClassName = canInteract
     ? "bg-primary text-primary-foreground hover:bg-primary/90"
@@ -128,48 +138,12 @@ export function LoginForm({
             noValidate
           >
             {showGoogleAuth && !isTwoFactorStep && (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-12 w-full border-border bg-background text-foreground text-sm font-medium hover:bg-muted"
-                  onClick={onContinueWithGoogle}
-                  disabled={isLoading}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 48 48"
-                    className="w-5 h-5"
-                    aria-hidden="true"
-                    focusable="false"
-                  >
-                    <path
-                      className="fill-amber-400"
-                      d="M43.6 20.5H42V20H24v8h11.3C33.6 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 6 1.2 8.1 3.2l5.7-5.7C34.3 6.1 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z"
-                    />
-                    <path
-                      className="fill-red-500"
-                      d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 6 1.2 8.1 3.2l5.7-5.7C34.3 6.1 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"
-                    />
-                    <path
-                      className="fill-green-500"
-                      d="M24 44c5.2 0 10.1-2 13.8-5.3l-6.4-5.4C29.3 34.9 26.8 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.5 16.2 44 24 44z"
-                    />
-                    <path
-                      className="fill-blue-600"
-                      d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4 5.4l.1-.1 6.4 5.4C37.3 39.1 44 34 44 24c0-1.2-.1-2.3-.4-3.5z"
-                    />
-                  </svg>
-                  <span>{copy.form.continueWithGoogle}</span>
-                </Button>
-
-                <div className="relative flex items-center justify-center">
-                  <div className="w-full border-t border-border" />
-                  <span className="absolute bg-card px-3 text-xs text-muted-foreground">
-                    {copy.form.orUseEmail}
-                  </span>
-                </div>
-              </>
+              <AuthGoogleButton
+                onContinueWithGoogle={onContinueWithGoogle}
+                isLoading={isLoading}
+                continueText={copy.form.continueWithGoogle}
+                orUseEmailText={copy.form.orUseEmail}
+              />
             )}
 
             {isTwoFactorStep && (
@@ -236,7 +210,7 @@ export function LoginForm({
             )}
 
             {!isTwoFactorStep && isSignUp && (
-              <AuthInputField
+              <AuthPhoneField
                 id="phone"
                 name="phone"
                 label={copy.form.phoneLabel}
@@ -245,8 +219,6 @@ export function LoginForm({
                 value={values.phone}
                 error={errors.phone}
                 disabled={isLoading}
-                type="text"
-                autoComplete="tel"
                 icon={Phone}
                 focused={focusedField === "phone"}
                 onChange={(value) => onFieldChange("phone", value)}
@@ -258,17 +230,15 @@ export function LoginForm({
 
             {!isTwoFactorStep && isSignUp && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <AuthInputField
+                <AuthSelectField
                   id="city"
                   name="city"
                   label={copy.form.cityLabel}
                   required
-                  placeholder={copy.form.cityPlaceholder}
                   value={values.city}
+                  options={cityOptions}
                   error={errors.city}
                   disabled={isLoading}
-                  type="text"
-                  autoComplete="address-level2"
                   icon={MapPin}
                   focused={focusedField === "city"}
                   onChange={(value) => onFieldChange("city", value)}

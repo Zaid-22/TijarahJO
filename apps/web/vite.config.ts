@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
 const DEV_DEFAULT_API_BASE_URL = "http://localhost:5033/api";
@@ -142,7 +143,7 @@ function injectCspPolicy(mode: string) {
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), injectCspPolicy(mode)],
+  plugins: [tailwindcss(), react(), injectCspPolicy(mode)],
   build: {
     rollupOptions: {
       output: {

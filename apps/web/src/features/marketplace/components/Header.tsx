@@ -72,11 +72,11 @@ export function Header({
     "group relative h-10 w-10 rounded-full border border-border/60 bg-background/70 p-0 text-muted-foreground shadow-sm hover:border-primary/35 hover:bg-primary/5 hover:text-primary hover:shadow-md transition-all";
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/35 bg-gradient-to-b from-background via-background/95 to-background/90 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
-      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/35 to-transparent" />
+    <header className="sticky top-0 z-50 border-b border-border/20 bg-background/80 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 transition-all duration-300">
       <div className="relative mx-auto max-w-7xl px-3 sm:px-4 lg:px-8">
-        <div className="flex h-16 items-center gap-3 sm:h-[4.75rem] sm:gap-5">
-          <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
+        <div className="flex h-16 items-center justify-between gap-3 sm:h-[4.5rem] sm:gap-5">
+          {/* Left section: Logo & Mobile Menu */}
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             {showBackButton ? (
               <Button
                 variant="ghost"
@@ -113,19 +113,23 @@ export function Header({
             )}
           </div>
 
+          {/* Middle section: Search Bar */}
           {showSearch && (
-            <div className="mx-1 hidden min-w-0 flex-1 md:block lg:mx-5">
-              <HeaderSearchInput
-                language={language}
-                isRTL={isRTL}
-                searchQuery={searchQuery}
-                onSearchChange={onSearchChange}
-                onSearchSubmit={onSearchSubmit}
-              />
+            <div className="hidden min-w-0 flex-1 md:flex md:justify-center lg:mx-4">
+              <div className="w-full max-w-2xl transition-all duration-300">
+                <HeaderSearchInput
+                  language={language}
+                  isRTL={isRTL}
+                  searchQuery={searchQuery}
+                  onSearchChange={onSearchChange}
+                  onSearchSubmit={onSearchSubmit}
+                />
+              </div>
             </div>
           )}
 
-          <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
+          {/* Right section: Profile, Actions & Sell Button */}
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             {isAuthenticated && (
               <HeaderNotificationsDropdown
                 language={language}

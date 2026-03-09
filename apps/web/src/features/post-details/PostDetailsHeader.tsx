@@ -2,7 +2,6 @@ import { Heart, Share2 } from "lucide-react";
 import { Button } from "../../shared/ui/button";
 import { SubpageHeader } from "../../shared/ui/subpage-header";
 import type { Language, Post } from "../../types";
-import { sharePost } from "../../utils/shareUtils";
 
 interface PostDetailsHeaderProps {
   post: Post;
@@ -13,6 +12,7 @@ interface PostDetailsHeaderProps {
   isFavorited: boolean;
   onBack: () => void;
   onFavoriteToggle?: (postId: string) => void;
+  onShare?: () => void;
   backToListingsLabel: string;
 }
 
@@ -25,6 +25,7 @@ export function PostDetailsHeader({
   isFavorited,
   onBack,
   onFavoriteToggle,
+  onShare,
   backToListingsLabel,
 }: PostDetailsHeaderProps) {
   const actionButtons = (
@@ -34,8 +35,10 @@ export function PostDetailsHeader({
         size="sm"
         className="h-9 w-9 rounded-lg p-0 transition-all duration-200 hover:scale-110 hover:bg-background hover:shadow-sm sm:h-10 sm:w-10"
         title={language === "ar" ? "مشاركة" : "Share"}
-        aria-label={language === "ar" ? "مشاركة هذا المنشور" : "Share this post"}
-        onClick={() => sharePost(post, language)}
+        aria-label={
+          language === "ar" ? "مشاركة هذا المنشور" : "Share this post"
+        }
+        onClick={onShare}
       >
         <Share2 className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
       </Button>

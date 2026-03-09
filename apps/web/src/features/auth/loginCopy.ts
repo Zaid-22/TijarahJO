@@ -68,14 +68,15 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
     form: {
       signUpTitle: "Sign Up",
       signInTitle: "Sign In",
-      signUpSubtitle: "Create your TijarahJo account to start buying and selling",
+      signUpSubtitle:
+        "Create your TijarahJo account to start buying and selling",
       signInSubtitle: "Sign in to access your TijarahJo account",
       firstNameLabel: "First Name",
       firstNamePlaceholder: "First name",
       lastNameLabel: "Last Name",
       lastNamePlaceholder: "Last name",
       phoneLabel: "Phone Number",
-      phonePlaceholder: "+9627XXXXXXXX",
+      phonePlaceholder: "07XXXXXXXX",
       cityLabel: "City",
       cityPlaceholder: "City",
       areaLabel: "Area",
@@ -116,7 +117,8 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
         "Try using different credentials, or switch to sign in if you already have an account.",
       signUpInvalidIdentifierPrompt:
         "Please enter a valid email address or Jordanian phone number.",
-      signUpInvalidPhonePrompt: "Please enter a valid Jordanian phone number.",
+      signUpInvalidPhonePrompt:
+        "Please enter a valid Jordanian phone number starting with 077, 078, or 079.",
       signUpCityRequiredPrompt: "Please enter your city.",
       signUpAreaRequiredPrompt: "Please enter your area.",
       registrationFailedFallback: "Registration failed. Please try again.",
@@ -125,17 +127,16 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       twoFactorRequiredPrompt:
         "Two-factor verification is required. Enter the code from your authenticator app.",
       twoFactorCodeInvalid: "Enter a valid 6-digit verification code.",
-      twoFactorSessionExpired: "Two-factor session expired. Please sign in again.",
+      twoFactorSessionExpired:
+        "Two-factor session expired. Please sign in again.",
     },
     validation: {
       identifierRequired: "Email or phone is required",
       identifierInvalid: "Enter a valid email or Jordanian phone number",
       passwordRequired: "Password is required",
       passwordMinLength: "Password must be at least 8 characters",
-      passwordUppercase:
-        "Password must contain at least one uppercase letter",
-      passwordLowercase:
-        "Password must contain at least one lowercase letter",
+      passwordUppercase: "Password must contain at least one uppercase letter",
+      passwordLowercase: "Password must contain at least one lowercase letter",
       passwordNumber: "Password must contain at least one number",
       passwordSpecial:
         "Password must contain at least one special character (!@#$%^&*...)",
@@ -144,7 +145,7 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       firstNameRequired: "First name is required",
       lastNameRequired: "Last name is required",
       phoneRequired: "Phone number is required",
-      phoneInvalid: "Enter a valid Jordanian phone number",
+      phoneInvalid: "Must be a 9-digit number starting with 77, 78, or 79",
       cityRequired: "City is required",
       areaRequired: "Area is required",
     },
@@ -160,7 +161,7 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       lastNameLabel: "اسم العائلة",
       lastNamePlaceholder: "اسم العائلة",
       phoneLabel: "رقم الهاتف",
-      phonePlaceholder: "+9627XXXXXXXX",
+      phonePlaceholder: "07XXXXXXXX",
       cityLabel: "المدينة",
       cityPlaceholder: "المدينة",
       areaLabel: "المنطقة",
@@ -186,7 +187,8 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       showPassword: "إظهار كلمة المرور",
       hidePassword: "إخفاء كلمة المرور",
       twoFactorTitle: "التحقق بخطوتين",
-      twoFactorSubtitle: "أدخل رمز التحقق المكوّن من 6 أرقام من تطبيق المصادقة.",
+      twoFactorSubtitle:
+        "أدخل رمز التحقق المكوّن من 6 أرقام من تطبيق المصادقة.",
       twoFactorCodeLabel: "رمز التحقق",
       twoFactorCodePlaceholder: "123456",
       verifyTwoFactorButton: "تأكيد الرمز",
@@ -201,7 +203,8 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
         "جرّب بيانات اعتماد مختلفة، أو انتقل إلى تسجيل الدخول إذا كان لديك حساب بالفعل.",
       signUpInvalidIdentifierPrompt:
         "يرجى إدخال بريد إلكتروني صالح أو رقم هاتف أردني صالح.",
-      signUpInvalidPhonePrompt: "يرجى إدخال رقم هاتف أردني صالح.",
+      signUpInvalidPhonePrompt:
+        "يرجى إدخال رقم هاتف متوافق يبدأ بـ 77 أو 78 أو 79.",
       signUpCityRequiredPrompt: "يرجى إدخال المدينة.",
       signUpAreaRequiredPrompt: "يرجى إدخال المنطقة.",
       registrationFailedFallback: "فشل إنشاء الحساب. يرجى المحاولة مرة أخرى.",
@@ -212,7 +215,8 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       twoFactorRequiredPrompt:
         "المصادقة الثنائية مطلوبة. أدخل الرمز من تطبيق المصادقة.",
       twoFactorCodeInvalid: "أدخل رمز تحقق صالحًا مكوّنًا من 6 أرقام.",
-      twoFactorSessionExpired: "انتهت جلسة المصادقة الثنائية. سجّل الدخول مرة أخرى.",
+      twoFactorSessionExpired:
+        "انتهت جلسة المصادقة الثنائية. سجّل الدخول مرة أخرى.",
     },
     validation: {
       identifierRequired: "البريد الإلكتروني أو الهاتف مطلوب",
@@ -220,10 +224,8 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
         "أدخل بريدًا إلكترونيًا صالحًا أو رقم هاتف أردني صالحًا",
       passwordRequired: "كلمة المرور مطلوبة",
       passwordMinLength: "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل",
-      passwordUppercase:
-        "يجب أن تحتوي كلمة المرور على حرف كبير واحد على الأقل",
-      passwordLowercase:
-        "يجب أن تحتوي كلمة المرور على حرف صغير واحد على الأقل",
+      passwordUppercase: "يجب أن تحتوي كلمة المرور على حرف كبير واحد على الأقل",
+      passwordLowercase: "يجب أن تحتوي كلمة المرور على حرف صغير واحد على الأقل",
       passwordNumber: "يجب أن تحتوي كلمة المرور على رقم واحد على الأقل",
       passwordSpecial:
         "يجب أن تحتوي كلمة المرور على رمز خاص واحد على الأقل (!@#$%^&*...)",
@@ -232,7 +234,7 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       firstNameRequired: "الاسم الأول مطلوب",
       lastNameRequired: "اسم العائلة مطلوب",
       phoneRequired: "رقم الهاتف مطلوب",
-      phoneInvalid: "أدخل رقم هاتف أردني صالحًا",
+      phoneInvalid: "الرقم يجب أن يتكون من 9 أرقام ويبدأ بـ 77, 78, أو 79",
       cityRequired: "المدينة مطلوبة",
       areaRequired: "المنطقة مطلوبة",
     },

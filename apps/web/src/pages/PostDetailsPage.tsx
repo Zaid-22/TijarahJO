@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Flag, Share2 } from "lucide-react";
+import { Flag } from "lucide-react";
 import { PostActionDialogs } from "../features/post-details/PostActionDialogs";
 import { PostDetailsHeader } from "../features/post-details/PostDetailsHeader";
 import { PostImageGallery } from "../features/post-details/PostImageGallery";
@@ -245,6 +245,7 @@ export function PostDetailsPage({
         isFavorited={isFavorited}
         onBack={onBack}
         onFavoriteToggle={onFavoriteToggle}
+        onShare={() => setActiveDialog("share")}
         backToListingsLabel={t.backToListings}
       />
 
@@ -352,17 +353,9 @@ export function PostDetailsPage({
         />
       )}
 
-      {/* Share & Report buttons */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 flex items-center gap-4">
-        <button
-          type="button"
-          onClick={() => setActiveDialog("share")}
-          className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5"
-        >
-          <Share2 className="h-4 w-4" />
-          {language === "ar" ? "مشاركة" : "Share"}
-        </button>
-        {!isOwnPost && isAuthenticated && (
+      {/* Report button */}
+      {!isOwnPost && isAuthenticated && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 flex items-center gap-4">
           <button
             type="button"
             onClick={() => setActiveDialog("report")}
@@ -373,8 +366,8 @@ export function PostDetailsPage({
               ? "الإبلاغ عن هذا الإعلان"
               : "Report this listing"}
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Share Dialog */}
       <ShareListingDialog
