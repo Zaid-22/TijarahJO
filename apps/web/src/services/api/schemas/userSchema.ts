@@ -5,7 +5,7 @@ import { toIsoStringOrNow } from "../shared";
 const DEFAULT_ACTIVE_STATUS = 1;
 const DEFAULT_USER_ROLE_ID = 2;
 
-export type ParsedUserSchema = {
+type ParsedUserSchema = {
   id: string;
   userId?: number;
   email: string;

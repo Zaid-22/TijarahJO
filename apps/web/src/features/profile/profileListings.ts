@@ -9,7 +9,7 @@ function normalizeLowercase(value: unknown): string {
   return normalizeValue(value).toLowerCase();
 }
 
-export interface ProfileListingsResult {
+interface ProfileListingsResult {
   activeListings: Post[];
   soldListings: Post[];
   normalizedCurrentUserId: string;

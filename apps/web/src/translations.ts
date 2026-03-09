@@ -4,7 +4,7 @@ import { Language } from "./types";
 export type { Language };
 
 /** All valid translation keys — use this type for compile-time safety. */
-export type TranslationKey =
+type TranslationKey =
   | "heroTitle"
   | "heroSubtitle"
   | "browseItems"
@@ -137,7 +137,7 @@ export type TranslationKey =
   | "saveChanges";
 
 /** Typed translation map — guarantees all keys exist. */
-export type TranslationMap = Record<TranslationKey, string>;
+type TranslationMap = Record<TranslationKey, string>;
 
 export const translations: Record<Language, TranslationMap> = {
   en: {

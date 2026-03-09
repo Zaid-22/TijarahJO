@@ -79,10 +79,6 @@ function normalizeServerQueryTag(tag: string): string {
   return tag.trim().toLowerCase();
 }
 
-function normalizeServerQueryPrefix(prefix: string): string {
-  return prefix.trim();
-}
-
 function normalizeServerQueryTags(tags: string[] | undefined): string[] {
   if (!Array.isArray(tags) || tags.length === 0) {
     return [];
@@ -163,42 +159,6 @@ function invalidateServerQueries(
   });
 }
 
-function removeServerQueries(
-  matcher: (key: string) => boolean,
-  queryClient: QueryClient = serverQueryClient,
-) {
-  const queries = queryClient.getQueryCache().findAll({
-    predicate: (query) => {
-      const key = getServerKey(query);
-      return key !== null && matcher(key);
-    },
-  });
-
-  const keysToRemove = new Set<string>();
-  for (const query of queries) {
-    const key = getServerKey(query);
-    if (key) {
-      keysToRemove.add(key);
-    }
-  }
-
-  queryClient.removeQueries({
-    predicate: (query) => {
-      const key = getServerKey(query);
-      return key !== null && matcher(key);
-    },
-  });
-
-  for (const key of keysToRemove) {
-    removeTagMappingsForKey(key);
-  }
-}
-
-function keyMatchesPrefix(key: string, prefix: string): boolean {
-  const normalizedPrefix = normalizeServerQueryPrefix(prefix);
-  return normalizedPrefix.length > 0 && key.startsWith(normalizedPrefix);
-}
-
 export function useServerQuery<TData>({
   key,
   queryFn,
@@ -253,21 +213,8 @@ function invalidateServerQuery(
   options: InvalidateServerQueryOptions = {},
   queryClient: QueryClient = serverQueryClient,
 ) {
-  invalidateServerQueries((candidateKey) => candidateKey === key, options, queryClient);
-}
-
-function invalidateServerQueryPrefix(
-  prefix: string,
-  options: InvalidateServerQueryOptions = {},
-  queryClient: QueryClient = serverQueryClient,
-) {
-  const normalizedPrefix = normalizeServerQueryPrefix(prefix);
-  if (!normalizedPrefix) {
-    return;
-  }
-
   invalidateServerQueries(
-    (candidateKey) => keyMatchesPrefix(candidateKey, normalizedPrefix),
+    (candidateKey) => candidateKey === key,
     options,
     queryClient,
   );
@@ -289,82 +236,11 @@ function invalidateServerQueryTag(
   }
 
   const keySet = new Set(keys);
-  invalidateServerQueries((candidateKey) => keySet.has(candidateKey), options, queryClient);
-}
-
-function cancelServerQuery(key: string, queryClient: QueryClient = serverQueryClient) {
-  void queryClient.cancelQueries({
-    queryKey: toQueryKey(key),
-    exact: true,
-  });
-}
-
-function cancelServerQueryPrefix(
-  prefix: string,
-  queryClient: QueryClient = serverQueryClient,
-) {
-  const normalizedPrefix = normalizeServerQueryPrefix(prefix);
-  if (!normalizedPrefix) {
-    return;
-  }
-
-  cancelServerQueries(
-    (candidateKey) => keyMatchesPrefix(candidateKey, normalizedPrefix),
+  invalidateServerQueries(
+    (candidateKey) => keySet.has(candidateKey),
+    options,
     queryClient,
   );
-}
-
-function cancelServerQueryTag(tag: string, queryClient: QueryClient = serverQueryClient) {
-  const normalizedTag = normalizeServerQueryTag(tag);
-  if (!normalizedTag) {
-    return;
-  }
-
-  const keys = tagKeys.get(normalizedTag);
-  if (!keys || keys.size === 0) {
-    return;
-  }
-
-  const keySet = new Set(keys);
-  cancelServerQueries((candidateKey) => keySet.has(candidateKey), queryClient);
-}
-
-function removeServerQuery(key: string, queryClient: QueryClient = serverQueryClient) {
-  queryClient.removeQueries({
-    queryKey: toQueryKey(key),
-    exact: true,
-  });
-  removeTagMappingsForKey(key);
-}
-
-function removeServerQueryPrefix(
-  prefix: string,
-  queryClient: QueryClient = serverQueryClient,
-) {
-  const normalizedPrefix = normalizeServerQueryPrefix(prefix);
-  if (!normalizedPrefix) {
-    return;
-  }
-
-  removeServerQueries(
-    (candidateKey) => keyMatchesPrefix(candidateKey, normalizedPrefix),
-    queryClient,
-  );
-}
-
-function removeServerQueryTag(tag: string, queryClient: QueryClient = serverQueryClient) {
-  const normalizedTag = normalizeServerQueryTag(tag);
-  if (!normalizedTag) {
-    return;
-  }
-
-  const keys = tagKeys.get(normalizedTag);
-  if (!keys || keys.size === 0) {
-    return;
-  }
-
-  const keySet = new Set(keys);
-  removeServerQueries((candidateKey) => keySet.has(candidateKey), queryClient);
 }
 
 function getServerQueryData<TData>(
@@ -396,13 +272,10 @@ function updateServerQueryData<TData>(
   }
 
   let nextValue: TData | undefined;
-  queryClient.setQueryData<TData | undefined>(
-    toQueryKey(key),
-    (current) => {
-      nextValue = updater(current);
-      return nextValue;
-    },
-  );
+  queryClient.setQueryData<TData | undefined>(toQueryKey(key), (current) => {
+    nextValue = updater(current);
+    return nextValue;
+  });
 
   if (nextValue === undefined && !options.keepFreshWhenUndefined) {
     invalidateServerQuery(key, { cancelInFlight: false }, queryClient);
@@ -417,25 +290,9 @@ function updateServerQueryData<TData>(
 }
 
 export {
-  cancelServerQueries,
-  cancelServerQuery,
-  cancelServerQueryPrefix,
-  cancelServerQueryTag,
   getServerQueryData,
-  invalidateServerQueries,
   invalidateServerQuery,
-  invalidateServerQueryPrefix,
   invalidateServerQueryTag,
-  normalizeServerQueryTags,
-  removeServerQuery,
-  removeServerQueryPrefix,
-  removeServerQueryTag,
   setServerQueryData,
   updateServerQueryData,
-};
-
-export type {
-  InvalidateServerQueryOptions,
-  ServerQueryContext,
-  UpdateServerQueryDataOptions,
 };

@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 
-export interface SavedSearch {
+interface SavedSearch {
   id: string;
   query: string;
   category?: string;

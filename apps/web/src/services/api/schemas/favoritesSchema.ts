@@ -1,6 +1,6 @@
 import { asRecord } from "../normalizers";
 
-export type ParsedFavoritesEnvelope = {
+type ParsedFavoritesEnvelope = {
   success: boolean;
   favorites: string[];
 };

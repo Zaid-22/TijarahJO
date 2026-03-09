@@ -85,7 +85,7 @@ function mapParsedAuthUser(userPayload: ParsedAuthUser): AuthApiUser {
   };
 }
 
-export function extractMessageFromErrorDetails(details: unknown): string {
+function extractMessageFromErrorDetails(details: unknown): string {
   const detailsRecord = asRecord(details);
   if (!detailsRecord) {
     return "";

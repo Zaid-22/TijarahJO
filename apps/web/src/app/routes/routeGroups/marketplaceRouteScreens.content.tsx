@@ -29,7 +29,7 @@ const NotificationsPage = lazy(() =>
   })),
 );
 
-export function FaqMarketplaceRouteScreen() {
+function FaqMarketplaceRouteScreen() {
   const { appProps, navigate } = useMarketplaceRouteContext();
   const location = useLocation();
   const backPath = resolveBackPathFromLocationState({
@@ -43,7 +43,7 @@ export function FaqMarketplaceRouteScreen() {
   );
 }
 
-export function TermsMarketplaceRouteScreen() {
+function TermsMarketplaceRouteScreen() {
   const { appProps, navigate } = useMarketplaceRouteContext();
   const location = useLocation();
   const backPath = resolveBackPathFromLocationState({
@@ -57,7 +57,7 @@ export function TermsMarketplaceRouteScreen() {
   );
 }
 
-export function PrivacyMarketplaceRouteScreen() {
+function PrivacyMarketplaceRouteScreen() {
   const { appProps, navigate } = useMarketplaceRouteContext();
   const location = useLocation();
   const backPath = resolveBackPathFromLocationState({
@@ -74,7 +74,7 @@ export function PrivacyMarketplaceRouteScreen() {
   );
 }
 
-export function HelpMarketplaceRouteScreen() {
+function HelpMarketplaceRouteScreen() {
   const { appProps, navigate } = useMarketplaceRouteContext();
   const location = useLocation();
   const backPath = resolveBackPathFromLocationState({
@@ -91,7 +91,7 @@ export function HelpMarketplaceRouteScreen() {
   );
 }
 
-export function NotificationsMarketplaceRouteScreen() {
+function NotificationsMarketplaceRouteScreen() {
   const { appProps, navigate } = useMarketplaceRouteContext();
 
   return (

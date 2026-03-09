@@ -1,9 +1,9 @@
 import { APP_CONFIG } from "../../constants/appConfig";
 import type { Language } from "../../types";
 
-export const CHAT_IMAGE_PREFIX = "[chat-image]";
+const CHAT_IMAGE_PREFIX = "[chat-image]";
 
-export type ParsedChatMessageContent =
+type ParsedChatMessageContent =
   | {
       type: "text";
       text: string;

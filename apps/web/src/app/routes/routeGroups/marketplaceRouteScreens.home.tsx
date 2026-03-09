@@ -7,7 +7,7 @@ const HomePage = lazy(() =>
   import("../../../pages/HomePage").then((m) => ({ default: m.HomePage })),
 );
 
-export function HomeMarketplaceRouteScreen() {
+function HomeMarketplaceRouteScreen() {
   const {
     appProps,
     routeState,
