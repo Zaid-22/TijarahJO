@@ -48,9 +48,9 @@ export type AdminPostListResult = {
 };
 
 export type AdminUserDetails = {
-  user: any;
+  user: Record<string, unknown>;
   recentPosts: AdminPostItem[];
-  recentReviews: any[];
+  recentReviews: Record<string, unknown>[];
 };
 
 // ── Phase 2 Types ──

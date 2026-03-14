@@ -5,12 +5,12 @@ import { type MarketplaceRouteDefinition } from "./marketplaceRouteDefinitions";
 import { useSearch } from "../../../contexts/SearchContext";
 
 const AllPostsPage = lazy(() =>
-  import("../../../pages/AllPostsPage").then((m) => ({
+  import("../../../features/marketplace/pages/AllPostsPage").then((m) => ({
     default: m.AllPostsPage,
   })),
 );
 const SearchResultsPage = lazy(() =>
-  import("../../../pages/SearchResultsPage").then((m) => ({
+  import("../../../features/marketplace/pages/SearchResultsPage").then((m) => ({
     default: m.SearchResultsPage,
   })),
 );

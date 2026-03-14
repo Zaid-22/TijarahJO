@@ -4,7 +4,7 @@ import { type MarketplaceRouteDefinition } from "./marketplaceRouteDefinitions";
 import { useSearch } from "../../../contexts/SearchContext";
 
 const HomePage = lazy(() =>
-  import("../../../pages/HomePage").then((m) => ({ default: m.HomePage })),
+  import("../../../features/home/pages/HomePage").then((m) => ({ default: m.HomePage })),
 );
 
 function HomeMarketplaceRouteScreen() {
@@ -27,12 +27,12 @@ function HomeMarketplaceRouteScreen() {
       isRTL={routeState.isRTL}
       darkMode={appProps.darkMode}
       searchQuery={activeSearchQuery}
-      setSearchQuery={(query) => {
+      setSearchQuery={(query: string) => {
         setSearchQuery(query);
         setActiveSearchQuery(query);
       }}
-      setShowLoginPrompt={(show) => show && redirectToLogin()}
-      setShowSellItem={(show) => {
+      setShowLoginPrompt={(show: boolean) => show && redirectToLogin()}
+      setShowSellItem={(show: boolean) => {
         if (!show) {
           return;
         }
@@ -44,8 +44,8 @@ function HomeMarketplaceRouteScreen() {
 
         navigate("/sell");
       }}
-      setShowAllPosts={(show) => show && navigate("/posts")}
-      setSelectedCategoryForPage={(categoryName) =>
+      setShowAllPosts={(show: boolean) => show && navigate("/posts")}
+      setSelectedCategoryForPage={(categoryName: string) =>
         categoryName &&
         navigate(`/category/${encodeURIComponent(categoryName)}`)
       }
@@ -54,7 +54,7 @@ function HomeMarketplaceRouteScreen() {
       displayedPosts={routeState.displayedPosts}
       viewMode={routeState.viewMode}
       setViewMode={routeState.setViewMode}
-      onPostClick={(id) => navigateToPost(id, "/")}
+      onPostClick={(id: string) => navigateToPost(id, "/")}
       favoriteIds={routeState.favoriteIds}
       toggleFavorite={routeState.toggleFavorite}
       currentUserId={sharedUserRouteProps.currentUserId}

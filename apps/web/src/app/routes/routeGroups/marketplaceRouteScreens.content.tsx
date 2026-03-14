@@ -8,23 +8,23 @@ import { useMarketplaceRouteContext } from "./marketplaceRouteContext";
 import { type MarketplaceRouteDefinition } from "./marketplaceRouteDefinitions";
 
 const FAQPage = lazy(() =>
-  import("../../../pages/FAQPage").then((m) => ({ default: m.FAQPage })),
+  import("../../../features/settings/pages/FAQPage").then((m) => ({ default: m.FAQPage })),
 );
 const TermsPage = lazy(() =>
-  import("../../../pages/TermsPage").then((m) => ({ default: m.TermsPage })),
+  import("../../../features/settings/pages/TermsPage").then((m) => ({ default: m.TermsPage })),
 );
 const PrivacyPage = lazy(() =>
-  import("../../../pages/PrivacyPage").then((m) => ({
+  import("../../../features/settings/pages/PrivacyPage").then((m) => ({
     default: m.PrivacyPage,
   })),
 );
 const HelpCenterPage = lazy(() =>
-  import("../../../pages/HelpCenterPage").then((m) => ({
+  import("../../../features/settings/pages/HelpCenterPage").then((m) => ({
     default: m.HelpCenterPage,
   })),
 );
 const NotificationsPage = lazy(() =>
-  import("../../../pages/NotificationsPage").then((m) => ({
+  import("../../../features/marketplace/pages/NotificationsPage").then((m) => ({
     default: m.NotificationsPage,
   })),
 );

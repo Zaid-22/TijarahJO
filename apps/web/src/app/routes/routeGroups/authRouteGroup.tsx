@@ -8,10 +8,10 @@ import {
 } from "../../../shared/lib/backNavigation";
 
 const LoginPage = lazy(() =>
-  import("../../../pages/LoginPage").then((m) => ({ default: m.LoginPage })),
+  import("../../../features/auth/pages/LoginPage").then((m) => ({ default: m.LoginPage })),
 );
 const ForgotPasswordPage = lazy(() =>
-  import("../../../pages/ForgotPasswordPage").then((m) => ({
+  import("../../../features/auth/pages/ForgotPasswordPage").then((m) => ({
     default: m.ForgotPasswordPage,
   })),
 );

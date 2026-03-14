@@ -3,3 +3,7 @@ dist/
 .unit-dist/
 .DS_Store
 .env.local
+eslint-output.json
+test-results/
+test-results */
+*.bak

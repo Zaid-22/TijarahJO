@@ -278,7 +278,7 @@ export function useAuthProviderController(): AuthContextType {
       consecutiveNetworkFailuresRef.current = 0;
       setIsGuest(true);
       setAuthState({
-        isAuthenticated: true,
+        isAuthenticated: false,
         user: null,
       });
       setAuthError(null);
@@ -411,7 +411,7 @@ export function useAuthProviderController(): AuthContextType {
     setIsGuest(true);
     setAuthError(null);
     setAuthState({
-      isAuthenticated: true,
+      isAuthenticated: false,
       user: null,
     });
     window.dispatchEvent(new CustomEvent("authSessionChanged"));
