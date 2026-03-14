@@ -1,6 +1,6 @@
 import { lazy } from "react";
 import { Route } from "react-router-dom";
-import type { AppRouteElementsParams } from "./AppRouteTypes";
+import type { AppRouteElementsParams, BaseAppRouteProps } from "./AppRouteTypes";
 import { renderAccountRouteGroup } from "./routeGroups/accountRouteGroup";
 import { renderAuthRouteGroup } from "./routeGroups/authRouteGroup";
 import { renderMarketplaceRouteGroup } from "./routeGroups/marketplaceRouteGroup";
@@ -9,14 +9,23 @@ import {
   resolveBackPathFromHistoryState,
 } from "../../shared/lib/backNavigation";
 
+
 const NotFoundPage = lazy(() =>
-  import("../../pages/NotFoundPage").then((module) => ({
+  import("../../shared/pages/NotFoundPage").then((module) => ({
     default: module.NotFoundPage,
   })),
 );
 
 export function renderAppRouteElements({
-  appProps,
+  language,
+  isAuthenticated,
+  userProfile,
+  darkMode,
+  setDarkMode,
+  toggleLanguage,
+  logout,
+  setUserProfile,
+  currentUserDisplayName,
   routeState,
   postActions,
   saveProfile,
@@ -24,6 +33,18 @@ export function renderAppRouteElements({
   redirectToLogin,
   requireAuth,
 }: AppRouteElementsParams) {
+  const appProps: BaseAppRouteProps = {
+    language,
+    isAuthenticated,
+    userProfile,
+    darkMode,
+    setDarkMode,
+    toggleLanguage,
+    logout,
+    setUserProfile,
+    currentUserDisplayName,
+  };
+
   return (
     <>
       {renderMarketplaceRouteGroup({
@@ -52,7 +73,7 @@ export function renderAppRouteElements({
         path="*"
         element={
           <NotFoundPage
-            language={appProps.language}
+            language={language}
             attemptedPath={
               typeof window === "undefined"
                 ? ""

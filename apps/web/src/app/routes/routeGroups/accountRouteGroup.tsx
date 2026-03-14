@@ -14,24 +14,24 @@ import type {
 import type { EditProfileFormProfile } from "../../../features/profile/types";
 
 const ChatPage = lazy(() =>
-  import("../../../pages/ChatPage").then((m) => ({ default: m.ChatPage })),
+  import("../../../features/chat/pages/ChatPage").then((m) => ({ default: m.ChatPage })),
 );
 const SettingsPage = lazy(() =>
-  import("../../../pages/SettingsPage").then((m) => ({ default: m.SettingsPage })),
+  import("../../../features/settings/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })),
 );
 const FavoritesPage = lazy(() =>
-  import("../../../pages/FavoritesPage").then((m) => ({ default: m.FavoritesPage })),
+  import("../../../features/marketplace/pages/FavoritesPage").then((m) => ({ default: m.FavoritesPage })),
 );
 const SellItemPage = lazy(() =>
-  import("../../../pages/SellItemPage").then((m) => ({ default: m.SellItemPage })),
+  import("../../../features/marketplace/pages/SellItemPage").then((m) => ({ default: m.SellItemPage })),
 );
 const EditProfilePage = lazy(() =>
-  import("../../../pages/EditProfilePage").then((m) => ({
+  import("../../../features/profile/pages/EditProfilePage").then((m) => ({
     default: m.EditProfilePage,
   })),
 );
 const ProfilePage = lazy(() =>
-  import("../../../pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
+  import("../../../features/profile/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
 );
 
 interface AccountRouteGroupParams {

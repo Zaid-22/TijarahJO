@@ -1,3 +1,6 @@
+import { useRef } from "react";
+import { Upload } from "lucide-react";
+import { Button } from "../../../../shared/ui/button";
 import { Input } from "../../../../shared/ui/input";
 import { Label } from "../../../../shared/ui/label";
 import type { CategoryFormData } from "./types";
@@ -13,6 +16,23 @@ export function CategoryFormFields({
   idPrefix,
   onChange,
 }: CategoryFormFieldsProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      return; // file too large
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      onChange({ ...formData, image: String(reader.result || "") });
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="grid gap-4 py-4">
       <div className="grid grid-cols-4 items-center gap-4">
@@ -71,15 +91,26 @@ export function CategoryFormFields({
 
       <div className="grid grid-cols-4 items-center gap-4">
         <Label htmlFor={`${idPrefix}-image`} className="text-right">
-          Image URL
+          Image Upload
         </Label>
-        <Input
-          id={`${idPrefix}-image`}
-          value={formData.image}
-          onChange={(e) => onChange({ ...formData, image: e.target.value })}
-          className="col-span-3"
-          placeholder="https://example.com/category.jpg"
-        />
+        <div className="col-span-3 flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full justify-start text-muted-foreground"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            {formData.image.trim() ? "Change Image" : "Upload Image"}
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileUpload}
+          />
+        </div>
       </div>
 
       {formData.image.trim() ? (

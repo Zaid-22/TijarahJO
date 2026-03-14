@@ -4,7 +4,7 @@ import { useMarketplaceRouteContext } from "./marketplaceRouteContext";
 import { type MarketplaceRouteDefinition } from "./marketplaceRouteDefinitions";
 
 const SellerProfilePage = lazy(() =>
-  import("../../../pages/SellerProfilePage").then((m) => ({
+  import("../../../features/seller-profile/pages/SellerProfilePage").then((m) => ({
     default: m.SellerProfilePage,
   })),
 );

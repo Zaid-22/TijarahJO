@@ -85,6 +85,11 @@ const FraudDetectionPanel = lazy(() =>
     default: m.FraudDetectionPanel,
   })),
 );
+const AdminBannersManagement = lazy(() =>
+  import("../features/admin/components/AdminBannersManagement").then((m) => ({
+    default: m.AdminBannersManagement,
+  })),
+);
 const Toaster = lazy(() =>
   import("../shared/ui/sonner").then((m) => ({ default: m.Toaster })),
 );
@@ -129,6 +134,7 @@ ReactDOM.createRoot(rootElement).render(
                 <Route path="locations" element={<LocationsManagement />} />
                 <Route path="reports" element={<ReportsQueue />} />
                 <Route path="fraud" element={<FraudDetectionPanel />} />
+                <Route path="banners" element={<AdminBannersManagement />} />
               </Route>
             </Route>
             <Route path="/*" element={<App />} />

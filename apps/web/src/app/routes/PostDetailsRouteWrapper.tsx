@@ -1,5 +1,5 @@
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { PostDetailsPage } from "../../pages/PostDetailsPage";
+import { PostDetailsPage } from "../../features/post-details/pages/PostDetailsPage";
 import { Language, Post, UserProfile } from "../../types";
 import { deferredToast } from "../../utils/toast";
 import { resolveCurrentUserId } from "./appRoutesUtils";

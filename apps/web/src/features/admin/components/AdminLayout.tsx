@@ -18,6 +18,7 @@ import {
   Home,
   Rows,
   AlertTriangle,
+  Image,
 } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -53,6 +54,7 @@ function AdminLayoutInner() {
     { label: "Locations", path: "/admin/locations", icon: MapPin },
     { label: "Reports", path: "/admin/reports", icon: Flag },
     { label: "Fraud Detection", path: "/admin/fraud", icon: AlertTriangle },
+    { label: "Banners", path: "/admin/banners", icon: Image },
     { label: "Audit Log", path: "/admin/audit-log", icon: FileText },
     { label: "Settings", path: "/admin/settings", icon: Settings2 },
   ];

@@ -39,13 +39,13 @@ export const adminApi = {
    * Get analytics data for dashboard charts
    */
   getAnalytics: async (): Promise<{
-    weeklyUsers: any[];
-    categoryData: any[];
+    weeklyUsers: Record<string, unknown>[];
+    categoryData: Record<string, unknown>[];
   }> => {
     try {
       const response = await apiRequest<{
-        weeklyUsers: any[];
-        categoryData: any[];
+        weeklyUsers: Record<string, unknown>[];
+        categoryData: Record<string, unknown>[];
       }>("/admin/analytics", {
         method: "GET",
       });

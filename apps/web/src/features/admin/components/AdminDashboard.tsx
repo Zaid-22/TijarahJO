@@ -35,8 +35,8 @@ import {
 export function AdminDashboard() {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [analytics, setAnalytics] = useState<{
-    weeklyUsers: any[];
-    categoryData: any[];
+    weeklyUsers: Record<string, unknown>[];
+    categoryData: Record<string, unknown>[];
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);

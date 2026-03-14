@@ -1,52 +1,46 @@
 import { Suspense, type ReactElement } from "react";
 import { Routes, useNavigate, useLocation, Navigate } from "react-router-dom";
-import { Language, UserProfile } from "../../types";
 import { renderAppRouteElements } from "./AppRouteElements";
 import { usePostActions } from "./usePostActions";
 import { useProfileSaveAction } from "./useProfileSaveAction";
 import { useMarketplaceRouteState } from "./useMarketplaceRouteState";
 import { LoadingState } from "../../shared/ui/loading-state";
 import { useSearch } from "../../contexts/SearchContext";
+import { useAuth } from "../../contexts/AuthContext";
+import { useAppSettings } from "../../contexts/AppSettingsContext";
+import { useUserProfileContext } from "../../contexts/UserProfileContext";
 
-interface AppRoutesProps {
-  language: Language;
-  isAuthenticated: boolean;
-  userProfile: UserProfile;
-  darkMode: boolean;
-  setDarkMode: (enabled: boolean) => void;
-  toggleLanguage: () => void;
-  logout: () => Promise<void>;
-  setUserProfile: (profile: UserProfile) => void;
-  currentUserDisplayName: string;
-}
-
-export function AppRoutes(props: AppRoutesProps) {
+export function AppRoutes() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const { language, darkMode, setDarkMode, toggleLanguage } = useAppSettings();
+  const { isAuthenticated, logout } = useAuth();
+  const { userProfile, setUserProfile, currentUserDisplayName } =
+    useUserProfileContext();
   const { activeSearchQuery } = useSearch();
 
   const routeState = useMarketplaceRouteState({
     pathname: location.pathname,
     searchQuery: activeSearchQuery,
-    language: props.language,
-    userProfile: props.userProfile,
+    language,
+    userProfile,
   });
 
   const postActions = usePostActions({
-    userProfile: props.userProfile,
+    userProfile,
     fetchPostsFromBackend: routeState.fetchPostsFromBackend,
   });
 
   const saveProfile = useProfileSaveAction({
     navigate,
-    userProfile: props.userProfile,
-    setUserProfile: props.setUserProfile,
+    userProfile,
+    setUserProfile,
   });
 
   const redirectToLogin = () => navigate("/login");
   const requireAuth = (element: ReactElement) =>
-    props.isAuthenticated ? (
+    isAuthenticated ? (
       element
     ) : (
       <Navigate
@@ -60,7 +54,15 @@ export function AppRoutes(props: AppRoutesProps) {
     <Suspense fallback={<LoadingState minHeightClassName="min-h-[40vh]" />}>
       <Routes>
         {renderAppRouteElements({
-          appProps: props,
+          language,
+          isAuthenticated,
+          userProfile,
+          darkMode,
+          setDarkMode,
+          toggleLanguage,
+          logout,
+          setUserProfile,
+          currentUserDisplayName,
           routeState,
           postActions,
           saveProfile,

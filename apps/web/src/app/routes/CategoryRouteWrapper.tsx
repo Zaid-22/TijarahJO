@@ -1,6 +1,6 @@
 import { Navigate, useParams } from "react-router-dom";
 import { Post, Language } from "../../types";
-import { CategoryPage } from "../../pages/CategoryPage";
+import { CategoryPage } from "../../features/marketplace/pages/CategoryPage";
 import { decodeCategoryParam } from "./appRoutesUtils";
 
 interface CategoryRouteWrapperProps {

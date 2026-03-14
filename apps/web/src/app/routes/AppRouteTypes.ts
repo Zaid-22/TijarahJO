@@ -45,7 +45,15 @@ export interface PostActions {
 }
 
 export interface AppRouteElementsParams {
-  appProps: BaseAppRouteProps;
+  language: Language;
+  isAuthenticated: boolean;
+  userProfile: UserProfile;
+  darkMode: boolean;
+  setDarkMode: (enabled: boolean) => void;
+  toggleLanguage: () => void;
+  logout: () => Promise<void>;
+  setUserProfile: (profile: UserProfile) => void;
+  currentUserDisplayName: string;
   routeState: MarketplaceRouteState;
   postActions: PostActions;
   saveProfile: (profile: EditProfileFormProfile) => Promise<void> | void;
