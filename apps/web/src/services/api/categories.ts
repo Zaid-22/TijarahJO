@@ -76,34 +76,42 @@ export const categoriesApi = {
       Image: data.image || "",
     };
 
-    const response = await apiRequest<unknown>("/categories", {
-      method: "POST",
-      body: JSON.stringify(backendCategory),
-    });
+    try {
+      const response = await apiRequest<unknown>("/categories", {
+        method: "POST",
+        body: JSON.stringify(backendCategory),
+      });
 
-    if (response.success) {
-      const categoryModel = parseCategoryPayload(response.data);
-      if (!categoryModel) {
+      if (response.success) {
+        const categoryModel = parseCategoryPayload(response.data);
+        if (!categoryModel) {
+          return {
+            success: false,
+            message: "Invalid category response",
+          };
+        }
+
         return {
-          success: false,
-          message: "Invalid category response",
+          success: true,
+          category: normalizeCategory(categoryModel),
         };
       }
 
+      const errorMessage = response.error?.message || "Failed to create category";
+      // eslint-disable-next-line no-console
+      console.warn("[categoriesApi.createCategory] API error:", response.error);
       return {
-        success: true,
-        category: normalizeCategory(categoryModel),
+        success: false,
+        message: errorMessage,
+      };
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("[categoriesApi.createCategory] Exception:", error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to create category",
       };
     }
-
-    const errorMessage = !response.success
-      ? response.error?.message || "Failed to create category"
-      : "Failed to create category";
-
-    return {
-      success: false,
-      message: errorMessage,
-    };
   },
 
   updateCategory: async (

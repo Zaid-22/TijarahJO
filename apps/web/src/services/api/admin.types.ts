@@ -30,13 +30,13 @@ export type AdminPostFilter = {
 };
 
 export type AdminPostItem = {
-  postId: number;
+  postID: number;
   title: string;
   price: number | null;
   status: number;
-  categoryId: number;
+  categoryID: number;
   categoryName: string;
-  userId: number;
+  userID: number;
   sellerName: string;
   views: number;
   createdAt: string;

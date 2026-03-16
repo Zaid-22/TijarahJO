@@ -199,7 +199,8 @@ public sealed class ChatOrchestrationServiceTests
         return new ChatOrchestrationService(
             messages,
             notifications,
-            lookup
+            lookup,
+            new FakeUserQueryHandler()
         );
     }
 
@@ -330,5 +331,17 @@ public sealed class ChatOrchestrationServiceTests
             string endpoint,
             CancellationToken cancellationToken = default)
             => Task.FromResult(true);
+    }
+
+    private sealed class FakeUserQueryHandler : IUserQueryHandler
+    {
+        public Task<UserListQueryResult> GetAllAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
+            => Task.FromResult(new UserListQueryResult { Success = true });
+
+        public Task<UserByIdQueryResult> GetByIdAsync(UserByIdQuery query, CancellationToken cancellationToken = default)
+            => Task.FromResult(new UserByIdQueryResult { Success = false });
+
+        public Task<UserExistsQueryResult> ExistsAsync(int userId, CancellationToken cancellationToken = default)
+            => Task.FromResult(new UserExistsQueryResult { Success = true, Exists = false });
     }
 }

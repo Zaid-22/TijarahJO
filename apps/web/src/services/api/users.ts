@@ -35,6 +35,10 @@ type RawUser = {
   roleID?: unknown;
   IsDeleted?: unknown;
   isDeleted?: unknown;
+  CityId?: unknown;
+  cityId?: unknown;
+  AreaId?: unknown;
+  areaId?: unknown;
 };
 
 type UserProfileRecord = {
@@ -210,7 +214,34 @@ export const usersApi = {
     });
 
     if (response.success && response.data) {
-      return normalizeUserProfile(response.data, String(normalizedUserId));
+      const rawUser = response.data;
+      
+      // Resolve City and Area IDs to names if they are present but names are missing
+      const cityId = rawUser.CityId ?? rawUser.cityId;
+      const areaId = rawUser.AreaId ?? rawUser.areaId;
+      
+      if (typeof cityId === 'number' && typeof rawUser.City !== 'string') {
+        try {
+          const { locationsApi } = await import('./locations');
+          const cities = await locationsApi.getCities();
+          const city = cities.find((c) => c.cityId === cityId);
+          if (city) {
+            rawUser.City = city.cityName;
+            
+            if (typeof areaId === 'number' && typeof rawUser.Area !== 'string') {
+              const areas = await locationsApi.getAreasByCity(cityId);
+              const area = areas.find((a) => a.areaId === areaId);
+              if (area) {
+                rawUser.Area = area.areaName;
+              }
+            }
+          }
+        } catch (err) {
+          debugError("[getUser] Failed to resolve location names:", err);
+        }
+      }
+
+      return normalizeUserProfile(rawUser, String(normalizedUserId));
     }
 
     return null;

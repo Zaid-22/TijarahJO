@@ -47,7 +47,7 @@ export function LocationsManagement() {
     try {
       setIsLoading(true);
       const result = await api.admin.getCities();
-      setCities(result);
+      setCities(Array.isArray(result) ? result : []);
     } catch (error) {
       logger.warn("[LocationsManagement] Failed to fetch cities", error);
       toast.error("Failed to fetch cities");
@@ -199,7 +199,7 @@ export function LocationsManagement() {
                       {city.cityName}
                     </span>
                     <Badge variant="secondary" className="text-xs">
-                      {city.areas.length} areas
+                      {city.areas?.length ?? 0} areas
                     </Badge>
                   </div>
                   <div
@@ -246,7 +246,7 @@ export function LocationsManagement() {
 
                 {isExpanded && (
                   <div className="border-t border-border bg-muted/20">
-                    {city.areas.length === 0 ? (
+                    {!(city.areas?.length > 0) ? (
                       <p className="px-10 py-4 text-sm text-muted-foreground">
                         No areas in this city yet.
                       </p>

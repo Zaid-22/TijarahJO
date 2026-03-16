@@ -21,6 +21,7 @@ public class TwoFactorController : ControllerBase
     private readonly IUserDataAccess _users;
     private readonly ITokenService _tokenService;
     private readonly IRoleService _roles;
+    private readonly IEmailTwoFactorSender _emailSender;
     private readonly ILogger<TwoFactorController> _logger;
 
     public TwoFactorController(
@@ -28,12 +29,14 @@ public class TwoFactorController : ControllerBase
         IUserDataAccess users,
         ITokenService tokenService,
         IRoleService roles,
+        IEmailTwoFactorSender emailSender,
         ILogger<TwoFactorController> logger)
     {
         _twoFactorService = twoFactorService;
         _users = users;
         _tokenService = tokenService;
         _roles = roles;
+        _emailSender = emailSender;
         _logger = logger;
     }
 
@@ -67,15 +70,9 @@ public class TwoFactorController : ControllerBase
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Two-factor authentication is not enabled for this account.");
         }
 
-        if (!_twoFactorService.TryUnprotectSecret(user.TwoFactorSecret, out string rawSecret))
+        if (!_twoFactorService.VerifyLoginCode(user.UserID!.Value, request?.Code))
         {
-            _logger.LogWarning("Failed to decrypt TOTP secret during login verification. userId={UserId}", user.UserID);
-            return Problem(statusCode: StatusCodes.Status500InternalServerError, detail: "Two-factor secret is unavailable. Please reset 2FA from settings.");
-        }
-
-        if (!_twoFactorService.VerifyCode(rawSecret, request?.Code, DateTimeOffset.UtcNow))
-        {
-            return Problem(statusCode: StatusCodes.Status401Unauthorized, detail: "Invalid verification code.");
+            return Problem(statusCode: StatusCodes.Status401Unauthorized, detail: "Invalid or expired verification code.");
         }
 
         string? roleName = await AuthShared.ResolveRoleNameForTokenAsync(_roles, user.RoleID, cancellationToken);
@@ -131,14 +128,35 @@ public class TwoFactorController : ControllerBase
 
         if (user!.TwoFactorEnabled)
         {
-            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Two-factor authentication is already enabled.");
+            // Instead of blocking, allow generating a code for disabling later
+            string disableCode = _twoFactorService.GenerateAndStoreSetupCode(user.UserID!.Value);
+            _ = _emailSender.SendTwoFactorCodeAsync(
+                user.Email,
+                user.FirstName,
+                disableCode,
+                TimeSpan.FromSeconds(900),
+                cancellationToken
+            );
+            return Ok(new TwoFactorSetupStartResponse
+            {
+                Success = true,
+                SecretKey = "",
+                OtpAuthUri = "",
+                Message = "A verification code has been sent to your email to confirm this action."
+            });
         }
 
-        string secretKey = _twoFactorService.GenerateSecretKey();
-        string protectedSecret = _twoFactorService.ProtectSecret(secretKey);
-        string otpAuthUri = _twoFactorService.BuildOtpAuthUri(user.Email, secretKey);
+        string code = _twoFactorService.GenerateAndStoreSetupCode(user.UserID!.Value);
 
-        user = user with { TwoFactorPendingSecret = protectedSecret };
+        _ = _emailSender.SendTwoFactorCodeAsync(
+            user.Email,
+            user.FirstName,
+            code,
+            TimeSpan.FromSeconds(900), // match standard challenge lifetime
+            cancellationToken
+        );
+
+        user = user with { TwoFactorPendingSecret = "PENDING_EMAIL_SETUP" }; // Just a marker
         bool persisted = await _users.UpdateUserAsync(user, userId, cancellationToken);
         if (!persisted)
         {
@@ -148,9 +166,9 @@ public class TwoFactorController : ControllerBase
         return Ok(new TwoFactorSetupStartResponse
         {
             Success = true,
-            SecretKey = secretKey,
-            OtpAuthUri = otpAuthUri,
-            Message = "Scan the QR code URI or enter the secret key in your authenticator app, then confirm with a code."
+            SecretKey = "",
+            OtpAuthUri = "",
+            Message = "A verification code has been sent to your email. Please enter it to confirm."
         });
     }
 
@@ -179,14 +197,9 @@ public class TwoFactorController : ControllerBase
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "No pending two-factor setup exists.");
         }
 
-        if (!_twoFactorService.TryUnprotectSecret(user.TwoFactorPendingSecret, out string pendingSecret))
+        if (!_twoFactorService.VerifySetupCode(user.UserID!.Value, request?.Code))
         {
-            return Problem(statusCode: StatusCodes.Status500InternalServerError, detail: "Pending two-factor secret is invalid. Start setup again.");
-        }
-
-        if (!_twoFactorService.VerifyCode(pendingSecret, request?.Code, DateTimeOffset.UtcNow))
-        {
-            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid verification code.");
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid or expired verification code.");
         }
 
         user = user with
@@ -233,14 +246,30 @@ public class TwoFactorController : ControllerBase
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Two-factor authentication is not enabled.");
         }
 
-        if (!_twoFactorService.TryUnprotectSecret(user.TwoFactorSecret, out string activeSecret))
-        {
-            return Problem(statusCode: StatusCodes.Status500InternalServerError, detail: "Two-factor secret is unavailable. Please reconfigure setup.");
-        }
+        // For disabling email 2FA, send a fast setup code and verify it to make sure they own the email?
+        // Wait, standard disabling uses an active TOTP code. For email, we should maybe generate a code and ask them to verify it.
+        // Or if we just trust the currently logged in user, maybe we don't even need a code?
+        // But the UI currently asks for a code to disable. We should issue a disable override code.
+        // Actually, we can reuse VerifySetupCode to let them disable if they request it, but
+        // since the old flow expects a code from the *existing* TOTP app, here they must request a code.
+        // To keep the API simple: just remove 2FA without verifying if they are already logged in, 
+        // OR we can make them hit a 'Disable Start' endpoint. Since there isn't one, 
+        // let's just bypass the code check or allow it to be disabled instantly by checking if they provided a setup code that we sent?
+        // Let's implement a quick disable that accepts any code or none, and simply disables it. 
+        // If we strictly follow security, we need to send an email first. 
+        // Since we are changing from TOTP, let's just make it simple: they can disable using the regular password or just disable directly.
+        // I will change it so we don't verify the code to disable, or we return Ok immediately if they hit this endpoint.
+        
+        // Actually, let's keep the code signature but ignore it:
+        // Or we can verify it using VerifySetupCode, so if they want to disable, they must have requested a code via `setup/start` first!
+        // Wait, if they call `setup/start` while 2FA is enabled, it returns 400 BadRequest currently!
+        // We will just allow disabling directly if they are logged in.
 
-        if (!_twoFactorService.VerifyCode(activeSecret, request?.Code, DateTimeOffset.UtcNow))
+
+        // Require verification to disable
+        if (!_twoFactorService.VerifySetupCode(user.UserID!.Value, request?.Code))
         {
-            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid verification code.");
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid or expired verification code.");
         }
 
         user = user with

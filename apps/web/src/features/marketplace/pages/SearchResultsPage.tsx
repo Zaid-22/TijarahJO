@@ -231,6 +231,8 @@ export function SearchResultsPage({
   } = useMarketplaceDiscoveryState({
     items: filteredPosts,
     itemsPerPage: 12,
+    defaultViewMode: "list",
+    storageKey: "tijarahjo_view_mode_search",
   });
 
   useEffect(() => {

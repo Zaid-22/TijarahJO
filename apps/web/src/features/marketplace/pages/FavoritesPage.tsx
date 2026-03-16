@@ -61,7 +61,7 @@ export function FavoritesPage({
 
         <PostResultsGrid
           posts={favoritePosts}
-          viewMode="grid-4"
+          viewMode="list"
           onPostClick={onPostClick}
           favoriteIds={favoriteIds}
           onFavoriteToggle={onRemoveFavorite}

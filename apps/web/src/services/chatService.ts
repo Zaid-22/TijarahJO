@@ -11,7 +11,6 @@ import { chatApi } from "./api/chat";
 import { normalizeChatMessage, RawChatMessage } from "./api/chatNormalization";
 import { logger } from "../shared/lib/logger";
 
-const API_BASE_URL = APP_CONFIG.apiBaseUrl;
 const DEBUG_CHAT =
   Boolean(import.meta.env.DEV) && import.meta.env.VITE_DEBUG_CHAT === "true";
 
@@ -21,11 +20,7 @@ const debugChatLog = (...args: unknown[]) => {
   }
 };
 
-const normalizedApiBase = API_BASE_URL.replace(/\/+$/, "");
-const hubBaseUrl = normalizedApiBase.endsWith("/api")
-  ? normalizedApiBase.slice(0, -4)
-  : normalizedApiBase;
-const HUB_URL = `${hubBaseUrl}/chatHub`;
+const HUB_URL = `${APP_CONFIG.backendHostUrl}/chatHub`;
 
 class ChatService {
   private connection: HubConnection | null = null;

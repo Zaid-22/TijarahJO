@@ -177,4 +177,51 @@ public class ChatController : ControllerBase
             Url = storedFile.PublicUrl
         });
     }
+
+    [HttpGet("download-image")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DownloadImage([FromQuery] string url, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "URL is required.");
+        }
+
+        try
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri))
+            {
+                return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid URL format.");
+            }
+
+            using var client = new HttpClient();
+            var response = await client.GetAsync(uri, cancellationToken);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                return NotFound();
+            }
+
+            var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream, cancellationToken);
+            memoryStream.Position = 0;
+
+            var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
+            var fileName = Path.GetFileName(uri.AbsolutePath);
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                fileName = "chat-image.jpg";
+            }
+
+            return File(memoryStream, contentType, fileName);
+        }
+        catch (Exception)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Failed to download image.");
+        }
+    }
 }

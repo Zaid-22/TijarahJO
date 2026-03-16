@@ -68,8 +68,12 @@ export function ChatPage({ language }: ChatPageProps) {
     initialSelectedUserId ?? null,
   );
   const [selectedDisplayName, setSelectedDisplayName] = useState("");
+  const [selectedUserAvatar, setSelectedUserAvatar] = useState<string | undefined>();
   const [userDisplayNamesById, setUserDisplayNamesById] = useState<
     Record<number, string>
+  >({});
+  const [userAvatarsById, setUserAvatarsById] = useState<
+    Record<number, string | undefined>
   >({});
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [isLoadingChats, setIsLoadingChats] = useState(true);
@@ -131,6 +135,7 @@ export function ChatPage({ language }: ChatPageProps) {
 
         const otherUserIds = Array.from(chatsByUser.keys());
         const namesById: Record<number, string> = {};
+        const avatarsById: Record<number, string | undefined> = {};
 
         await Promise.all(
           otherUserIds.map(async (otherUserId) => {
@@ -139,10 +144,14 @@ export function ChatPage({ language }: ChatPageProps) {
               userData as Record<string, unknown> | null | undefined,
               otherUserId,
             );
+            if (userData && userData.avatar) {
+              avatarsById[otherUserId] = userData.avatar;
+            }
           }),
         );
 
         setUserDisplayNamesById(namesById);
+        setUserAvatarsById(avatarsById);
         setChats(
           Array.from(chatsByUser.values()).map((chat) => ({
             ...chat,
@@ -228,10 +237,12 @@ export function ChatPage({ language }: ChatPageProps) {
     const cachedName = userDisplayNamesById[selectedUserId];
     if (cachedName) {
       setSelectedDisplayName(cachedName);
+      setSelectedUserAvatar(userAvatarsById[selectedUserId]);
       return;
     }
 
     setSelectedDisplayName(`${labels.userPrefix} ${selectedUserId}`);
+    setSelectedUserAvatar(undefined);
 
     let isCancelled = false;
     (async () => {
@@ -245,16 +256,25 @@ export function ChatPage({ language }: ChatPageProps) {
         selectedUserId,
       );
       setSelectedDisplayName(resolvedName);
+      if (userData?.avatar) {
+        setSelectedUserAvatar(userData.avatar);
+      }
       setUserDisplayNamesById((prev) => ({
         ...prev,
         [selectedUserId]: resolvedName,
       }));
+      if (userData?.avatar) {
+        setUserAvatarsById((prev) => ({
+          ...prev,
+          [selectedUserId]: userData.avatar,
+        }));
+      }
     })();
 
     return () => {
       isCancelled = true;
     };
-  }, [labels.userPrefix, selectedUserId, userDisplayNamesById]);
+  }, [labels.userPrefix, selectedUserId, userDisplayNamesById, userAvatarsById]);
 
   const handleSelectUser = (id: number) => {
     const normalizedUserId = toPositiveIntegerId(id);
@@ -267,6 +287,7 @@ export function ChatPage({ language }: ChatPageProps) {
       userDisplayNamesById[normalizedUserId] ||
         `${labels.userPrefix} ${normalizedUserId}`,
     );
+    setSelectedUserAvatar(userAvatarsById[normalizedUserId]);
     navigate(`/chat/${normalizedUserId}`, {
       state: {
         fromPath: safeBackPath,
@@ -357,6 +378,7 @@ export function ChatPage({ language }: ChatPageProps) {
                   selectedDisplayName ||
                   `${labels.userPrefix} ${selectedUserId}`
                 }
+                otherUserAvatar={selectedUserAvatar}
                 currentUser={{
                   id: user?.id || "",
                   name: user?.name || labels.me,

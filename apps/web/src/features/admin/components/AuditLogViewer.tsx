@@ -30,10 +30,14 @@ export function AuditLogViewer() {
         currentPage,
         50,
       );
-      setAuditResult(result);
+      setAuditResult({
+        entries: Array.isArray(result?.entries) ? result.entries : [],
+        totalCount: result?.totalCount ?? 0,
+      });
     } catch (error) {
       logger.warn("[AuditLogViewer] Failed to fetch audit logs", error);
       toast.error("Failed to fetch audit logs");
+      setAuditResult({ entries: [], totalCount: 0 });
     } finally {
       setIsLoading(false);
     }
@@ -68,13 +72,13 @@ export function AuditLogViewer() {
     }
   };
 
-  const filteredEntries = auditResult.entries.filter(
+  const filteredEntries = (auditResult?.entries || []).filter(
     (entry) =>
-      entry.tableName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (entry.tableName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (entry.changedByUserName ?? "")
         .toLowerCase()
         .includes(searchQuery.toLowerCase()) ||
-      entry.action.toLowerCase().includes(searchQuery.toLowerCase()),
+      (entry.action || "").toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const formatJson = (jsonStr: string | null) => {
@@ -265,7 +269,7 @@ export function AuditLogViewer() {
             <Button
               variant="outline"
               size="sm"
-              disabled={auditResult.entries.length < 50 || isLoading}
+              disabled={(auditResult?.entries?.length ?? 0) < 50 || isLoading}
               onClick={() => setPage((p) => p + 1)}
             >
               Next

@@ -7,6 +7,7 @@ import { getProfileListings } from "../profileListings";
 import { ProfileHeaderSection } from "../components/ProfileHeaderSection";
 import { ProfileSidebarSection } from "../components/ProfileSidebarSection";
 import { ProfileListingsSection } from "../components/ProfileListingsSection";
+import { ProfileReviewsSection } from "../components/ProfileReviewsSection";
 import { SubpageHeader } from "../../../shared/ui/subpage-header";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { Button } from "../../../shared/ui/button";
@@ -112,6 +113,16 @@ export function ProfilePage({
             />
           </div>
         </div>
+
+        {userProfile.id && (
+          <div className="mt-6">
+            <ProfileReviewsSection 
+              userId={userProfile.id} 
+              language={language} 
+              t={t} 
+            />
+          </div>
+        )}
       </div>
     </PageShell>
   );

@@ -27,6 +27,7 @@ public class AuthController : ControllerBase
     private readonly IRoleService _roles;
     private readonly TwoFactorService _twoFactorService;
     private readonly ITokenBlacklistService _tokenBlacklistService;
+    private readonly IEmailTwoFactorSender _emailSender;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
@@ -36,6 +37,7 @@ public class AuthController : ControllerBase
         IRoleService roles,
         TwoFactorService twoFactorService,
         ITokenBlacklistService tokenBlacklistService,
+        IEmailTwoFactorSender emailSender,
         ILogger<AuthController> logger)
     {
         _tokenService = tokenService;
@@ -44,6 +46,7 @@ public class AuthController : ControllerBase
         _roles = roles;
         _twoFactorService = twoFactorService;
         _tokenBlacklistService = tokenBlacklistService;
+        _emailSender = emailSender;
         _logger = logger;
     }
 
@@ -76,13 +79,16 @@ public class AuthController : ControllerBase
 
         if (result.User.TwoFactorEnabled)
         {
-            if (string.IsNullOrWhiteSpace(result.User.TwoFactorSecret))
-            {
-                return Problem(
-                    statusCode: StatusCodes.Status500InternalServerError,
-                    detail: "Two-factor secret is unavailable. Please reset 2FA from settings."
-                );
-            }
+            string code = _twoFactorService.GenerateAndStoreLoginCode(result.User.UserID.Value);
+            
+            _ = _emailSender.SendTwoFactorCodeAsync(
+                result.User.Email,
+                result.User.FirstName,
+                code,
+                TimeSpan.FromSeconds(900), // Match LoginChallengeLifetimeSeconds from options defaults
+                cancellationToken
+            );
+
             return Ok(AuthShared.BuildTwoFactorChallengeResponse(_twoFactorService, result.User.UserID.Value));
         }
 

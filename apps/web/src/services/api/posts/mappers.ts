@@ -184,9 +184,13 @@ export function transformPostModelToPost(
         ? String(postModel.UserId)
         : postModel.SellerID !== undefined && postModel.SellerID !== null
           ? String(postModel.SellerID)
-          : typeof postModel.sellerId === "string"
-            ? postModel.sellerId
-            : "";
+          : postModel.SellerId !== undefined && postModel.SellerId !== null
+            ? String(postModel.SellerId)
+            : typeof postModel.sellerId === "string"
+              ? postModel.sellerId
+              : typeof postModel.sellerId === "number"
+                ? String(postModel.sellerId)
+                : "";
 
   const category =
     typeof postModel.Category === "string"

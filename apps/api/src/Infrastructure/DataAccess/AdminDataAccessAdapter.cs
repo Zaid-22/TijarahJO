@@ -18,31 +18,56 @@ public sealed class AdminDataAccessAdapter : IAdminDataAccess
 
     public async Task<DashboardStatsModel> GetDashboardStatsAsync(CancellationToken cancellationToken = default)
     {
+        int totalUsers = 0, activeUsers = 0, newUsersThisWeek = 0;
+        int totalPosts = 0, activeListings = 0, blockedListings = 0, soldPosts = 0;
+        int totalCategories = 0;
+        int totalReviews = 0;
+        double averageRating = 0;
+        var recentActions = new System.Collections.Generic.List<RecentAdminAction>();
+
         // Users
-        int totalUsers = await _dbContext.Users.CountAsync(u => !u.IsDeleted, cancellationToken);
-        int activeUsers = await _dbContext.Users.CountAsync(u => !u.IsDeleted && u.Status == 1, cancellationToken);
-        var oneWeekAgo = System.DateTime.UtcNow.AddDays(-7);
-        int newUsersThisWeek = await _dbContext.Users.CountAsync(u => !u.IsDeleted && u.JoinDate >= oneWeekAgo, cancellationToken);
+        try
+        {
+            totalUsers = await _dbContext.Users.CountAsync(u => !u.IsDeleted, cancellationToken);
+            activeUsers = await _dbContext.Users.CountAsync(u => !u.IsDeleted && u.Status == 1, cancellationToken);
+            var oneWeekAgo = System.DateTime.UtcNow.AddDays(-7);
+            newUsersThisWeek = await _dbContext.Users.CountAsync(u => !u.IsDeleted && u.JoinDate >= oneWeekAgo, cancellationToken);
+        }
+        catch { /* swallow – dashboard still usable without user counts */ }
 
         // Posts
-        int totalPosts = await _dbContext.Posts.CountAsync(p => !p.IsDeleted, cancellationToken);
-        int activeListings = await _dbContext.Posts.CountAsync(p => !p.IsDeleted && p.Status == 0, cancellationToken);
-        int blockedListings = await _dbContext.Posts.CountAsync(p => !p.IsDeleted && p.Status == 1, cancellationToken);
-        int soldPosts = await _dbContext.Posts.CountAsync(p => !p.IsDeleted && p.Status == 3, cancellationToken);
+        try
+        {
+            totalPosts = await _dbContext.Posts.CountAsync(p => !p.IsDeleted, cancellationToken);
+            activeListings = await _dbContext.Posts.CountAsync(p => !p.IsDeleted && p.Status == 0, cancellationToken);
+            blockedListings = await _dbContext.Posts.CountAsync(p => !p.IsDeleted && p.Status == 1, cancellationToken);
+            soldPosts = await _dbContext.Posts.CountAsync(p => !p.IsDeleted && p.Status == 3, cancellationToken);
+        }
+        catch { /* swallow */ }
 
         // Categories
-        int totalCategories = await _dbContext.Categories.CountAsync(c => !c.IsDeleted, cancellationToken);
+        try
+        {
+            totalCategories = await _dbContext.Categories.CountAsync(c => !c.IsDeleted, cancellationToken);
+        }
+        catch { /* swallow */ }
 
         // Reviews
-        int totalReviews = await _dbContext.Reviews.CountAsync(r => !r.IsDeleted, cancellationToken);
-        double averageRating = await _dbContext.Reviews
-            .Where(r => !r.IsDeleted)
-            .Select(r => (double?)r.Rating)
-            .AverageAsync(cancellationToken) ?? 0;
+        try
+        {
+            totalReviews = await _dbContext.Reviews.CountAsync(r => !r.IsDeleted, cancellationToken);
+            averageRating = await _dbContext.Reviews
+                .Where(r => !r.IsDeleted)
+                .Select(r => (double?)r.Rating)
+                .AverageAsync(cancellationToken) ?? 0;
+        }
+        catch { /* swallow */ }
 
         // Recent admin activity (last 10 from audit log)
-        var recentActions = await (from a in _dbContext.AuditLogs.AsNoTracking()
-                                   join u in _dbContext.Users.AsNoTracking() on a.ChangedByUserID equals u.UserID into ug
+        try
+        {
+            recentActions = await (from a in _dbContext.AuditLogs.AsNoTracking()
+                                   join u in _dbContext.Users.AsNoTracking().IgnoreQueryFilters() on a.ChangedByUserID equals u.UserID into ug
                                    from u in ug.DefaultIfEmpty()
                                    orderby a.ChangedAt descending
                                    select new RecentAdminAction
@@ -52,6 +77,8 @@ public sealed class AdminDataAccessAdapter : IAdminDataAccess
                                        TableName = a.TableName,
                                        ChangedAt = a.ChangedAt
                                    }).Take(10).ToListAsync(cancellationToken);
+        }
+        catch { /* swallow – dashboard still usable without recent actions */ }
 
         return new DashboardStatsModel
         {
@@ -297,20 +324,28 @@ public sealed class AdminDataAccessAdapter : IAdminDataAccess
 
     public async Task<System.Collections.Generic.IReadOnlyList<SystemSettingItem>> GetAllSettingsAsync(CancellationToken cancellationToken = default)
     {
-        return await _dbContext.SystemSettings
-            .AsNoTracking()
-            .OrderBy(s => s.SettingKey)
-            .Select(s => new SystemSettingItem
-            {
-                SettingID = s.SettingID,
-                SettingKey = s.SettingKey,
-                Label = s.Label,
-                Value = s.Value,
-                ValueType = s.ValueType,
-                Description = s.Description,
-                UpdatedAt = s.UpdatedAt
-            })
-            .ToListAsync(cancellationToken);
+        try
+        {
+            return await _dbContext.SystemSettings
+                .AsNoTracking()
+                .OrderBy(s => s.SettingKey)
+                .Select(s => new SystemSettingItem
+                {
+                    SettingID = s.SettingID,
+                    SettingKey = s.SettingKey,
+                    Label = s.Label,
+                    Value = s.Value,
+                    ValueType = s.ValueType,
+                    Description = s.Description,
+                    UpdatedAt = s.UpdatedAt
+                })
+                .ToListAsync(cancellationToken);
+        }
+        catch
+        {
+            // SystemSettings table may not exist yet – return empty list
+            return System.Array.Empty<SystemSettingItem>();
+        }
     }
 
     public async Task<bool> UpdateSettingAsync(string key, string value, CancellationToken cancellationToken = default)
@@ -493,42 +528,50 @@ public sealed class AdminDataAccessAdapter : IAdminDataAccess
 
     public async Task<AdminReportListResult> GetReportsAsync(int? status = null, string? reportType = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
     {
-        var query = _dbContext.Reports.AsNoTracking().AsQueryable();
+        try
+        {
+            var query = _dbContext.Reports.AsNoTracking().AsQueryable();
 
-        if (status.HasValue)
-            query = query.Where(r => r.Status == status.Value);
-        if (!string.IsNullOrWhiteSpace(reportType))
-            query = query.Where(r => r.ReportType == reportType);
+            if (status.HasValue)
+                query = query.Where(r => r.Status == status.Value);
+            if (!string.IsNullOrWhiteSpace(reportType))
+                query = query.Where(r => r.ReportType == reportType);
 
-        int totalCount = await query.CountAsync(cancellationToken);
+            int totalCount = await query.CountAsync(cancellationToken);
 
-        var items = await (from r in query
-                          join reporter in _dbContext.Users.AsNoTracking() on r.ReporterUserID equals reporter.UserID
-                          join resolver in _dbContext.Users.AsNoTracking() on r.ResolvedByUserID equals resolver.UserID into rg
-                          from resolver in rg.DefaultIfEmpty()
-                          orderby r.CreatedAt descending
-                          select new AdminReportItem
-                          {
-                              ReportID = r.ReportID,
-                              ReportType = r.ReportType,
-                              TargetID = r.TargetID,
-                              Reason = r.Reason,
-                              Description = r.Description,
-                              ReporterUserID = r.ReporterUserID,
-                              ReporterName = (reporter.FirstName + " " + (reporter.LastName ?? "")).Trim(),
-                              Status = r.Status,
-                              StatusLabel = r.Status >= 0 && r.Status < _reportStatusLabels.Length ? _reportStatusLabels[r.Status] : "Unknown",
-                              ResolvedByUserID = r.ResolvedByUserID,
-                              ResolvedByName = resolver != null ? (resolver.FirstName + " " + (resolver.LastName ?? "")).Trim() : null,
-                              ResolutionNotes = r.ResolutionNotes,
-                              CreatedAt = r.CreatedAt,
-                              ResolvedAt = r.ResolvedAt
-                          })
-                          .Skip((pageNumber - 1) * pageSize)
-                          .Take(pageSize)
-                          .ToListAsync(cancellationToken);
+            var items = await (from r in query
+                              join reporter in _dbContext.Users.AsNoTracking() on r.ReporterUserID equals reporter.UserID
+                              join resolver in _dbContext.Users.AsNoTracking() on r.ResolvedByUserID equals resolver.UserID into rg
+                              from resolver in rg.DefaultIfEmpty()
+                              orderby r.CreatedAt descending
+                              select new AdminReportItem
+                              {
+                                  ReportID = r.ReportID,
+                                  ReportType = r.ReportType,
+                                  TargetID = r.TargetID,
+                                  Reason = r.Reason,
+                                  Description = r.Description,
+                                  ReporterUserID = r.ReporterUserID,
+                                  ReporterName = (reporter.FirstName + " " + (reporter.LastName ?? "")).Trim(),
+                                  Status = r.Status,
+                                  StatusLabel = r.Status >= 0 && r.Status < _reportStatusLabels.Length ? _reportStatusLabels[r.Status] : "Unknown",
+                                  ResolvedByUserID = r.ResolvedByUserID,
+                                  ResolvedByName = resolver != null ? (resolver.FirstName + " " + (resolver.LastName ?? "")).Trim() : null,
+                                  ResolutionNotes = r.ResolutionNotes,
+                                  CreatedAt = r.CreatedAt,
+                                  ResolvedAt = r.ResolvedAt
+                              })
+                              .Skip((pageNumber - 1) * pageSize)
+                              .Take(pageSize)
+                              .ToListAsync(cancellationToken);
 
-        return new AdminReportListResult { Reports = items, TotalCount = totalCount };
+            return new AdminReportListResult { Reports = items, TotalCount = totalCount };
+        }
+        catch
+        {
+            // Reports table may not exist yet – return empty result
+            return new AdminReportListResult { Reports = System.Array.Empty<AdminReportItem>(), TotalCount = 0 };
+        }
     }
 
     public async Task<bool> UpdateReportStatusAsync(int reportId, int newStatus, int adminUserId, string? resolutionNotes = null, CancellationToken cancellationToken = default)

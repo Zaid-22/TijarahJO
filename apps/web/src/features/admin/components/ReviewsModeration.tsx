@@ -28,10 +28,14 @@ export function ReviewsModeration() {
     try {
       setIsLoading(true);
       const result = await api.admin.getReviews(currentPage, 50);
-      setReviewsResult(result);
+      setReviewsResult({
+        reviews: Array.isArray(result?.reviews) ? result.reviews : [],
+        totalCount: result?.totalCount ?? 0,
+      });
     } catch (error) {
       logger.warn("[ReviewsModeration] Failed to fetch reviews", error);
       toast.error("Failed to fetch reviews");
+      setReviewsResult({ reviews: [], totalCount: 0 });
     } finally {
       setIsLoading(false);
     }
@@ -73,13 +77,13 @@ export function ReviewsModeration() {
     );
   };
 
-  const filteredReviews = reviewsResult.reviews.filter(
+  const filteredReviews = (reviewsResult?.reviews || []).filter(
     (review) =>
-      review.reviewerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      review.reviewedUserName
+      (review.reviewerName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (review.reviewedUserName || "")
         .toLowerCase()
         .includes(searchQuery.toLowerCase()) ||
-      review.comment.toLowerCase().includes(searchQuery.toLowerCase()),
+      (review.comment || "").toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -207,7 +211,7 @@ export function ReviewsModeration() {
             <Button
               variant="outline"
               size="sm"
-              disabled={reviewsResult.reviews.length < 50 || isLoading}
+              disabled={(reviewsResult?.reviews?.length ?? 0) < 50 || isLoading}
               onClick={() => setPage((p) => p + 1)}
             >
               Next
