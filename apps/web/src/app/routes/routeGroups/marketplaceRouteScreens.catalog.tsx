@@ -22,6 +22,7 @@ function AllPostsMarketplaceRouteScreen() {
     navigateToPost,
     sharedPostRouteProps,
     sharedUserRouteProps,
+    promptLoginModal,
   } = useMarketplaceRouteContext();
 
   return (
@@ -36,6 +37,7 @@ function AllPostsMarketplaceRouteScreen() {
       darkMode={appProps.darkMode}
       currentUserId={sharedUserRouteProps.currentUserId}
       currentUserDisplayName={sharedUserRouteProps.currentUserDisplayName}
+      onRequireAuth={promptLoginModal}
     />
   );
 }
@@ -47,6 +49,7 @@ function SearchResultsMarketplaceRouteScreen() {
     navigateToPost,
     sharedPostRouteProps,
     sharedUserRouteProps,
+    promptLoginModal,
   } = useMarketplaceRouteContext();
   const { activeSearchQuery, setActiveSearchQuery, setSearchQuery } =
     useSearch();
@@ -63,6 +66,7 @@ function SearchResultsMarketplaceRouteScreen() {
       isAuthenticated={sharedUserRouteProps.isAuthenticated}
       currentUserId={sharedUserRouteProps.currentUserId}
       currentUserDisplayName={sharedUserRouteProps.currentUserDisplayName}
+      onRequireAuth={promptLoginModal}
       onSearch={(newQuery) => {
         setActiveSearchQuery(newQuery);
         setSearchQuery(newQuery);
@@ -78,6 +82,7 @@ function CategoryMarketplaceRouteScreen() {
     navigateToPost,
     sharedPostRouteProps,
     sharedUserRouteProps,
+    promptLoginModal,
   } = useMarketplaceRouteContext();
 
   return (
@@ -91,6 +96,7 @@ function CategoryMarketplaceRouteScreen() {
       onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
       onBack={() => navigate("/")}
       onOpenPost={(id) => navigateToPost(id, "/category")}
+      onRequireAuth={promptLoginModal}
     />
   );
 }

@@ -1,4 +1,5 @@
 import { ArrowLeft, MessageCircle, Plus } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useState } from "react";
 import { Button } from "../../../shared/ui/button";
 import { Logo } from "../../../shared/ui/logo";
@@ -108,7 +109,15 @@ export function Header({
                   onLogout={onLogout}
                   onCategoryClick={onCategoryClick}
                 />
-                {showLogo && <Logo size="md" darkMode={darkMode} />}
+                {showLogo && (
+                  <Link 
+                    to="/" 
+                    className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary hover:opacity-90 transition-opacity"
+                    aria-label={language === "ar" ? "العودة إلى الرئيسية" : "Go to homepage"}
+                  >
+                    <Logo size="md" darkMode={darkMode} />
+                  </Link>
+                )}
               </>
             )}
           </div>

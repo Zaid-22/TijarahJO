@@ -26,6 +26,7 @@ interface MarketplaceRouteGroupParams {
   postActions: PostActions;
   navigate: NavigateFunction;
   redirectToLogin: () => void;
+  promptLoginModal: () => void;
 }
 
 export function renderMarketplaceRouteGroup({
@@ -34,6 +35,7 @@ export function renderMarketplaceRouteGroup({
   postActions,
   navigate,
   redirectToLogin,
+  promptLoginModal,
 }: MarketplaceRouteGroupParams) {
   const currentUserId = appProps.isAuthenticated
     ? routeState.currentUserId
@@ -66,6 +68,7 @@ export function renderMarketplaceRouteGroup({
     postActions,
     navigate,
     redirectToLogin,
+    promptLoginModal,
     navigateToPost,
     sharedUserRouteProps,
     sharedPostRouteProps,

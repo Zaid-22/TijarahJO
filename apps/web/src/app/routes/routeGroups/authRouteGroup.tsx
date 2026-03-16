@@ -35,6 +35,12 @@ export function renderAuthRouteGroup({
               appProps.setUserProfile(
                 applyLoginUserDataToProfile(appProps.userProfile, userData),
               );
+              
+              if (userData.role === "admin") {
+                navigate("/admin", { replace: true });
+                return;
+              }
+
               const currentPath = buildCurrentPath(
                 window.location.pathname,
                 window.location.search,

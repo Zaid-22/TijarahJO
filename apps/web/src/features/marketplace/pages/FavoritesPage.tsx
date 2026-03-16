@@ -14,6 +14,7 @@ interface FavoritesPageProps {
   language: Language;
   isAuthenticated?: boolean;
   currentUserId?: string;
+  onRequireAuth?: () => void;
 }
 
 export function FavoritesPage({
@@ -25,6 +26,7 @@ export function FavoritesPage({
   language,
   isAuthenticated = false,
   currentUserId,
+  onRequireAuth,
 }: FavoritesPageProps) {
   const t = translations[language];
   const isRTL = language === "ar";
@@ -66,6 +68,7 @@ export function FavoritesPage({
           isAuthenticated={isAuthenticated}
           currentUserId={isAuthenticated ? currentUserId : undefined}
           language={language}
+          onRequireAuth={onRequireAuth}
           emptyState={{
             title: t.noFavorites,
             description: t.noFavoritesDescription,

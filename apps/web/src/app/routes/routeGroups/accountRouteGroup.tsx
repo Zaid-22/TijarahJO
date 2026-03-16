@@ -41,6 +41,7 @@ interface AccountRouteGroupParams {
   saveProfile: (profile: EditProfileFormProfile) => Promise<void> | void;
   navigate: NavigateFunction;
   requireAuth: (element: ReactElement) => ReactElement;
+  promptLoginModal?: () => void;
 }
 
 export function renderAccountRouteGroup({
@@ -50,6 +51,7 @@ export function renderAccountRouteGroup({
   saveProfile,
   navigate,
   requireAuth,
+  promptLoginModal,
 }: AccountRouteGroupParams) {
   const openSupportEmail = (subject: string) => {
     if (typeof window === "undefined") {
@@ -172,6 +174,7 @@ export function renderAccountRouteGroup({
             }
             isAuthenticated={sharedUserRouteProps.isAuthenticated}
             currentUserId={sharedUserRouteProps.currentUserId}
+            onRequireAuth={() => promptLoginModal?.()}
           />,
         )}
       />

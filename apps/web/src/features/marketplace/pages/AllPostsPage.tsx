@@ -33,6 +33,7 @@ interface AllPostsPageProps {
   darkMode?: boolean;
   currentUserDisplayName?: string;
   currentUserId?: string;
+  onRequireAuth?: () => void;
 }
 
 interface AllPostsFilterControlsProps {
@@ -89,6 +90,7 @@ export function AllPostsPage({
   darkMode = false,
   currentUserDisplayName,
   currentUserId,
+  onRequireAuth,
 }: AllPostsPageProps) {
   const t = translations[language];
   const isRTL = language === "ar";
@@ -259,6 +261,7 @@ export function AllPostsPage({
                 setPriceRange("all");
               },
             }}
+            onRequireAuth={onRequireAuth}
           />
         )}
         {shouldShowPagination ? (

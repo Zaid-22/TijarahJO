@@ -13,6 +13,7 @@ interface CategoryRouteWrapperProps {
   onFavoriteToggle: (postId: string) => void;
   onBack: () => void;
   onOpenPost: (postId: string) => void;
+  onRequireAuth?: () => void;
 }
 
 export function CategoryRouteWrapper({
@@ -25,6 +26,7 @@ export function CategoryRouteWrapper({
   onFavoriteToggle,
   onBack,
   onOpenPost,
+  onRequireAuth,
 }: CategoryRouteWrapperProps) {
   const { categoryName } = useParams();
   const decodedCategory = decodeCategoryParam(categoryName);
@@ -47,6 +49,7 @@ export function CategoryRouteWrapper({
       currentUserDisplayName={
         isAuthenticated ? currentUserDisplayName : undefined
       }
+      onRequireAuth={onRequireAuth}
     />
   );
 }

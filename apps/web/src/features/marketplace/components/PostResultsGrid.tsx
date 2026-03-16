@@ -26,6 +26,7 @@ interface PostResultsGridProps {
   hideCategoryBadge?: boolean;
   animated?: boolean;
   className?: string;
+  onRequireAuth?: () => void;
 }
 
 function resolvePostKey(post: Post, index: number) {
@@ -54,6 +55,7 @@ export function PostResultsGrid({
   hideCategoryBadge = false,
   animated = false,
   className,
+  onRequireAuth,
 }: PostResultsGridProps) {
   const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
 
@@ -87,6 +89,7 @@ export function PostResultsGrid({
             currentUserDisplayName={isAuthenticated ? currentUserDisplayName : undefined}
             hideCategoryBadge={hideCategoryBadge}
             language={language}
+            onRequireAuth={onRequireAuth}
           />
         ))
       )}

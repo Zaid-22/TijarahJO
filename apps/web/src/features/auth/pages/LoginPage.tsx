@@ -37,6 +37,7 @@ interface LoginPageProps {
     phone?: string;
     avatar?: string;
     joinedDate?: string;
+    role?: "user" | "admin";
   }) => void;
   onContinueAsGuest: () => void;
   language: Language;
@@ -277,6 +278,7 @@ export function LoginPage({
       phone: user?.phone || normalizedPhone,
       avatar: user?.avatar,
       joinedDate: formatJoinedDateLabel(user?.joinedDate, language),
+      role: user?.roleID === 1 || (user as unknown as Record<string, unknown>)?.role === "admin" ? "admin" : "user",
     });
   };
 
@@ -325,6 +327,7 @@ export function LoginPage({
       phone: user?.phone || "",
       avatar: user?.avatar,
       joinedDate: formatJoinedDateLabel(user?.joinedDate, language),
+      role: user?.roleID === 1 || (user as unknown as Record<string, unknown>)?.role === "admin" ? "admin" : "user",
     });
   };
 
@@ -380,6 +383,7 @@ export function LoginPage({
       phone: user?.phone || "",
       avatar: user?.avatar,
       joinedDate: formatJoinedDateLabel(user?.joinedDate, language),
+      role: user?.roleID === 1 || (user as unknown as Record<string, unknown>)?.role === "admin" ? "admin" : "user",
     });
   };
 

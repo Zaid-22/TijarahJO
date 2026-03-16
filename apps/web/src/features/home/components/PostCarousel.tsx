@@ -16,6 +16,7 @@ interface PostCarouselProps {
   onPostClick: (id: string) => void;
   onViewAll?: () => void;
   viewAllLabel?: string;
+  onRequireAuth?: () => void;
 }
 
 export function PostCarousel({
@@ -31,6 +32,7 @@ export function PostCarousel({
   onPostClick,
   onViewAll,
   viewAllLabel,
+  onRequireAuth,
 }: PostCarouselProps) {
   const isRTL = language === "ar";
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -160,6 +162,7 @@ export function PostCarousel({
                 currentUserId={currentUserId}
                 currentUserDisplayName={currentUserDisplayName}
                 language={language}
+                onRequireAuth={onRequireAuth}
               />
             </div>
           ))}

@@ -11,6 +11,7 @@ import {
 import { Alert, AlertDescription } from "../../shared/ui/alert";
 import { Button } from "../../shared/ui/button";
 import { Logo } from "../../shared/ui/logo";
+import { Link } from "react-router-dom";
 import { AuthInputField } from "./AuthInputField";
 import { AuthPhoneField } from "./AuthPhoneField";
 import { AuthSelectField } from "./AuthSelectField";
@@ -100,7 +101,9 @@ export function LoginForm({
     >
       <div className="w-full max-w-md">
         <div className="text-center mb-6 sm:mb-8">
-          <Logo size="lg" className="mx-auto mb-3 sm:mb-4" />
+          <Link to="/" className="inline-block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary hover:opacity-90 transition-opacity">
+            <Logo size="lg" className="mx-auto mb-3 sm:mb-4" />
+          </Link>
           <h1 className="mb-2 text-2xl sm:text-3xl text-foreground">
             {isTwoFactorStep
               ? copy.form.twoFactorTitle

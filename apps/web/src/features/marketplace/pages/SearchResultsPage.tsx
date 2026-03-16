@@ -34,6 +34,7 @@ interface SearchResultsPageProps {
   isAuthenticated?: boolean;
   currentUserDisplayName?: string;
   currentUserId?: string;
+  onRequireAuth?: () => void;
 }
 
 export function SearchResultsPage({
@@ -48,6 +49,7 @@ export function SearchResultsPage({
   isAuthenticated = false,
   currentUserDisplayName,
   currentUserId,
+  onRequireAuth,
 }: SearchResultsPageProps) {
   const [localSearchQuery, setLocalSearchQuery] = useState(initialSearchQuery);
   const [appliedSearchQuery, setAppliedSearchQuery] = useState(
@@ -415,6 +417,7 @@ export function SearchResultsPage({
                     onBack();
                   },
                 }}
+                onRequireAuth={onRequireAuth}
               />
             )}
             {shouldShowPagination ? (
