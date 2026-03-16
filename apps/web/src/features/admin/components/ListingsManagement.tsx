@@ -48,10 +48,15 @@ export function ListingsManagement() {
         pageSize: 50,
         status: currentStatus,
       });
-      setPostsResult(result);
+      // Normalize result to ensure posts is always a valid array
+      setPostsResult({
+        posts: Array.isArray(result?.posts) ? result.posts : [],
+        totalCount: result?.totalCount ?? 0,
+      });
     } catch (error) {
       logger.warn("[ListingsManagement] Failed to fetch posts", error);
       toast.error("Failed to fetch listings");
+      setPostsResult({ posts: [], totalCount: 0 });
     } finally {
       setIsLoading(false);
     }
@@ -130,7 +135,7 @@ export function ListingsManagement() {
   // Bulk select helpers
   const allSelected =
     filteredPosts.length > 0 &&
-    filteredPosts.every((p) => selectedIds.has(p.postId));
+    filteredPosts.every((p) => selectedIds.has(p.postID));
   const toggleSelect = (id: number) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -143,7 +148,7 @@ export function ListingsManagement() {
     if (allSelected) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredPosts.map((p) => p.postId)));
+      setSelectedIds(new Set(filteredPosts.map((p) => p.postID)));
     }
   };
 
@@ -196,7 +201,7 @@ export function ListingsManagement() {
             size="sm"
             onClick={() => {
               const rows = filteredPosts.map((p) => ({
-                ID: p.postId,
+                ID: p.postID,
                 Title: p.title,
                 Price: p.price ?? "",
                 Status: p.status,
@@ -296,19 +301,19 @@ export function ListingsManagement() {
               ) : (
                 filteredPosts.map((post, idx) => (
                   <tr
-                    key={post.postId}
+                    key={post.postID}
                     className={`border-b border-border hover:bg-muted/50 transition-colors ${focusedIndex === idx ? "ring-2 ring-primary ring-inset" : ""}`}
                   >
                     <td className="px-3 py-4">
                       <input
                         type="checkbox"
-                        checked={selectedIds.has(post.postId)}
-                        onChange={() => toggleSelect(post.postId)}
+                        checked={selectedIds.has(post.postID)}
+                        onChange={() => toggleSelect(post.postID)}
                         className="rounded border-border"
                         aria-label={`Select listing ${post.title}`}
                       />
                     </td>
-                    <td className="px-6 py-4 font-medium">{post.postId}</td>
+                    <td className="px-6 py-4 font-medium">{post.postID}</td>
                     <td
                       className="px-6 py-4 font-medium text-foreground max-w-[200px] truncate"
                       title={post.title}
@@ -341,7 +346,7 @@ export function ListingsManagement() {
                             className="text-destructive hover:bg-destructive/10"
                             onClick={() =>
                               setActionPost({
-                                id: post.postId,
+                                id: post.postID,
                                 title: post.title,
                                 newStatus: 1,
                                 label: "Blocked",
@@ -359,7 +364,7 @@ export function ListingsManagement() {
                             className="text-green-600 hover:bg-green-100"
                             onClick={() =>
                               setActionPost({
-                                id: post.postId,
+                                id: post.postID,
                                 title: post.title,
                                 newStatus: 0,
                                 label: "Active",

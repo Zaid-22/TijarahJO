@@ -108,7 +108,8 @@ export function useChat(otherUserId?: number) {
       return true;
     } catch (err) {
       logger.warn("[useChat] Failed to send message", err);
-      setError("Failed to send message.");
+      const errStr = err instanceof Error ? err.message : "Failed to send message.";
+      setError(errStr);
       return false;
     }
   };

@@ -1,9 +1,8 @@
 import React from "react";
 import { Button } from "../../../shared/ui/button";
 import { Badge } from "../../../shared/ui/badge";
-import { Heart, MapPin, User, Eye, Phone, MessageCircle, Star } from "lucide-react";
+import { Heart, Phone, MessageCircle } from "lucide-react";
 import { ImageWithFallback } from "./ImageWithFallback";
-import { cn } from "../../../shared/ui/utils";
 import { usePostCardState, type PostCardSharedProps } from "./usePostCardState";
 
 export const PostCardList = React.memo(function PostCardList(props: PostCardSharedProps) {
@@ -20,139 +19,121 @@ export const PostCardList = React.memo(function PostCardList(props: PostCardShar
   } = usePostCardState(props);
 
   return (
-    <div className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 animate-fade-in sm:flex-row backdrop-blur-sm card-shadow-brand focus-within:ring-2 focus-within:ring-primary/50 hover:shadow-lg">
+    <div className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all duration-300 sm:flex-row hover:shadow-md focus-within:ring-2 focus-within:ring-primary/50 relative">
       <button
         type="button"
         onClick={openPost}
         aria-label={labels.viewDetailsAria}
         title={labels.viewDetails}
-        className="relative w-full sm:w-64 aspect-square overflow-hidden flex-shrink-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="relative w-full sm:w-72 aspect-[4/3] sm:aspect-auto overflow-hidden flex-shrink-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         <ImageWithFallback
           src={post.image}
           alt={post.name}
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
 
         {!hideCategoryBadge && (
           <div className="absolute top-3 left-3 z-10">
-            <Badge className="backdrop-blur-md border border-border/60 bg-background/95 px-3 py-1 text-primary shadow-sm">
+            <Badge className="backdrop-blur-md border hover:bg-background/95 border-border/60 bg-background/95 px-3 py-1 text-foreground shadow-sm">
               {post.category}
             </Badge>
           </div>
         )}
 
         {post.status === "SOLD" && (
-          <div
-            className={`absolute ${!hideCategoryBadge && showFavoriteButton ? "top-16" : "top-3"} right-3 z-10`}
-          >
+          <div className={`absolute ${!hideCategoryBadge ? "top-14" : "top-3"} right-3 z-10`}>
             <Badge className="backdrop-blur-md border border-border/60 bg-muted/95 px-3 py-1 text-muted-foreground shadow-sm font-semibold">
               {labels.soldOut}
             </Badge>
           </div>
         )}
-
-        {post.condition && post.status !== "SOLD" && (
-          <div className="absolute bottom-3 left-3 z-10">
-            <Badge className="backdrop-blur-md border border-border/60 bg-background/95 px-2 py-0.5 text-xs text-foreground shadow-sm">
-              {post.condition}
-            </Badge>
-          </div>
-        )}
       </button>
 
-      <div className="flex-1 p-6 flex flex-col justify-between">
+      <div 
+        className="flex-1 p-4 sm:p-5 flex flex-col justify-between cursor-pointer" 
+        onClick={openPost}
+        role="button"
+        tabIndex={0}
+        aria-label={labels.viewDetailsAria}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openPost();
+          }
+        }}
+      >
         <div>
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <div className="flex-1">
-              <h3 className="mb-2 text-foreground transition-colors group-hover:text-primary">
-                {post.name}
-              </h3>
-              <div className="mb-3 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-primary">
-                    <MapPin className="w-3.5 h-3.5" />
-                  </div>
-                  <span>
-                    {post.location}
-                    {post.area ? `, ${post.area}` : ""}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-primary">
-                      <User className="w-3.5 h-3.5" />
-                    </div>
-                    <span className="font-medium">{post.seller}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs font-medium text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full">
-                    <Star className="w-3.5 h-3.5 fill-amber-500" />
-                    <span>4.8 <span className="opacity-70 font-normal">(12)</span></span>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="flex items-start justify-between gap-4 mb-2">
+            <h3 className="text-xl sm:text-[22px] font-bold text-foreground transition-colors group-hover:text-primary line-clamp-2 leading-tight">
+              {post.name}
+            </h3>
+          </div>
 
+          <div className="mb-4 space-y-2">
+            <p className="text-foreground text-sm sm:text-[15px] font-medium">
+              {[post.category, post.condition].filter(Boolean).join(" ، ")}
+            </p>
+
+            <div className="flex items-center text-muted-foreground text-sm">
+              <span>
+                {post.location}
+                {post.area ? `، ${post.area}` : ""}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div 
+          className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-2 pt-4 border-t border-border gap-4" 
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+          role="presentation"
+        >
+          <div className="flex items-center text-foreground font-bold whitespace-nowrap">
+            <span className="text-2xl sm:text-[28px] leading-none">
+              {post.price.toLocaleString(priceLocale)}
+            </span>
+            <span className="text-lg ms-1.5 pt-1">
+              {labels.currency}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             {showFavoriteButton && (
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon"
                 onClick={handleFavoriteClick}
-                className="h-10 w-10 rounded-full hover:bg-muted"
+                className="h-[42px] w-[42px] shrink-0 rounded-lg border-border hover:bg-muted"
                 aria-label={labels.favoriteLabel}
                 title={labels.favoriteLabel}
               >
                 <Heart
-                  className={`w-5 h-5 transition-all duration-200 text-red-500 stroke-2 ${
-                    isFavorite ? "fill-red-500" : "fill-none"
+                  className={`w-5 h-5 transition-all duration-200 text-[#c21414] dark:text-red-500 stroke-2 ${
+                    isFavorite ? "fill-current" : "fill-none"
                   }`}
                 />
               </Button>
             )}
-          </div>
-        </div>
 
-        <div className="flex items-center justify-between border-t border-border pt-4">
-          <div>
-            <span className="text-3xl font-semibold text-foreground">
-              {post.price.toLocaleString(priceLocale)}
-            </span>
-            <span
-              className={cn(
-                "text-lg text-muted-foreground",
-                "ms-2",
-              )}
-            >
-              {labels.currency}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Button 
-              size="icon" 
-              variant="outline" 
-              className="h-10 w-10 sm:h-11 sm:w-11 rounded-full border-primary/20 text-primary hover:bg-primary/10 transition-colors" 
-              title={isRTL ? "اتصال" : "Call"} 
-              onClick={handleCallClick}
-            >
-              <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
-            </Button>
-            <Button 
-              size="icon" 
-              variant="outline" 
-              className="h-10 w-10 sm:h-11 sm:w-11 rounded-full border-primary/20 text-primary hover:bg-primary/10 transition-colors" 
-              title={isRTL ? "مراسلة" : "Message"} 
+            <Button
+              variant="outline"
+              className="h-[42px] flex-1 sm:flex-none px-4 sm:px-6 rounded-lg border-[1.5px] border-[#0066ff] text-[#0066ff] hover:bg-blue-50 hover:text-[#0066ff] dark:hover:bg-[#0066ff]/10 font-bold transition-colors text-[15px]"
+              title={isRTL ? "دردش" : "Message"}
               onClick={handleMessageClick}
             >
-              <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="me-2">{isRTL ? "دردش" : "Chat"}</span>
+              <MessageCircle className="w-5 h-5 fill-current" />
             </Button>
+
             <Button
-              size="lg"
-              className="px-6 sm:px-8 shadow-md transition-all duration-300 hover:opacity-90 hover:shadow-lg"
-              onClick={openPost}
-              title={labels.viewDetails}
+              className="h-[42px] flex-1 sm:flex-none px-4 sm:px-6 rounded-lg bg-[#0066ff] hover:bg-[#0052cc] text-white font-bold transition-colors text-[15px]"
+              title={isRTL ? "اتصال" : "Call"}
+              onClick={handleCallClick}
             >
-              <Eye className={`w-4 h-4 me-2`} />
-              <span className="hidden sm:inline">{labels.viewDetails}</span>
+              <span className="me-2" dir="ltr">{post.phone || "079XXXXXXX"}</span>
+              <Phone className="w-5 h-5 fill-current" />
             </Button>
           </div>
         </div>

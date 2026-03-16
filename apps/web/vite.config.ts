@@ -112,9 +112,27 @@ function buildStyleSrcDirective(isProduction: boolean): string {
   return "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com";
 }
 
+function buildImgSrcDirective(isProduction: boolean): string {
+  const imgSources = ["'self'", "data:", "blob:", "https:"];
+
+  // In development, also allow the backend origin for serving uploaded images
+  if (!isProduction) {
+    const defaultApiBaseUrl = DEV_DEFAULT_API_BASE_URL;
+    const configuredApiBaseUrl =
+      process.env.VITE_API_BASE_URL?.trim() || defaultApiBaseUrl;
+    const apiOrigin = parseApiOrigin(configuredApiBaseUrl);
+    if (apiOrigin) {
+      imgSources.push(apiOrigin);
+    }
+  }
+
+  return `img-src ${imgSources.join(" ")}`;
+}
+
 function buildCspPolicy(isProduction: boolean): string {
   const connectSrc = buildConnectSources(isProduction);
   const styleSrc = buildStyleSrcDirective(isProduction);
+  const imgSrc = buildImgSrcDirective(isProduction);
 
   return [
     "default-src 'self'",
@@ -123,7 +141,7 @@ function buildCspPolicy(isProduction: boolean): string {
     "frame-ancestors 'none'",
     "script-src 'self'",
     styleSrc,
-    "img-src 'self' data: blob: https:",
+    imgSrc,
     "font-src 'self' data: https://fonts.gstatic.com",
     connectSrc,
     "form-action 'self'",

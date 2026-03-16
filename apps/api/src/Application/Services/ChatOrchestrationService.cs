@@ -8,15 +8,18 @@ public sealed class ChatOrchestrationService : IChatOrchestrationService
     private readonly IMessageService _messages;
     private readonly INotificationService _notifications;
     private readonly IChatPresenceLookup _presenceLookup;
+    private readonly IUserQueryHandler _userQueryHandler;
 
     public ChatOrchestrationService(
         IMessageService messages,
         INotificationService notifications,
-        IChatPresenceLookup presenceLookup)
+        IChatPresenceLookup presenceLookup,
+        IUserQueryHandler userQueryHandler)
     {
         _messages = messages;
         _notifications = notifications;
         _presenceLookup = presenceLookup;
+        _userQueryHandler = userQueryHandler;
     }
 
     public async Task<ChatServiceResult<IReadOnlyList<ChatMessageEnvelope>>> GetHistoryAsync(
@@ -133,6 +136,15 @@ public sealed class ChatOrchestrationService : IChatOrchestrationService
         DateTime? lastSeenAtUtc = isOnline
             ? null
             : await _presenceLookup.GetLastSeenUtcAsync(otherUserId, cancellationToken);
+
+        if (!isOnline && lastSeenAtUtc == null)
+        {
+            var userResult = await _userQueryHandler.GetByIdAsync(new UserByIdQuery { TargetUserId = otherUserId }, cancellationToken);
+            if (userResult.Success && userResult.User != null)
+            {
+                lastSeenAtUtc = userResult.User.JoinDate;
+            }
+        }
 
         return new ChatServiceResult<ChatPresenceSnapshot>
         {

@@ -113,6 +113,13 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
             return false;
         }
 
+        await _dbContext.Posts
+            .Where(item => item.UserID == userId.Value && !item.IsDeleted)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(item => item.IsDeleted, true),
+                cancellationToken
+            );
+
         await _dbContext.Favorites
             .Where(item => item.UserID == userId.Value && !item.IsDeleted)
             .ExecuteUpdateAsync(

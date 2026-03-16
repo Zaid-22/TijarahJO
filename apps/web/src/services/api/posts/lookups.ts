@@ -318,9 +318,25 @@ export async function resolveCityId(
 
   const normalizedCity = cityValue.trim().toLowerCase();
   const citiesCache = await ensureCitiesCache(forceRefresh);
+  const entries = Object.entries(citiesCache);
 
-  for (const [id, name] of Object.entries(citiesCache)) {
+  // 1. Exact match
+  for (const [id, name] of entries) {
     if (name.toLowerCase() === normalizedCity || id === normalizedCity) {
+      return toPositiveIntegerId(id);
+    }
+  }
+
+  // 2. Starts-with match
+  for (const [id, name] of entries) {
+    if (name.toLowerCase().startsWith(normalizedCity)) {
+      return toPositiveIntegerId(id);
+    }
+  }
+
+  // 3. Contains match
+  for (const [id, name] of entries) {
+    if (name.toLowerCase().includes(normalizedCity)) {
       return toPositiveIntegerId(id);
     }
   }
@@ -344,9 +360,25 @@ export async function resolveAreaId(
 
   const normalizedArea = areaValue.trim().toLowerCase();
   const areasCache = await ensureAreasCache(cityId, forceRefresh);
+  const entries = Object.entries(areasCache);
 
-  for (const [id, name] of Object.entries(areasCache)) {
+  // 1. Exact match
+  for (const [id, name] of entries) {
     if (name.toLowerCase() === normalizedArea || id === normalizedArea) {
+      return toPositiveIntegerId(id);
+    }
+  }
+
+  // 2. Starts-with match (e.g. "madab" matches "Madaba")
+  for (const [id, name] of entries) {
+    if (name.toLowerCase().startsWith(normalizedArea)) {
+      return toPositiveIntegerId(id);
+    }
+  }
+
+  // 3. Contains match (e.g. "adab" matches "Madaba")
+  for (const [id, name] of entries) {
+    if (name.toLowerCase().includes(normalizedArea)) {
       return toPositiveIntegerId(id);
     }
   }

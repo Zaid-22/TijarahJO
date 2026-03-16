@@ -18,12 +18,9 @@ interface TwoFactorDialogProps {
   onOpenChange: (open: boolean) => void;
   mode: TwoFactorDialogMode;
   copy: TwoFactorCopy;
-  secretKey: string;
-  otpAuthUri: string;
   code: string;
   error: string;
   isPending: boolean;
-  onCopyText: (value: string) => Promise<void>;
   onCodeChange: (value: string) => void;
   onCancel: () => void;
   onConfirm: () => Promise<void>;
@@ -35,12 +32,9 @@ export function TwoFactorDialog({
   onOpenChange,
   mode,
   copy,
-  secretKey,
-  otpAuthUri,
   code,
   error,
   isPending,
-  onCopyText,
   onCodeChange,
   onCancel,
   onConfirm,
@@ -57,41 +51,7 @@ export function TwoFactorDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {mode === "setup" && (
-          <div className="space-y-3">
-            <div>
-              <Label>{copy.secretKeyLabel}</Label>
-              <div className="mt-1 rounded-md border bg-muted/30 px-3 py-2 font-mono text-sm break-all">
-                {secretKey}
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="mt-1 h-8 px-2"
-                onClick={() => void onCopyText(secretKey)}
-              >
-                {language === "ar" ? "نسخ المفتاح" : "Copy key"}
-              </Button>
-            </div>
-            <div>
-              <Label>{copy.otpUriLabel}</Label>
-              <div className="mt-1 rounded-md border bg-muted/30 px-3 py-2 text-xs break-all">
-                {otpAuthUri}
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="mt-1 h-8 px-2"
-                onClick={() => void onCopyText(otpAuthUri)}
-              >
-                {language === "ar" ? "نسخ الرابط" : "Copy URI"}
-              </Button>
-            </div>
-          </div>
-        )}
-
+        {/* QR Code and Secret Key are removed for Email 2FA */}
         <div className="space-y-2">
           <Label htmlFor="twoFactorCode">{copy.codeLabel}</Label>
           <Input

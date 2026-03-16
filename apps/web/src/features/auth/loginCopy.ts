@@ -102,7 +102,7 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       showPassword: "Show password",
       hidePassword: "Hide password",
       twoFactorTitle: "Two-Factor Verification",
-      twoFactorSubtitle: "Enter the 6-digit code from your authenticator app.",
+      twoFactorSubtitle: "Enter the 6-digit code sent to your email.",
       twoFactorCodeLabel: "Verification Code",
       twoFactorCodePlaceholder: "123456",
       verifyTwoFactorButton: "Verify Code",
@@ -125,7 +125,7 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       loginFailedFallback: "Invalid email or password. Please try again.",
       googleAuthFailedFallback: "Google sign-in failed. Please try again.",
       twoFactorRequiredPrompt:
-        "Two-factor verification is required. Enter the code from your authenticator app.",
+        "Two-factor verification is required. Enter the code sent to your email.",
       twoFactorCodeInvalid: "Enter a valid 6-digit verification code.",
       twoFactorSessionExpired:
         "Two-factor session expired. Please sign in again.",
@@ -188,7 +188,7 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       hidePassword: "إخفاء كلمة المرور",
       twoFactorTitle: "التحقق بخطوتين",
       twoFactorSubtitle:
-        "أدخل رمز التحقق المكوّن من 6 أرقام من تطبيق المصادقة.",
+        "أدخل رمز التحقق المكوّن من 6 أرقام المرسل إلى بريدك الإلكتروني.",
       twoFactorCodeLabel: "رمز التحقق",
       twoFactorCodePlaceholder: "123456",
       verifyTwoFactorButton: "تأكيد الرمز",
@@ -213,7 +213,7 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       googleAuthFailedFallback:
         "فشل تسجيل الدخول عبر Google. يرجى المحاولة مرة أخرى.",
       twoFactorRequiredPrompt:
-        "المصادقة الثنائية مطلوبة. أدخل الرمز من تطبيق المصادقة.",
+        "المصادقة الثنائية مطلوبة. أدخل الرمز المرسل إلى بريدك الإلكتروني.",
       twoFactorCodeInvalid: "أدخل رمز تحقق صالحًا مكوّنًا من 6 أرقام.",
       twoFactorSessionExpired:
         "انتهت جلسة المصادقة الثنائية. سجّل الدخول مرة أخرى.",

@@ -153,7 +153,7 @@ export const resolveDisplayLocationLabel = ({
     return parts.join(", ");
   }
 
-  if (resolvedCity) {
+  if (resolvedCity && !isJordanLabel(resolvedCity)) {
     return resolvedCity;
   }
 

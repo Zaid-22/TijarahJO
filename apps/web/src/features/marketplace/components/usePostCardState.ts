@@ -99,7 +99,13 @@ export function usePostCardState({
       onRequireAuth?.();
       return;
     }
-    openPost();
+    // Instead of opening the post, navigate to chat
+    // Ensure we trigger a new chat or open the list
+    if (normalizedSellerId) {
+      window.location.href = `/chat/${normalizedSellerId}`;
+    } else {
+      window.location.href = `/chat`;
+    }
   };
 
   return {

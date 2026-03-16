@@ -317,13 +317,21 @@ export async function apiRequest<T>(
     if (!response.ok) {
       // For BadRequest (400), the error details are in the response body
       // ASP.NET Core returns AuthResponse with Message property
-      const errorMessage =
+      let errorMessage =
         data.message ||
         data.Message ||
+        data.detail ||
         data.error?.message ||
         data.error?.Message ||
         response.statusText ||
         "An error occurred";
+
+      if (data.errors && typeof data.errors === "object") {
+        const firstKey = Object.keys(data.errors)[0];
+        if (firstKey && Array.isArray(data.errors[firstKey]) && data.errors[firstKey].length > 0) {
+          errorMessage = data.errors[firstKey][0];
+        }
+      }
 
       return {
         success: false,

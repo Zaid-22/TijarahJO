@@ -79,56 +79,56 @@ export function AdminDashboard() {
   const statCards = [
     {
       title: "Total Users",
-      value: stats.totalUsers.toLocaleString(),
+      value: (stats.totalUsers ?? 0).toLocaleString(),
       icon: Users,
       color: "text-blue-500",
       bgColor: "bg-blue-500/15",
     },
     {
       title: "New Users (7d)",
-      value: stats.newUsersThisWeek.toLocaleString(),
+      value: (stats.newUsersThisWeek ?? 0).toLocaleString(),
       icon: UserPlus,
       color: "text-emerald-500",
       bgColor: "bg-emerald-500/15",
     },
     {
       title: "Active Listings",
-      value: stats.activeListings.toLocaleString(),
+      value: (stats.activeListings ?? 0).toLocaleString(),
       icon: ShoppingBag,
       color: "text-violet-500",
       bgColor: "bg-violet-500/15",
     },
     {
       title: "Items Sold",
-      value: stats.soldPosts.toLocaleString(),
+      value: (stats.soldPosts ?? 0).toLocaleString(),
       icon: CheckCircle,
       color: "text-teal-500",
       bgColor: "bg-teal-500/15",
     },
     {
       title: "Blocked Listings",
-      value: stats.blockedListings.toLocaleString(),
+      value: (stats.blockedListings ?? 0).toLocaleString(),
       icon: ShieldAlert,
       color: "text-red-500",
       bgColor: "bg-red-500/15",
     },
     {
       title: "Total Reviews",
-      value: stats.totalReviews.toLocaleString(),
+      value: (stats.totalReviews ?? 0).toLocaleString(),
       icon: MessageSquare,
       color: "text-amber-500",
       bgColor: "bg-amber-500/15",
     },
     {
       title: "Avg Rating",
-      value: stats.averageRating > 0 ? `${stats.averageRating} ★` : "N/A",
+      value: (stats.averageRating ?? 0) > 0 ? `${stats.averageRating} ★` : "N/A",
       icon: Star,
       color: "text-yellow-500",
       bgColor: "bg-yellow-500/15",
     },
     {
       title: "Categories",
-      value: stats.totalCategories.toLocaleString(),
+      value: (stats.totalCategories ?? 0).toLocaleString(),
       icon: TrendingUp,
       color: "text-indigo-500",
       bgColor: "bg-indigo-500/15",
@@ -322,13 +322,13 @@ export function AdminDashboard() {
             <CardTitle className="text-lg">Recent Admin Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            {stats.recentActions.length === 0 ? (
+            {(stats.recentActions?.length ?? 0) === 0 ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
                 No recent activity to show.
               </div>
             ) : (
               <div className="space-y-3">
-                {stats.recentActions.map((action, idx) => (
+                {(stats.recentActions ?? []).map((action, idx) => (
                   <div
                     key={idx}
                     className="flex items-center justify-between gap-4 text-sm"
@@ -364,7 +364,7 @@ export function AdminDashboard() {
                   Total Posts
                 </span>
                 <span className="font-semibold">
-                  {stats.totalPosts.toLocaleString()}
+                  {(stats.totalPosts ?? 0).toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -372,7 +372,7 @@ export function AdminDashboard() {
                   Active Users
                 </span>
                 <span className="font-semibold">
-                  {stats.activeUsers.toLocaleString()}
+                  {(stats.activeUsers ?? 0).toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -380,8 +380,8 @@ export function AdminDashboard() {
                   Conversion (Sold / Total)
                 </span>
                 <span className="font-semibold">
-                  {stats.totalPosts > 0
-                    ? `${((stats.soldPosts / stats.totalPosts) * 100).toFixed(1)}%`
+                  {(stats.totalPosts ?? 0) > 0
+                    ? `${(((stats.soldPosts ?? 0) / (stats.totalPosts ?? 1)) * 100).toFixed(1)}%`
                     : "N/A"}
                 </span>
               </div>
@@ -390,8 +390,8 @@ export function AdminDashboard() {
                   User-to-Listing Ratio
                 </span>
                 <span className="font-semibold">
-                  {stats.activeListings > 0
-                    ? `${(stats.totalUsers / stats.activeListings).toFixed(1)}`
+                  {(stats.activeListings ?? 0) > 0
+                    ? `${((stats.totalUsers ?? 0) / (stats.activeListings ?? 1)).toFixed(1)}`
                     : "N/A"}
                 </span>
               </div>

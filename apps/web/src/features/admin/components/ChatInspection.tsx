@@ -28,10 +28,14 @@ export function ChatInspection() {
     try {
       setIsLoading(true);
       const result = await api.admin.getConversations(currentPage, 50);
-      setConvResult(result);
+      setConvResult({
+        conversations: Array.isArray(result?.conversations) ? result.conversations : [],
+        totalCount: result?.totalCount ?? 0,
+      });
     } catch (error) {
       logger.warn("[ChatInspection] Failed to fetch conversations", error);
       toast.error("Failed to fetch conversations");
+      setConvResult({ conversations: [], totalCount: 0 });
     } finally {
       setIsLoading(false);
     }
@@ -54,10 +58,10 @@ export function ChatInspection() {
     }
   };
 
-  const filteredConversations = convResult.conversations.filter(
+  const filteredConversations = (convResult?.conversations || []).filter(
     (c) =>
-      c.user1Name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.user2Name.toLowerCase().includes(searchQuery.toLowerCase()),
+      (c.user1Name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.user2Name || "").toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   // ─── Message Thread View ───
@@ -267,7 +271,7 @@ export function ChatInspection() {
             <Button
               variant="outline"
               size="sm"
-              disabled={convResult.conversations.length < 50 || isLoading}
+              disabled={(convResult?.conversations?.length ?? 0) < 50 || isLoading}
               onClick={() => setPage((p) => p + 1)}
             >
               Next

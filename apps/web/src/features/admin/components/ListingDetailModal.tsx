@@ -7,19 +7,7 @@ import {
 import { Badge } from "../../../shared/ui/badge";
 import { Button } from "../../../shared/ui/button";
 import { Ban, CheckCircle, Eye, ExternalLink } from "lucide-react";
-
-type AdminPostItem = {
-  postId: number;
-  title: string;
-  price: number | null;
-  status: number;
-  categoryId: number;
-  categoryName: string;
-  userId: number;
-  sellerName: string;
-  views: number;
-  createdAt: string;
-};
+import type { AdminPostItem } from "../../../services/api/admin.types";
 
 type ListingDetailModalProps = {
   post: AdminPostItem | null;
@@ -64,7 +52,7 @@ export function ListingDetailModal({
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
               <span className="text-muted-foreground">Post ID</span>
-              <p className="font-medium">#{post.postId}</p>
+              <p className="font-medium">#{post.postID}</p>
             </div>
             <div>
               <span className="text-muted-foreground">Price</span>
@@ -81,7 +69,7 @@ export function ListingDetailModal({
             <div>
               <span className="text-muted-foreground">Views</span>
               <p className="font-medium flex items-center gap-1">
-                <Eye className="w-3.5 h-3.5" /> {post.views.toLocaleString()}
+                <Eye className="w-3.5 h-3.5" /> {(post.views ?? 0).toLocaleString()}
               </p>
             </div>
             <div>
@@ -103,7 +91,7 @@ export function ListingDetailModal({
                 variant="destructive"
                 size="sm"
                 onClick={() => {
-                  onBlock(post.postId);
+                  onBlock(post.postID);
                   onOpenChange(false);
                 }}
               >
@@ -115,7 +103,7 @@ export function ListingDetailModal({
                 variant="default"
                 size="sm"
                 onClick={() => {
-                  onApprove(post.postId);
+                  onApprove(post.postID);
                   onOpenChange(false);
                 }}
               >
@@ -125,7 +113,7 @@ export function ListingDetailModal({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => window.open(`/post/${post.postId}`, "_blank")}
+              onClick={() => window.open(`/post/${post.postID}`, "_blank")}
             >
               <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> View Public
             </Button>

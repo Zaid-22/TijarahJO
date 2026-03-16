@@ -16,6 +16,26 @@ import type {
 // Re-export all types so existing consumers don't break
 export type * from "./admin.types";
 
+/**
+ * Recursively converts all object keys from PascalCase to camelCase.
+ * The backend uses `PropertyNamingPolicy = null` which preserves PascalCase,
+ * but the frontend types expect camelCase.
+ */
+function toCamelCaseKeys<T>(obj: unknown): T {
+  if (Array.isArray(obj)) {
+    return obj.map((item) => toCamelCaseKeys(item)) as T;
+  }
+  if (obj !== null && typeof obj === "object" && !(obj instanceof Date)) {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
+      result[camelKey] = toCamelCaseKeys(value);
+    }
+    return result as T;
+  }
+  return obj as T;
+}
+
 export const adminApi = {
   /**
    * Get main dashboard statistics (Admin only)
@@ -26,7 +46,7 @@ export const adminApi = {
         method: "GET",
       });
       if (response.success && response.data) {
-        return response.data;
+        return toCamelCaseKeys<AdminDashboardStats>(response.data);
       }
       throw new Error("Failed to fetch admin stats");
     } catch (error) {
@@ -50,7 +70,7 @@ export const adminApi = {
         method: "GET",
       });
       if (response.success && response.data) {
-        return response.data;
+        return toCamelCaseKeys(response.data);
       }
       throw new Error("Failed to fetch admin analytics");
     } catch (error) {
@@ -82,7 +102,7 @@ export const adminApi = {
       });
 
       if (response.success && response.data) {
-        return response.data;
+        return toCamelCaseKeys<AdminPostListResult>(response.data);
       }
 
       const errorMessage =
@@ -104,9 +124,17 @@ export const adminApi = {
     status: number,
   ): Promise<boolean> => {
     try {
+      // Backend expects a string: ACTIVE, BLOCKED, or SOLD
+      const STATUS_MAP: Record<number, string> = {
+        0: "ACTIVE",
+        1: "BLOCKED",
+        3: "SOLD",
+      };
+      const statusString = STATUS_MAP[status] ?? "ACTIVE";
+
       const response = await apiRequest(`/admin/posts/${postId}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ Status: statusString }),
       });
 
       return response.success;
@@ -129,7 +157,7 @@ export const adminApi = {
       );
 
       if (response.success && response.data) {
-        return response.data;
+        return toCamelCaseKeys<AdminUserDetails>(response.data);
       }
 
       return null;
@@ -155,7 +183,7 @@ export const adminApi = {
       );
 
       if (response.success && response.data) {
-        return response.data;
+        return toCamelCaseKeys<AdminReviewListResult>(response.data);
       }
 
       const errorMessage =
@@ -206,7 +234,7 @@ export const adminApi = {
       );
 
       if (response.success && response.data) {
-        return response.data;
+        return toCamelCaseKeys<AdminAuditLogResult>(response.data);
       }
 
       const errorMessage =
@@ -231,7 +259,7 @@ export const adminApi = {
         },
       );
       if (response.success && response.data) {
-        return response.data;
+        return toCamelCaseKeys<SystemSettingItem[]>(response.data);
       }
       throw new Error("Failed to fetch settings");
     } catch (error) {
@@ -244,7 +272,7 @@ export const adminApi = {
     try {
       const response = await apiRequest(`/admin/settings/${key}`, {
         method: "PUT",
-        body: JSON.stringify({ value }),
+        body: JSON.stringify({ Value: value }),
       });
       return response.success;
     } catch (error) {
@@ -265,7 +293,7 @@ export const adminApi = {
         { method: "GET" },
       );
       if (response.success && response.data) {
-        return response.data;
+        return toCamelCaseKeys<AdminConversationListResult>(response.data);
       }
       throw new Error("Failed to fetch conversations");
     } catch (error) {
@@ -283,7 +311,7 @@ export const adminApi = {
         { method: "GET" },
       );
       if (response.success && response.data) {
-        return response.data;
+        return toCamelCaseKeys<AdminConversationDetail>(response.data);
       }
       return null;
     } catch (error) {
@@ -303,7 +331,7 @@ export const adminApi = {
         "/admin/locations/cities",
         { method: "GET" },
       );
-      if (response.success && response.data) return response.data;
+      if (response.success && response.data) return toCamelCaseKeys<AdminCityItem[]>(response.data);
       throw new Error("Failed to fetch cities");
     } catch (error) {
       debugError("Failed to fetch cities:", error);
@@ -386,7 +414,7 @@ export const adminApi = {
         `/admin/reports?${params.toString()}`,
         { method: "GET" },
       );
-      if (response.success && response.data) return response.data;
+      if (response.success && response.data) return toCamelCaseKeys<AdminReportListResult>(response.data);
       throw new Error("Failed to fetch reports");
     } catch (error) {
       debugError("Failed to fetch reports:", error);
@@ -401,7 +429,7 @@ export const adminApi = {
   ): Promise<boolean> => {
     const response = await apiRequest(`/admin/reports/${reportId}/status`, {
       method: "PUT",
-      body: JSON.stringify({ status, resolutionNotes }),
+      body: JSON.stringify({ Status: status, ResolutionNotes: resolutionNotes }),
     });
     return response.success;
   },
@@ -414,7 +442,7 @@ export const adminApi = {
         "/admin/permissions",
         { method: "GET" },
       );
-      if (response.success && response.data) return response.data;
+      if (response.success && response.data) return toCamelCaseKeys<PermissionItem[]>(response.data);
       throw new Error("Failed to fetch permissions");
     } catch (error) {
       debugError("adminApi.getPermissions", error);
@@ -468,7 +496,7 @@ export const adminApi = {
         "/admin/fraud/signals",
         { method: "GET" },
       );
-      if (response.success && response.data) return response.data;
+      if (response.success && response.data) return toCamelCaseKeys<FraudSignalsResult>(response.data);
       throw new Error("Failed to fetch fraud signals");
     } catch (error) {
       debugError("adminApi.getFraudSignals", error);

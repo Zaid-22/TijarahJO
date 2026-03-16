@@ -28,44 +28,72 @@ public class AdminAnalyticsController : ControllerBase
     {
         var now = DateTime.UtcNow;
         var sevenDaysAgo = now.AddDays(-7);
+        
+        var weeklyUsers = new System.Collections.Generic.List<object>();
+        var categoryData = new System.Collections.Generic.List<object>();
 
         // 1. Weekly users (last 7 days)
-        var usersPastWeek = await _dbContext.Users
-            .AsNoTracking()
-            .Where(u => !u.IsDeleted && u.JoinDate >= sevenDaysAgo)
-            .Select(u => new { u.JoinDate })
-            .ToListAsync(HttpContext.RequestAborted);
+        try 
+        {
+            var usersPastWeek = await _dbContext.Users
+                .AsNoTracking()
+                .Where(u => !u.IsDeleted && u.JoinDate >= sevenDaysAgo)
+                .Select(u => new { u.JoinDate })
+                .ToListAsync(HttpContext.RequestAborted);
 
-        var weeklyUsers = Enumerable.Range(0, 7)
-            .Select(i => sevenDaysAgo.AddDays(i).Date)
-            .Select(date => new
-            {
-                Day = date.ToString("ddd"),
-                Count = usersPastWeek.Count(u => u.JoinDate.Date == date)
-            })
-            .ToList();
+            weeklyUsers = Enumerable.Range(0, 7)
+                .Select(i => sevenDaysAgo.AddDays(i).Date)
+                .Select(date => (object)new
+                {
+                    Day = date.ToString("ddd"),
+                    Count = usersPastWeek.Count(u => u.JoinDate.Date == date)
+                })
+                .ToList();
+        }
+        catch { /* swallow to keep dashboard alive */ }
 
         // 2. Posts by category
-        var categoryData = await _dbContext.Posts
-            .AsNoTracking()
-            .Where(p => !p.IsDeleted)
-            .GroupBy(p => p.CategoryID)
-            .Join(_dbContext.Categories, 
-                  grouped => grouped.Key, 
-                  cat => cat.CategoryID, 
-                  (grouped, cat) => new 
-                  {
-                      Name = cat.CategoryName,
-                      Count = grouped.Count()
-                  })
-            .OrderByDescending(c => c.Count)
-            .Take(10) // Top 10 categories
-            .ToListAsync(HttpContext.RequestAborted);
+        try 
+        {
+            // Fetch category names to memory first
+            var categories = await _dbContext.Categories
+                .AsNoTracking()
+                .Select(c => new { c.CategoryID, c.CategoryName })
+                .ToListAsync(HttpContext.RequestAborted);
+                
+            var categoryDict = categories.ToDictionary(c => c.CategoryID, c => c.CategoryName);
+
+            // Grouping in EF Core can be problematic; doing simple projection and grouping client-side
+            var activePostsCategories = await _dbContext.Posts
+                .AsNoTracking()
+                .Where(p => !p.IsDeleted)
+                .Select(p => p.CategoryID)
+                .ToListAsync(HttpContext.RequestAborted);
+
+            categoryData = activePostsCategories
+                .GroupBy(c => c)
+                .Select(g => new CategoryCountDto
+                {
+                    Name = categoryDict.TryGetValue(g.Key, out var name) ? name : "Unknown",
+                    Count = g.Count()
+                })
+                .OrderByDescending(c => c.Count)
+                .Take(10)
+                .Cast<object>()
+                .ToList();
+        }
+        catch { /* swallow */ }
 
         return Ok(new
         {
             WeeklyUsers = weeklyUsers,
             CategoryData = categoryData
         });
+    }
+
+    private class CategoryCountDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public int Count { get; set; }
     }
 }

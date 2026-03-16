@@ -42,8 +42,6 @@ interface UseTwoFactorSettingsResult {
   isActionDisabled: boolean;
   isDialogOpen: boolean;
   dialogMode: TwoFactorDialogMode;
-  secretKey: string;
-  otpAuthUri: string;
   code: string;
   error: string;
   isMutationPending: boolean;
@@ -60,10 +58,10 @@ function getTwoFactorCopy(language: Language): TwoFactorCopy {
     return {
       setupTitle: "تفعيل المصادقة الثنائية",
       setupDescription:
-        "افتح تطبيق المصادقة، أضف الحساب بالمفتاح أدناه، ثم أدخل رمز التحقق.",
+        "أدخل رمز التحقق الذي تم إرساله إلى بريدك الإلكتروني.",
       disableTitle: "تعطيل المصادقة الثنائية",
       disableDescription:
-        "أدخل رمزًا صالحًا من تطبيق المصادقة لتأكيد تعطيل المصادقة الثنائية.",
+        "أدخل رمز التحقق الذي تم إرساله إلى بريدك الإلكتروني لتأكيد التعطيل.",
       secretKeyLabel: "المفتاح السري",
       otpUriLabel: "رابط QR (otpauth://)",
       codeLabel: "رمز التحقق",
@@ -73,9 +71,9 @@ function getTwoFactorCopy(language: Language): TwoFactorCopy {
       confirmDisable: "تأكيد التعطيل",
       enable: "تفعيل",
       manage: "إدارة",
-      enabledDescription: "المصادقة الثنائية مفعلة على حسابك.",
+      enabledDescription: "المصادقة الثنائية عبر البريد الإلكتروني مفعلة على حسابك.",
       pendingDescription: "أكمل خطوة التأكيد لتفعيل المصادقة الثنائية.",
-      defaultDescription: "أضف طبقة إضافية من الأمان باستخدام تطبيق المصادقة.",
+      defaultDescription: "أضف طبقة إضافية من الأمان عبر البريد الإلكتروني.",
       copySuccess: "تم النسخ.",
       setupStarted: "تم إنشاء إعداد المصادقة الثنائية.",
       enabledSuccess: "تم تفعيل المصادقة الثنائية.",
@@ -88,10 +86,10 @@ function getTwoFactorCopy(language: Language): TwoFactorCopy {
   return {
     setupTitle: "Enable Two-Factor Authentication",
     setupDescription:
-      "Open your authenticator app, add the account using the key below, then enter the verification code.",
+      "Enter the verification code that was sent to your email.",
     disableTitle: "Disable Two-Factor Authentication",
     disableDescription:
-      "Enter a valid authenticator code to confirm disabling two-factor authentication.",
+      "Enter the verification code that was sent to your email to confirm disabling two-factor authentication.",
     secretKeyLabel: "Secret Key",
     otpUriLabel: "QR URI (otpauth://)",
     codeLabel: "Verification Code",
@@ -101,9 +99,9 @@ function getTwoFactorCopy(language: Language): TwoFactorCopy {
     confirmDisable: "Confirm Disable",
     enable: "Enable",
     manage: "Manage",
-    enabledDescription: "Two-factor authentication is enabled for your account.",
+    enabledDescription: "Email two-factor authentication is enabled for your account.",
     pendingDescription: "Finish verification to complete two-factor activation.",
-    defaultDescription: "Add an extra security layer using an authenticator app.",
+    defaultDescription: "Add an extra security layer using email verification.",
     copySuccess: "Copied.",
     setupStarted: "Two-factor setup generated.",
     enabledSuccess: "Two-factor authentication enabled.",
@@ -124,8 +122,6 @@ export function useTwoFactorSettings({
   const [isTwoFactorDialogOpen, setIsTwoFactorDialogOpen] = useState(false);
   const [twoFactorDialogMode, setTwoFactorDialogMode] =
     useState<TwoFactorDialogMode>("setup");
-  const [twoFactorSecretKey, setTwoFactorSecretKey] = useState("");
-  const [twoFactorOtpAuthUri, setTwoFactorOtpAuthUri] = useState("");
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [twoFactorError, setTwoFactorError] = useState("");
 
@@ -160,8 +156,6 @@ export function useTwoFactorSettings({
   const resetTwoFactorDialogState = useCallback(() => {
     setTwoFactorCode("");
     setTwoFactorError("");
-    setTwoFactorSecretKey("");
-    setTwoFactorOtpAuthUri("");
   }, []);
 
   const onDialogOpenChange = useCallback((open: boolean) => {
@@ -207,9 +201,6 @@ export function useTwoFactorSettings({
       }
 
       setTwoFactorDialogMode("setup");
-      setTwoFactorSecretKey(response.secretKey);
-      setTwoFactorOtpAuthUri(response.otpAuthUri);
-      setTwoFactorCode("");
       setIsTwoFactorDialogOpen(true);
       toast.success(response.message || copy.setupStarted);
       await loadTwoFactorStatus();
@@ -298,8 +289,6 @@ export function useTwoFactorSettings({
     isActionDisabled: isTwoFactorLoading || isTwoFactorMutationPending,
     isDialogOpen: isTwoFactorDialogOpen,
     dialogMode: twoFactorDialogMode,
-    secretKey: twoFactorSecretKey,
-    otpAuthUri: twoFactorOtpAuthUri,
     code: twoFactorCode,
     error: twoFactorError,
     isMutationPending: isTwoFactorMutationPending,

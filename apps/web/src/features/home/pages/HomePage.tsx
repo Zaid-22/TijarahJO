@@ -156,6 +156,16 @@ export function HomePage({
           onViewAll={() => setShowAllPosts(true)}
           viewAllLabel={language === "ar" ? "عرض الكل" : "View All"}
           onRequireAuth={() => setShowLoginPrompt(true)}
+          tags={[
+            { id: "1", label: language === "ar" ? "سيارات للبيع" : "Cars for Sale" },
+            { id: "2", label: language === "ar" ? "سيارات للايجار" : "Cars for Rent" },
+            { id: "3", label: language === "ar" ? "دراجات نارية" : "Motorcycles" },
+            { id: "4", label: language === "ar" ? "صندوق" : "Box" },
+            { id: "5", label: language === "ar" ? "أرقام لوحات" : "License Plates" },
+            { id: "6", label: language === "ar" ? "جنوط" : "Rims" },
+            { id: "7", label: language === "ar" ? "أضوية المركبة" : "Car Lights" },
+          ]}
+          activeTagId="1" // Mock active tag
         />
       )}
 

@@ -105,15 +105,12 @@ export function SettingsPage({
     isActionDisabled: isTwoFactorActionDisabled,
     isDialogOpen: isTwoFactorDialogOpen,
     dialogMode: twoFactorDialogMode,
-    secretKey: twoFactorSecretKey,
-    otpAuthUri: twoFactorOtpAuthUri,
     code: twoFactorCode,
     error: twoFactorError,
     isMutationPending: isTwoFactorMutationPending,
     onTwoFactorAction: handleTwoFactorAction,
     onConfirmDialog: handleConfirmTwoFactorDialog,
     onCodeChange: handleTwoFactorCodeChange,
-    onCopyText: handleTwoFactorCopyText,
     onDialogOpenChange: handleTwoFactorDialogOpenChange,
     onCancelDialog: handleCancelTwoFactorDialog,
   } = useTwoFactorSettings({
@@ -222,12 +219,9 @@ export function SettingsPage({
           onOpenChange={handleTwoFactorDialogOpenChange}
           mode={twoFactorDialogMode}
           copy={twoFactorCopy}
-          secretKey={twoFactorSecretKey}
-          otpAuthUri={twoFactorOtpAuthUri}
           code={twoFactorCode}
           error={twoFactorError}
           isPending={isTwoFactorMutationPending}
-          onCopyText={handleTwoFactorCopyText}
           onCodeChange={handleTwoFactorCodeChange}
           onCancel={handleCancelTwoFactorDialog}
           onConfirm={handleConfirmTwoFactorDialog}

@@ -70,6 +70,7 @@ public static class DTOMapper
             Views = postModel.Views,
             CityId = postModel.CityId,
             AreaId = postModel.AreaId,
+            SellerId = postModel.UserID.ToString(),
             Images = Array.Empty<string>() // Provide base empty array, images generally fetched separately
         };
     }

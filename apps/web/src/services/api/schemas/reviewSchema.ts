@@ -12,6 +12,8 @@ export function parseRawReview(value: unknown): RawReview | null {
     reviewID: record.reviewID,
     ReviewerID: record.ReviewerID,
     reviewerID: record.reviewerID,
+    ReviewerName: record.ReviewerName,
+    reviewerName: record.reviewerName,
     ReviewedUserID: record.ReviewedUserID,
     reviewedUserID: record.reviewedUserID,
     Rating: record.Rating,

@@ -40,6 +40,7 @@ builder.Services.Configure<FileStorageOptions>(builder.Configuration.GetSection(
 builder.Services.Configure<PasswordResetOptions>(builder.Configuration.GetSection("PasswordReset"));
 builder.Services.Configure<PasswordResetEmailOptions>(builder.Configuration.GetSection("PasswordResetEmail"));
 builder.Services.Configure<TwoFactorOptions>(builder.Configuration.GetSection("TwoFactor"));
+builder.Services.Configure<EmailTwoFactorOptions>(builder.Configuration.GetSection("EmailTwoFactor"));
 builder.Services.AddHttpClient<GoogleAuthService>();
 
 // ---------------------------------------------------------------------------
@@ -226,6 +227,7 @@ builder.Services.AddSingleton<ITokenBlacklistService, MemoryTokenBlacklistServic
 builder.Services.AddScoped<IPostsFeedService, PostsFeedService>();
 builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
 builder.Services.AddScoped<IPasswordResetEmailSender, PasswordResetEmailSender>();
+builder.Services.AddScoped<IEmailTwoFactorSender, EmailTwoFactorSender>();
 builder.Services.AddSingleton<TwoFactorService>();
 builder.Services.AddSingleton<IPostImageFileStorageService, LocalPostImageFileStorageService>();
 builder.Services.AddSingleton<IImageModerationService, ImageModerationService>();
