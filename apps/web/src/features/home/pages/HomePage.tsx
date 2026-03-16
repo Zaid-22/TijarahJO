@@ -155,6 +155,7 @@ export function HomePage({
           onPostClick={(id) => onPostClick(id, "featured")}
           onViewAll={() => setShowAllPosts(true)}
           viewAllLabel={language === "ar" ? "عرض الكل" : "View All"}
+          onRequireAuth={() => setShowLoginPrompt(true)}
         />
       )}
 
@@ -191,6 +192,7 @@ export function HomePage({
           onPostClick={(id) => onPostClick(id, "recent")}
           onViewAll={() => setShowAllPosts(true)}
           viewAllLabel={language === "ar" ? "عرض الكل" : "View All"}
+          onRequireAuth={() => setShowLoginPrompt(true)}
         />
       )}
 
@@ -311,6 +313,7 @@ export function HomePage({
                 : undefined,
               onAction: searchQuery ? () => setSearchQuery("") : undefined,
             }}
+            onRequireAuth={() => setShowLoginPrompt(true)}
           />
         )}
 

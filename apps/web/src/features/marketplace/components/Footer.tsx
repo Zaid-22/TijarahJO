@@ -117,7 +117,9 @@ export function Footer({ language }: FooterProps) {
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
         <div className="grid grid-cols-1 gap-10 border-b border-white/10 pb-10 md:grid-cols-2 lg:grid-cols-12 lg:gap-8">
           <section className="space-y-5 lg:col-span-5">
-            <Logo size="md" variant="light" className="drop-shadow-md" />
+            <Link to="/" className="inline-block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary hover:opacity-90 transition-opacity">
+              <Logo size="md" variant="light" className="drop-shadow-md" />
+            </Link>
             <p className="max-w-md text-sm leading-7 text-slate-300">
               {content.aboutText}
             </p>

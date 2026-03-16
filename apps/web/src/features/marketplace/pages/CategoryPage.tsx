@@ -38,6 +38,7 @@ interface CategoryPageProps {
   currentUserId?: string;
   isAuthenticated?: boolean;
   isLoading?: boolean;
+  onRequireAuth?: () => void;
 }
 
 export function CategoryPage({
@@ -52,6 +53,7 @@ export function CategoryPage({
   currentUserId,
   isAuthenticated = false,
   isLoading = false,
+  onRequireAuth,
 }: CategoryPageProps) {
   const isRTL = language === "ar";
   const { categories } = useCatalogCategories();
@@ -206,6 +208,7 @@ export function CategoryPage({
                       ? "لا توجد منشورات متاحة في هذه الفئة"
                       : "No posts available in this category",
                 }}
+                onRequireAuth={onRequireAuth}
               />
             )}
 

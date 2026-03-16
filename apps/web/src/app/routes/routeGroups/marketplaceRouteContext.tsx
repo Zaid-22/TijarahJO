@@ -25,6 +25,7 @@ export interface MarketplaceRouteContextValue {
   postActions: PostActions;
   navigate: NavigateFunction;
   redirectToLogin: () => void;
+  promptLoginModal: () => void;
   navigateToPost: (postId: string, fallbackFromPath: string) => void;
   sharedUserRouteProps: MarketplaceSharedUserRouteProps;
   sharedPostRouteProps: MarketplaceSharedPostRouteProps;

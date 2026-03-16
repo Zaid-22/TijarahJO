@@ -11,6 +11,7 @@ export interface PostCardSharedProps {
   currentUserId?: string;
   hideCategoryBadge?: boolean;
   language?: Language;
+  onRequireAuth?: () => void;
 }
 
 export function usePostCardState({
@@ -21,6 +22,7 @@ export function usePostCardState({
   language,
   onFavoriteToggle,
   onPostClick,
+  onRequireAuth,
 }: PostCardSharedProps) {
   const resolvedLanguage = language || resolveDocumentLanguage();
   const isRTL = resolvedLanguage === "ar";
@@ -57,16 +59,20 @@ export function usePostCardState({
     normalizedCurrentUserId.length > 0 &&
     normalizedSellerId.length > 0 &&
     normalizedCurrentUserId === normalizedSellerId;
-  const showFavoriteButton = isAuthenticated && !isOwner;
+  const showFavoriteButton = !isOwner;
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     if (!isAuthenticated) {
-      deferredToast.error(labels.loginRequiredTitle, {
-        description: labels.loginRequiredDescription,
-        duration: 3000,
-      });
+      if (onRequireAuth) {
+        onRequireAuth();
+      } else {
+        deferredToast.error(labels.loginRequiredTitle, {
+          description: labels.loginRequiredDescription,
+          duration: 3000,
+        });
+      }
       return;
     }
     onFavoriteToggle?.(post.id);
@@ -76,6 +82,26 @@ export function usePostCardState({
     onPostClick?.(post.id);
   };
 
+  const handleCallClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      onRequireAuth?.();
+      return;
+    }
+    if (post.phone) {
+      window.location.href = `tel:${post.phone}`;
+    }
+  };
+
+  const handleMessageClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      onRequireAuth?.();
+      return;
+    }
+    openPost();
+  };
+
   return {
     resolvedLanguage,
     isRTL,
@@ -83,6 +109,8 @@ export function usePostCardState({
     priceLocale,
     showFavoriteButton,
     handleFavoriteClick,
+    handleCallClick,
+    handleMessageClick,
     openPost,
   };
 }

@@ -13,6 +13,7 @@ interface PostCardProps {
   currentUserId?: string;
   hideCategoryBadge?: boolean;
   language?: Language;
+  onRequireAuth?: () => void;
 }
 
 export function PostCard({

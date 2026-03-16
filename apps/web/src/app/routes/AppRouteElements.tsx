@@ -31,6 +31,7 @@ export function renderAppRouteElements({
   saveProfile,
   navigate,
   redirectToLogin,
+  promptLoginModal,
   requireAuth,
 }: AppRouteElementsParams) {
   const appProps: BaseAppRouteProps = {
@@ -53,6 +54,7 @@ export function renderAppRouteElements({
         postActions,
         navigate,
         redirectToLogin,
+        promptLoginModal,
       })}
 
       {renderAccountRouteGroup({
@@ -62,6 +64,7 @@ export function renderAppRouteElements({
         saveProfile,
         navigate,
         requireAuth,
+        promptLoginModal,
       })}
 
       {renderAuthRouteGroup({

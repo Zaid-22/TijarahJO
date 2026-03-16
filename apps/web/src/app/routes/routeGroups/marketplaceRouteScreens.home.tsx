@@ -12,6 +12,7 @@ function HomeMarketplaceRouteScreen() {
     appProps,
     routeState,
     redirectToLogin,
+    promptLoginModal,
     navigate,
     navigateToPost,
     sharedUserRouteProps,
@@ -31,7 +32,7 @@ function HomeMarketplaceRouteScreen() {
         setSearchQuery(query);
         setActiveSearchQuery(query);
       }}
-      setShowLoginPrompt={(show: boolean) => show && redirectToLogin()}
+      setShowLoginPrompt={(show: boolean) => show && promptLoginModal()}
       setShowSellItem={(show: boolean) => {
         if (!show) {
           return;

@@ -33,6 +33,11 @@ public sealed class AdminQueryHandler : IAdminQueryHandler
                     ActiveListings = stats.ActiveListings,
                     BlockedListings = stats.BlockedListings,
                     TotalCategories = stats.TotalCategories,
+                    NewUsersThisWeek = stats.NewUsersThisWeek,
+                    TotalReviews = stats.TotalReviews,
+                    AverageRating = stats.AverageRating,
+                    SoldPosts = stats.SoldPosts,
+                    RecentActions = stats.RecentActions,
                     PendingReports = 0, // Mock for v1
                     TotalRevenue = 0 // Mock for v1
                 }

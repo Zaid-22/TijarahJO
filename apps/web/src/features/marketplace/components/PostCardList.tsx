@@ -14,6 +14,8 @@ export const PostCardList = React.memo(function PostCardList(props: PostCardShar
     priceLocale,
     showFavoriteButton,
     handleFavoriteClick,
+    handleCallClick,
+    handleMessageClick,
     openPost,
   } = usePostCardState(props);
 
@@ -130,10 +132,7 @@ export const PostCardList = React.memo(function PostCardList(props: PostCardShar
               variant="outline" 
               className="h-10 w-10 sm:h-11 sm:w-11 rounded-full border-primary/20 text-primary hover:bg-primary/10 transition-colors" 
               title={isRTL ? "اتصال" : "Call"} 
-              onClick={(e) => { 
-                e.stopPropagation(); 
-                if (post.phone) window.location.href = `tel:${post.phone}`; 
-              }}
+              onClick={handleCallClick}
             >
               <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
@@ -142,10 +141,7 @@ export const PostCardList = React.memo(function PostCardList(props: PostCardShar
               variant="outline" 
               className="h-10 w-10 sm:h-11 sm:w-11 rounded-full border-primary/20 text-primary hover:bg-primary/10 transition-colors" 
               title={isRTL ? "مراسلة" : "Message"} 
-              onClick={(e) => { 
-                e.stopPropagation(); 
-                openPost(); 
-              }}
+              onClick={handleMessageClick}
             >
               <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>

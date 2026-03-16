@@ -9,6 +9,8 @@ import { useSearch } from "../../contexts/SearchContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { useAppSettings } from "../../contexts/AppSettingsContext";
 import { useUserProfileContext } from "../../contexts/UserProfileContext";
+import { LoginPromptModal } from "../../features/auth/components/LoginPromptModal";
+import { useState } from "react";
 
 export function AppRoutes() {
   const navigate = useNavigate();
@@ -37,6 +39,9 @@ export function AppRoutes() {
     userProfile,
     setUserProfile,
   });
+
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const promptLoginModal = () => setShowAuthModal(true);
 
   const redirectToLogin = () => navigate("/login");
   const requireAuth = (element: ReactElement) =>
@@ -68,9 +73,15 @@ export function AppRoutes() {
           saveProfile,
           navigate,
           redirectToLogin,
+          promptLoginModal,
           requireAuth,
         })}
       </Routes>
+      <LoginPromptModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+        language={language}
+      />
     </Suspense>
   );
 }

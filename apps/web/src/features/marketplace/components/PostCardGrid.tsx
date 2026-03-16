@@ -15,6 +15,8 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
     priceLocale,
     showFavoriteButton,
     handleFavoriteClick,
+    handleCallClick,
+    handleMessageClick,
     openPost,
   } = usePostCardState(props);
 
@@ -124,10 +126,7 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
               variant="outline" 
               className="h-8 w-8 sm:h-9 sm:w-9 rounded-full border-primary/20 text-primary hover:bg-primary/10 transition-colors" 
               title={isRTL ? "اتصال" : "Call"} 
-              onClick={(e) => { 
-                e.stopPropagation(); 
-                if (post.phone) window.location.href = `tel:${post.phone}`; 
-              }}
+              onClick={handleCallClick}
             >
               <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Button>
@@ -136,10 +135,7 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
               variant="outline" 
               className="h-8 w-8 sm:h-9 sm:w-9 rounded-full border-primary/20 text-primary hover:bg-primary/10 transition-colors" 
               title={isRTL ? "مراسلة" : "Message"} 
-              onClick={(e) => { 
-                e.stopPropagation(); 
-                openPost(); // Or navigate to messages route eventually
-              }}
+              onClick={handleMessageClick}
             >
               <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Button>

@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { AlertCircle, CheckCircle2, KeyRound, Lock, Mail } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { APP_CONFIG } from "../../../constants/appConfig";
 import { api } from "../../../services/api";
 import type { Language } from "../../../types";
@@ -271,7 +271,9 @@ export function ForgotPasswordPage({ language }: ForgotPasswordPageProps) {
       >
         <div className="w-full max-w-md">
           <div className="text-center mb-6 sm:mb-8">
-            <Logo size="lg" className="mx-auto mb-3 sm:mb-4" />
+            <Link to="/" className="inline-block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary hover:opacity-90 transition-opacity">
+              <Logo size="lg" className="mx-auto mb-3 sm:mb-4" />
+            </Link>
             <h1 className="mb-2 text-2xl sm:text-3xl text-foreground">
               {copy.title}
             </h1>

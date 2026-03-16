@@ -11,7 +11,12 @@ public sealed class DashboardStatsResponse
     public int ActiveListings { get; init; }
     public int BlockedListings { get; init; }
     public int TotalCategories { get; init; }
-    
+    public int NewUsersThisWeek { get; init; }
+    public int TotalReviews { get; init; }
+    public double AverageRating { get; init; }
+    public int SoldPosts { get; init; }
+    public System.Collections.Generic.IReadOnlyList<TijarahJoDB.Application.Abstractions.DataAccess.RecentAdminAction> RecentActions { get; init; } = System.Array.Empty<TijarahJoDB.Application.Abstractions.DataAccess.RecentAdminAction>();
+
     // Optional metrics that can be added later
     public int PendingReports { get; init; } = 0;
     public decimal TotalRevenue { get; init; } = 0;

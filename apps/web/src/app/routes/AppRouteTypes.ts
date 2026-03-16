@@ -59,5 +59,6 @@ export interface AppRouteElementsParams {
   saveProfile: (profile: EditProfileFormProfile) => Promise<void> | void;
   navigate: NavigateFunction;
   redirectToLogin: () => void;
+  promptLoginModal: () => void;
   requireAuth: (element: ReactElement) => ReactElement;
 }

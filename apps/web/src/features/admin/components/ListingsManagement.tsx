@@ -121,10 +121,10 @@ export function ListingsManagement() {
   };
 
   // Simple client-side search across current page items (Phase 1)
-  const filteredPosts = postsResult.posts.filter(
+  const filteredPosts = (postsResult?.posts || []).filter(
     (post) =>
-      post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.sellerName.toLowerCase().includes(searchQuery.toLowerCase()),
+      (post.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (post.sellerName || "").toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   // Bulk select helpers
@@ -396,7 +396,7 @@ export function ListingsManagement() {
             <Button
               variant="outline"
               size="sm"
-              disabled={postsResult.posts.length < 50 || isLoading}
+              disabled={(postsResult?.posts?.length ?? 0) < 50 || isLoading}
               onClick={() => setPage((p) => p + 1)}
             >
               Next
