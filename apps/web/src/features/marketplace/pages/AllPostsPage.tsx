@@ -1,4 +1,5 @@
 import { PostResultsGrid } from "../components/PostResultsGrid";
+import { PostResultsGridSkeleton } from "../components/PostResultsGridSkeleton";
 import { SubpageHeader } from "../../../shared/ui/subpage-header";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { MarketplaceDiscoveryControls } from "../components/MarketplaceDiscoveryControls";
@@ -231,29 +232,35 @@ export function AllPostsPage({
             language === "ar" ? "جاري تحميل النتائج..." : "Loading results..."
           }
         />
-        <PostResultsGrid
-          posts={displayedPosts}
-          viewMode={viewMode}
-          onPostClick={onPostClick}
-          favoriteIds={favoriteIds}
-          onFavoriteToggle={onFavoriteToggle}
-          isAuthenticated={isAuthenticated}
-          currentUserId={currentUserId}
-          currentUserDisplayName={currentUserDisplayName}
-          language={language}
-          emptyState={{
-            title: language === "ar" ? "لم يتم العثور على منشورات" : "No Posts Found",
-            description:
-              language === "ar"
-                ? "حاول تعديل الفلاتر أو مصطلحات البحث للعثور على ما تبحث عنه."
-                : "Try adjusting your filters or search terms to find what you're looking for.",
-            actionLabel: t.clearFilters,
-            onAction: () => {
-              clearSearch();
-              setPriceRange("all");
-            },
-          }}
-        />
+        {isSearching ? (
+          <div className="py-2.5">
+            <PostResultsGridSkeleton viewMode={viewMode} count={12} />
+          </div>
+        ) : (
+          <PostResultsGrid
+            posts={displayedPosts}
+            viewMode={viewMode}
+            onPostClick={onPostClick}
+            favoriteIds={favoriteIds}
+            onFavoriteToggle={onFavoriteToggle}
+            isAuthenticated={isAuthenticated}
+            currentUserId={currentUserId}
+            currentUserDisplayName={currentUserDisplayName}
+            language={language}
+            emptyState={{
+              title: language === "ar" ? "لم يتم العثور على منشورات" : "No Posts Found",
+              description:
+                language === "ar"
+                  ? "حاول تعديل الفلاتر أو مصطلحات البحث للعثور على ما تبحث عنه."
+                  : "Try adjusting your filters or search terms to find what you're looking for.",
+              actionLabel: t.clearFilters,
+              onAction: () => {
+                clearSearch();
+                setPriceRange("all");
+              },
+            }}
+          />
+        )}
         {shouldShowPagination ? (
           <MarketplaceResultsPagination
             currentPage={pagination.currentPage}

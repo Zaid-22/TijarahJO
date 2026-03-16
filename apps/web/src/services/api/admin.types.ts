@@ -48,7 +48,22 @@ export type AdminPostListResult = {
 };
 
 export type AdminUserDetails = {
-  user: Record<string, unknown>;
+  user: {
+    id?: number;
+    userID?: number;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    cityID?: number;
+    areaID?: number;
+    joinDate?: string;
+    joinedDate?: string;
+    roleID?: number;
+    status?: number;
+    avatar?: string;
+    [key: string]: unknown;
+  };
   recentPosts: AdminPostItem[];
   recentReviews: Record<string, unknown>[];
 };

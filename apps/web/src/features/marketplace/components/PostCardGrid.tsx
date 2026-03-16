@@ -2,7 +2,7 @@ import React from "react";
 import { CardContent } from "../../../shared/ui/card";
 import { Button } from "../../../shared/ui/button";
 import { Badge } from "../../../shared/ui/badge";
-import { Heart, MapPin, User, Eye } from "lucide-react";
+import { Heart, MapPin, User, Eye, Phone, MessageCircle, Star } from "lucide-react";
 import { ImageWithFallback } from "./ImageWithFallback";
 import { cn } from "../../../shared/ui/utils";
 import { usePostCardState, type PostCardSharedProps } from "./usePostCardState";
@@ -92,11 +92,17 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
                 {post.area ? `, ${post.area}` : ""}
               </span>
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground sm:gap-2 sm:text-sm">
-              <div className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-muted sm:h-5 sm:w-5">
-                <User className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary" />
+            <div className="flex items-center justify-between gap-1.5 text-xs text-muted-foreground sm:gap-2 sm:text-sm">
+              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                <div className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-muted sm:h-5 sm:w-5">
+                  <User className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary" />
+                </div>
+                <span className="truncate font-medium">{post.seller}</span>
               </div>
-              <span className="truncate">{post.seller}</span>
+              <div className="flex items-center gap-1 text-xs font-medium text-amber-500 flex-shrink-0 bg-amber-500/10 px-1.5 py-0.5 rounded-full">
+                <Star className="w-3 h-3 fill-amber-500" />
+                <span>4.8 <span className="opacity-70 font-normal">(12)</span></span>
+              </div>
             </div>
           </div>
         </div>
@@ -112,15 +118,41 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
               </span>
             </div>
           </div>
-          <Button
-            size="sm"
-            className="flex-shrink-0 px-3 text-xs shadow-md transition-all duration-300 hover:opacity-90 hover:shadow-lg sm:px-4 sm:text-sm md:px-6"
-            onClick={openPost}
-            title={labels.viewDetails}
-          >
-            <span className="hidden sm:inline">{labels.view}</span>
-            <Eye className="w-4 h-4 sm:hidden" />
-          </Button>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <Button 
+              size="icon" 
+              variant="outline" 
+              className="h-8 w-8 sm:h-9 sm:w-9 rounded-full border-primary/20 text-primary hover:bg-primary/10 transition-colors" 
+              title={isRTL ? "اتصال" : "Call"} 
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                if (post.phone) window.location.href = `tel:${post.phone}`; 
+              }}
+            >
+              <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </Button>
+            <Button 
+              size="icon" 
+              variant="outline" 
+              className="h-8 w-8 sm:h-9 sm:w-9 rounded-full border-primary/20 text-primary hover:bg-primary/10 transition-colors" 
+              title={isRTL ? "مراسلة" : "Message"} 
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                openPost(); // Or navigate to messages route eventually
+              }}
+            >
+              <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </Button>
+            <Button
+              size="sm"
+              className="flex-shrink-0 px-3 text-xs shadow-md transition-all duration-300 hover:opacity-90 hover:shadow-lg sm:px-4 sm:text-sm"
+              onClick={openPost}
+              title={labels.viewDetails}
+            >
+              <span className="hidden sm:inline">{labels.view}</span>
+              <Eye className="w-4 h-4 sm:hidden" />
+            </Button>
+          </div>
         </div>
       </CardContent>
     </div>

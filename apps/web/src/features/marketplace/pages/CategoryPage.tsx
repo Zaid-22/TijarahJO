@@ -1,4 +1,5 @@
 import { PostResultsGrid } from "../components/PostResultsGrid";
+import { PostResultsGridSkeleton } from "../components/PostResultsGridSkeleton";
 import { PageShell } from "../../../shared/ui/page-shell";
 
 import { Language } from "../../../translations";
@@ -36,6 +37,7 @@ interface CategoryPageProps {
   currentUserDisplayName?: string;
   currentUserId?: string;
   isAuthenticated?: boolean;
+  isLoading?: boolean;
 }
 
 export function CategoryPage({
@@ -49,6 +51,7 @@ export function CategoryPage({
   currentUserDisplayName,
   currentUserId,
   isAuthenticated = false,
+  isLoading = false,
 }: CategoryPageProps) {
   const isRTL = language === "ar";
   const { categories } = useCatalogCategories();
@@ -176,25 +179,35 @@ export function CategoryPage({
               }
             />
 
-            <PostResultsGrid
-              posts={displayedPosts}
-              viewMode={viewMode}
-              onPostClick={onPostClick}
-              favoriteIds={favoriteIds}
-              onFavoriteToggle={onFavoriteToggle}
-              isAuthenticated={isAuthenticated}
-              currentUserId={currentUserId}
-              currentUserDisplayName={currentUserDisplayName}
-              hideCategoryBadge
-              language={language}
-              emptyState={{
-                title: language === "ar" ? "لا توجد نتائج" : "No results found",
-                description:
-                  language === "ar"
-                    ? "لا توجد منشورات متاحة في هذه الفئة"
-                    : "No posts available in this category",
-              }}
-            />
+            {isLoading ? (
+              <div className="py-2.5">
+                <PostResultsGridSkeleton
+                  viewMode={viewMode}
+                  count={12}
+                  hideCategoryBadge
+                />
+              </div>
+            ) : (
+              <PostResultsGrid
+                posts={displayedPosts}
+                viewMode={viewMode}
+                onPostClick={onPostClick}
+                favoriteIds={favoriteIds}
+                onFavoriteToggle={onFavoriteToggle}
+                isAuthenticated={isAuthenticated}
+                currentUserId={currentUserId}
+                currentUserDisplayName={currentUserDisplayName}
+                hideCategoryBadge
+                language={language}
+                emptyState={{
+                  title: language === "ar" ? "لا توجد نتائج" : "No results found",
+                  description:
+                    language === "ar"
+                      ? "لا توجد منشورات متاحة في هذه الفئة"
+                      : "No posts available in this category",
+                }}
+              />
+            )}
 
             {shouldShowPagination ? (
               <MarketplaceResultsPagination
