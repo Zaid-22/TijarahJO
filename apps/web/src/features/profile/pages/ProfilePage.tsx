@@ -69,7 +69,7 @@ export function ProfilePage({
               onClick={onSettingsClick}
               aria-label={language === "ar" ? "الإعدادات" : "Settings"}
             >
-              <Settings className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+              <Settings className={`w-4 h-4 me-2`} />
               <span className="hidden sm:inline">
                 {language === "ar" ? "الإعدادات" : "Settings"}
               </span>

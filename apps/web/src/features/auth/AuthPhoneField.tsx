@@ -74,7 +74,7 @@ export function AuthPhoneField({
     <div className="space-y-2">
       <label
         htmlFor={id}
-        className={`text-sm text-foreground block w-full ${isRTL ? "text-right" : "text-left"}`}
+        className={`text-sm text-foreground block w-full text-start`}
       >
         {label} {required && <span className="text-destructive">*</span>}
       </label>
@@ -95,7 +95,7 @@ export function AuthPhoneField({
           dir="ltr"
         >
           <span
-            className={`inline-block py-1 ${isRTL ? "border-l border-border pl-3 ml-1" : "border-r border-border pr-3 mr-1"}`}
+            className="inline-block py-1 border-e border-border pe-3 me-1"
           >
             {prefix}
           </span>
@@ -128,7 +128,7 @@ export function AuthPhoneField({
 
       {error && (
         <p
-          className={`mt-1 text-xs text-destructive ${isRTL ? "text-right" : "text-left"}`}
+          className={`mt-1 text-xs text-destructive text-start`}
         >
           {error}
         </p>

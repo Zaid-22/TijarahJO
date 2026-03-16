@@ -45,7 +45,7 @@ interface PostActionDialogsProps {
 
 export function PostActionDialogs({
   language,
-  isRTL,
+
   post,
   sellerPhone,
   showEditDialog,
@@ -249,7 +249,7 @@ export function PostActionDialogs({
                 className="flex-1"
               >
                 <Button className="w-full">
-                  <Phone className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+                  <Phone className={`w-4 h-4 me-2`} />
                   {language === "ar" ? "اتصل الآن" : "Call Now"}
                 </Button>
               </a>

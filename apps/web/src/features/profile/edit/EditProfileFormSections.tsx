@@ -63,7 +63,7 @@ export function EditProfileFormSections({
   onSave,
 }: EditProfileFormSectionsProps) {
   const t = translations[language];
-  const isRTL = language === "ar";
+
   const saveButtonClassName = hasChanges
     ? "bg-primary text-primary-foreground hover:bg-primary/90"
     : "bg-muted text-muted-foreground cursor-not-allowed hover:bg-muted";
@@ -105,7 +105,7 @@ export function EditProfileFormSections({
                   className="border-primary text-primary"
                   onClick={onUploadClick}
                 >
-                  <Upload className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+                  <Upload className={`w-4 h-4 me-2`} />
                   {t.uploadPhoto || "Upload Photo"}
                 </Button>
                 <Button
@@ -114,7 +114,7 @@ export function EditProfileFormSections({
                   className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                   onClick={onPhotoRemove}
                 >
-                  <X className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+                  <X className={`w-4 h-4 me-2`} />
                   {t.removePhoto || "Remove"}
                 </Button>
               </div>
@@ -309,7 +309,7 @@ export function EditProfileFormSections({
           disabled={!hasChanges}
           className={saveButtonClassName}
         >
-          <Save className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+          <Save className={`w-4 h-4 me-2`} />
           {t.saveChanges || "Save Changes"}
         </Button>
       </div>

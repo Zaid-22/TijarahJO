@@ -258,7 +258,7 @@ export function NotificationsPage({
                   }
                 }}
                 className={`w-full text-left rounded-xl border p-4 transition-all hover:shadow-sm ${
-                  isRTL ? "text-right" : ""
+                  "text-start"
                 } ${
                   notification.isRead
                     ? "bg-card border-border"

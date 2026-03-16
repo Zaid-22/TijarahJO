@@ -50,7 +50,7 @@ interface ProfileListingsSectionProps {
 
 export function ProfileListingsSection({
   language,
-  isRTL,
+
   t,
   userProfile,
   activeListings,
@@ -87,11 +87,11 @@ export function ProfileListingsSection({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="active">
-              <Package className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+              <Package className={`w-4 h-4 me-2`} />
               {t.activeListings} ({activeListings.length})
             </TabsTrigger>
             <TabsTrigger value="sold">
-              <Package className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+              <Package className={`w-4 h-4 me-2`} />
               {t.soldListings} ({soldListings.length})
             </TabsTrigger>
           </TabsList>
@@ -102,7 +102,7 @@ export function ProfileListingsSection({
               className="w-full sm:w-auto hover:opacity-90"
               onClick={handleAddPostAction}
             >
-              <Plus className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+              <Plus className={`w-4 h-4 me-2`} />
               {t.addPost}
             </Button>
           ) : (
@@ -113,7 +113,7 @@ export function ProfileListingsSection({
                   className="w-full sm:w-auto hover:opacity-90"
                   onClick={handleAddPostAction}
                 >
-                  <Plus className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+                  <Plus className={`w-4 h-4 me-2`} />
                   {t.addPost}
                 </Button>
               </DialogTrigger>

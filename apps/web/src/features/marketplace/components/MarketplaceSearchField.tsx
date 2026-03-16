@@ -78,7 +78,7 @@ export function MarketplaceSearchField({
         className={cn(
           "border border-border/30 bg-muted/20 shadow-sm backdrop-blur-xl hover:bg-muted/40 hover:border-border/60 hover:shadow-md text-foreground placeholder:text-muted-foreground/70 focus-visible:bg-background focus-visible:border-primary/60 focus-visible:ring-4 focus-visible:ring-primary/10 focus-visible:shadow-lg transition-all duration-300",
           INPUT_SIZE_CLASS[size],
-          isRTL ? "pr-12 pl-12" : "pl-12 pr-12",
+          "px-12",
           inputClassName,
         )}
       />

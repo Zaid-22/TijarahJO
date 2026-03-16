@@ -180,7 +180,7 @@ export function EditProfilePage({
               onClick={handleSave}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              <Save className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+              <Save className={`w-4 h-4 me-2`} />
               {t.saveChanges || "Save Changes"}
             </Button>
           </motion.div>

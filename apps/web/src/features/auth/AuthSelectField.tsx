@@ -63,7 +63,7 @@ export function AuthSelectField({
   const selectTrailingPaddingClassName = isRTL
     ? "pl-12 sm:pl-14"
     : "pr-12 sm:pr-14";
-  const selectTextAlignClassName = isRTL ? "text-right" : "text-left";
+  const selectTextAlignClassName = "text-start";
   const chevronPositionClassName = isRTL
     ? "left-3 sm:left-4"
     : "right-3 sm:right-4";
@@ -72,7 +72,7 @@ export function AuthSelectField({
     <div className="space-y-2">
       <label
         htmlFor={id}
-        className={`text-sm text-foreground block w-full ${isRTL ? "text-right" : "text-left"}`}
+        className={`text-sm text-foreground block w-full text-start`}
       >
         {label} {required && <span className="text-destructive">*</span>}
       </label>
@@ -115,7 +115,7 @@ export function AuthSelectField({
 
       {error && (
         <p
-          className={`mt-1 text-xs text-destructive ${isRTL ? "text-right" : "text-left"}`}
+          className={`mt-1 text-xs text-destructive text-start`}
         >
           {error}
         </p>

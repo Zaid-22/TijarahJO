@@ -39,7 +39,7 @@ interface PostSellerSidebarProps {
 
 export function PostSellerSidebar({
   language,
-  isRTL,
+
   post,
   publicSellerName,
   sellerAvatar,
@@ -116,7 +116,7 @@ export function PostSellerSidebar({
                   disabled={post.status === "SOLD"}
                 >
                   <Edit
-                    className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"} ${
+                    className={`w-4 h-4 me-2 ${
                       post.status !== "SOLD" ? "group-hover:scale-110" : ""
                     } transition-transform`}
                   />
@@ -129,7 +129,7 @@ export function PostSellerSidebar({
                   onClick={onShowDeleteDialog}
                 >
                   <Trash2
-                    className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"} group-hover:scale-110 transition-transform`}
+                    className={`w-4 h-4 me-2 group-hover:scale-110 transition-transform`}
                   />
                   {labels.removePost}
                 </Button>
@@ -157,7 +157,7 @@ export function PostSellerSidebar({
                       type="button"
                       onClick={onShowPhoneDialog}
                     >
-                      <Phone className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+                      <Phone className={`w-4 h-4 me-2`} />
                       {labels.callSeller}
                     </Button>
 
@@ -167,7 +167,7 @@ export function PostSellerSidebar({
                       onClick={onChatWithSeller}
                     >
                       <MessageSquare
-                        className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`}
+                        className={`w-4 h-4 me-2`}
                       />
                       {labels.chatWithSeller}
                     </Button>

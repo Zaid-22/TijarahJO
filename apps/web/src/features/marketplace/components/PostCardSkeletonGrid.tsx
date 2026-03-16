@@ -9,8 +9,7 @@ interface PostCardSkeletonGridProps {
 }
 
 export const PostCardSkeletonGrid = React.memo(
-  function PostCardSkeletonGrid({ hideCategoryBadge, language = "en" }: PostCardSkeletonGridProps) {
-    const isRTL = language === "ar";
+  function PostCardSkeletonGrid({ hideCategoryBadge }: PostCardSkeletonGridProps) {
     
     return (
       <div className="relative flex h-[380px] sm:h-[400px] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -56,7 +55,7 @@ export const PostCardSkeletonGrid = React.memo(
 
           <div className="mt-auto flex items-center justify-between border-t border-border pt-2 sm:pt-3">
             {/* Price */}
-            <div className={cn("flex-1 min-w-0", isRTL ? "ml-2" : "mr-2")}>
+            <div className={cn("flex-1 min-w-0", "me-2")}>
               <div className="flex items-baseline gap-1">
                 <Skeleton className="h-6 sm:h-7 w-20" />
                 <Skeleton className="h-4 sm:h-5 w-8" />

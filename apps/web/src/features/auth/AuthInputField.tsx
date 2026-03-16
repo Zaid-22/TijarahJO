@@ -68,13 +68,13 @@ export function AuthInputField({
       ? "border-primary ring-4 ring-primary/15 focus-visible:border-primary"
       : "border-border";
   const iconPositionClassName = isRTL ? "right-3 sm:right-4" : "left-3 sm:left-4";
-  const inputLeadingPaddingClassName = isRTL ? "pr-11 sm:pr-16" : "pl-11 sm:pl-16";
+  const inputLeadingPaddingClassName = "pe-11 sm:pe-16";
   const inputTrailingPaddingClassName = showToggle
     ? isRTL
       ? "pl-12 sm:pl-14"
       : "pr-12 sm:pr-14"
     : "";
-  const inputTextAlignClassName = isRTL ? "text-right" : "text-left";
+  const inputTextAlignClassName = "text-start";
   const togglePositionClassName = isRTL ? "left-3 sm:left-4" : "right-3 sm:right-4";
 
   const inputType = showToggle ? (showValue ? "text" : "password") : type;
@@ -83,7 +83,7 @@ export function AuthInputField({
     <div className="space-y-2">
       <label
         htmlFor={id}
-        className={`text-sm text-foreground ${isRTL ? "text-right" : "text-left"}`}
+        className={`text-sm text-foreground text-start`}
       >
         {label} {required && <span className="text-destructive">*</span>}
       </label>

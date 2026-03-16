@@ -59,14 +59,14 @@ export function SubpageHeader({
               onClick={onBack}
               className={cn(
                 "hover:bg-primary/10 text-primary",
-                isRTL ? "-mr-2" : "-ml-2",
+                "-ms-2",
               )}
               aria-label={backLabel || (isRTL ? "العودة" : "Back")}
             >
               <ArrowLeft className={`w-5 h-5 ${isRTL ? "rotate-180" : ""}`} />
               {backLabel ? (
                 <span
-                  className={cn("hidden sm:inline", isRTL ? "mr-2" : "ml-2")}
+                  className={cn("hidden sm:inline", "ms-2")}
                 >
                   {backLabel}
                 </span>

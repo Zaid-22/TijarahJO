@@ -21,7 +21,6 @@ export function ChatList({
   onSelectUser,
   language = "en",
 }: ChatListProps) {
-  const isRTL = language === "ar";
   const labels = {
     messages: language === "ar" ? "الرسائل" : "Messages",
     noConversations:
@@ -51,7 +50,7 @@ export function ChatList({
               onClick={() => onSelectUser(chat.userId)}
               className={cn(
                 "group flex w-full items-center border-b border-border/40 px-4 py-3 transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-                isRTL ? "text-right" : "text-left",
+                "text-start",
                 selectedUserId === chat.userId
                   ? "bg-primary/10"
                   : "",
@@ -61,7 +60,7 @@ export function ChatList({
               <div
                 className={cn(
                   "flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border/60 bg-muted text-muted-foreground transition-colors group-hover:text-foreground",
-                  isRTL ? "ml-3" : "mr-3",
+                  "me-3",
                 )}
               >
                 <User className="h-6 w-6" />
@@ -81,7 +80,7 @@ export function ChatList({
                   <span
                     className={cn(
                       "whitespace-nowrap text-xs text-muted-foreground",
-                      isRTL ? "mr-2" : "ml-2",
+                      "ms-2",
                     )}
                   >
                     {new Date(chat.timestamp).toLocaleTimeString(dateLocale, {
@@ -106,7 +105,7 @@ export function ChatList({
                 <div
                   className={cn(
                     "h-2.5 w-2.5 rounded-full bg-primary",
-                    isRTL ? "mr-2" : "ml-2",
+                    "ms-2",
                   )}
                 ></div>
               )}

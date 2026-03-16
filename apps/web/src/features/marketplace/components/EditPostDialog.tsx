@@ -65,7 +65,7 @@ export function EditPostDialog({
   onCancel,
   language = "en",
 }: EditPostDialogProps) {
-  const isRTL = language === "ar";
+
   const objectUrlsRef = useRef<Set<string>>(new Set());
 
   const [name, setName] = useState(post.name);
@@ -199,10 +199,10 @@ export function EditPostDialog({
   return (
     <DialogContent className="max-w-2xl max-h-dialog-90vh overflow-y-auto">
       <DialogHeader>
-        <DialogTitle className={isRTL ? "text-right" : ""}>
+        <DialogTitle className={"text-start"}>
           {language === "ar" ? "تعديل المنشور" : "Edit Post"}
         </DialogTitle>
-        <DialogDescription className={isRTL ? "text-right" : ""}>
+        <DialogDescription className={"text-start"}>
           {language === "ar"
             ? "قم بتحديث معلومات منشورك أدناه"
             : "Update your post information below"}
@@ -213,7 +213,7 @@ export function EditPostDialog({
         <div className="space-y-2">
           <Label
             htmlFor="edit-name"
-            className={isRTL ? "text-right block" : ""}
+            className={"text-start block"}
           >
             {language === "ar" ? "اسم المنشور" : "Post Name"} *
           </Label>
@@ -225,14 +225,14 @@ export function EditPostDialog({
               language === "ar" ? "مثال: iPhone 13 Pro" : "e.g. iPhone 13 Pro"
             }
             required
-            className={isRTL ? "text-right" : ""}
+            className={"text-start"}
           />
         </div>
 
         <div className="space-y-2">
           <Label
             htmlFor="edit-price"
-            className={isRTL ? "text-right block" : ""}
+            className={"text-start block"}
           >
             {language === "ar" ? "السعر (دينار أردني)" : "Price (JOD)"} *
           </Label>
@@ -245,21 +245,21 @@ export function EditPostDialog({
             required
             min="0.01"
             step="0.01"
-            className={isRTL ? "text-right" : ""}
+            className={"text-start"}
           />
         </div>
 
         <div className="space-y-2">
           <Label
             htmlFor="edit-category"
-            className={isRTL ? "text-right block" : ""}
+            className={"text-start block"}
           >
             {language === "ar" ? "الفئة" : "Category"} *
           </Label>
           <Select value={category} onValueChange={setCategory} required>
             <SelectTrigger
               id="edit-category"
-              className={isRTL ? "text-right" : ""}
+              className={"text-start"}
             >
               <SelectValue
                 placeholder={
@@ -280,14 +280,14 @@ export function EditPostDialog({
         <div className="space-y-2">
           <Label
             htmlFor="edit-location"
-            className={isRTL ? "text-right block" : ""}
+            className={"text-start block"}
           >
             {language === "ar" ? "المدينة" : "City"} *
           </Label>
           <Select value={location} onValueChange={setLocation} required>
             <SelectTrigger
               id="edit-location"
-              className={isRTL ? "text-right" : ""}
+              className={"text-start"}
             >
               <SelectValue
                 placeholder={language === "ar" ? "اختر المدينة" : "Select city"}
@@ -306,7 +306,7 @@ export function EditPostDialog({
         <div className="space-y-2">
           <Label
             htmlFor="edit-area"
-            className={isRTL ? "text-right block" : ""}
+            className={"text-start block"}
           >
             {language === "ar" ? "المنطقة" : "Area"}
           </Label>
@@ -315,12 +315,12 @@ export function EditPostDialog({
             value={area}
             onChange={(e) => setArea(e.target.value)}
             placeholder={language === "ar" ? "مثال: عمان" : "e.g. Amman"}
-            className={isRTL ? "text-right" : ""}
+            className={"text-start"}
           />
         </div>
 
         <div className="space-y-2">
-          <Label className={isRTL ? "text-right block" : ""}>
+          <Label className={"text-start block"}>
             {language === "ar" ? "صور المنشور" : "Post Images"}
           </Label>
 
@@ -401,7 +401,7 @@ export function EditPostDialog({
         <div className="space-y-2">
           <Label
             htmlFor="edit-description"
-            className={isRTL ? "text-right block" : ""}
+            className={"text-start block"}
           >
             {language === "ar" ? "الوصف (اختياري)" : "Description (Optional)"}
           </Label>
@@ -415,7 +415,7 @@ export function EditPostDialog({
                 : "Add a detailed description of your post..."
             }
             rows={4}
-            className={isRTL ? "text-right" : ""}
+            className={"text-start"}
           />
         </div>
 
