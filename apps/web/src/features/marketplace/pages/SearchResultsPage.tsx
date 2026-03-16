@@ -10,6 +10,7 @@ import {
 } from "../components/AdvancedSearchFilters";
 
 import { PostResultsGrid } from "../components/PostResultsGrid";
+import { PostResultsGridSkeleton } from "../components/PostResultsGridSkeleton";
 
 import { Language } from "../../../translations";
 import { Post } from "../../../types";
@@ -383,33 +384,39 @@ export function SearchResultsPage({
               }
             />
 
-            <PostResultsGrid
-              posts={displayedPosts}
-              viewMode={viewMode}
-              onPostClick={onPostClick}
-              favoriteIds={favoriteIds}
-              onFavoriteToggle={onFavoriteToggle}
-              isAuthenticated={isAuthenticated}
-              currentUserId={currentUserId}
-              currentUserDisplayName={currentUserDisplayName}
-              language={language}
-              animated
-              emptyState={{
-                title: language === "ar" ? "لا توجد نتائج" : "No results found",
-                description:
-                  language === "ar"
-                    ? `لم نتمكن من العثور على أي منشورات تطابق "${normalizedSearchQuery}"`
-                    : `We couldn't find any posts matching "${normalizedSearchQuery}"`,
-                actionLabel:
-                  language === "ar"
-                    ? "العودة إلى السوق"
-                    : "Back to Marketplace",
-                onAction: () => {
-                  clearSearch();
-                  onBack();
-                },
-              }}
-            />
+            {isSearching ? (
+              <div className="py-2.5">
+                <PostResultsGridSkeleton viewMode={viewMode} count={8} />
+              </div>
+            ) : (
+              <PostResultsGrid
+                posts={displayedPosts}
+                viewMode={viewMode}
+                onPostClick={onPostClick}
+                favoriteIds={favoriteIds}
+                onFavoriteToggle={onFavoriteToggle}
+                isAuthenticated={isAuthenticated}
+                currentUserId={currentUserId}
+                currentUserDisplayName={currentUserDisplayName}
+                language={language}
+                animated
+                emptyState={{
+                  title: language === "ar" ? "لا توجد نتائج" : "No results found",
+                  description:
+                    language === "ar"
+                      ? `لم نتمكن من العثور على أي منشورات تطابق "${normalizedSearchQuery}"`
+                      : `We couldn't find any posts matching "${normalizedSearchQuery}"`,
+                  actionLabel:
+                    language === "ar"
+                      ? "العودة إلى السوق"
+                      : "Back to Marketplace",
+                  onAction: () => {
+                    clearSearch();
+                    onBack();
+                  },
+                }}
+              />
+            )}
             {shouldShowPagination ? (
               <MarketplaceResultsPagination
                 currentPage={pagination.currentPage}

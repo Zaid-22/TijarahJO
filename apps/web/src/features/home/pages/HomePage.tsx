@@ -1,6 +1,7 @@
 import { useMemo } from "react";
-import { Loader2, Globe, Star } from "lucide-react";
+import { Globe, Star } from "lucide-react";
 import { PostResultsGrid } from "../../marketplace/components/PostResultsGrid";
+import { PostResultsGridSkeleton } from "../../marketplace/components/PostResultsGridSkeleton";
 import { MarketplaceResultsPagination } from "../../marketplace/components/MarketplaceResultsPagination";
 import { Language, Post, ViewMode } from "../../../types";
 import { APP_CONFIG } from "../../../constants/appConfig";
@@ -250,18 +251,12 @@ export function HomePage({
 
         {/* Loading State */}
         {isLoadingPosts && (
-          <div className="col-span-full flex flex-col items-center justify-center py-16 px-4">
-            <Loader2 className="mb-4 h-16 w-16 animate-spin text-primary" />
-            <h3 className="mb-2 text-foreground">
-              {language === "ar"
-                ? "جارٍ تحميل المنشورات..."
-                : "Loading posts..."}
-            </h3>
-            <p className="max-w-md text-center text-muted-foreground">
-              {language === "ar"
-                ? "جاري جلب البيانات من قاعدة البيانات"
-                : "Fetching data from database"}
-            </p>
+          <div className="py-2.5">
+            <PostResultsGridSkeleton
+              viewMode={viewMode}
+              count={12}
+              hideCategoryBadge={false}
+            />
           </div>
         )}
 

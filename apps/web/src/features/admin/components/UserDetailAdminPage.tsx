@@ -86,7 +86,7 @@ export function UserDetailAdminPage() {
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
           User Details{" "}
           <span className="text-muted-foreground font-normal text-lg">
-            #{user.id || user.userID}
+            #{String(user.id || (user as any).userID)}
           </span>
         </h1>
       </div>
@@ -102,7 +102,7 @@ export function UserDetailAdminPage() {
               <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center overflow-hidden border border-border">
                 {user.avatar ? (
                   <img
-                    src={user.avatar}
+                    src={String(user.avatar)}
                     alt="User avatar"
                     className="w-full h-full object-cover"
                   />
@@ -116,24 +116,24 @@ export function UserDetailAdminPage() {
               <div className="flex items-center gap-3 text-sm">
                 <User className="w-4 h-4 text-muted-foreground" />
                 <span className="font-medium">
-                  {user.firstName} {user.lastName}
+                  {String(user.firstName)} {String(user.lastName)}
                 </span>
               </div>
 
               <div className="flex items-center gap-3 text-sm">
                 <Mail className="w-4 h-4 text-muted-foreground" />
-                <span className="break-all">{user.email}</span>
+                <span className="break-all">{String(user.email)}</span>
               </div>
 
               <div className="flex items-center gap-3 text-sm">
                 <Phone className="w-4 h-4 text-muted-foreground" />
-                <span>{user.phone || "No phone number"}</span>
+                <span>{user.phone ? String(user.phone) : "No phone number"}</span>
               </div>
 
               <div className="flex items-center gap-3 text-sm">
                 <MapPin className="w-4 h-4 text-muted-foreground" />
                 <span>
-                  Location IDs: {user.cityID || "None"}, {user.areaID || "None"}
+                  Location IDs: {user.cityID ? String(user.cityID) : "None"}, {user.areaID ? String(user.areaID) : "None"}
                 </span>
               </div>
 
@@ -142,7 +142,7 @@ export function UserDetailAdminPage() {
                 <span>
                   Joined{" "}
                   {new Date(
-                    user.joinDate || user.joinedDate,
+                    String(user.joinDate || user.joinedDate || new Date().toISOString())
                   ).toLocaleDateString()}
                 </span>
               </div>
@@ -182,7 +182,7 @@ export function UserDetailAdminPage() {
                 </div>
               ) : (
                 <div className="divide-y divide-border">
-                  {recentPosts.map((post) => (
+                  {recentPosts.map((post: any) => (
                     <div
                       key={post.postId}
                       className="py-3 flex justify-between items-center"
@@ -222,15 +222,15 @@ export function UserDetailAdminPage() {
                 </div>
               ) : (
                 <div className="divide-y divide-border">
-                  {recentReviews.map((review) => (
+                  {recentReviews.map((review: any) => (
                     <div key={review.reviewID || review.id} className="py-3">
                       <div className="flex justify-between items-start mb-1">
                         <div className="flex items-center gap-1 text-yellow-500">
-                          {"★".repeat(review.rating)}
-                          {"☆".repeat(5 - review.rating)}
+                          {"★".repeat(review.rating || 0)}
+                          {"☆".repeat(Math.max(0, 5 - (review.rating || 0)))}
                         </div>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(review.createdAt).toLocaleDateString()}
+                          {new Date(review.createdAt || new Date()).toLocaleDateString()}
                         </span>
                       </div>
                       <p className="text-sm italic">

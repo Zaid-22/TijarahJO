@@ -1,6 +1,6 @@
 # Frontend File Assessment (2026-02-17)
 
-Scope: `apps/web/src` static assessment (83 files).
+Scope: `TijarahJo-frontend/src` static assessment (83 files).
 
 ## Summary
 
@@ -130,12 +130,12 @@ Scope: `apps/web/src` static assessment (83 files).
 
 ## Phase 4 Update (2026-02-17)
 
-- Added missing `apps/web/docs/README.md` to match references in
-  `apps/web/README.md`.
-- Archived historical frontend fix docs into `apps/web/docs/archive/`.
+- Added missing `TijarahJo-frontend/docs/README.md` to match references in
+  `TijarahJo-frontend/README.md`.
+- Archived historical frontend fix docs into `TijarahJo-frontend/docs/archive/`.
 - Replaced archived frontend docs at original paths with short pointer stubs to
   preserve path stability.
-- Set `apps/web/docs/ID_SYSTEM.md` as the active canonical frontend
+- Set `TijarahJo-frontend/docs/ID_SYSTEM.md` as the active canonical frontend
   technical doc.
 
 ## Phase 5 Update (2026-02-17)

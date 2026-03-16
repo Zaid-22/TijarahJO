@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "../../../shared/ui/button";
 import { Badge } from "../../../shared/ui/badge";
-import { Heart, MapPin, User, Eye } from "lucide-react";
+import { Heart, MapPin, User, Eye, Phone, MessageCircle, Star } from "lucide-react";
 import { ImageWithFallback } from "./ImageWithFallback";
 import { cn } from "../../../shared/ui/utils";
 import { usePostCardState, type PostCardSharedProps } from "./usePostCardState";
@@ -76,11 +76,17 @@ export const PostCardList = React.memo(function PostCardList(props: PostCardShar
                     {post.area ? `, ${post.area}` : ""}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-primary">
-                    <User className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-primary">
+                      <User className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="font-medium">{post.seller}</span>
                   </div>
-                  <span>{post.seller}</span>
+                  <div className="flex items-center gap-1 text-xs font-medium text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full">
+                    <Star className="w-3.5 h-3.5 fill-amber-500" />
+                    <span>4.8 <span className="opacity-70 font-normal">(12)</span></span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -118,15 +124,41 @@ export const PostCardList = React.memo(function PostCardList(props: PostCardShar
               {labels.currency}
             </span>
           </div>
-          <Button
-            size="lg"
-            className="px-8 shadow-md transition-all duration-300 hover:opacity-90 hover:shadow-lg"
-            onClick={openPost}
-            title={labels.viewDetails}
-          >
-            <Eye className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
-            {labels.viewDetails}
-          </Button>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Button 
+              size="icon" 
+              variant="outline" 
+              className="h-10 w-10 sm:h-11 sm:w-11 rounded-full border-primary/20 text-primary hover:bg-primary/10 transition-colors" 
+              title={isRTL ? "اتصال" : "Call"} 
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                if (post.phone) window.location.href = `tel:${post.phone}`; 
+              }}
+            >
+              <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
+            </Button>
+            <Button 
+              size="icon" 
+              variant="outline" 
+              className="h-10 w-10 sm:h-11 sm:w-11 rounded-full border-primary/20 text-primary hover:bg-primary/10 transition-colors" 
+              title={isRTL ? "مراسلة" : "Message"} 
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                openPost(); 
+              }}
+            >
+              <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+            </Button>
+            <Button
+              size="lg"
+              className="px-6 sm:px-8 shadow-md transition-all duration-300 hover:opacity-90 hover:shadow-lg"
+              onClick={openPost}
+              title={labels.viewDetails}
+            >
+              <Eye className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+              <span className="hidden sm:inline">{labels.viewDetails}</span>
+            </Button>
+          </div>
         </div>
       </div>
     </div>
