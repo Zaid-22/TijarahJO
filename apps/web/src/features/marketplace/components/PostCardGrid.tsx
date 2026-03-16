@@ -108,7 +108,7 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
         </div>
 
         <div className="mt-auto flex items-center justify-between border-t border-border pt-2 sm:pt-3">
-          <div className={cn("flex-1 min-w-0", isRTL ? "ml-2" : "mr-2")}>
+          <div className={cn("flex-1 min-w-0", "me-2")}>
             <div className="flex flex-wrap items-baseline gap-1">
               <span className="text-lg sm:text-xl md:text-2xl font-semibold text-foreground">
                 {post.price.toLocaleString(priceLocale)}

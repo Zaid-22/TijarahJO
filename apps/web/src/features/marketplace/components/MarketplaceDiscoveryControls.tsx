@@ -79,7 +79,7 @@ export function MarketplaceDiscoveryControls({
             onClick={mobileFilters.onToggle}
             className="lg:hidden border-primary text-primary"
           >
-            <SlidersHorizontal className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+            <SlidersHorizontal className={cn("w-4 h-4", "me-2")} />
             {mobileFilters.toggleLabel}
           </Button>
         ) : null}

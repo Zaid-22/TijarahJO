@@ -158,7 +158,7 @@ export function Header({
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
                 <span
-                  className={`text-sm font-semibold ${isRTL ? "mr-1 sm:mr-2" : "ml-1 sm:ml-2"}`}
+                  className={`text-sm font-semibold ms-1 sm:ms-2`}
                 >
                   <span className="sr-only sm:not-sr-only">{t.sellItem}</span>
                   <span className="sm:hidden" aria-hidden="true">

@@ -76,7 +76,7 @@ export function PostSummaryCard({
               <span className="text-3xl font-semibold text-foreground">
                 {post.price.toLocaleString()}
               </span>
-              <span className={cn("text-lg text-muted-foreground", isRTL ? "mr-2" : "ml-2")}>JOD</span>
+              <span className={cn("text-lg text-muted-foreground", "ms-2")}>JOD</span>
             </div>
           </div>
         </div>

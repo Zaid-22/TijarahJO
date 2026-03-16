@@ -138,7 +138,7 @@ export function ForgotPasswordPage({ language }: ForgotPasswordPageProps) {
     blockedPathnames: ["/forgot-password"],
   });
   const iconPositionClass = isRTL ? "right-3" : "left-3";
-  const inputPaddingClass = isRTL ? "pr-9" : "pl-9";
+  const inputPaddingClass = "ps-9";
 
   const [step, setStep] = useState<ResetStep>("request");
   const [email, setEmail] = useState("");

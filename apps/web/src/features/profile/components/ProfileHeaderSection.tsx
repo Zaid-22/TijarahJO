@@ -13,7 +13,7 @@ interface ProfileHeaderSectionProps {
 
 export function ProfileHeaderSection({
   userProfile,
-  isRTL,
+
   t,
   activeListingsCount,
   onEditProfileClick,
@@ -56,7 +56,7 @@ export function ProfileHeaderSection({
                 className="bg-background text-primary hover:bg-muted"
                 onClick={onEditProfileClick}
               >
-                <Edit className={`w-4 h-4 ${isRTL ? "ml-1" : "mr-1"}`} />
+                <Edit className={`w-4 h-4 me-1`} />
                 <span className="hidden xs:inline">{t.editProfile}</span>
                 <span className="xs:hidden">{t.editProfile}</span>
               </Button>

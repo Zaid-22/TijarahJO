@@ -22,7 +22,7 @@ interface HelpSectionProps {
 
 export function HelpSection({
   text,
-  isRTL,
+
   onOpenHelpCenter,
   onContactSupport,
   onReportIssue,
@@ -48,7 +48,7 @@ export function HelpSection({
           className="w-full justify-start"
           onClick={onOpenHelpCenter}
         >
-          <HelpCircle className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+          <HelpCircle className={`w-4 h-4 me-2`} />
           {text.helpCenter}
         </Button>
         <Button
@@ -56,7 +56,7 @@ export function HelpSection({
           className="w-full justify-start"
           onClick={onContactSupport}
         >
-          <Mail className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+          <Mail className={`w-4 h-4 me-2`} />
           {text.contactSupport}
         </Button>
         <Button
@@ -64,7 +64,7 @@ export function HelpSection({
           className="w-full justify-start"
           onClick={onReportIssue}
         >
-          <Shield className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+          <Shield className={`w-4 h-4 me-2`} />
           {text.reportIssue}
         </Button>
         <Separator />

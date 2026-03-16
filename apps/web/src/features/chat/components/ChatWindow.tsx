@@ -36,7 +36,6 @@ export function ChatWindow({
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
-  const isRTL = language === "ar";
   const labels = {
     back: language === "ar" ? "العودة" : "Back",
     online: language === "ar" ? "متصل" : "Online",
@@ -181,7 +180,7 @@ export function ChatWindow({
           variant="ghost"
           size="sm"
           onClick={onBack}
-          className={`md:hidden ${isRTL ? "ml-2" : "mr-2"}`}
+          className={`md:hidden me-2`}
           aria-label={labels.back}
         >
           ←
@@ -189,7 +188,7 @@ export function ChatWindow({
         <div
           className={cn(
             "flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-primary/10 text-primary",
-            isRTL ? "ml-3" : "mr-3",
+            "me-3",
           )}
         >
           <User className="h-6 w-6" />

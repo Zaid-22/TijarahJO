@@ -118,7 +118,7 @@ export const PostCardList = React.memo(function PostCardList(props: PostCardShar
             <span
               className={cn(
                 "text-lg text-muted-foreground",
-                isRTL ? "mr-2" : "ml-2",
+                "ms-2",
               )}
             >
               {labels.currency}
@@ -155,7 +155,7 @@ export const PostCardList = React.memo(function PostCardList(props: PostCardShar
               onClick={openPost}
               title={labels.viewDetails}
             >
-              <Eye className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+              <Eye className={`w-4 h-4 me-2`} />
               <span className="hidden sm:inline">{labels.viewDetails}</span>
             </Button>
           </div>

@@ -317,7 +317,7 @@ export function LoginForm({
             )}
 
             {!isTwoFactorStep && !isSignUp && (
-              <div className={isRTL ? "text-left" : "text-right"}>
+              <div className={"text-end"}>
                 <button
                   type="button"
                   onClick={onForgotPassword}

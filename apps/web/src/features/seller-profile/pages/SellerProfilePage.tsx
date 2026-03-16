@@ -232,7 +232,7 @@ export function SellerProfilePage() {
                 }
                 className="shadow-sm hover:shadow-md transition-all rounded-xl bg-primary hover:bg-primary/90"
               >
-                <MessageSquare className={`w-4 h-4 ${isRTL ? "ml-2" : "mr-2"}`} />
+                <MessageSquare className={`w-4 h-4 me-2`} />
                 {labels.chatWithSeller}
               </Button>
             </div>
