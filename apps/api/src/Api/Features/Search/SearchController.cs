@@ -1,10 +1,10 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDBAPI.Common.Utils;
-using TijarahJoDBAPI.Contracts.Responses;
+using TijarahJo.Api.Common.Utils;
+using TijarahJo.Api.Contracts.Responses;
 
-namespace TijarahJoDBAPI.Features.Search;
+namespace TijarahJo.Api.Features.Search;
 
 [ApiController]
 [ApiVersion("1.0")]

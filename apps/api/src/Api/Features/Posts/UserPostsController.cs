@@ -11,12 +11,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDBAPI.Common.Services;
-using TijarahJoDBAPI.Common.Utils;
-using TijarahJoDBAPI.Contracts.Requests;
-using TijarahJoDBAPI.Contracts.Responses;
+using TijarahJo.Api.Common.Services;
+using TijarahJo.Api.Common.Utils;
+using TijarahJo.Api.Contracts.Requests;
+using TijarahJo.Api.Contracts.Responses;
 
-namespace TijarahJoDBAPI.Features.Posts
+namespace TijarahJo.Api.Features.Posts
 {
     [ApiController]
     [ApiVersion("1.0")]
@@ -43,12 +43,7 @@ namespace TijarahJoDBAPI.Features.Posts
             _postStatusTransitions = postStatusTransitions;
         }
 
-        public sealed class PostsFeedRequest
-        {
-            public int? Page { get; set; } = 1;
-            public int? Limit { get; set; } = 20;
-            public bool? IncludeDeleted { get; set; } = false;
-        }
+
 
         // --- Feed ---
 
@@ -111,11 +106,7 @@ namespace TijarahJoDBAPI.Features.Posts
                 return this.ToPostReadProblem(result.FailureReason, result.Message, "Error incrementing view count");
             }
 
-            return Ok(new PostViewIncrementResponse
-            {
-                Message = "View count incremented",
-                PostId = id
-            });
+            return NoContent();
         }
 
         [HttpGet("user/{userId:int}")]

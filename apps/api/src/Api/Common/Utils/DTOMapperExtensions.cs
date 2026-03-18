@@ -1,8 +1,8 @@
 using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDBAPI.Contracts.Responses;
+using TijarahJo.Api.Contracts.Responses;
 
-namespace TijarahJoDBAPI.Common.Utils;
+namespace TijarahJo.Api.Common.Utils;
 
 /// <summary>
 /// Extension-method wrappers around <see cref="DTOMapper"/> for cleaner call sites.

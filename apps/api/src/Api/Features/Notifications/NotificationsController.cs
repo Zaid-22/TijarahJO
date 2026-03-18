@@ -3,12 +3,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDBAPI.Common.Configuration;
-using TijarahJoDBAPI.Common.Utils;
-using TijarahJoDBAPI.Contracts.Requests;
-using TijarahJoDBAPI.Contracts.Responses;
+using TijarahJo.Api.Common.Configuration;
+using TijarahJo.Api.Common.Utils;
+using TijarahJo.Api.Contracts.Requests;
+using TijarahJo.Api.Contracts.Responses;
 
-namespace TijarahJoDBAPI.Features.Notifications;
+namespace TijarahJo.Api.Features.Notifications;
 
 [Authorize]
 [ApiController]

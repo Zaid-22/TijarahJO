@@ -2,7 +2,7 @@ using Microsoft.Extensions.Caching.Memory;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.DAL.Queries;
 
-namespace TijarahJoDBAPI.Tests;
+namespace TijarahJo.Api.Tests;
 
 public sealed class SearchReadServiceTests
 {

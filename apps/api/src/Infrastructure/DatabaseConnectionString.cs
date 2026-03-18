@@ -1,4 +1,4 @@
-namespace TijarahJoDB_DataAccess;
+namespace TijarahJo.Infrastructure.DataAccess;
 
 /// <summary>
 /// Strongly-typed wrapper for injecting the resolved connection string

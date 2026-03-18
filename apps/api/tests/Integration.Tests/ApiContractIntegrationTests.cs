@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text.Json;
 
-namespace TijarahJoDBAPI.Integration.Tests;
+namespace TijarahJo.Api.Integration.Tests;
 
 public sealed class ApiContractIntegrationTests
 {

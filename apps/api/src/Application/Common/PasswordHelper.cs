@@ -29,10 +29,8 @@ public static class PasswordHelper
     public static string HashPasswordLegacy(string password)
     {
         ValidatePassword(password);
-
-        using SHA256 sha256 = SHA256.Create();
         byte[] bytes = Encoding.UTF8.GetBytes(password);
-        byte[] hash = sha256.ComputeHash(bytes);
+        byte[] hash = SHA256.HashData(bytes);
         return Convert.ToBase64String(hash);
     }
 

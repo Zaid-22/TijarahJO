@@ -3,7 +3,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Configuration;
 
-namespace TijarahJoDBAPI.Common.Health;
+namespace TijarahJo.Api.Common.Health;
 
 public sealed class DatabaseConnectivityHealthCheck : IHealthCheck
 {

@@ -2,12 +2,12 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDBAPI.Common.Authorization;
-using TijarahJoDBAPI.Common.Utils;
-using TijarahJoDBAPI.Contracts.Requests;
-using TijarahJoDBAPI.Contracts.Responses;
+using TijarahJo.Api.Common.Authorization;
+using TijarahJo.Api.Common.Utils;
+using TijarahJo.Api.Contracts.Requests;
+using TijarahJo.Api.Contracts.Responses;
 
-namespace TijarahJoDBAPI.Features.Categories;
+namespace TijarahJo.Api.Features.Categories;
 
 [ApiController]
 [ApiVersion("1.0")]

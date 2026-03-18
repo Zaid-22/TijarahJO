@@ -1,6 +1,6 @@
 using Microsoft.OpenApi.Models;
 
-namespace TijarahJoDBAPI.Startup;
+namespace TijarahJo.Api.Startup;
 
 public static class SwaggerExtensions
 {

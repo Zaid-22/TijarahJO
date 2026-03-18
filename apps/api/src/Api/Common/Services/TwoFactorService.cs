@@ -4,14 +4,13 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
-using TijarahJoDBAPI.Common.Configuration;
+using TijarahJo.Api.Common.Configuration;
 
-namespace TijarahJoDBAPI.Common.Services;
+namespace TijarahJo.Api.Common.Services;
 
 public sealed class TwoFactorService
 {
-    private const int AesNonceLength = 12;
-    private const int AesTagLength = 16;
+
     private static readonly byte[] _challengeHashKey = RandomNumberGenerator.GetBytes(32);
 
     private readonly TwoFactorOptions _options;
@@ -21,7 +20,7 @@ public sealed class TwoFactorService
     private static readonly ConcurrentDictionary<int, TwoFactorChallengeState> _loginChallenges = new();
     private static readonly ConcurrentDictionary<int, TwoFactorChallengeState> _setupChallenges = new();
 
-    public TwoFactorService(IOptions<TwoFactorOptions> optionsAccessor, JwtOptions jwtOptions, ILogger<TwoFactorService> logger)
+    public TwoFactorService(IOptions<TwoFactorOptions> optionsAccessor, JwtOptions jwtOptions)
     {
         _options = optionsAccessor.Value ?? new TwoFactorOptions();
 
@@ -220,7 +219,7 @@ public sealed class TwoFactorService
         return value.ToString($"D{safeDigits}");
     }
 
-    private void PruneExpiredChallenges(ConcurrentDictionary<int, TwoFactorChallengeState> cache)
+    private static void PruneExpiredChallenges(ConcurrentDictionary<int, TwoFactorChallengeState> cache)
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         foreach ((int key, TwoFactorChallengeState value) in cache)

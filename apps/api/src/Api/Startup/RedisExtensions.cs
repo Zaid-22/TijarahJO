@@ -1,9 +1,9 @@
 using StackExchange.Redis;
 using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDBAPI.Common.Configuration;
-using TijarahJoDBAPI.Common.Services;
+using TijarahJo.Api.Common.Configuration;
+using TijarahJo.Api.Common.Services;
 
-namespace TijarahJoDBAPI.Startup;
+namespace TijarahJo.Api.Startup;
 
 /// <summary>
 /// Result of the Redis startup connection attempt, passed to the middleware pipeline

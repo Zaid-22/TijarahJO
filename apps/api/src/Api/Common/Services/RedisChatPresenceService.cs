@@ -2,7 +2,7 @@ using StackExchange.Redis;
 using Microsoft.Extensions.Logging;
 using TijarahJoDB.Application.Abstractions.Services;
 
-namespace TijarahJoDBAPI.Common.Services;
+namespace TijarahJo.Api.Common.Services;
 
 public sealed class RedisChatPresenceService : IChatPresenceService
 {
@@ -22,8 +22,8 @@ public sealed class RedisChatPresenceService : IChatPresenceService
         _logger = logger;
     }
 
-    private string GetUserKey(int userId) => $"chat:presence:user:{userId}";
-    private string GetLastSeenKey(int userId) => $"chat:lastseen:user:{userId}";
+    private static string GetUserKey(int userId) => $"chat:presence:user:{userId}";
+    private static string GetLastSeenKey(int userId) => $"chat:lastseen:user:{userId}";
 
     public async Task MarkConnectedAsync(int userId, string connectionId, CancellationToken cancellationToken = default)
     {

@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
-using TijarahJoDBAPI.Common.Configuration;
+using TijarahJo.Api.Common.Configuration;
 
-namespace TijarahJoDBAPI.Common.Services;
+namespace TijarahJo.Api.Common.Services;
 
 public sealed record StoredPostImageFile(
     string PublicUrl,
@@ -26,6 +26,7 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
     private readonly FileStorageOptions _options;
     private readonly ILogger<LocalPostImageFileStorageService> _logger;
     private readonly HashSet<string> _allowedImageExtensions;
+    private static readonly string[] other = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
 
     public LocalPostImageFileStorageService(
         IWebHostEnvironment environment,
@@ -208,7 +209,7 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
 
         if (normalized.Count == 0)
         {
-            normalized.UnionWith(new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" });
+            normalized.UnionWith(other);
         }
 
         return normalized;

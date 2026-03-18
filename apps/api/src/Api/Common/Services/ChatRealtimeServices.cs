@@ -1,10 +1,10 @@
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.SignalR;
 using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDBAPI.Contracts.Responses;
-using TijarahJoDBAPI.Hubs;
+using TijarahJo.Api.Contracts.Responses;
+using TijarahJo.Api.Hubs;
 
-namespace TijarahJoDBAPI.Common.Services;
+namespace TijarahJo.Api.Common.Services;
 
 public interface IChatPresenceService : IChatPresenceLookup
 {

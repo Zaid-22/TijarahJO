@@ -4,7 +4,7 @@ using TijarahJoDB.Application.Common;
 using TijarahJoDB.Application.Services;
 using TijarahJoDB.BLL;
 
-namespace TijarahJoDBAPI.Tests;
+namespace TijarahJo.Api.Tests;
 
 public sealed class PostReadServiceTests
 {

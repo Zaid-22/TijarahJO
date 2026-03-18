@@ -1,6 +1,6 @@
 using TijarahJoDB.Application.Abstractions.DataAccess;
 
-namespace TijarahJoDBAPI.Tests;
+namespace TijarahJo.Api.Tests;
 
 public sealed class AuditAttributionContractTests
 {

@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Caching.Memory;
 using TijarahJoDB.Application.Abstractions.Services;
 
-namespace TijarahJoDBAPI.Common.Services
+namespace TijarahJo.Api.Common.Services
 {
     public sealed class PostsFeedService : IPostsFeedService
     {

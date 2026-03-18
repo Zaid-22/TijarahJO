@@ -24,7 +24,7 @@ public static class PhoneNumberNormalizer
             digitsOnly = digitsOnly.Substring(3);
         }
 
-        if (digitsOnly.StartsWith("0", StringComparison.Ordinal) && digitsOnly.Length == 10)
+        if (digitsOnly.StartsWith('0') && digitsOnly.Length == 10)
         {
             digitsOnly = digitsOnly.Substring(1);
         }

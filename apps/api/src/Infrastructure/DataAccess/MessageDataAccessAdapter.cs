@@ -6,7 +6,7 @@ using TijarahJoDB.Application.Common;
 using TijarahJoDB.DAL.Entities;
 using TijarahJoDB.DAL.Persistence;
 
-namespace TijarahJoDB_DataAccess;
+namespace TijarahJo.Infrastructure.DataAccess;
 
 
 public sealed class MessageDataAccessAdapter : IMessageDataAccess
@@ -44,8 +44,13 @@ public sealed class MessageDataAccessAdapter : IMessageDataAccess
     /// </summary>
     public async Task<IReadOnlyList<MessageModel>> GetChatHistoryAsync(
         int conversationId,
+        int pageNumber = 1,
+        int pageSize = 50,
         CancellationToken cancellationToken = default)
     {
+        int safePage = Math.Max(1, pageNumber);
+        int safeSize = Math.Clamp(pageSize, 1, 200);
+
         ConversationMetadata? metadata = await _dbContext.Conversations
             .AsNoTracking()
             .Where(c => c.ConversationID == conversationId)
@@ -55,9 +60,14 @@ public sealed class MessageDataAccessAdapter : IMessageDataAccess
         List<MessageEntity> messages = await _dbContext.Messages
             .AsNoTracking()
             .Where(item => item.ConversationID == conversationId)
-            .OrderBy(item => item.CreatedAt)
-            .ThenBy(item => item.MessageID)
+            .OrderByDescending(item => item.CreatedAt)
+            .ThenByDescending(item => item.MessageID)
+            .Skip((safePage - 1) * safeSize)
+            .Take(safeSize)
             .ToListAsync(cancellationToken);
+
+        // Reverse to chronological order after pagination
+        messages.Reverse();
 
         return messages
             .Select(item => ToModel(item, metadata?.User1ID, metadata?.User2ID, metadata?.PostID))

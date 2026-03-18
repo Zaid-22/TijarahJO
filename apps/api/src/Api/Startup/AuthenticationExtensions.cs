@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using TijarahJoDBAPI.Common.Authorization;
-using TijarahJoDBAPI.Common.Configuration;
+using TijarahJo.Api.Common.Authorization;
+using TijarahJo.Api.Common.Configuration;
 
-namespace TijarahJoDBAPI.Startup;
+namespace TijarahJo.Api.Startup;
 
 public static class AuthenticationExtensions
 {
@@ -12,28 +12,22 @@ public static class AuthenticationExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // Configure JWT Options from appsettings with environment variable override
-        var jwtOptions = configuration.GetSection("JWT").Get<JwtOptions>();
-        if (jwtOptions == null)
-        {
-            throw new InvalidOperationException("JWT configuration is missing from appsettings.json");
-        }
+        var jwtSection = configuration.GetSection("JWT");
 
-        // Override SigningKey from environment variable if present (production)
-        var signingKeyFromEnv = configuration["JWT:SigningKey"] ?? Environment.GetEnvironmentVariable("JWT_SIGNING_KEY");
-        if (!string.IsNullOrEmpty(signingKeyFromEnv))
-        {
-            jwtOptions.SigningKey = signingKeyFromEnv;
-        }
+        // Resolve values with environment variable overrides
+        string signingKey = jwtSection["SigningKey"] ?? Environment.GetEnvironmentVariable("JWT_SIGNING_KEY") ?? "";
+        string issuer = jwtSection["Issuer"] ?? Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "";
+        string audience = jwtSection["Audience"] ?? Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "";
+        int lifetime = int.TryParse(jwtSection["Lifetime"], out int lt) ? lt : 120;
 
         // Validate SigningKey is not empty
-        if (string.IsNullOrEmpty(jwtOptions.SigningKey))
+        if (string.IsNullOrEmpty(signingKey))
         {
             throw new InvalidOperationException("JWT SigningKey is not configured. Set it in appsettings.json or JWT_SIGNING_KEY environment variable.");
         }
 
         const int minimumJwtSigningKeyBytes = 32;
-        int signingKeyBytes = Encoding.UTF8.GetByteCount(jwtOptions.SigningKey);
+        int signingKeyBytes = Encoding.UTF8.GetByteCount(signingKey);
         if (signingKeyBytes < minimumJwtSigningKeyBytes)
         {
             throw new InvalidOperationException(
@@ -41,25 +35,30 @@ public static class AuthenticationExtensions
             );
         }
 
-        // Override Issuer/Audience from environment variables if present
-        jwtOptions.Issuer = configuration["JWT:Issuer"] ?? Environment.GetEnvironmentVariable("JWT_ISSUER") ?? jwtOptions.Issuer;
-        jwtOptions.Audience = configuration["JWT:Audience"] ?? Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? jwtOptions.Audience;
-
         // Fail fast if Issuer or Audience is not set in production
         var environment = configuration["ASPNETCORE_ENVIRONMENT"]
             ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
             ?? "Production";
         bool isProduction = !string.Equals(environment, "Development", StringComparison.OrdinalIgnoreCase);
 
-        if (isProduction && string.IsNullOrEmpty(jwtOptions.Issuer))
+        if (isProduction && string.IsNullOrEmpty(issuer))
         {
             throw new InvalidOperationException("JWT Issuer must be configured for non-development environments.");
         }
 
-        if (isProduction && string.IsNullOrEmpty(jwtOptions.Audience))
+        if (isProduction && string.IsNullOrEmpty(audience))
         {
             throw new InvalidOperationException("JWT Audience must be configured for non-development environments.");
         }
+
+        // Construct immutable JwtOptions
+        var jwtOptions = new JwtOptions
+        {
+            Issuer = issuer,
+            Audience = audience,
+            Lifetime = lifetime,
+            SigningKey = signingKey
+        };
 
         // Register JWT Options as singleton
         services.AddSingleton(jwtOptions);
@@ -107,14 +106,12 @@ public static class AuthenticationExtensions
             };
         });
 
-        services.AddAuthorization(options =>
-        {
-            options.AddPolicy(AuthorizationPolicies.AdminOnly, policy =>
+        services.AddAuthorizationBuilder()
+            .AddPolicy(AuthorizationPolicies.AdminOnly, policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireRole(AppRoles.Admin);
             });
-        });
 
         return services;
     }

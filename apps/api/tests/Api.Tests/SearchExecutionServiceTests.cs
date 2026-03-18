@@ -1,7 +1,7 @@
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Services;
 
-namespace TijarahJoDBAPI.Tests;
+namespace TijarahJo.Api.Tests;
 
 public sealed class SearchExecutionServiceTests
 {

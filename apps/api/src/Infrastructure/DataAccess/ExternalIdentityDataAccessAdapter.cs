@@ -3,7 +3,7 @@ using TijarahJoDB.Application.Abstractions.DataAccess;
 using TijarahJoDB.DAL.Entities;
 using TijarahJoDB.DAL.Persistence;
 
-namespace TijarahJoDB_DataAccess;
+namespace TijarahJo.Infrastructure.DataAccess;
 
 public sealed class ExternalIdentityDataAccessAdapter : IExternalIdentityDataAccess
 {

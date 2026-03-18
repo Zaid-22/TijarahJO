@@ -56,8 +56,8 @@ public sealed class MessageService : IMessageService
         };
     }
 
-    public async Task<List<MessageModel>> GetChatHistoryAsync(int conversationId, CancellationToken cancellationToken = default)
-        => new(await _messages.GetChatHistoryAsync(conversationId, cancellationToken));
+    public async Task<List<MessageModel>> GetChatHistoryAsync(int conversationId, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
+        => new(await _messages.GetChatHistoryAsync(conversationId, pageNumber, pageSize, cancellationToken));
 
     public async Task<List<MessageModel>> GetRecentChatsAsync(int userId, CancellationToken cancellationToken = default)
         => new(await _messages.GetRecentChatsAsync(userId, cancellationToken));

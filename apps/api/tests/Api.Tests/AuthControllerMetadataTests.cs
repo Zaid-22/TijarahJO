@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
-using TijarahJoDBAPI.Features.Auth;
+using TijarahJo.Api.Features.Auth;
 
-namespace TijarahJoDBAPI.Tests;
+namespace TijarahJo.Api.Tests;
 
 public sealed class AuthControllerMetadataTests
 {

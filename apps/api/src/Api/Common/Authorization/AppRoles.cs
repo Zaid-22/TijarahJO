@@ -1,6 +1,6 @@
 using System;
 
-namespace TijarahJoDBAPI.Common.Authorization;
+namespace TijarahJo.Api.Common.Authorization;
 
 public static class AppRoles
 {

@@ -1,9 +1,9 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDBAPI.Contracts.Responses;
+using TijarahJo.Api.Contracts.Responses;
 
-namespace TijarahJoDBAPI.Features.Locations;
+namespace TijarahJo.Api.Features.Locations;
 
 [ApiController]
 [ApiVersion("1.0")]

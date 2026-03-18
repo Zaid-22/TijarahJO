@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Primitives;
 
-namespace TijarahJoDBAPI.Common.Services;
+namespace TijarahJo.Api.Common.Services;
 
 public sealed class NoOpMemoryCache : IMemoryCache
 {

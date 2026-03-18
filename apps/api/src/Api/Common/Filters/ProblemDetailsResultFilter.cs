@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.WebUtilities;
 
-namespace TijarahJoDBAPI.Common.Filters;
+namespace TijarahJo.Api.Common.Filters;
 
 /// <summary>
 /// Normalizes non-success object/status responses into RFC7807 ProblemDetails payloads.

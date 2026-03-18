@@ -1,6 +1,6 @@
-using static TijarahJoDBAPI.Common.Services.PostsFeedService;
+using static TijarahJo.Api.Common.Services.PostsFeedService;
 
-namespace TijarahJoDBAPI.Common.Services;
+namespace TijarahJo.Api.Common.Services;
 
 /// <summary>
 /// Abstraction for the posts feed service — enables mocking in tests.

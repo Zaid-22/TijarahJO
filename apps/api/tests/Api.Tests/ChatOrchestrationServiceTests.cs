@@ -249,7 +249,7 @@ public sealed class ChatOrchestrationServiceTests
         public Task<ConversationAccessMetadata?> GetConversationMetadataAsync(int conversationId, CancellationToken cancellationToken = default)
             => Task.FromResult<ConversationAccessMetadata?>(null);
 
-        public Task<List<MessageModel>> GetChatHistoryAsync(int conversationId, CancellationToken cancellationToken = default)
+        public Task<List<MessageModel>> GetChatHistoryAsync(int conversationId, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
         {
             LastGetChatHistoryConversationId = conversationId;
             if (HistoryByConversationId.TryGetValue(conversationId, out List<MessageModel>? history))

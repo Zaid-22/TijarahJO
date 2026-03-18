@@ -6,10 +6,10 @@ using Microsoft.AspNetCore.WebUtilities;
 using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Common;
-using TijarahJoDBAPI.Common.Services;
-using TijarahJoDBAPI.Contracts.Responses;
+using TijarahJo.Api.Common.Services;
+using TijarahJo.Api.Contracts.Responses;
 
-namespace TijarahJoDBAPI.Features.Auth;
+namespace TijarahJo.Api.Features.Auth;
 
 [ApiController]
 [ApiVersion("1.0")]

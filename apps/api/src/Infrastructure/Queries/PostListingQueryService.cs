@@ -4,7 +4,7 @@ using System.Data;
 using System.Text;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Common;
-using TijarahJoDB_DataAccess;
+using TijarahJo.Infrastructure.DataAccess;
 
 namespace TijarahJoDB.DAL.Queries;
 

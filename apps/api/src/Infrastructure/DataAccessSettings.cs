@@ -1,7 +1,7 @@
 using System;
 using Microsoft.Extensions.Configuration;
 
-namespace TijarahJoDB_DataAccess
+namespace TijarahJo.Infrastructure.DataAccess
 {
     /// <summary>
     /// Resolves the SQL Server connection string at startup.

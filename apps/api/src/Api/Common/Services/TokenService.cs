@@ -2,10 +2,10 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
-using TijarahJoDBAPI.Common.Authorization;
-using TijarahJoDBAPI.Common.Configuration;
+using TijarahJo.Api.Common.Authorization;
+using TijarahJo.Api.Common.Configuration;
 
-namespace TijarahJoDBAPI.Common.Services;
+namespace TijarahJo.Api.Common.Services;
 
 /// <summary>
 /// Service for generating and validating JWT tokens

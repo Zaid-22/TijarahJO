@@ -32,7 +32,7 @@ public interface IFavoriteDataAccess
 public interface IMessageDataAccess
 {
     Task<int> AddMessageAsync(MessageModel message, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<MessageModel>> GetChatHistoryAsync(int conversationId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<MessageModel>> GetChatHistoryAsync(int conversationId, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<MessageModel>> GetRecentChatsAsync(int userId, CancellationToken cancellationToken = default);
     Task<bool> MarkMessagesAsReadAsync(int conversationId, int receiverId, CancellationToken cancellationToken = default);
 }
