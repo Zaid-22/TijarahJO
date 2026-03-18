@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace TijarahJoDBAPI.Contracts.Responses;
+namespace TijarahJo.Api.Contracts.Responses;
 
 public sealed class TopSellerResponseDTO
 {

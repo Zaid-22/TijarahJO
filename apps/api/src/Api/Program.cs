@@ -14,13 +14,14 @@ using System.Threading.RateLimiting;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Services;
 using TijarahJoDB.Bootstrap;
-using TijarahJoDBAPI.Common.Configuration;
-using TijarahJoDBAPI.Common.Filters;
-using TijarahJoDBAPI.Common.Health;
-using TijarahJoDBAPI.Common.Services;
-using TijarahJoDBAPI.Startup;
+using TijarahJo.Api.Common.Configuration;
+using TijarahJo.Api.Common.Filters;
+using TijarahJo.Api.Common.Health;
+using TijarahJo.Api.Common.Services;
+using TijarahJo.Api.Startup;
 
 var builder = WebApplication.CreateBuilder(args);
+
 
 // ---------------------------------------------------------------------------
 // Feature flags
@@ -223,7 +224,7 @@ builder.Services.AddTijarahJoSwagger();
 
 // API-layer services
 builder.Services.AddScoped<ITokenService, TokenService>();
-builder.Services.AddSingleton<ITokenBlacklistService, MemoryTokenBlacklistService>();
+// Token blacklist is registered in InfrastructureServiceCollectionExtensions (DB-backed)
 builder.Services.AddScoped<IPostsFeedService, PostsFeedService>();
 builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
 builder.Services.AddScoped<IPasswordResetEmailSender, PasswordResetEmailSender>();
@@ -239,7 +240,7 @@ RedisStartupResult redisResult = await builder.Services.AddTijarahJoRedis(builde
 // Infrastructure + Application layers (Bootstrap project)
 builder.Services.AddTijarahJoInfrastructure(builder.Configuration);
 builder.Services.AddApplicationServices();
-builder.Services.AddResponseCaching();
+
 
 // ======================= BUILD =======================
 var app = builder.Build();
@@ -294,7 +295,7 @@ if (featureFlags.EnableRateLimiting)
 
 app.UseAuthentication();
 app.UseTijarahJoTokenBlacklist();
-app.UseResponseCaching();
+
 app.UseTijarahJoCsrfMiddleware();
 app.UseAuthorization();
 app.UseTijarahJoStatusCodePages();
@@ -316,7 +317,7 @@ if (featureFlags.EnableHealthChecks)
     });
 }
 
-app.MapHub<TijarahJoDBAPI.Hubs.ChatHub>("/chatHub");
+app.MapHub<TijarahJo.Api.Hubs.ChatHub>("/chatHub");
 
 app.Run();
 

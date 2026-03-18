@@ -1,8 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
-using TijarahJoDBAPI.Common.Authorization;
+using TijarahJo.Api.Common.Authorization;
 
-namespace TijarahJoDBAPI.Common.Utils;
+namespace TijarahJo.Api.Common.Utils;
 
 public static class ApiControllerHelpers
 {

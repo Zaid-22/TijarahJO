@@ -43,12 +43,14 @@ public class CityConfiguration : IEntityTypeConfiguration<CityEntity>
 
 public class AreaConfiguration : IEntityTypeConfiguration<AreaEntity>
 {
+    private static readonly string[] propertyNames = new[] { "CityID", "AreaName" };
+
     public void Configure(EntityTypeBuilder<AreaEntity> builder)
     {
         builder.ToTable("Areas");
         builder.HasKey(e => e.AreaID);
         builder.Property(e => e.AreaName).HasMaxLength(100).IsRequired();
-        builder.HasIndex(new[] { "CityID", "AreaName" }).IsUnique().HasDatabaseName("UQ_Areas_City_Area");
+        builder.HasIndex(propertyNames).IsUnique().HasDatabaseName("UQ_Areas_City_Area");
         builder.HasOne(e => e.City)
               .WithMany(c => c.Areas)
               .HasForeignKey(e => e.CityID)

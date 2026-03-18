@@ -1,4 +1,4 @@
-namespace TijarahJoDBAPI.Contracts.Responses;
+namespace TijarahJo.Api.Contracts.Responses;
 
 public class UserResponseDTO
 {
@@ -15,6 +15,5 @@ public class UserResponseDTO
     public string? Avatar { get; set; }
     public DateTime JoinedDate { get; set; }
     public int Status { get; set; }
-    public int RoleID { get; set; }
-    public bool IsDeleted { get; set; }
+    public string RoleName { get; set; } = string.Empty;
 }

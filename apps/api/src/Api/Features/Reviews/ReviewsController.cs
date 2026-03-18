@@ -3,11 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDBAPI.Common.Utils;
-using TijarahJoDBAPI.Contracts.Requests;
-using TijarahJoDBAPI.Contracts.Responses;
+using TijarahJo.Api.Common.Utils;
+using TijarahJo.Api.Contracts.Requests;
+using TijarahJo.Api.Contracts.Responses;
 
-namespace TijarahJoDBAPI.Features.Reviews
+namespace TijarahJo.Api.Features.Reviews
 {
     [ApiController]
     [ApiVersion("1.0")]

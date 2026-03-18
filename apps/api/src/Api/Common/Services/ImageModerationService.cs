@@ -4,7 +4,7 @@ using Google.Cloud.Vision.V1;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
-namespace TijarahJoDBAPI.Common.Services;
+namespace TijarahJo.Api.Common.Services;
 
 public interface IImageModerationService
 {

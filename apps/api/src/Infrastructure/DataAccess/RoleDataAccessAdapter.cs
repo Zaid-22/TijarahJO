@@ -6,7 +6,7 @@ using TijarahJoDB.Application.Common;
 using TijarahJoDB.DAL.Entities;
 using TijarahJoDB.DAL.Persistence;
 
-namespace TijarahJoDB_DataAccess;
+namespace TijarahJo.Infrastructure.DataAccess;
 
 
 public sealed class RoleDataAccessAdapter : IRoleDataAccess

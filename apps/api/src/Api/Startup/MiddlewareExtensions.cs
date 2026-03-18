@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using System.Text.Json;
 
-namespace TijarahJoDBAPI.Startup;
+namespace TijarahJo.Api.Startup;
 
 public static class MiddlewareExtensions
 {

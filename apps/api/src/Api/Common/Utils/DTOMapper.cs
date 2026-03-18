@@ -1,12 +1,12 @@
 using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDBAPI.Contracts.Responses;
+using TijarahJo.Api.Contracts.Responses;
 
-namespace TijarahJoDBAPI.Common.Utils;
+namespace TijarahJo.Api.Common.Utils;
 
 public static class DTOMapper
 {
-    public static UserResponseDTO ToUserResponseDTO(UserModel userModel)
+    public static UserResponseDTO ToUserResponseDTO(UserModel userModel, string roleName = "")
     {
         return new UserResponseDTO
         {
@@ -21,8 +21,7 @@ public static class DTOMapper
             Avatar = userModel.Avatar,
             JoinedDate = userModel.JoinDate,
             Status = userModel.Status,
-            RoleID = userModel.RoleID,
-            IsDeleted = userModel.IsDeleted
+            RoleName = roleName
         };
     }
 
@@ -59,7 +58,6 @@ public static class DTOMapper
         return new PostResponseDTO
         {
             PostID = postModel.PostID ?? 0,
-            Id = postModel.PostID?.ToString() ?? string.Empty,
             CategoryID = postModel.CategoryID,
             PostTitle = postModel.PostTitle ?? string.Empty,
             PostDescription = postModel.PostDescription ?? string.Empty,
@@ -70,8 +68,7 @@ public static class DTOMapper
             Views = postModel.Views,
             CityId = postModel.CityId,
             AreaId = postModel.AreaId,
-            SellerId = postModel.UserID.ToString(),
-            Images = Array.Empty<string>() // Provide base empty array, images generally fetched separately
+            SellerId = postModel.UserID.ToString()
         };
     }
 

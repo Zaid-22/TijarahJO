@@ -9,12 +9,12 @@ using TijarahJoDB.Application.Abstractions.DataAccess;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Common;
 using TijarahJoDB.BLL;
-using TijarahJoDBAPI.Common.Services;
-using TijarahJoDBAPI.Common.Utils;
-using TijarahJoDBAPI.Contracts.Requests;
-using TijarahJoDBAPI.Contracts.Responses;
+using TijarahJo.Api.Common.Services;
+using TijarahJo.Api.Common.Utils;
+using TijarahJo.Api.Contracts.Requests;
+using TijarahJo.Api.Contracts.Responses;
 
-namespace TijarahJoDBAPI.Features.Auth;
+namespace TijarahJo.Api.Features.Auth;
 
 [ApiController]
 [ApiVersion("1.0")]
@@ -27,7 +27,7 @@ public class AuthController : ControllerBase
     private readonly IRoleService _roles;
     private readonly TwoFactorService _twoFactorService;
     private readonly ITokenBlacklistService _tokenBlacklistService;
-    private readonly IEmailTwoFactorSender _emailSender;
+    private readonly IBackgroundJobService _backgroundJobService;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
@@ -37,7 +37,7 @@ public class AuthController : ControllerBase
         IRoleService roles,
         TwoFactorService twoFactorService,
         ITokenBlacklistService tokenBlacklistService,
-        IEmailTwoFactorSender emailSender,
+        IBackgroundJobService backgroundJobService,
         ILogger<AuthController> logger)
     {
         _tokenService = tokenService;
@@ -46,7 +46,7 @@ public class AuthController : ControllerBase
         _roles = roles;
         _twoFactorService = twoFactorService;
         _tokenBlacklistService = tokenBlacklistService;
-        _emailSender = emailSender;
+        _backgroundJobService = backgroundJobService;
         _logger = logger;
     }
 
@@ -81,13 +81,16 @@ public class AuthController : ControllerBase
         {
             string code = _twoFactorService.GenerateAndStoreLoginCode(result.User.UserID.Value);
             
-            _ = _emailSender.SendTwoFactorCodeAsync(
-                result.User.Email,
-                result.User.FirstName,
-                code,
-                TimeSpan.FromSeconds(900), // Match LoginChallengeLifetimeSeconds from options defaults
-                cancellationToken
-            );
+            await _backgroundJobService.EnqueueAsync(async (sp, ct) =>
+            {
+                var sender = sp.GetRequiredService<IEmailTwoFactorSender>();
+                await sender.SendTwoFactorCodeAsync(
+                    result.User.Email,
+                    result.User.FirstName,
+                    code,
+                    TimeSpan.FromSeconds(900),
+                    ct);
+            }, cancellationToken);
 
             return Ok(AuthShared.BuildTwoFactorChallengeResponse(_twoFactorService, result.User.UserID.Value));
         }

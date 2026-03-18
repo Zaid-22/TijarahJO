@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace TijarahJoDBAPI.Startup;
+namespace TijarahJo.Api.Startup;
 
 public static class CorsExtensions
 {

@@ -176,7 +176,7 @@ public interface IMessageService
     Task<int?> GetOrCreateConversationIdAsync(int userA, int userB, int? postId = null, CancellationToken cancellationToken = default);
     Task<bool> CanAccessConversationAsync(int userId, int conversationId, CancellationToken cancellationToken = default);
     Task<ConversationAccessMetadata?> GetConversationMetadataAsync(int conversationId, CancellationToken cancellationToken = default);
-    Task<List<MessageModel>> GetChatHistoryAsync(int conversationId, CancellationToken cancellationToken = default);
+    Task<List<MessageModel>> GetChatHistoryAsync(int conversationId, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
     Task<List<MessageModel>> GetRecentChatsAsync(int userId, CancellationToken cancellationToken = default);
     Task<bool> MarkAsReadAsync(int conversationId, int receiverId, CancellationToken cancellationToken = default);
     Message Create(MessageModel model);

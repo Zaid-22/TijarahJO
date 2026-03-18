@@ -5,7 +5,7 @@ using TijarahJoDB.Application.Common;
 using TijarahJoDB.DAL.Entities;
 using TijarahJoDB.DAL.Persistence;
 
-namespace TijarahJoDB_DataAccess;
+namespace TijarahJo.Infrastructure.DataAccess;
 
 public sealed class UserDataAccessAdapter : IUserDataAccess
 {
@@ -26,7 +26,7 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
         UserEntity? entity = await _dbContext.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(item => item.UserID == userId.Value, cancellationToken);
-        return entity is null ? null : ToModel(entity);
+        return entity is null ? null : ToPublicModel(entity);
     }
 
     public async Task<int> AddUserAsync(UserModel user, CancellationToken cancellationToken = default)
@@ -113,23 +113,61 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
             return false;
         }
 
-        await _dbContext.Posts
-            .Where(item => item.UserID == userId.Value && !item.IsDeleted)
-            .ExecuteUpdateAsync(
-                setters => setters.SetProperty(item => item.IsDeleted, true),
-                cancellationToken
-            );
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            await _dbContext.Posts
+                .Where(item => item.UserID == userId.Value && !item.IsDeleted)
+                .ExecuteUpdateAsync(
+                    setters => setters.SetProperty(item => item.IsDeleted, true),
+                    cancellationToken
+                );
 
-        await _dbContext.Favorites
-            .Where(item => item.UserID == userId.Value && !item.IsDeleted)
-            .ExecuteUpdateAsync(
-                setters => setters.SetProperty(item => item.IsDeleted, true),
-                cancellationToken
-            );
+            // Audit: ExecuteUpdateAsync bypasses change tracker, so log manually
+            _dbContext.AuditLogs.Add(new AuditLogEntity
+            {
+                TableName = "Posts",
+                Action = "BULK_SOFT_DELETE",
+                ChangedByUserID = actorUserId,
+                ChangedAt = DateTime.UtcNow,
+                OldValues = $"{{\"UserID\":{userId.Value},\"IsDeleted\":false}}",
+                NewValues = $"{{\"UserID\":{userId.Value},\"IsDeleted\":true}}"
+            });
 
-        entity.IsDeleted = true;
-        _dbContext.AuditActorUserId = actorUserId;
-        return await _dbContext.SaveChangesAsync(cancellationToken) > 0;
+            await _dbContext.Favorites
+                .Where(item => item.UserID == userId.Value && !item.IsDeleted)
+                .ExecuteUpdateAsync(
+                    setters => setters.SetProperty(item => item.IsDeleted, true),
+                    cancellationToken
+                );
+
+            _dbContext.AuditLogs.Add(new AuditLogEntity
+            {
+                TableName = "Favorites",
+                Action = "BULK_SOFT_DELETE",
+                ChangedByUserID = actorUserId,
+                ChangedAt = DateTime.UtcNow,
+                OldValues = $"{{\"UserID\":{userId.Value},\"IsDeleted\":false}}",
+                NewValues = $"{{\"UserID\":{userId.Value},\"IsDeleted\":true}}"
+            });
+
+            entity.IsDeleted = true;
+            _dbContext.AuditActorUserId = actorUserId;
+            bool deleted = await _dbContext.SaveChangesAsync(cancellationToken) > 0;
+            if (!deleted)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return false;
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 
     public async Task<bool> DoesUserExistAsync(int? userId, CancellationToken cancellationToken = default)
@@ -154,7 +192,7 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
             .Take(safeSize)
             .ToListAsync(cancellationToken);
 
-        return entities.Select(ToModel).ToList();
+        return entities.Select(ToPublicModel).ToList();
     }
 
     public async Task<UserModel?> GetUserByLoginAsync(string login, CancellationToken cancellationToken = default)
@@ -256,5 +294,14 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
             entity.TwoFactorSecret,
             entity.TwoFactorPendingSecret
         );
+    }
+
+    /// <summary>
+    /// Maps entity to model with HashedPassword stripped.
+    /// Use for non-auth read paths (profile views, user lists).
+    /// </summary>
+    private static UserModel ToPublicModel(UserEntity entity)
+    {
+        return ToModel(entity) with { HashedPassword = string.Empty };
     }
 }

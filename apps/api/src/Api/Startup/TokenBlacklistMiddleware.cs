@@ -5,9 +5,9 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Net.Http.Headers;
-using TijarahJoDBAPI.Common.Services;
+using TijarahJoDB.Application.Abstractions.Services;
 
-namespace TijarahJoDBAPI.Startup;
+namespace TijarahJo.Api.Startup;
 
 /// <summary>
 /// Intercepts authenticated requests and verifies that the provided JWT is not blacklisted.

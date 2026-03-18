@@ -1,4 +1,4 @@
-namespace TijarahJoDBAPI.Common.Services;
+namespace TijarahJo.Api.Common.Services;
 
 /// <summary>
 /// Abstraction for JWT token generation — enables mocking in tests.

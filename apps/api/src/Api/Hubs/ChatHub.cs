@@ -3,11 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using System;
 using System.Security.Claims;
 using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDBAPI.Common.Services;
-using TijarahJoDBAPI.Common.Utils;
-using TijarahJoDBAPI.Contracts.Responses;
+using TijarahJo.Api.Common.Services;
+using TijarahJo.Api.Common.Utils;
+using TijarahJo.Api.Contracts.Responses;
 
-namespace TijarahJoDBAPI.Hubs
+namespace TijarahJo.Api.Hubs
 {
     [Authorize]
     public class ChatHub : Hub

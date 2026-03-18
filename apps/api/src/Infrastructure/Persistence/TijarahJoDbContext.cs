@@ -28,6 +28,7 @@ public sealed class TijarahJoDbContext : DbContext
     public DbSet<CityEntity> Cities => Set<CityEntity>();
     public DbSet<AreaEntity> Areas => Set<AreaEntity>();
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
+    public DbSet<BlacklistedTokenEntity> BlacklistedTokens => Set<BlacklistedTokenEntity>();
     public DbSet<SystemSettingEntity> SystemSettings => Set<SystemSettingEntity>();
     public DbSet<ReportEntity> Reports => Set<ReportEntity>();
     public DbSet<PermissionEntity> Permissions => Set<PermissionEntity>();

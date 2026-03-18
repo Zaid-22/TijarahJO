@@ -3,10 +3,10 @@ using Microsoft.Extensions.Options;
 using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.DataAccess;
 using TijarahJoDB.Application.Common;
-using TijarahJoDBAPI.Common.Configuration;
-using TijarahJoDBAPI.Common.Services;
+using TijarahJo.Api.Common.Configuration;
+using TijarahJo.Api.Common.Services;
 
-namespace TijarahJoDBAPI.Tests;
+namespace TijarahJo.Api.Tests;
 
 public sealed class PasswordResetServiceTests
 {

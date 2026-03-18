@@ -1,6 +1,6 @@
-using TijarahJoDBAPI.Common.Utils;
+using TijarahJo.Api.Common.Utils;
 
-namespace TijarahJoDBAPI.Common.Services;
+namespace TijarahJo.Api.Common.Services;
 
 public static class RateLimitPartitionResolver
 {

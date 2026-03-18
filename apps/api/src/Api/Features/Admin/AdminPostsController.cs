@@ -3,11 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TijarahJoDB.Application.Abstractions.DataAccess;
 using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDBAPI.Common.Authorization;
-using TijarahJoDBAPI.Common.Utils;
-using TijarahJoDBAPI.Contracts.Requests;
+using TijarahJo.Api.Common.Authorization;
+using TijarahJo.Api.Common.Utils;
+using TijarahJo.Api.Contracts.Requests;
 
-namespace TijarahJoDBAPI.Features.Admin;
+namespace TijarahJo.Api.Features.Admin;
 
 [ApiController]
 [ApiVersion("1.0")]

@@ -1,7 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace TijarahJoDBAPI.Contracts.Requests;
+namespace TijarahJo.Api.Contracts.Requests;
 
 public sealed class CreatePostImageRequest
 {

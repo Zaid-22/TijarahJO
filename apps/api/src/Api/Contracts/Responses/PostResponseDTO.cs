@@ -1,9 +1,8 @@
-namespace TijarahJoDBAPI.Contracts.Responses;
+namespace TijarahJo.Api.Contracts.Responses;
 
 public class PostResponseDTO
 {
     public int PostID { get; set; }
-    public string Id { get; set; } = string.Empty;
     public int CategoryID { get; set; }
     public string Category { get; set; } = string.Empty;
     public string PostTitle { get; set; } = string.Empty;
@@ -21,5 +20,4 @@ public class PostResponseDTO
     public string? Area { get; set; }
     public string Seller { get; set; } = string.Empty;
     public string SellerId { get; set; } = string.Empty;
-    public string[] Images { get; set; } = System.Array.Empty<string>();
 }

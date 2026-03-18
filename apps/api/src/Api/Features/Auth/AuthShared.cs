@@ -4,11 +4,11 @@ using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Common;
 using TijarahJoDB.BLL;
-using TijarahJoDBAPI.Common.Services;
-using TijarahJoDBAPI.Common.Utils;
-using TijarahJoDBAPI.Contracts.Responses;
+using TijarahJo.Api.Common.Services;
+using TijarahJo.Api.Common.Utils;
+using TijarahJo.Api.Contracts.Responses;
 
-namespace TijarahJoDBAPI.Features.Auth;
+namespace TijarahJo.Api.Features.Auth;
 
 /// <summary>
 /// Shared helpers used across AuthController, TwoFactorController, and OAuthController.

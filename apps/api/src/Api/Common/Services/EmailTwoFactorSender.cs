@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.Mail;
 using Microsoft.Extensions.Options;
-using TijarahJoDBAPI.Common.Configuration;
+using TijarahJo.Api.Common.Configuration;
 
-namespace TijarahJoDBAPI.Common.Services;
+namespace TijarahJo.Api.Common.Services;
 
 public interface IEmailTwoFactorSender
 {
@@ -89,7 +89,7 @@ public sealed class EmailTwoFactorSender : IEmailTwoFactorSender
             smtp.Credentials = new NetworkCredential(_options.Username, _options.Password);
         }
 
-        await smtp.SendMailAsync(mail).WaitAsync(cancellationToken);
+        await smtp.SendMailAsync(mail, cancellationToken);
     }
 
     private bool IsSmtpConfigured()

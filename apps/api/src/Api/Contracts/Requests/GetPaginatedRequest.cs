@@ -1,5 +1,5 @@
 
-namespace TijarahJoDBAPI.Contracts.Requests;
+namespace TijarahJo.Api.Contracts.Requests;
 public class GetPaginatedRequest
 {
 	public int PageNumber { get; set; } = 1;

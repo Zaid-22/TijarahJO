@@ -7,7 +7,7 @@ using TijarahJoDB.DAL.Persistence;
 using TijarahJoDB.DAL.Queries;
 using TijarahJoDB.DAL.Services;
 using TijarahJoDB.Infrastructure.Caching;
-using TijarahJoDB_DataAccess;
+using TijarahJo.Infrastructure.DataAccess;
 
 namespace TijarahJoDB.Bootstrap;
 
@@ -58,6 +58,8 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<TijarahJoDB.Infrastructure.Jobs.ChannelBackgroundJobService>();
         services.AddSingleton<IBackgroundJobService>(sp => sp.GetRequiredService<TijarahJoDB.Infrastructure.Jobs.ChannelBackgroundJobService>());
         services.AddHostedService<TijarahJoDB.Infrastructure.Jobs.BackgroundJobWorker>();
+
+        services.AddScoped<ITokenBlacklistService, TijarahJo.Infrastructure.Services.DatabaseTokenBlacklistService>();
 
         return services;
     }

@@ -1,4 +1,4 @@
-namespace TijarahJoDBAPI.Common.Configuration;
+namespace TijarahJo.Api.Common.Configuration;
 
 public sealed class FileStorageOptions
 {

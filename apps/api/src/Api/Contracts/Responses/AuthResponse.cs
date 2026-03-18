@@ -1,6 +1,6 @@
 using TijarahJo.Domain.Models;
 
-namespace TijarahJoDBAPI.Contracts.Responses;
+namespace TijarahJo.Api.Contracts.Responses;
 
 public class AuthResponse
 {

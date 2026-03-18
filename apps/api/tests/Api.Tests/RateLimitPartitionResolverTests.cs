@@ -1,9 +1,9 @@
 using System.Net;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
-using TijarahJoDBAPI.Common.Services;
+using TijarahJo.Api.Common.Services;
 
-namespace TijarahJoDBAPI.Tests;
+namespace TijarahJo.Api.Tests;
 
 public sealed class RateLimitPartitionResolverTests
 {

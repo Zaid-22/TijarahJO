@@ -51,7 +51,7 @@ public sealed class ChatOrchestrationService : IChatOrchestrationService
         await _messages.MarkAsReadAsync(conversationId.Value, currentUserId, cancellationToken);
         await _notifications.MarkConversationAsReadAsync(currentUserId, conversationId.Value, cancellationToken);
 
-        IReadOnlyList<ChatMessageEnvelope> history = (await _messages.GetChatHistoryAsync(conversationId.Value, cancellationToken))
+        IReadOnlyList<ChatMessageEnvelope> history = (await _messages.GetChatHistoryAsync(conversationId.Value, cancellationToken: cancellationToken))
             .Select(message => new ChatMessageEnvelope
             {
                 Message = message,

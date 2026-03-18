@@ -3,9 +3,9 @@ using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Common;
 using TijarahJoDB.Application.Services;
 using TijarahJoDB.BLL;
-using TijarahJoDBAPI.Contracts.Requests;
+using TijarahJo.Api.Contracts.Requests;
 
-namespace TijarahJoDBAPI.Tests;
+namespace TijarahJo.Api.Tests;
 
 public sealed class PostStatusWritePathContractTests
 {

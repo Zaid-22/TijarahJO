@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using TijarahJoDB.Application.Abstractions.Services;
 
-namespace TijarahJoDBAPI.Tests;
+namespace TijarahJo.Api.Tests;
 
 public sealed class SearchRequestQueryValidationTests
 {

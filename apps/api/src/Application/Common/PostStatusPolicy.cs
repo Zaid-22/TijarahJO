@@ -1,10 +1,14 @@
+using TijarahJo.Domain.Enums;
+
 namespace TijarahJoDB.Application.Common;
 
 public static class PostStatusPolicy
 {
-    public const int Active = 0;
-    public const int Blocked = 1;
-    public const int Sold = 3;
+    // Enum-backed constants for backward compatibility
+    public const int Active = (int)PostStatus.Active;
+    public const int Blocked = (int)PostStatus.Blocked;
+    public const int Sold = (int)PostStatus.Sold;
+
     public const string AllowedApiStatuses = "ACTIVE, BLOCKED, SOLD";
     public const string SoftDeleteApiAliases = "DELETED, INACTIVE";
     public const string AllowedPersistedStatusIds = "0, 1, 3";
@@ -16,12 +20,12 @@ public static class PostStatusPolicy
             return "DELETED";
         }
 
-        if (dbStatus == Blocked)
+        return (PostStatus)dbStatus switch
         {
-            return "BLOCKED";
-        }
-
-        return dbStatus == Sold ? "SOLD" : "ACTIVE";
+            PostStatus.Blocked => "BLOCKED",
+            PostStatus.Sold => "SOLD",
+            _ => "ACTIVE"
+        };
     }
 
     public static bool TryNormalizeClientStatus(string? rawStatus, out string normalizedStatus)
@@ -63,12 +67,12 @@ public static class PostStatusPolicy
 
     public static bool IsModerationState(int dbStatus)
     {
-        return dbStatus == Blocked;
+        return (PostStatus)dbStatus == PostStatus.Blocked;
     }
 
     public static bool IsAllowedPersistedStatus(int dbStatus)
     {
-        return dbStatus is Active or Blocked or Sold;
+        return Enum.IsDefined(typeof(PostStatus), dbStatus);
     }
 
     public static string ToSqlCaseExpression(string postAlias)

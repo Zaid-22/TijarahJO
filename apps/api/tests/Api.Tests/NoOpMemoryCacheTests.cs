@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Caching.Memory;
-using TijarahJoDBAPI.Common.Services;
+using TijarahJo.Api.Common.Services;
 
-namespace TijarahJoDBAPI.Tests;
+namespace TijarahJo.Api.Tests;
 
 public sealed class NoOpMemoryCacheTests
 {

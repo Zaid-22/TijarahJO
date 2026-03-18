@@ -1,9 +1,9 @@
-using TijarahJoDBAPI.Common.Services;
+using TijarahJo.Api.Common.Services;
 using TijarahJoDB.DAL.Queries;
-using TijarahJoDB_DataAccess;
+using TijarahJo.Infrastructure.DataAccess;
 using Microsoft.Extensions.Caching.Memory;
 
-namespace TijarahJoDBAPI.Tests;
+namespace TijarahJo.Api.Tests;
 
 public sealed class PostsFeedServiceTests
 {

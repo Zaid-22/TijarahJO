@@ -1,13 +1,13 @@
-namespace TijarahJoDBAPI.Common.Configuration;
+namespace TijarahJo.Api.Common.Configuration;
 
 /// <summary>
 /// JWT Configuration Options
 /// </summary>
-public class JwtOptions
+public sealed class JwtOptions
 {
-    public string Issuer { get; set; } = string.Empty;
-    public string Audience { get; set; } = string.Empty;
-    public int Lifetime { get; set; } = 120; // Minutes
-    public string SigningKey { get; set; } = string.Empty;
+    public string Issuer { get; init; } = string.Empty;
+    public string Audience { get; init; } = string.Empty;
+    public int Lifetime { get; init; } = 120; // Minutes
+    public string SigningKey { get; init; } = string.Empty;
 }
 

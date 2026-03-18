@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace TijarahJoDBAPI.Integration.Tests;
+namespace TijarahJo.Api.Integration.Tests;
 
 public sealed class ApiSmokeIntegrationTests
 {

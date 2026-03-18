@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using TijarahJoDB.Application.Abstractions.Services;
 
-namespace TijarahJoDBAPI.Common.Utils;
+namespace TijarahJo.Api.Common.Utils;
 
 public static class ApiResultProblemMapper
 {

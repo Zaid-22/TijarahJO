@@ -3,7 +3,7 @@ using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Services;
 using TijarahJoDB.BLL;
 
-namespace TijarahJoDBAPI.Tests;
+namespace TijarahJo.Api.Tests;
 
 /// <summary>
 /// Unit tests for <see cref="CategoryCommandService"/>.

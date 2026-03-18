@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TijarahJoDB.DAL.Persistence;
-using TijarahJoDBAPI.Common.Authorization;
+using TijarahJo.Api.Common.Authorization;
 
-namespace TijarahJoDBAPI.Features.Admin;
+namespace TijarahJo.Api.Features.Admin;
 
 [ApiController]
 [ApiVersion("1.0")]
@@ -34,9 +34,9 @@ public class AdminSearchController : ControllerBase
         var users = await _dbContext.Users
             .AsNoTracking()
             .Where(u => !u.IsDeleted &&
-                (u.FirstName.ToLower().Contains(term) ||
-                 (u.LastName != null && u.LastName.ToLower().Contains(term)) ||
-                 u.Email.ToLower().Contains(term)))
+                (u.FirstName.Contains(term, StringComparison.CurrentCultureIgnoreCase) ||
+                 (u.LastName != null && u.LastName.Contains(term, StringComparison.CurrentCultureIgnoreCase)) ||
+                 u.Email.Contains(term, StringComparison.CurrentCultureIgnoreCase)))
             .OrderBy(u => u.FirstName)
             .Take(maxResults)
             .Select(u => new SearchResultItem
@@ -51,7 +51,7 @@ public class AdminSearchController : ControllerBase
         // Search Posts
         var posts = await _dbContext.Posts
             .AsNoTracking()
-            .Where(p => !p.IsDeleted && p.PostTitle.ToLower().Contains(term))
+            .Where(p => !p.IsDeleted && p.PostTitle.Contains(term, StringComparison.CurrentCultureIgnoreCase))
             .OrderByDescending(p => p.CreatedAt)
             .Take(maxResults)
             .Select(p => new SearchResultItem
@@ -66,7 +66,7 @@ public class AdminSearchController : ControllerBase
         // Search Categories
         var categories = await _dbContext.Categories
             .AsNoTracking()
-            .Where(c => !c.IsDeleted && c.CategoryName.ToLower().Contains(term))
+            .Where(c => !c.IsDeleted && c.CategoryName.Contains(term, StringComparison.CurrentCultureIgnoreCase))
             .OrderBy(c => c.CategoryName)
             .Take(maxResults)
             .Select(c => new SearchResultItem

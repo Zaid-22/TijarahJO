@@ -5,9 +5,9 @@ using Microsoft.Extensions.Options;
 using TijarahJo.Domain.Models;
 using TijarahJoDB.Application.Abstractions.DataAccess;
 using TijarahJoDB.Application.Common;
-using TijarahJoDBAPI.Common.Configuration;
+using TijarahJo.Api.Common.Configuration;
 
-namespace TijarahJoDBAPI.Common.Services;
+namespace TijarahJo.Api.Common.Services;
 
 public enum PasswordResetConfirmationFailureReason
 {
@@ -265,7 +265,7 @@ public sealed class PasswordResetService : IPasswordResetService
         return value.ToString($"D{safeDigits}");
     }
 
-    private void PruneExpiredChallenges()
+    private static void PruneExpiredChallenges()
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         foreach ((string key, PasswordResetChallengeState value) in _challenges)

@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TijarahJoDB.DAL.Persistence;
-using TijarahJoDBAPI.Common.Authorization;
+using TijarahJo.Api.Common.Authorization;
 
-namespace TijarahJoDBAPI.Features.Admin;
+namespace TijarahJo.Api.Features.Admin;
 
 /// <summary>
 /// Admin endpoint for fraud detection signals.

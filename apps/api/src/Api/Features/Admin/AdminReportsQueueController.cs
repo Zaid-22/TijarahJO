@@ -2,10 +2,10 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TijarahJoDB.Application.Abstractions.DataAccess;
-using TijarahJoDBAPI.Common.Authorization;
+using TijarahJo.Api.Common.Authorization;
 using System.Security.Claims;
 
-namespace TijarahJoDBAPI.Features.Admin;
+namespace TijarahJo.Api.Features.Admin;
 
 [ApiController]
 [ApiVersion("1.0")]

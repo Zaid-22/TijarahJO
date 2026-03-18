@@ -3,7 +3,7 @@ using TijarahJoDB.Application.Abstractions.DataAccess;
 using TijarahJoDB.Application.Services;
 using TijarahJoDB.BLL;
 
-namespace TijarahJoDBAPI.Tests;
+namespace TijarahJo.Api.Tests;
 
 public sealed class MessageServiceTests
 {
@@ -71,7 +71,7 @@ public sealed class MessageServiceTests
             return Task.FromResult(NextMessageId);
         }
 
-        public Task<IReadOnlyList<MessageModel>> GetChatHistoryAsync(int conversationId, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<MessageModel>> GetChatHistoryAsync(int conversationId, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<MessageModel>>(Array.Empty<MessageModel>());
 
         public Task<IReadOnlyList<MessageModel>> GetRecentChatsAsync(int userId, CancellationToken cancellationToken = default)
