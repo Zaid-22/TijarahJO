@@ -61,6 +61,12 @@ public sealed class GoogleAuthService
         }
     }
 
+    public string GetDebugConfiguredError()
+    {
+        ResolvedGoogleAuthOptions options = ResolveOptions();
+        return $"Enabled:{options.Enabled},ClientId:{!string.IsNullOrWhiteSpace(options.ClientId)},Secret:{!string.IsNullOrWhiteSpace(options.ClientSecret)},Uri:{Uri.TryCreate(options.RedirectUri, UriKind.Absolute, out _)}({options.RedirectUri})";
+    }
+
     public string BuildAuthorizationUrl(string state, string nonce)
     {
         ResolvedGoogleAuthOptions options = ResolveOptions();

@@ -46,7 +46,7 @@ public class OAuthController : ControllerBase
     {
         if (!_googleAuthService.IsConfigured)
         {
-            return Redirect(BuildGoogleFailureRedirectUri("Google sign-in is not configured."));
+            return Redirect(BuildGoogleFailureRedirectUri($"Google sign-in is not configured. Debug: {_googleAuthService.GetDebugConfiguredError()}"));
         }
 
         string state = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32));

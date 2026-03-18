@@ -111,7 +111,6 @@ export function CategoryPage({
 
   const {
     viewMode,
-    setViewMode,
     displayedResults: displayedPosts,
     shouldShowPagination,
     pagination,
@@ -169,9 +168,7 @@ export function CategoryPage({
             {/* Controls Bar */}
             <MarketplaceDiscoveryControls
               language={language}
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-              toolbarClassName="mb-6"
+              toolbarClassName="flex-none"
               leftSlotClassName="gap-2 flex-1 sm:flex-initial"
               leftControls={
                 <MarketplaceSortSelect

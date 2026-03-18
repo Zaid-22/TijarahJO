@@ -20,7 +20,7 @@ interface AuthPhoneFieldProps {
 }
 
 const FIELD_ICON_CONTAINER_BASE =
-  "absolute top-1/2 transform -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all duration-300";
+  "absolute top-1/2 transform -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center transition-all duration-300 pointer-events-none";
 
 const INPUT_BASE_CLASS =
   "h-12 sm:h-14 rounded-xl border-2 transition-all duration-300 text-sm sm:text-base text-foreground bg-background placeholder:text-muted-foreground font-sans";
@@ -42,7 +42,7 @@ export function AuthPhoneField({
   isRTL = false,
 }: AuthPhoneFieldProps) {
   const isActive = focused || value.length > 0;
-  const iconContainerClassName = isActive ? "bg-primary/10" : "bg-muted/70";
+  const iconContainerClassName = "";
   const iconClassName = isActive ? "text-primary" : "text-muted-foreground";
   const inputStateClassName = error
     ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20"

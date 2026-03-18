@@ -36,14 +36,13 @@ public class AdminAnalyticsController(TijarahJoDbContext dbContext) : Controller
                 .Select(u => new { u.JoinDate })
                 .ToListAsync(HttpContext.RequestAborted);
 
-            weeklyUsers = Enumerable.Range(0, 7)
+            weeklyUsers = [.. Enumerable.Range(0, 7)
                 .Select(i => sevenDaysAgo.AddDays(i).Date)
                 .Select(date => (object)new
                 {
                     Day = date.ToString("ddd"),
                     Count = usersPastWeek.Count(u => u.JoinDate.Date == date)
-                })
-                .ToList();
+                })];
         }
         catch { /* swallow to keep dashboard alive */ }
 
@@ -65,7 +64,7 @@ public class AdminAnalyticsController(TijarahJoDbContext dbContext) : Controller
                 .Select(p => p.CategoryID)
                 .ToListAsync(HttpContext.RequestAborted);
 
-            categoryData = activePostsCategories
+            categoryData = [.. activePostsCategories
                 .GroupBy(c => c)
                 .Select(g => new CategoryCountDto
                 {
@@ -74,8 +73,7 @@ public class AdminAnalyticsController(TijarahJoDbContext dbContext) : Controller
                 })
                 .OrderByDescending(c => c.Count)
                 .Take(10)
-                .Cast<object>()
-                .ToList();
+                .Cast<object>()];
         }
         catch { /* swallow */ }
 

@@ -224,7 +224,6 @@ export function SearchResultsPage({
   });
   const {
     viewMode,
-    setViewMode,
     displayedResults: displayedPosts,
     shouldShowPagination,
     pagination,
@@ -344,9 +343,7 @@ export function SearchResultsPage({
 
             <MarketplaceDiscoveryControls
               language={language}
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-              toolbarClassName="mb-4"
+              toolbarClassName="flex-none"
               search={{
                 value: localSearchQuery,
                 placeholder:

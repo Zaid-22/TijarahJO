@@ -25,7 +25,6 @@ export interface MarketplaceRouteState {
   favoriteIds: string[];
   toggleFavorite: (postId: string) => void;
   viewMode: ViewMode;
-  setViewMode: (mode: ViewMode) => void;
   currentPage: number;
   totalPages: number;
   isLoading: boolean;
