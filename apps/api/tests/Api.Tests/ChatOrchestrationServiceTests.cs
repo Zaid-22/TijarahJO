@@ -3,7 +3,7 @@ using TijarahJoDB.Application.Abstractions.Services;
 using TijarahJoDB.Application.Services;
 using TijarahJoDB.BLL;
 
-namespace TijarahJoDBAPI.Tests;
+namespace TijarahJo.Api.Tests;
 
 public sealed class ChatOrchestrationServiceTests
 {
@@ -78,8 +78,8 @@ public sealed class ChatOrchestrationServiceTests
             isRead: false,
             receiverId: 10,
             postId: 3));
-        messages.HistoryByConversationId[55] = new List<MessageModel>
-        {
+        messages.HistoryByConversationId[55] =
+        [
             new(
                 messageId: 2,
                 senderId: 22,
@@ -89,7 +89,7 @@ public sealed class ChatOrchestrationServiceTests
                 isRead: false,
                 receiverId: 10,
                 postId: 3)
-        };
+        ];
         var service = CreateService(messages, new FakeNotificationService(), new FakePresenceLookup());
 
         ChatServiceResult<IReadOnlyList<ChatMessageEnvelope>> result = await service.GetHistoryAsync(10, 22);
@@ -120,8 +120,8 @@ public sealed class ChatOrchestrationServiceTests
             isRead: false,
             receiverId: 10,
             postId: null));
-        messages.HistoryByConversationId[77] = new List<MessageModel>
-        {
+        messages.HistoryByConversationId[77] =
+        [
             new(
                 messageId: 12,
                 senderId: 10,
@@ -131,7 +131,7 @@ public sealed class ChatOrchestrationServiceTests
                 isRead: true,
                 receiverId: 22,
                 postId: null)
-        };
+        ];
         var service = CreateService(messages, new FakeNotificationService(), new FakePresenceLookup());
 
         ChatServiceResult<IReadOnlyList<ChatMessageEnvelope>> result = await service.GetHistoryAsync(10, 22);
@@ -234,8 +234,8 @@ public sealed class ChatOrchestrationServiceTests
         public int SaveAsyncCalls { get; private set; }
         public int? LastGetChatHistoryConversationId { get; private set; }
         public int? LastMarkAsReadConversationId { get; private set; }
-        public List<MessageModel> RecentChatsResult { get; } = new();
-        public Dictionary<int, List<MessageModel>> HistoryByConversationId { get; } = new();
+        public List<MessageModel> RecentChatsResult { get; } = [];
+        public Dictionary<int, List<MessageModel>> HistoryByConversationId { get; } = [];
 
         public Task<int?> GetOrCreateConversationIdAsync(int userA, int userB, int? postId = null, CancellationToken cancellationToken = default)
         {
@@ -303,7 +303,7 @@ public sealed class ChatOrchestrationServiceTests
             int take = 25,
             bool unreadOnly = false,
             CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<NotificationEnvelope>>(Array.Empty<NotificationEnvelope>());
+            => Task.FromResult<IReadOnlyList<NotificationEnvelope>>([]);
 
         public Task<int> GetUnreadCountAsync(int userId, CancellationToken cancellationToken = default)
             => Task.FromResult(0);
