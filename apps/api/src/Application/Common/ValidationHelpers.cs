@@ -1,6 +1,6 @@
-using TijarahJoDB.Application.Abstractions.Services;
+using TijarahJo.Application.Abstractions.Services;
 
-namespace TijarahJoDB.Application.Common;
+namespace TijarahJo.Application.Common;
 
 /// <summary>
 /// Shared validation logic used by multiple command services.

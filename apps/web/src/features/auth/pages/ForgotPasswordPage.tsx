@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { AlertCircle, CheckCircle2, KeyRound, Lock, Mail } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { APP_CONFIG } from "../../../constants/appConfig";
 import { api } from "../../../services/api";
 import type { Language } from "../../../types";
@@ -8,9 +8,9 @@ import { Alert, AlertDescription } from "../../../shared/ui/alert";
 import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
 import { Label } from "../../../shared/ui/label";
-import { Logo } from "../../../shared/ui/logo";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { SubpageHeader } from "../../../shared/ui/subpage-header";
+import { AuthPageLayout } from "../components/AuthPageLayout";
 import {
   buildCurrentPath,
   resolveBackPathFromLocationState,
@@ -265,24 +265,24 @@ export function ForgotPasswordPage({ language }: ForgotPasswordPageProps) {
         backLabel={copy.backToLogin}
         onLogoClick={() => navigate("/")}
       />
-      <div
-        dir={isRTL ? "rtl" : "ltr"}
-        className="min-h-content-70vh flex items-center justify-center p-4 sm:p-6 lg:p-8"
-      >
-        <div className="w-full max-w-md">
-          <div className="text-center mb-6 sm:mb-8">
-            <Link to="/" className="inline-block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary hover:opacity-90 transition-opacity">
-              <Logo size="lg" className="mx-auto mb-3 sm:mb-4" />
-            </Link>
-            <h1 className="mb-2 text-2xl sm:text-3xl text-foreground">
-              {copy.title}
-            </h1>
-            <p className="px-4 text-sm sm:text-base text-muted-foreground">
-              {copy.subtitle}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-border bg-card shadow-xl p-4 sm:p-6 lg:p-8 space-y-5">
+        <AuthPageLayout
+          direction={isRTL ? "rtl" : "ltr"}
+          title={copy.title}
+          subtitle={copy.subtitle}
+          footer={
+            step !== "complete" ? (
+              <div className="text-center mt-4">
+                <button
+                  type="button"
+                  onClick={() => navigate("/login")}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {copy.backToLogin}
+                </button>
+              </div>
+            ) : undefined
+          }
+        >
             {errorMessage && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -421,20 +421,7 @@ export function ForgotPasswordPage({ language }: ForgotPasswordPageProps) {
               </div>
             )}
 
-            {step !== "complete" && (
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={() => navigate("/login")}
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {copy.backToLogin}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </PageShell>
-  );
-}
+        </AuthPageLayout>
+      </PageShell>
+    );
+  }

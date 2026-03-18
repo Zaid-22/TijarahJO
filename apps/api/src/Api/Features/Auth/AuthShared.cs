@@ -1,9 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
 using TijarahJo.Domain.Models;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.Application.Common;
-using TijarahJoDB.BLL;
+using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Application.Common;
 using TijarahJo.Api.Common.Services;
 using TijarahJo.Api.Common.Utils;
 using TijarahJo.Api.Contracts.Responses;

@@ -4,8 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using TijarahJo.Domain.Models;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.Application.Common;
+using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Application.Common;
 using TijarahJo.Api.Common.Services;
 using TijarahJo.Api.Contracts.Responses;
 

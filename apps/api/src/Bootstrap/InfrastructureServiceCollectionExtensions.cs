@@ -1,15 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using TijarahJoDB.Application.Abstractions.DataAccess;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.DAL.Persistence;
-using TijarahJoDB.DAL.Queries;
-using TijarahJoDB.DAL.Services;
-using TijarahJoDB.Infrastructure.Caching;
+using TijarahJo.Application.Abstractions.DataAccess;
+using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Infrastructure.Persistence;
+using TijarahJo.Infrastructure.Queries;
+using TijarahJo.Infrastructure.Services;
+using TijarahJo.Infrastructure.Caching;
 using TijarahJo.Infrastructure.DataAccess;
 
-namespace TijarahJoDB.Bootstrap;
+namespace TijarahJo.Bootstrap;
 
 public static class InfrastructureServiceCollectionExtensions
 {
@@ -55,9 +55,9 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<INotificationService, NotificationService>();
         services.AddSingleton<ICacheService, HybridCacheService>();
 
-        services.AddSingleton<TijarahJoDB.Infrastructure.Jobs.ChannelBackgroundJobService>();
-        services.AddSingleton<IBackgroundJobService>(sp => sp.GetRequiredService<TijarahJoDB.Infrastructure.Jobs.ChannelBackgroundJobService>());
-        services.AddHostedService<TijarahJoDB.Infrastructure.Jobs.BackgroundJobWorker>();
+        services.AddSingleton<TijarahJo.Infrastructure.Jobs.ChannelBackgroundJobService>();
+        services.AddSingleton<IBackgroundJobService>(sp => sp.GetRequiredService<TijarahJo.Infrastructure.Jobs.ChannelBackgroundJobService>());
+        services.AddHostedService<TijarahJo.Infrastructure.Jobs.BackgroundJobWorker>();
 
         services.AddScoped<ITokenBlacklistService, TijarahJo.Infrastructure.Services.DatabaseTokenBlacklistService>();
 

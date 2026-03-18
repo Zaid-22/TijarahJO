@@ -1,4 +1,4 @@
-namespace TijarahJoDB.DAL.Entities;
+namespace TijarahJo.Domain.Entities;
 
 /// <summary>
 /// Represents a JWT that has been revoked (e.g. on logout).

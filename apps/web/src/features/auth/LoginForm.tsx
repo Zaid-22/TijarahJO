@@ -10,13 +10,12 @@ import {
 } from "lucide-react";
 import { Alert, AlertDescription } from "../../shared/ui/alert";
 import { Button } from "../../shared/ui/button";
-import { Logo } from "../../shared/ui/logo";
-import { Link } from "react-router-dom";
 import { AuthInputField } from "./AuthInputField";
 import { AuthPhoneField } from "./AuthPhoneField";
 import { AuthSelectField } from "./AuthSelectField";
 import { AuthGoogleButton } from "./AuthGoogleButton";
 import { JORDAN_CITIES, JORDAN_CITIES_AR } from "./loginUtils";
+import { AuthPageLayout } from "./components/AuthPageLayout";
 import type { Language } from "../../types";
 import {
   LoginField,
@@ -95,32 +94,55 @@ export function LoginForm({
     : "bg-muted text-muted-foreground cursor-not-allowed opacity-70 hover:bg-muted";
 
   return (
-    <div
-      dir={isRTL ? "rtl" : "ltr"}
-      className="min-h-content-70vh flex items-center justify-center p-4 sm:p-6 lg:p-8"
-    >
-      <div className="w-full max-w-md">
-        <div className="text-center mb-6 sm:mb-8">
-          <Link to="/" className="inline-block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary hover:opacity-90 transition-opacity">
-            <Logo size="lg" className="mx-auto mb-3 sm:mb-4" />
-          </Link>
-          <h1 className="mb-2 text-2xl sm:text-3xl text-foreground">
-            {isTwoFactorStep
-              ? copy.form.twoFactorTitle
-              : isSignUp
-                ? copy.form.signUpTitle
-                : copy.form.signInTitle}
-          </h1>
-          <p className="px-4 text-sm sm:text-base text-muted-foreground">
-            {isTwoFactorStep
-              ? copy.form.twoFactorSubtitle
-              : isSignUp
-                ? copy.form.signUpSubtitle
-                : copy.form.signInSubtitle}
-          </p>
-        </div>
+    <AuthPageLayout
+      direction={isRTL ? "rtl" : "ltr"}
+      title={
+        isTwoFactorStep
+          ? copy.form.twoFactorTitle
+          : isSignUp
+            ? copy.form.signUpTitle
+            : copy.form.signInTitle
+      }
+      subtitle={
+        isTwoFactorStep
+          ? copy.form.twoFactorSubtitle
+          : isSignUp
+            ? copy.form.signUpSubtitle
+            : copy.form.signInSubtitle
+      }
+      footer={
+        <>
+          {!isTwoFactorStep && (
+            <div className="mt-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                {isSignUp
+                  ? copy.form.alreadyHaveAccount
+                  : copy.form.dontHaveAccount}{" "}
+                <button
+                  type="button"
+                  onClick={onToggleAuthMode}
+                  className="font-medium text-primary hover:underline"
+                >
+                  {isSignUp ? copy.form.signInLink : copy.form.signUpLink}
+                </button>
+              </p>
+            </div>
+          )}
 
-        <div className="rounded-2xl border border-border bg-card shadow-xl p-4 sm:p-6 lg:p-8">
+          {!isTwoFactorStep && (
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={onContinueAsGuest}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {copy.form.continueAsGuest}
+              </button>
+            </div>
+          )}
+        </>
+      }
+    >
           {generalError && (
             <Alert
               variant="destructive"
@@ -398,36 +420,6 @@ export function LoginForm({
             )}
           </form>
 
-          {!isTwoFactorStep && (
-            <div className="mt-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                {isSignUp
-                  ? copy.form.alreadyHaveAccount
-                  : copy.form.dontHaveAccount}{" "}
-                <button
-                  type="button"
-                  onClick={onToggleAuthMode}
-                  className="font-medium text-primary hover:underline"
-                >
-                  {isSignUp ? copy.form.signInLink : copy.form.signUpLink}
-                </button>
-              </p>
-            </div>
-          )}
-
-          {!isTwoFactorStep && (
-            <div className="mt-4 text-center">
-              <button
-                type="button"
-                onClick={onContinueAsGuest}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {copy.form.continueAsGuest}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    </AuthPageLayout>
   );
 }

@@ -16,18 +16,12 @@ public interface IEmailTwoFactorSender
     );
 }
 
-public sealed class EmailTwoFactorSender : IEmailTwoFactorSender
+public sealed class EmailTwoFactorSender(
+    IOptions<EmailTwoFactorOptions> options,
+    ILogger<EmailTwoFactorSender> logger) : IEmailTwoFactorSender
 {
-    private readonly EmailTwoFactorOptions _options;
-    private readonly ILogger<EmailTwoFactorSender> _logger;
-
-    public EmailTwoFactorSender(
-        IOptions<EmailTwoFactorOptions> options,
-        ILogger<EmailTwoFactorSender> logger)
-    {
-        _options = options.Value;
-        _logger = logger;
-    }
+    private readonly EmailTwoFactorOptions _options = options.Value;
+    private readonly ILogger<EmailTwoFactorSender> _logger = logger;
 
     public async Task SendTwoFactorCodeAsync(
         string recipientEmail,

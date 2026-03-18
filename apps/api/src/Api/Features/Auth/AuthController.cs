@@ -5,10 +5,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 using TijarahJo.Domain.Models;
-using TijarahJoDB.Application.Abstractions.DataAccess;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.Application.Common;
-using TijarahJoDB.BLL;
+using TijarahJo.Application.Abstractions.DataAccess;
+using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Application.Common;
 using TijarahJo.Api.Common.Services;
 using TijarahJo.Api.Common.Utils;
 using TijarahJo.Api.Contracts.Requests;
@@ -19,36 +18,24 @@ namespace TijarahJo.Api.Features.Auth;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/auth")]
-public class AuthController : ControllerBase
+public class AuthController(
+    ITokenService tokenService,
+    IAuthCommandService authCommands,
+    IUserQueryHandler userQueries,
+    IRoleService roles,
+    TwoFactorService twoFactorService,
+    ITokenBlacklistService tokenBlacklistService,
+    IBackgroundJobService backgroundJobService,
+    ILogger<AuthController> logger) : ControllerBase
 {
-    private readonly ITokenService _tokenService;
-    private readonly IAuthCommandService _authCommands;
-    private readonly IUserQueryHandler _userQueries;
-    private readonly IRoleService _roles;
-    private readonly TwoFactorService _twoFactorService;
-    private readonly ITokenBlacklistService _tokenBlacklistService;
-    private readonly IBackgroundJobService _backgroundJobService;
-    private readonly ILogger<AuthController> _logger;
-
-    public AuthController(
-        ITokenService tokenService,
-        IAuthCommandService authCommands,
-        IUserQueryHandler userQueries,
-        IRoleService roles,
-        TwoFactorService twoFactorService,
-        ITokenBlacklistService tokenBlacklistService,
-        IBackgroundJobService backgroundJobService,
-        ILogger<AuthController> logger)
-    {
-        _tokenService = tokenService;
-        _authCommands = authCommands;
-        _userQueries = userQueries;
-        _roles = roles;
-        _twoFactorService = twoFactorService;
-        _tokenBlacklistService = tokenBlacklistService;
-        _backgroundJobService = backgroundJobService;
-        _logger = logger;
-    }
+    private readonly ITokenService _tokenService = tokenService;
+    private readonly IAuthCommandService _authCommands = authCommands;
+    private readonly IUserQueryHandler _userQueries = userQueries;
+    private readonly IRoleService _roles = roles;
+    private readonly TwoFactorService _twoFactorService = twoFactorService;
+    private readonly ITokenBlacklistService _tokenBlacklistService = tokenBlacklistService;
+    private readonly IBackgroundJobService _backgroundJobService = backgroundJobService;
+    private readonly ILogger<AuthController> _logger = logger;
 
     [HttpPost("login")]
     [AllowAnonymous]

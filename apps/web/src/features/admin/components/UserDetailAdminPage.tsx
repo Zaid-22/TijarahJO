@@ -86,6 +86,7 @@ export function UserDetailAdminPage() {
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
           User Details{" "}
           <span className="text-muted-foreground font-normal text-lg">
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             #{String(user.id || (user as any).userID)}
           </span>
         </h1>
@@ -182,6 +183,7 @@ export function UserDetailAdminPage() {
                 </div>
               ) : (
                 <div className="divide-y divide-border">
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {recentPosts.map((post: any) => (
                     <div
                       key={post.postId}
@@ -222,6 +224,7 @@ export function UserDetailAdminPage() {
                 </div>
               ) : (
                 <div className="divide-y divide-border">
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {recentReviews.map((review: any) => (
                     <div key={review.reviewID || review.id} className="py-3">
                       <div className="flex justify-between items-start mb-1">

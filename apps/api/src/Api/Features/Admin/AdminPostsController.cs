@@ -1,8 +1,8 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TijarahJoDB.Application.Abstractions.DataAccess;
-using TijarahJoDB.Application.Abstractions.Services;
+using TijarahJo.Application.Abstractions.DataAccess;
+using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Api.Common.Authorization;
 using TijarahJo.Api.Common.Utils;
 using TijarahJo.Api.Contracts.Requests;

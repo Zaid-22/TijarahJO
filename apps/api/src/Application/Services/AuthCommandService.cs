@@ -1,12 +1,11 @@
 using TijarahJo.Domain.Models;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.Application.Common;
+using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Application.Common;
 using Microsoft.Extensions.Logging;
-using TijarahJoDB.BLL;
 using System.Security.Cryptography;
-using TijarahJoDB.Application.Abstractions.DataAccess;
+using TijarahJo.Application.Abstractions.DataAccess;
 
-namespace TijarahJoDB.Application.Services;
+namespace TijarahJo.Application.Services;
 
 public sealed class AuthCommandService : IAuthCommandService
 {

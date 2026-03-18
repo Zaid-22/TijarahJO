@@ -1,10 +1,10 @@
 using System;
 
-namespace TijarahJoDB.DAL.Entities;
+namespace TijarahJo.Domain.Entities;
 
 /// <summary>
 /// Represents a single audit entry recording a data mutation on a key table.
-/// Written by <see cref="TijarahJoDB.DAL.Persistence.TijarahJoDbContext.SaveChangesAsync"/>
+/// Written by <see cref="TijarahJo.Infrastructure.Persistence.TijarahJoDbContext.SaveChangesAsync"/>
 /// in the same transaction as the primary change.
 /// </summary>
 public sealed class AuditLogEntity

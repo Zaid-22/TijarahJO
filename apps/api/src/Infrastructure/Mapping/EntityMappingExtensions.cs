@@ -1,5 +1,5 @@
 using TijarahJo.Domain.Models;
-using TijarahJoDB.DAL.Entities;
+using TijarahJo.Domain.Entities;
 
 namespace TijarahJo.Infrastructure.Mapping;
 

@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Caching.Memory;
-using TijarahJoDB.Application.Abstractions.Services;
+using TijarahJo.Application.Abstractions.Services;
 
 namespace TijarahJo.Api.Common.Services
 {

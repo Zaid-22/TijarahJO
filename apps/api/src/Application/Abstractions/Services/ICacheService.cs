@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace TijarahJoDB.Application.Abstractions.Services;
+namespace TijarahJo.Application.Abstractions.Services;
 
 public interface ICacheService
 {

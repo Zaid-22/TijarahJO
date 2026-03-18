@@ -1,7 +1,7 @@
 import { SellerProfileResponse } from "../../types/api";
 import { apiRequest } from "./client";
 
-export interface TopSeller {
+interface TopSeller {
   id: string;
   name: string;
   phone: string;

@@ -5,7 +5,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Net.Http.Headers;
-using TijarahJoDB.Application.Abstractions.Services;
+using TijarahJo.Application.Abstractions.Services;
 
 namespace TijarahJo.Api.Startup;
 

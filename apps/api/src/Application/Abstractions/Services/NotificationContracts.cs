@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace TijarahJoDB.Application.Abstractions.Services;
+namespace TijarahJo.Application.Abstractions.Services;
 
 public sealed class NotificationEnvelope
 {

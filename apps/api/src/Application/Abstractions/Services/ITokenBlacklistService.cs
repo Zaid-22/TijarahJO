@@ -1,4 +1,4 @@
-namespace TijarahJoDB.Application.Abstractions.Services;
+namespace TijarahJo.Application.Abstractions.Services;
 
 /// <summary>
 /// Manages revoked JWT tokens so that logged-out users cannot reuse their token.

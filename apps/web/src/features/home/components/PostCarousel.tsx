@@ -4,7 +4,7 @@ import { PostCard } from "../../marketplace/components/PostCard";
 import type { Language, Post } from "../../../types";
 import { cn } from "../../../shared/ui/utils";
 
-export interface PostCarouselTag {
+interface PostCarouselTag {
   id: string;
   label: string;
 }
@@ -137,7 +137,7 @@ export function PostCarousel({
               type="button"
               onClick={() => onTagClick?.(tag.id)}
               className={cn(
-                "px-5 py-2.5 rounded-xl whitespace-nowrap text-sm sm:text-[15px] font-semibold transition-all duration-200 border",
+                "px-5 py-2.5 rounded-xl whitespace-nowrap text-sm sm:text-base font-semibold transition-all duration-200 border",
                 activeTagId === tag.id
                   ? "bg-muted text-foreground border-transparent shadow-sm"
                   : "bg-transparent text-muted-foreground hover:bg-muted/50 border-transparent shadow-none"

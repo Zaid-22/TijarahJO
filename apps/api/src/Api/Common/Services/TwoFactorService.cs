@@ -161,12 +161,12 @@ public sealed class TwoFactorService
         return code;
     }
 
-    private bool VerifyAndRemoveCode(int userId, string? submittedCode, ConcurrentDictionary<int, TwoFactorChallengeState> cache)
+    private static bool VerifyAndRemoveCode(int userId, string? submittedCode, ConcurrentDictionary<int, TwoFactorChallengeState> cache)
     {
         PruneExpiredChallenges(cache);
         
         DateTimeOffset now = DateTimeOffset.UtcNow;
-        string normalizedCode = new string((submittedCode ?? "").Where(char.IsDigit).ToArray());
+        string normalizedCode = string.Concat((submittedCode ?? "").Where(char.IsDigit));
 
         if (!cache.TryGetValue(userId, out TwoFactorChallengeState? challenge) || challenge.ExpiresAtUtc <= now)
         {

@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.Application.Services;
+using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Application.Services;
 
-namespace TijarahJoDB.Bootstrap;
+namespace TijarahJo.Bootstrap;
 
 /// <summary>
 /// Registers all Application-layer services (query handlers, command services,

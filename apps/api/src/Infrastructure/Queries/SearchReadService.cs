@@ -1,9 +1,9 @@
 using System.Globalization;
 using Microsoft.Extensions.Caching.Memory;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.Application.Common;
+using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Application.Common;
 
-namespace TijarahJoDB.DAL.Queries;
+namespace TijarahJo.Infrastructure.Queries;
 
 public sealed class SearchReadService : ISearchReadService
 {

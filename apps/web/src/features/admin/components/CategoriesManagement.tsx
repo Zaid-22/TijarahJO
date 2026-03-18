@@ -130,7 +130,6 @@ export function CategoriesManagement() {
         toast.error(response.message || "Failed to add");
       }
     } catch (error) {
-      console.error("[CategoriesManagement] Failed to save category:", error);
       logger.warn("[CategoriesManagement] Failed to save category", error);
       toast.error("An error occurred");
     }

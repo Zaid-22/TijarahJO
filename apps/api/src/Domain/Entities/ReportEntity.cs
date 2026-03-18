@@ -1,6 +1,6 @@
 using System;
 
-namespace TijarahJoDB.DAL.Entities;
+namespace TijarahJo.Domain.Entities;
 
 /// <summary>
 /// Represents a user-submitted abuse/fraud report against a listing, user, or review.

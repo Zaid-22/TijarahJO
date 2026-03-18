@@ -1,8 +1,8 @@
 using TijarahJo.Domain.Models;
-using TijarahJoDB.Application.Abstractions.DataAccess;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.Application.Services;
-using TijarahJoDB.BLL;
+using TijarahJo.Application.Abstractions.DataAccess;
+using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Application.Services;
+using TijarahJo.Application.Common;
 
 namespace TijarahJo.Api.Tests;
 
@@ -46,7 +46,7 @@ public sealed class AuthCommandServiceTests
     public async Task LoginAsync_ReturnsInvalidCredentials_WhenPasswordWrong()
     {
         // Register a user with a known hashed password
-        var hashedCorrectPassword = TijarahJoDB.Application.Common.PasswordHelper.HashPassword("correct-password");
+        var hashedCorrectPassword = TijarahJo.Application.Common.PasswordHelper.HashPassword("correct-password");
         var service = BuildService(hashedPassword: hashedCorrectPassword);
 
         AuthCommandResult result = await service.LoginAsync(new LoginCommand
@@ -62,7 +62,7 @@ public sealed class AuthCommandServiceTests
     [Fact]
     public async Task LoginAsync_ReturnsInvalidCredentials_WhenUserIsSoftDeleted()
     {
-        var hash = TijarahJoDB.Application.Common.PasswordHelper.HashPassword("pass");
+        var hash = TijarahJo.Application.Common.PasswordHelper.HashPassword("pass");
         var service = BuildService(hashedPassword: hash, isDeleted: true);
 
         AuthCommandResult result = await service.LoginAsync(new LoginCommand
@@ -78,7 +78,7 @@ public sealed class AuthCommandServiceTests
     [Fact]
     public async Task LoginAsync_ReturnsUserInactive_WhenUserIsBanned()
     {
-        var hash = TijarahJoDB.Application.Common.PasswordHelper.HashPassword("pass");
+        var hash = TijarahJo.Application.Common.PasswordHelper.HashPassword("pass");
         // Status = 2 means banned/inactive (Active = 1 per UserStatusPolicy)
         var service = BuildService(hashedPassword: hash, status: 2);
 
@@ -95,7 +95,7 @@ public sealed class AuthCommandServiceTests
     [Fact]
     public async Task LoginAsync_ReturnsSuccess_WhenCredentialsAreValid()
     {
-        var hash = TijarahJoDB.Application.Common.PasswordHelper.HashPassword("correct-pass");
+        var hash = TijarahJo.Application.Common.PasswordHelper.HashPassword("correct-pass");
         var service = BuildService(hashedPassword: hash);
 
         AuthCommandResult result = await service.LoginAsync(new LoginCommand
@@ -245,7 +245,7 @@ public sealed class AuthCommandServiceTests
     {
         var model = new UserModel(
             userid: 1,
-            hashedpassword: hashedPassword ?? TijarahJoDB.Application.Common.PasswordHelper.HashPassword("default"),
+            hashedpassword: hashedPassword ?? TijarahJo.Application.Common.PasswordHelper.HashPassword("default"),
             email: "user@example.com",
             firstname: "Test",
             lastname: "User",

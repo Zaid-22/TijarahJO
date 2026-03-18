@@ -1,6 +1,6 @@
 using TijarahJo.Domain.Enums;
 
-namespace TijarahJoDB.Application.Common;
+namespace TijarahJo.Application.Common;
 
 public static class UserStatusPolicy
 {

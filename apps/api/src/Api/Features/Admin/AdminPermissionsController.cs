@@ -2,7 +2,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using TijarahJoDB.DAL.Persistence;
+using TijarahJo.Infrastructure.Persistence;
 using TijarahJo.Api.Common.Authorization;
 
 namespace TijarahJo.Api.Features.Admin;
@@ -69,7 +69,7 @@ public class AdminPermissionsController : ControllerBase
         // Add new
         foreach (var permId in request.PermissionIds)
         {
-            _dbContext.RolePermissions.Add(new TijarahJoDB.DAL.Entities.RolePermissionEntity
+            _dbContext.RolePermissions.Add(new TijarahJo.Domain.Entities.RolePermissionEntity
             {
                 RoleID = roleId,
                 PermissionID = permId

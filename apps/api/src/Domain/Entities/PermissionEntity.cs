@@ -1,4 +1,4 @@
-namespace TijarahJoDB.DAL.Entities;
+namespace TijarahJo.Domain.Entities;
 
 /// <summary>
 /// Represents a granular permission that can be assigned to roles.

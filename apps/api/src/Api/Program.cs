@@ -11,9 +11,9 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using System.Net;
 using System.Threading.RateLimiting;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.Application.Services;
-using TijarahJoDB.Bootstrap;
+using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Application.Services;
+using TijarahJo.Bootstrap;
 using TijarahJo.Api.Common.Configuration;
 using TijarahJo.Api.Common.Filters;
 using TijarahJo.Api.Common.Health;
@@ -50,11 +50,11 @@ builder.Services.AddHttpClient<GoogleAuthService>();
 string[] configuredKnownProxies = builder.Configuration
     .GetSection("ForwardedHeaders:KnownProxies")
     .Get<string[]>()
-    ?? Array.Empty<string>();
+    ?? [];
 string[] configuredKnownNetworks = builder.Configuration
     .GetSection("ForwardedHeaders:KnownNetworks")
     .Get<string[]>()
-    ?? Array.Empty<string>();
+    ?? [];
 bool hasExplicitForwardedHeaderTrust = configuredKnownProxies.Length > 0 || configuredKnownNetworks.Length > 0;
 
 static bool TryParseKnownNetwork(string rawValue, out Microsoft.AspNetCore.HttpOverrides.IPNetwork network)
@@ -176,8 +176,8 @@ if (featureFlags.EnableHttpLogging)
 if (featureFlags.EnableHealthChecks)
 {
     builder.Services.AddHealthChecks()
-        .AddCheck("process_liveness", () => HealthCheckResult.Healthy("Process is running."), tags: new[] { "live" })
-        .AddCheck<DatabaseConnectivityHealthCheck>("database_connectivity", tags: new[] { "ready" });
+        .AddCheck("process_liveness", () => HealthCheckResult.Healthy("Process is running."), tags: ["live"])
+        .AddCheck<DatabaseConnectivityHealthCheck>("database_connectivity", tags: ["ready"]);
 }
 
 // ---------------------------------------------------------------------------

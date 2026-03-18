@@ -1,0 +1,21 @@
+  Determining projects to restore...
+  Restored /Users/zaidyehyaaiasra/Desktop/UN/Grad Project 1/final project primary /apps/api/src/Domain/TijarahJo.Domain.csproj (in 2.01 sec).
+  Restored /Users/zaidyehyaaiasra/Desktop/UN/Grad Project 1/final project primary /apps/api/src/Application/TijarahJo.Application.csproj (in 2.03 sec).
+  Restored /Users/zaidyehyaaiasra/Desktop/UN/Grad Project 1/final project primary /apps/api/src/Infrastructure/TijarahJo.Infrastructure.csproj (in 2.06 sec).
+  Restored /Users/zaidyehyaaiasra/Desktop/UN/Grad Project 1/final project primary /apps/api/src/Bootstrap/TijarahJo.Bootstrap.csproj (in 2.06 sec).
+  Restored /Users/zaidyehyaaiasra/Desktop/UN/Grad Project 1/final project primary /apps/api/src/Api/TijarahJo.Api.csproj (in 2.06 sec).
+  Restored /Users/zaidyehyaaiasra/Desktop/UN/Grad Project 1/final project primary /apps/api/tests/Integration.Tests/TijarahJo.Integration.Tests.csproj (in 2.07 sec).
+  Restored /Users/zaidyehyaaiasra/Desktop/UN/Grad Project 1/final project primary /apps/api/tests/Api.Tests/TijarahJo.Api.Tests.csproj (in 2.08 sec).
+  TijarahJo.Domain -> /Users/zaidyehyaaiasra/Desktop/UN/Grad Project 1/final project primary /apps/api/src/Domain/bin/Debug/net8.0/TijarahJo.Domain.dll
+  TijarahJo.Application -> /Users/zaidyehyaaiasra/Desktop/UN/Grad Project 1/final project primary /apps/api/src/Application/bin/Debug/net8.0/TijarahJo.Application.dll
+  TijarahJo.Infrastructure -> /Users/zaidyehyaaiasra/Desktop/UN/Grad Project 1/final project primary /apps/api/src/Infrastructure/bin/Debug/net8.0/TijarahJo.Infrastructure.dll
+  TijarahJo.Bootstrap -> /Users/zaidyehyaaiasra/Desktop/UN/Grad Project 1/final project primary /apps/api/src/Bootstrap/bin/Debug/net8.0/TijarahJo.Bootstrap.dll
+  TijarahJo.Integration.Tests -> /Users/zaidyehyaaiasra/Desktop/UN/Grad Project 1/final project primary /apps/api/tests/Integration.Tests/bin/Debug/net8.0/TijarahJo.Integration.Tests.dll
+  TijarahJo.Api -> /Users/zaidyehyaaiasra/Desktop/UN/Grad Project 1/final project primary /apps/api/src/Api/bin/Debug/net8.0/TijarahJo.Api.dll
+  TijarahJo.Api.Tests -> /Users/zaidyehyaaiasra/Desktop/UN/Grad Project 1/final project primary /apps/api/tests/Api.Tests/bin/Debug/net8.0/TijarahJo.Api.Tests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:08.89

@@ -2,7 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using TijarahJo.Domain.Models;
 
-namespace TijarahJoDB.Application.Abstractions.Services;
+namespace TijarahJo.Application.Abstractions.Services;
 
 public sealed class LoginCommand
 {

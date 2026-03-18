@@ -3,9 +3,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using TijarahJoDB.Application.Abstractions.Services;
+using TijarahJo.Application.Abstractions.Services;
 
-namespace TijarahJoDB.Application.Common;
+namespace TijarahJo.Application.Common;
 
 public static class RoleResolution
 {

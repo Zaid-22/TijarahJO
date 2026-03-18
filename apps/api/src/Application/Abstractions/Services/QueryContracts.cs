@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace TijarahJoDB.Application.Abstractions.Services;
+namespace TijarahJo.Application.Abstractions.Services;
 
 public enum PostListingVisibilityMode
 {

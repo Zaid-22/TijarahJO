@@ -1,11 +1,11 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.Application.Common;
-using TijarahJoDB.DAL.Persistence;
+using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Application.Common;
+using TijarahJo.Infrastructure.Persistence;
 
-namespace TijarahJoDB.DAL.Queries;
+namespace TijarahJo.Infrastructure.Queries;
 
 public sealed class SellerReadService : ISellerReadService
 {

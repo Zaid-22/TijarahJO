@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using TijarahJoDB.Application.Abstractions.Services;
+using TijarahJo.Application.Abstractions.Services;
 
 namespace TijarahJo.Api.Tests;
 

@@ -1,4 +1,4 @@
-namespace TijarahJoDB.DAL.Entities;
+namespace TijarahJo.Domain.Entities;
 
 /// <summary>
 /// Junction table mapping roles to permissions (many-to-many).
