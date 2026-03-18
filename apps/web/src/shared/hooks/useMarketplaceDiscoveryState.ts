@@ -1,21 +1,18 @@
 import type { ViewMode } from "../../types";
-import { useMarketplaceViewMode } from "./useMarketplaceViewMode";
 import { usePaginatedResults } from "./usePaginatedResults";
 
 interface UseMarketplaceDiscoveryStateParams<T> {
   items: T[];
   itemsPerPage?: number;
   defaultViewMode?: ViewMode;
-  storageKey?: string;
+  storageKey?: string; // Kept for backwards compatibility if needed elsewhere
 }
 
 export function useMarketplaceDiscoveryState<T>({
   items,
   itemsPerPage = 12,
   defaultViewMode = "grid-4",
-  storageKey,
 }: UseMarketplaceDiscoveryStateParams<T>) {
-  const [viewMode, setViewMode] = useMarketplaceViewMode(defaultViewMode, storageKey);
   const {
     displayedResults,
     shouldShowPagination,
@@ -26,8 +23,7 @@ export function useMarketplaceDiscoveryState<T>({
   });
 
   return {
-    viewMode,
-    setViewMode,
+    viewMode: defaultViewMode,
     displayedResults,
     shouldShowPagination,
     pagination,

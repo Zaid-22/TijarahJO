@@ -49,7 +49,6 @@ export function useMarketplaceRouteState({
 
   const {
     viewMode,
-    setViewMode,
     displayedResults: displayedPosts,
     pagination,
   } = useMarketplaceDiscoveryState({
@@ -73,7 +72,6 @@ export function useMarketplaceRouteState({
     favoriteIds,
     toggleFavorite,
     viewMode,
-    setViewMode,
     currentPage: pagination.currentPage,
     totalPages: pagination.totalPages,
     isLoading: pagination.isLoading,

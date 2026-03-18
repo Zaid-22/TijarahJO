@@ -113,7 +113,6 @@ export function AllPostsPage({
   });
   const {
     viewMode,
-    setViewMode,
     displayedResults: displayedPosts,
     shouldShowPagination,
     pagination,
@@ -174,8 +173,7 @@ export function AllPostsPage({
           <div className="flex flex-col gap-4">
             <MarketplaceDiscoveryControls
               language={language}
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
+              toolbarClassName="flex-none"
               search={{
                 value: searchInputValue,
                 placeholder:

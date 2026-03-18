@@ -54,7 +54,6 @@ function HomeMarketplaceRouteScreen() {
       postsError={routeState.postsError}
       displayedPosts={routeState.displayedPosts}
       viewMode={routeState.viewMode}
-      setViewMode={routeState.setViewMode}
       onPostClick={(id: string) => navigateToPost(id, "/")}
       favoriteIds={routeState.favoriteIds}
       toggleFavorite={routeState.toggleFavorite}

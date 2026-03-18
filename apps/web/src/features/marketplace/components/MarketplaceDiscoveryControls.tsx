@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { SlidersHorizontal } from "lucide-react";
-import type { Language, ViewMode } from "../../../types";
+import type { Language } from "../../../types";
 import { Button } from "../../../shared/ui/button";
 import { cn } from "../../../shared/ui/utils";
 import { MarketplaceDiscoveryToolbar } from "./MarketplaceDiscoveryToolbar";
@@ -24,8 +24,6 @@ interface DiscoveryMobileFiltersConfig {
 
 interface MarketplaceDiscoveryControlsProps {
   language: Language;
-  viewMode: ViewMode;
-  onViewModeChange: (mode: ViewMode) => void;
   search?: DiscoverySearchConfig;
   leftControls?: ReactNode;
   mobileFilters?: DiscoveryMobileFiltersConfig;
@@ -33,13 +31,10 @@ interface MarketplaceDiscoveryControlsProps {
   className?: string;
   toolbarClassName?: string;
   leftSlotClassName?: string;
-  showViewModeOnMobile?: boolean;
 }
 
 export function MarketplaceDiscoveryControls({
   language,
-  viewMode,
-  onViewModeChange,
   search,
   leftControls,
   mobileFilters,
@@ -47,7 +42,6 @@ export function MarketplaceDiscoveryControls({
   className,
   toolbarClassName,
   leftSlotClassName,
-  showViewModeOnMobile = false,
 }: MarketplaceDiscoveryControlsProps) {
   const isRTL = language === "ar";
 
@@ -65,12 +59,8 @@ export function MarketplaceDiscoveryControls({
       ) : null}
 
       <MarketplaceDiscoveryToolbar
-        language={language}
-        viewMode={viewMode}
-        onViewModeChange={onViewModeChange}
         className={toolbarClassName}
         leftSlotClassName={leftSlotClassName}
-        showViewModeOnMobile={showViewModeOnMobile}
       >
         {mobileFilters ? (
           <Button
