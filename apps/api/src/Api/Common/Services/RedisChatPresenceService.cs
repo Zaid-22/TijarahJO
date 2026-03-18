@@ -1,6 +1,6 @@
 using StackExchange.Redis;
 using Microsoft.Extensions.Logging;
-using TijarahJoDB.Application.Abstractions.Services;
+using TijarahJo.Application.Abstractions.Services;
 
 namespace TijarahJo.Api.Common.Services;
 

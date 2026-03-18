@@ -1,8 +1,8 @@
 using System.Threading;
 using System.Threading.Tasks;
-using TijarahJoDB.BLL;
+using TijarahJo.Application.Common;
 
-namespace TijarahJoDB.Application.Abstractions.Services;
+namespace TijarahJo.Application.Abstractions.Services;
 
 public sealed class CreatePostCommand
 {

@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 
-namespace TijarahJoDB.Application.Common;
+namespace TijarahJo.Application.Common;
 
 public static class PhoneNumberNormalizer
 {

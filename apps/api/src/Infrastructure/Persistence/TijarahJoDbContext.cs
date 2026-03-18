@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
-using TijarahJoDB.DAL.Entities;
+using TijarahJo.Domain.Entities;
 
-namespace TijarahJoDB.DAL.Persistence;
+namespace TijarahJo.Infrastructure.Persistence;
 
 public sealed class TijarahJoDbContext : DbContext
 {

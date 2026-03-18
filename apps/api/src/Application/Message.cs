@@ -1,6 +1,6 @@
 using TijarahJo.Domain.Models;
 
-namespace TijarahJoDB.BLL
+namespace TijarahJo.Application.Common
 {
     public class Message
     {

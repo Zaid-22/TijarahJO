@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace TijarahJoDB.Application.Abstractions.Services;
+namespace TijarahJo.Application.Abstractions.Services;
 
 public sealed class SearchRequestQuery
 {

@@ -3,8 +3,8 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
 using TijarahJo.Domain.Models;
-using TijarahJoDB.Application.Abstractions.DataAccess;
-using TijarahJoDB.Application.Common;
+using TijarahJo.Application.Abstractions.DataAccess;
+using TijarahJo.Application.Common;
 using TijarahJo.Api.Common.Configuration;
 
 namespace TijarahJo.Api.Common.Services;

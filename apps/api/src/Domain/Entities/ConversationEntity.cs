@@ -1,6 +1,6 @@
 using System;
 
-namespace TijarahJoDB.DAL.Entities
+namespace TijarahJo.Domain.Entities
 {
     /// <summary>
     /// Represents a distinct chat thread between two users, optionally regarding a specific post.

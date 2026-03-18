@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace TijarahJoDB.Infrastructure.Jobs;
+namespace TijarahJo.Infrastructure.Jobs;
 
 public sealed class BackgroundJobWorker : BackgroundService
 {

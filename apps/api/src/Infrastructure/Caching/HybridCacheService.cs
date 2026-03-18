@@ -4,9 +4,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
-using TijarahJoDB.Application.Abstractions.Services;
+using TijarahJo.Application.Abstractions.Services;
 
-namespace TijarahJoDB.Infrastructure.Caching;
+namespace TijarahJo.Infrastructure.Caching;
 
 public class HybridCacheService : ICacheService
 {

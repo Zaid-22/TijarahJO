@@ -1,8 +1,8 @@
 using System.Threading;
 using System.Threading.Tasks;
-using TijarahJoDB.Application.Abstractions.Services;
+using TijarahJo.Application.Abstractions.Services;
 
-namespace TijarahJoDB.Application.Services;
+namespace TijarahJo.Application.Services;
 
 public sealed class FavoriteCommandService : IFavoriteCommandService
 {

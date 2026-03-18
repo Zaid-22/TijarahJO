@@ -1,5 +1,5 @@
 using TijarahJo.Api.Common.Services;
-using TijarahJoDB.DAL.Queries;
+using TijarahJo.Infrastructure.Queries;
 using TijarahJo.Infrastructure.DataAccess;
 using Microsoft.Extensions.Caching.Memory;
 

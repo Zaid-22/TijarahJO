@@ -21,10 +21,10 @@ const arTranslations = {
 };
 
 /** All valid translation keys inferred from the English translation map. */
-export type TranslationKey = keyof typeof enTranslations;
+type TranslationKey = keyof typeof enTranslations;
 
 /** Typed translation map — guarantees all keys exist. */
-export type TranslationMap = Record<TranslationKey, string>;
+type TranslationMap = Record<TranslationKey, string>;
 
 export const translations: Record<Language, TranslationMap> = {
   en: enTranslations as TranslationMap,

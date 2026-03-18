@@ -1,5 +1,5 @@
 using TijarahJo.Domain.Models;
-using TijarahJoDB.Application.Abstractions.Services;
+using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Api.Contracts.Responses;
 
 namespace TijarahJo.Api.Common.Utils;
@@ -128,7 +128,7 @@ public static class DTOMapper
         return new SearchResponseDTO
         {
             Success = readResult.Success,
-            Posts = readResult.Posts.Select(post => new SearchPostResponseDTO
+            Posts = [.. readResult.Posts.Select(post => new SearchPostResponseDTO
             {
                 Id = post.Id,
                 Name = post.Name,
@@ -146,7 +146,7 @@ public static class DTOMapper
                 UpdatedAt = post.UpdatedAt,
                 Views = post.Views,
                 Status = post.Status
-            }).ToList(),
+            })],
             Pagination = new SearchPaginationResponseDTO
             {
                 CurrentPage = readResult.Pagination.CurrentPage,
@@ -192,7 +192,7 @@ public static class DTOMapper
                 ActiveListingsCount = profile.Seller.ActiveListingsCount,
                 TotalSalesCount = profile.Seller.TotalSalesCount
             },
-            Posts = profile.Posts.Select(post => new SellerPostResponseDTO
+            Posts = [.. profile.Posts.Select(post => new SellerPostResponseDTO
             {
                 Id = post.Id,
                 Name = post.Name,
@@ -204,14 +204,14 @@ public static class DTOMapper
                 Category = post.Category,
                 CategoryId = post.CategoryId,
                 Image = post.Image,
-                Images = post.Images.ToList(),
+                Images = [.. post.Images],
                 Phone = post.Phone,
                 Description = post.Description,
                 CreatedAt = post.CreatedAt,
                 UpdatedAt = post.UpdatedAt,
                 Views = post.Views,
                 Status = post.Status
-            }).ToList()
+            })]
         };
     }
 

@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using TijarahJo.Domain.Models;
 
-namespace TijarahJoDB.Application.Abstractions.DataAccess;
+namespace TijarahJo.Application.Abstractions.DataAccess;
 
 // ---------------------------------------------------------------------------
 // DESIGN RULE: All data access methods are async-only.

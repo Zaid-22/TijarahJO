@@ -1,7 +1,7 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TijarahJoDB.Application.Abstractions.DataAccess;
+using TijarahJo.Application.Abstractions.DataAccess;
 using TijarahJo.Api.Common.Authorization;
 
 namespace TijarahJo.Api.Features.Admin;

@@ -3,11 +3,11 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.DAL.Entities;
-using TijarahJoDB.DAL.Persistence;
+using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Domain.Entities;
+using TijarahJo.Infrastructure.Persistence;
 
-namespace TijarahJoDB.DAL.Services;
+namespace TijarahJo.Infrastructure.Services;
 
 public sealed class NotificationService : INotificationService
 {

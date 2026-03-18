@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using TijarahJoDB.Application.Abstractions.DataAccess;
-using TijarahJoDB.DAL.Entities;
-using TijarahJoDB.DAL.Persistence;
+using TijarahJo.Application.Abstractions.DataAccess;
+using TijarahJo.Domain.Entities;
+using TijarahJo.Infrastructure.Persistence;
 
 namespace TijarahJo.Infrastructure.DataAccess;
 

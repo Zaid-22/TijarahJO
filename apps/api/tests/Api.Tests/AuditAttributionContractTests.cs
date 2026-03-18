@@ -1,4 +1,4 @@
-using TijarahJoDB.Application.Abstractions.DataAccess;
+using TijarahJo.Application.Abstractions.DataAccess;
 
 namespace TijarahJo.Api.Tests;
 

@@ -1,5 +1,5 @@
 using StackExchange.Redis;
-using TijarahJoDB.Application.Abstractions.Services;
+using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Api.Common.Configuration;
 using TijarahJo.Api.Common.Services;
 

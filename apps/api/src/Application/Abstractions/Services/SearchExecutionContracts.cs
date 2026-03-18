@@ -1,4 +1,4 @@
-namespace TijarahJoDB.Application.Abstractions.Services;
+namespace TijarahJo.Application.Abstractions.Services;
 
 public enum SearchExecutionFailureReason
 {

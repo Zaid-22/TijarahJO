@@ -1,6 +1,6 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
-using TijarahJoDB.Application.Abstractions.Services;
+using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Api.Contracts.Responses;
 
 namespace TijarahJo.Api.Features.Locations;

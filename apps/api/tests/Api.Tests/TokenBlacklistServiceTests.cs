@@ -1,4 +1,4 @@
-using TijarahJoDB.Application.Abstractions.Services;
+using TijarahJo.Application.Abstractions.Services;
 
 namespace TijarahJo.Api.Tests;
 
@@ -50,7 +50,7 @@ public sealed class TokenBlacklistServiceTests
     /// </summary>
     private sealed class FakeTokenBlacklistService : ITokenBlacklistService
     {
-        private readonly Dictionary<string, DateTimeOffset> _store = new();
+        private readonly Dictionary<string, DateTimeOffset> _store = [];
 
         public Task AddToBlacklistAsync(string jti, DateTimeOffset expiration, CancellationToken cancellationToken = default)
         {

@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using TijarahJo.Domain.Models;
-using TijarahJoDB.BLL;
+using TijarahJo.Application.Common;
 
-namespace TijarahJoDB.Application.Abstractions.Services;
+namespace TijarahJo.Application.Abstractions.Services;
 
 // ---------------------------------------------------------------------------
 // DESIGN RULE: All service methods that perform I/O are async-only.

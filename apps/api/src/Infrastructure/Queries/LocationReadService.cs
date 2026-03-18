@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.DAL.Persistence;
+using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Infrastructure.Persistence;
 
-namespace TijarahJoDB.DAL.Queries;
+namespace TijarahJo.Infrastructure.Queries;
 
 public sealed class LocationReadService : ILocationReadService
 {

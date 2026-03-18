@@ -1,4 +1,4 @@
-namespace TijarahJoDB.DAL.Entities
+namespace TijarahJo.Domain.Entities
 {
     public sealed class UserStatusLookupEntity
     {

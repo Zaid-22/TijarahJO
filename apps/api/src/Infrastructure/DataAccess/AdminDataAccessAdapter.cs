@@ -2,19 +2,14 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using TijarahJoDB.Application.Abstractions.DataAccess;
-using TijarahJoDB.DAL.Persistence;
+using TijarahJo.Application.Abstractions.DataAccess;
+using TijarahJo.Infrastructure.Persistence;
 
 namespace TijarahJo.Infrastructure.DataAccess;
 
-public sealed class AdminDataAccessAdapter : IAdminDataAccess
+public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdminDataAccess
 {
-    private readonly TijarahJoDbContext _dbContext;
-
-    public AdminDataAccessAdapter(TijarahJoDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
+    private readonly TijarahJoDbContext _dbContext = dbContext;
 
     public async Task<DashboardStatsModel> GetDashboardStatsAsync(CancellationToken cancellationToken = default)
     {
@@ -344,7 +339,7 @@ public sealed class AdminDataAccessAdapter : IAdminDataAccess
         catch
         {
             // SystemSettings table may not exist yet – return empty list
-            return System.Array.Empty<SystemSettingItem>();
+            return [];
         }
     }
 
@@ -472,7 +467,7 @@ public sealed class AdminDataAccessAdapter : IAdminDataAccess
 
     public async Task<int> CreateCityAsync(string cityName, CancellationToken cancellationToken = default)
     {
-        var entity = new TijarahJoDB.DAL.Entities.CityEntity { CityName = cityName };
+        var entity = new TijarahJo.Domain.Entities.CityEntity { CityName = cityName };
         await _dbContext.Cities.AddAsync(entity, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return entity.CityID;
@@ -480,7 +475,7 @@ public sealed class AdminDataAccessAdapter : IAdminDataAccess
 
     public async Task<bool> UpdateCityAsync(int cityId, string cityName, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.Cities.FindAsync(new object[] { cityId }, cancellationToken);
+        var entity = await _dbContext.Cities.FindAsync([cityId], cancellationToken);
         if (entity == null) return false;
         entity.CityName = cityName;
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -489,7 +484,7 @@ public sealed class AdminDataAccessAdapter : IAdminDataAccess
 
     public async Task<bool> DeleteCityAsync(int cityId, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.Cities.FindAsync(new object[] { cityId }, cancellationToken);
+        var entity = await _dbContext.Cities.FindAsync([cityId], cancellationToken);
         if (entity == null) return false;
         _dbContext.Cities.Remove(entity);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -498,7 +493,7 @@ public sealed class AdminDataAccessAdapter : IAdminDataAccess
 
     public async Task<int> CreateAreaAsync(int cityId, string areaName, CancellationToken cancellationToken = default)
     {
-        var entity = new TijarahJoDB.DAL.Entities.AreaEntity { CityID = cityId, AreaName = areaName };
+        var entity = new TijarahJo.Domain.Entities.AreaEntity { CityID = cityId, AreaName = areaName };
         await _dbContext.Areas.AddAsync(entity, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return entity.AreaID;
@@ -506,7 +501,7 @@ public sealed class AdminDataAccessAdapter : IAdminDataAccess
 
     public async Task<bool> UpdateAreaAsync(int areaId, string areaName, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.Areas.FindAsync(new object[] { areaId }, cancellationToken);
+        var entity = await _dbContext.Areas.FindAsync([areaId], cancellationToken);
         if (entity == null) return false;
         entity.AreaName = areaName;
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -515,7 +510,7 @@ public sealed class AdminDataAccessAdapter : IAdminDataAccess
 
     public async Task<bool> DeleteAreaAsync(int areaId, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.Areas.FindAsync(new object[] { areaId }, cancellationToken);
+        var entity = await _dbContext.Areas.FindAsync([areaId], cancellationToken);
         if (entity == null) return false;
         _dbContext.Areas.Remove(entity);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -524,7 +519,7 @@ public sealed class AdminDataAccessAdapter : IAdminDataAccess
 
     // ── Reports ──
 
-    private static readonly string[] _reportStatusLabels = { "Pending", "Under Review", "Resolved", "Dismissed" };
+    private static readonly string[] _reportStatusLabels = ["Pending", "Under Review", "Resolved", "Dismissed"];
 
     public async Task<AdminReportListResult> GetReportsAsync(int? status = null, string? reportType = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
     {
@@ -570,13 +565,13 @@ public sealed class AdminDataAccessAdapter : IAdminDataAccess
         catch
         {
             // Reports table may not exist yet – return empty result
-            return new AdminReportListResult { Reports = System.Array.Empty<AdminReportItem>(), TotalCount = 0 };
+            return new AdminReportListResult { Reports = [], TotalCount = 0 };
         }
     }
 
     public async Task<bool> UpdateReportStatusAsync(int reportId, int newStatus, int adminUserId, string? resolutionNotes = null, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.Reports.FindAsync(new object[] { reportId }, cancellationToken);
+        var entity = await _dbContext.Reports.FindAsync([reportId], cancellationToken);
         if (entity == null) return false;
 
         entity.Status = newStatus;

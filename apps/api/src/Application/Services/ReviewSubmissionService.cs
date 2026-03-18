@@ -2,9 +2,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using TijarahJo.Domain.Models;
-using TijarahJoDB.Application.Abstractions.Services;
+using TijarahJo.Application.Abstractions.Services;
 
-namespace TijarahJoDB.Application.Services;
+namespace TijarahJo.Application.Services;
 
 public sealed class ReviewSubmissionService : IReviewSubmissionService
 {

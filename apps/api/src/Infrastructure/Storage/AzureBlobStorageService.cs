@@ -3,9 +3,9 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using TijarahJoDB.Application.Abstractions.Services;
+using TijarahJo.Application.Abstractions.Services;
 
-namespace TijarahJoDB.Infrastructure.Storage;
+namespace TijarahJo.Infrastructure.Storage;
 
 /// <summary>
 /// Placeholder implementation for Azure Blob Storage.

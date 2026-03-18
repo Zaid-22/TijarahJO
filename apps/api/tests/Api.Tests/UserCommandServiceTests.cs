@@ -1,8 +1,8 @@
 using TijarahJo.Domain.Models;
-using TijarahJoDB.Application.Abstractions.DataAccess;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.Application.Services;
-using TijarahJoDB.BLL;
+using TijarahJo.Application.Abstractions.DataAccess;
+using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Application.Services;
+using TijarahJo.Application.Common;
 
 namespace TijarahJo.Api.Tests;
 
@@ -310,7 +310,7 @@ public sealed class UserCommandServiceTests
     {
         var model = new UserModel(
             userid: 1,
-            hashedpassword: TijarahJoDB.Application.Common.PasswordHelper.HashPassword("default"),
+            hashedpassword: TijarahJo.Application.Common.PasswordHelper.HashPassword("default"),
             email: "user@example.com",
             firstname: "Test",
             lastname: "User",

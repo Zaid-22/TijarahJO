@@ -2,9 +2,9 @@ using System;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using TijarahJoDB.Application.Abstractions.Services;
+using TijarahJo.Application.Abstractions.Services;
 
-namespace TijarahJoDB.Infrastructure.Jobs;
+namespace TijarahJo.Infrastructure.Jobs;
 
 public sealed class ChannelBackgroundJobService : IBackgroundJobService
 {

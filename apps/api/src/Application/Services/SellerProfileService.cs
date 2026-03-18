@@ -1,10 +1,10 @@
 using System.Globalization;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.Application.Abstractions.DataAccess;
-using TijarahJoDB.Application.Common;
+using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Application.Abstractions.DataAccess;
+using TijarahJo.Application.Common;
 using TijarahJo.Domain.Models;
 
-namespace TijarahJoDB.Application.Services;
+namespace TijarahJo.Application.Services;
 
 public sealed class SellerProfileService : ISellerProfileService
 {

@@ -1,8 +1,7 @@
 using TijarahJo.Domain.Models;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.Application.Common;
-using TijarahJoDB.Application.Services;
-using TijarahJoDB.BLL;
+using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Application.Common;
+using TijarahJo.Application.Services;
 
 namespace TijarahJo.Api.Tests;
 

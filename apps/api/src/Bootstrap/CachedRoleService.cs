@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Caching.Memory;
 using TijarahJo.Domain.Models;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.BLL;
+using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Application.Common;
 
-namespace TijarahJoDB.Bootstrap;
+namespace TijarahJo.Bootstrap;
 
 /// <summary>
 /// Decorator that adds in-memory caching to <see cref="IRoleService"/>.

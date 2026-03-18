@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace TijarahJoDB.Application.Abstractions.DataAccess;
+namespace TijarahJo.Application.Abstractions.DataAccess;
 
 public enum ExternalIdentityLinkStatus
 {

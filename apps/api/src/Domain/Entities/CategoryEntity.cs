@@ -1,6 +1,6 @@
 using System;
 
-namespace TijarahJoDB.DAL.Entities
+namespace TijarahJo.Domain.Entities
 {
     public sealed class CategoryEntity
     {

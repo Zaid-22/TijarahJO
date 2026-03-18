@@ -2,11 +2,11 @@ using Microsoft.Data.SqlClient;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Text;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.Application.Common;
+using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Application.Common;
 using TijarahJo.Infrastructure.DataAccess;
 
-namespace TijarahJoDB.DAL.Queries;
+namespace TijarahJo.Infrastructure.Queries;
 
 public sealed class PostListingQueryService : IPostListingQueryService
 {

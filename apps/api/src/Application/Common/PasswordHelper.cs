@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace TijarahJoDB.Application.Common;
+namespace TijarahJo.Application.Common;
 
 public static class PasswordHelper
 {

@@ -2,7 +2,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using TijarahJoDB.DAL.Persistence;
+using TijarahJo.Infrastructure.Persistence;
 using TijarahJo.Api.Common.Authorization;
 
 namespace TijarahJo.Api.Features.Admin;
@@ -11,14 +11,9 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/analytics")]
 [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
-public class AdminAnalyticsController : ControllerBase
+public class AdminAnalyticsController(TijarahJoDbContext dbContext) : ControllerBase
 {
-    private readonly TijarahJoDbContext _dbContext;
-
-    public AdminAnalyticsController(TijarahJoDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
+    private readonly TijarahJoDbContext _dbContext = dbContext;
 
     /// <summary>
     /// Returns data for admin dashboard charts.
@@ -29,8 +24,8 @@ public class AdminAnalyticsController : ControllerBase
         var now = DateTime.UtcNow;
         var sevenDaysAgo = now.AddDays(-7);
         
-        var weeklyUsers = new System.Collections.Generic.List<object>();
-        var categoryData = new System.Collections.Generic.List<object>();
+        System.Collections.Generic.List<object> weeklyUsers = [];
+        System.Collections.Generic.List<object> categoryData = [];
 
         // 1. Weekly users (last 7 days)
         try 

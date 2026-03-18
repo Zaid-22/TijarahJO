@@ -390,6 +390,7 @@ export function ChatWindow({
 
       {/* Fullscreen Image Modal */}
       {fullscreenImage && (
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
           onClick={() => setFullscreenImage(null)}
@@ -460,7 +461,7 @@ export function ChatWindow({
           <img
             src={fullscreenImage}
             alt="Fullscreen view"
-            className="max-h-[85vh] max-w-[95vw] rounded-md object-contain shadow-2xl cursor-default"
+            className="max-h-full max-w-full rounded-md object-contain shadow-2xl cursor-default"
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => e.stopPropagation()}
             role="presentation"

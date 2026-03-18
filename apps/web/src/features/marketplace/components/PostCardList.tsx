@@ -65,13 +65,13 @@ export const PostCardList = React.memo(function PostCardList(props: PostCardShar
       >
         <div>
           <div className="flex items-start justify-between gap-4 mb-2">
-            <h3 className="text-xl sm:text-[22px] font-bold text-foreground transition-colors group-hover:text-primary line-clamp-2 leading-tight">
+            <h3 className="text-xl sm:text-2xl font-bold text-foreground transition-colors group-hover:text-primary line-clamp-2 leading-tight">
               {post.name}
             </h3>
           </div>
 
           <div className="mb-4 space-y-2">
-            <p className="text-foreground text-sm sm:text-[15px] font-medium">
+            <p className="text-foreground text-sm sm:text-base font-medium">
               {[post.category, post.condition].filter(Boolean).join(" ، ")}
             </p>
 
@@ -91,7 +91,7 @@ export const PostCardList = React.memo(function PostCardList(props: PostCardShar
           role="presentation"
         >
           <div className="flex items-center text-foreground font-bold whitespace-nowrap">
-            <span className="text-2xl sm:text-[28px] leading-none">
+            <span className="text-2xl sm:text-3xl leading-none">
               {post.price.toLocaleString(priceLocale)}
             </span>
             <span className="text-lg ms-1.5 pt-1">
@@ -110,7 +110,7 @@ export const PostCardList = React.memo(function PostCardList(props: PostCardShar
                 title={labels.favoriteLabel}
               >
                 <Heart
-                  className={`w-5 h-5 transition-all duration-200 text-[#c21414] dark:text-red-500 stroke-2 ${
+                  className={`w-5 h-5 transition-all duration-200 text-red-600 dark:text-red-500 stroke-2 ${
                     isFavorite ? "fill-current" : "fill-none"
                   }`}
                 />
@@ -119,7 +119,7 @@ export const PostCardList = React.memo(function PostCardList(props: PostCardShar
 
             <Button
               variant="outline"
-              className="h-[42px] flex-1 sm:flex-none px-4 sm:px-6 rounded-lg border-[1.5px] border-[#0066ff] text-[#0066ff] hover:bg-blue-50 hover:text-[#0066ff] dark:hover:bg-[#0066ff]/10 font-bold transition-colors text-[15px]"
+              className="h-[42px] flex-1 sm:flex-none px-4 sm:px-6 rounded-lg border-[1.5px] border-blue-600 text-blue-600 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-600/10 font-bold transition-colors text-base"
               title={isRTL ? "دردش" : "Message"}
               onClick={handleMessageClick}
             >
@@ -128,7 +128,7 @@ export const PostCardList = React.memo(function PostCardList(props: PostCardShar
             </Button>
 
             <Button
-              className="h-[42px] flex-1 sm:flex-none px-4 sm:px-6 rounded-lg bg-[#0066ff] hover:bg-[#0052cc] text-white font-bold transition-colors text-[15px]"
+              className="h-[42px] flex-1 sm:flex-none px-4 sm:px-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold transition-colors text-base"
               title={isRTL ? "اتصال" : "Call"}
               onClick={handleCallClick}
             >

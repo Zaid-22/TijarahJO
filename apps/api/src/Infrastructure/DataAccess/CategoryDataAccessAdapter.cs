@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using TijarahJo.Domain.Models;
-using TijarahJoDB.Application.Abstractions.DataAccess;
-using TijarahJoDB.Application.Common;
-using TijarahJoDB.DAL.Entities;
-using TijarahJoDB.DAL.Persistence;
+using TijarahJo.Application.Abstractions.DataAccess;
+using TijarahJo.Application.Common;
+using TijarahJo.Domain.Entities;
+using TijarahJo.Infrastructure.Persistence;
 
 namespace TijarahJo.Infrastructure.DataAccess;
 

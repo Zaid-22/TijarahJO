@@ -2,9 +2,9 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TijarahJo.Domain.Models;
-using TijarahJoDB.Application.Abstractions.DataAccess;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.Application.Common;
+using TijarahJo.Application.Abstractions.DataAccess;
+using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Application.Common;
 using TijarahJo.Api.Common.Services;
 using TijarahJo.Api.Common.Utils;
 using TijarahJo.Api.Contracts.Requests;
@@ -15,30 +15,20 @@ namespace TijarahJo.Api.Features.Auth;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/auth/2fa")]
-public class TwoFactorController : ControllerBase
+public class TwoFactorController(
+    TwoFactorService twoFactorService,
+    IUserDataAccess users,
+    ITokenService tokenService,
+    IRoleService roles,
+    IEmailTwoFactorSender emailSender,
+    ILogger<TwoFactorController> logger) : ControllerBase
 {
-    private readonly TwoFactorService _twoFactorService;
-    private readonly IUserDataAccess _users;
-    private readonly ITokenService _tokenService;
-    private readonly IRoleService _roles;
-    private readonly IEmailTwoFactorSender _emailSender;
-    private readonly ILogger<TwoFactorController> _logger;
-
-    public TwoFactorController(
-        TwoFactorService twoFactorService,
-        IUserDataAccess users,
-        ITokenService tokenService,
-        IRoleService roles,
-        IEmailTwoFactorSender emailSender,
-        ILogger<TwoFactorController> logger)
-    {
-        _twoFactorService = twoFactorService;
-        _users = users;
-        _tokenService = tokenService;
-        _roles = roles;
-        _emailSender = emailSender;
-        _logger = logger;
-    }
+    private readonly TwoFactorService _twoFactorService = twoFactorService;
+    private readonly IUserDataAccess _users = users;
+    private readonly ITokenService _tokenService = tokenService;
+    private readonly IRoleService _roles = roles;
+    private readonly IEmailTwoFactorSender _emailSender = emailSender;
+    private readonly ILogger<TwoFactorController> _logger = logger;
 
     [HttpPost("verify-login")]
     [AllowAnonymous]

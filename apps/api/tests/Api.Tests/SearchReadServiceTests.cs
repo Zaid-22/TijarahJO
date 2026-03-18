@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Caching.Memory;
-using TijarahJoDB.Application.Abstractions.Services;
-using TijarahJoDB.DAL.Queries;
+using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Infrastructure.Queries;
 
 namespace TijarahJo.Api.Tests;
 

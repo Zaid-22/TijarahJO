@@ -1,8 +1,8 @@
 using TijarahJo.Domain.Models;
-using TijarahJoDB.Application.Abstractions.DataAccess;
-using TijarahJoDB.Application.Abstractions.Services;
+using TijarahJo.Application.Abstractions.DataAccess;
+using TijarahJo.Application.Abstractions.Services;
 
-namespace TijarahJoDB.Application.Services;
+namespace TijarahJo.Application.Services;
 
 public sealed class FavoriteService : IFavoriteService
 {

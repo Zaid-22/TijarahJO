@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using TijarahJoDB.DAL.Entities;
+using TijarahJo.Domain.Entities;
 
-namespace TijarahJoDB.DAL.Persistence.Configurations;
+namespace TijarahJo.Infrastructure.Persistence.Configurations;
 
 public class UserStatusLookupConfiguration : IEntityTypeConfiguration<UserStatusLookupEntity>
 {
