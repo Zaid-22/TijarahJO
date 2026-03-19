@@ -137,4 +137,3 @@ All sign in and sign up issues have been fixed:
 - ✅ Proper state management
 
 The authentication flow should now work correctly!
-

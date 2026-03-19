@@ -1,9 +1,7 @@
 # Troubleshooting Docs
 
-Active troubleshooting references:
-
-- `PROFILE_UPDATE_FIX.md`
-- `SIGN_IN_SIGN_UP_FIXES.md`
+Active troubleshooting references are intentionally kept minimal.
+Use current product/setup docs first, then consult the archive for historical fix logs when needed.
 
 Historical troubleshooting and verification logs:
 

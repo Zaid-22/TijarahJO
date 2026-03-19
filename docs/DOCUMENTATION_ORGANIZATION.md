@@ -41,6 +41,9 @@ docs/
 3. Use absolute dates in metadata lines.
 4. Keep folder names and examples aligned with the real repository layout.
 
+Legacy one-time fix reports and historical integration snapshots should live under
+section-specific `archive/` folders, not alongside current operational docs.
+
 ## Legacy Notes
 
 Historical docs are tracked through archive indices:

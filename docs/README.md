@@ -26,12 +26,11 @@ docs/
 ## Reports (`reports/`)
 
 - `reports/FINAL_PROJECT_REPORT.md`
-- `reports/INTEGRATION_REPORT.md`
 - `reports/API_ENDPOINTS_STATUS.md`
 - `reports/FRONTEND_FILE_ASSESSMENT_2026-02-17.md`
 - `reports/archive/README.md` (historical snapshots)
 
-Use for project summary, integration details, and endpoint status.
+Use for project summary, endpoint status, and active report references.
 
 ## API (`api/`)
 
@@ -49,7 +48,6 @@ Frontend-focused implementation notes and QA matrices.
 
 - `setup/SETUP_NEW_COMPUTER_GUIDE.md`
 - `setup/QUICK_SETUP_CHECKLIST.md`
-- `setup/WILL_IT_WORK_ON_ANOTHER_COMPUTER.md`
 - `setup/PRODUCTION_DEPLOYMENT_DOCKER.md`
 - `setup/ENV_TEMPLATE.txt`
 - `setup/BACKEND_SETUP_STEP_BY_STEP.md`
@@ -60,9 +58,7 @@ Use for machine setup, backend setup, and environment configuration.
 ## Troubleshooting (`troubleshooting/`)
 
 Primary active docs:
-
-- `troubleshooting/PROFILE_UPDATE_FIX.md`
-- `troubleshooting/SIGN_IN_SIGN_UP_FIXES.md`
+- `troubleshooting/README.md`
 
 Historical troubleshooting logs:
 
@@ -84,7 +80,6 @@ Launch/readiness and PR quality checklists.
 
 - Setup project: `setup/SETUP_NEW_COMPUTER_GUIDE.md`
 - Production containers: `setup/PRODUCTION_DEPLOYMENT_DOCKER.md`
-- Understand project integration: `reports/INTEGRATION_REPORT.md`
 - Backend docs index: `backend/README.md`
 - Frontend docs index: `frontend/README.md`
 - View historical final report snapshot: `reports/archive/README.md`
@@ -99,6 +94,6 @@ Launch/readiness and PR quality checklists.
 1. Keep references path-accurate to actual files.
 2. Use real dates (no unresolved template strings).
 3. Prefer one canonical document per topic; link instead of duplicating.
-4. Mark legacy documents clearly when they are historical.
+4. Mark legacy documents clearly when they are historical and move them into section archives when practical.
 
 Last Updated: 2026-02-17

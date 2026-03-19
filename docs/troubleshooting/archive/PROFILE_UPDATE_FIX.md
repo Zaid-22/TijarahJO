@@ -143,4 +143,3 @@ Test the following scenarios:
 - Improved security validation
 
 The profile update functionality should now work correctly!
-

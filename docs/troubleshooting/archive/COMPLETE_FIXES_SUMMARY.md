@@ -154,8 +154,8 @@ This document summarizes all fixes applied to make the TijarahJo project ready f
 3. ✅ `LAUNCH_READINESS_CHECKLIST.md` - Comprehensive launch checklist
 4. ✅ `QUICK_LAUNCH_CHECKLIST.md` - Quick reference guide
 5. ✅ `LAUNCH_CHECKLIST_PROGRESS.md` - Progress tracking
-6. ✅ `SIGN_IN_SIGN_UP_FIXES.md` - Authentication fixes documentation
-7. ✅ `PROFILE_UPDATE_FIX.md` - Profile update fixes documentation
+6. ✅ `archive/SIGN_IN_SIGN_UP_FIXES.md` - Authentication fixes documentation
+7. ✅ `archive/PROFILE_UPDATE_FIX.md` - Profile update fixes documentation
 
 ---
 
@@ -228,4 +228,3 @@ All documentation is in the project root:
 
 **Last Updated:** 2026-02-17  
 **Status:** Ready for testing, remaining items are nice-to-have improvements
-
