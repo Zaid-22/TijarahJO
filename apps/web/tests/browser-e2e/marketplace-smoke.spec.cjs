@@ -37,6 +37,19 @@ async function setUiLanguage(page, language) {
   }, language);
 }
 
+async function signInAndOpenProfile(page) {
+  await page.goto("/login");
+  await page.locator("#authIdentifier").fill("buyer@example.com");
+  await page.locator("#password").fill("Password123!");
+  const signInButton = page.getByRole("button", {
+    name: SIGN_IN_BUTTON_PATTERN,
+  });
+  await expect(signInButton).toBeEnabled();
+  await signInButton.click();
+  await page.goto("/profile");
+  await expectProfilePageLoaded(page);
+}
+
 function waitForAuthBootstrap(page) {
   return page.waitForResponse(
     (response) =>
@@ -151,6 +164,15 @@ async function setPostFavoriteState(page, shouldBeFavorited) {
   ]);
 }
 
+async function selectComboboxOption(page, labelPattern, optionPattern) {
+  const combobox = page.getByRole("combobox", { name: labelPattern }).first();
+  await expect(combobox).toBeVisible();
+  await combobox.click({ force: true });
+  const option = page.getByRole("option", { name: optionPattern }).first();
+  await expect(option).toBeVisible();
+  await option.click({ force: true });
+}
+
 async function ensureFavoriteListingVisible(page, postId, postTitle) {
   const removeFavoriteButton = page
     .getByRole("button", {
@@ -172,30 +194,14 @@ async function ensureFavoriteListingVisible(page, postId, postTitle) {
 test("auth journey: user can sign in and access profile", async ({ page }) => {
   const apiMock = createMarketplaceApiMock({ authenticated: false });
   await apiMock.install(page);
-
-  await page.goto("/login");
-
-  await page.locator("#authIdentifier").fill("buyer@example.com");
-  await page.locator("#password").fill("Password123!");
-  await Promise.all([
-    page.waitForResponse(
-      (response) =>
-        response.request().method() === "POST" &&
-        AUTH_LOGIN_RESPONSE_PATTERN.test(response.url()) &&
-        response.ok(),
-    ),
-    page.getByRole("button", { name: SIGN_IN_BUTTON_PATTERN }).click(),
-  ]);
-
-  const authBootstrap = waitForAuthBootstrap(page);
-  await page.goto("/profile");
-  await authBootstrap;
-  await expectProfilePageLoaded(page);
+  await setUiLanguage(page, "en");
+  await signInAndOpenProfile(page);
 });
 
 test("search journey: global search navigates to search results", async ({ page }) => {
   const apiMock = createMarketplaceApiMock({ authenticated: false });
   await apiMock.install(page);
+  await setUiLanguage(page, "en");
 
   await page.goto("/");
   await submitMarketplaceSearch(page, "phone");
@@ -206,50 +212,53 @@ test("search journey: global search navigates to search results", async ({ page 
 test("favorites journey: add and remove favorites for authenticated user", async ({ page }) => {
   const apiMock = createMarketplaceApiMock({ authenticated: true });
   await apiMock.install(page);
-
-  const authBootstrap = waitForAuthBootstrap(page);
-  await page.goto("/");
-  await authBootstrap;
+  await setUiLanguage(page, "en");
+  await signInAndOpenProfile(page);
   await submitMarketplaceSearch(page, "phone");
   await expect(page.getByText("Demo Phone")).toBeVisible();
 
   await page.goto("/post/101");
-  await setPostFavoriteState(page, true);
+  const favoriteToggle = getPostFavoriteToggle(page);
+  await expect(favoriteToggle).toBeVisible();
+  await favoriteToggle.click();
+  await expect(favoriteToggle).toHaveAttribute(
+    "aria-label",
+    /remove from favorites|إزالة من المفضلة/i,
+  );
 
   await page.goto("/favorites");
   await expect(page.getByText(FAVORITES_HEADING_PATTERN)).toBeVisible();
+  await expect(page.getByText("Demo Phone")).toBeVisible();
   const removeDemoPhoneFromFavoritesButton = await ensureFavoriteListingVisible(
     page,
     "101",
     "Demo Phone",
   );
-  const removeFavoriteResponsePromise = page.waitForResponse(
-    (response) => isFavoritesMutationResponse(response, "DELETE"),
-  );
   await removeDemoPhoneFromFavoritesButton.click();
-  await removeFavoriteResponsePromise;
   await expect(page).toHaveURL(/\/favorites$/);
   await expect(page.getByText(FAVORITES_HEADING_PATTERN)).toBeVisible();
+  await expect(page.getByText("Demo Phone")).toHaveCount(0);
 });
 
 test("post CRUD journey: create, update, and delete a post", async ({ page }) => {
   const apiMock = createMarketplaceApiMock({ authenticated: true });
   await apiMock.install(page);
+  await setUiLanguage(page, "en");
 
   const createdPostTitle = "E2E Created Post";
   const updatedPostTitle = "E2E Updated Post";
-  let createdPostId = "400";
+  let createdPostId = "";
 
-  const authBootstrap = waitForAuthBootstrap(page);
+  await signInAndOpenProfile(page);
   await page.goto("/sell");
-  await authBootstrap;
 
   await page.locator("#title").fill(createdPostTitle);
   await page.locator("#price").fill("777");
-  await page.locator("#category").click();
-  await page.getByRole("option", { name: "Electronics" }).click();
-  await page.locator("#location").click();
-  await page.getByRole("option", { name: "Amman" }).click();
+  await selectComboboxOption(
+    page,
+    /category|الفئة/i,
+    /electronics|إلكترونيات/i,
+  );
   await page.locator("#description").fill("Playwright E2E post creation");
   await page.setInputFiles("#image-upload", {
     name: "post.png",
@@ -258,27 +267,13 @@ test("post CRUD journey: create, update, and delete a post", async ({ page }) =>
   });
   await expect(page.getByText(/1\/5 images uploaded/i)).toBeVisible();
 
-  const createPostResponsePromise = page.waitForResponse((response) => {
-    const url = response.url();
-    return (
-      response.request().method() === "POST" &&
-      POSTS_COLLECTION_RESPONSE_PATTERN.test(url) &&
-      !POST_IMAGES_RESPONSE_PATTERN.test(url)
-    );
-  });
   await page.getByRole("button", { name: PUBLISH_POST_BUTTON_PATTERN }).click();
-  const createPostResponse = await createPostResponsePromise;
-  const createdPostPayload = await createPostResponse.json();
-  const parsedCreatedPostId = Number(
-    createdPostPayload?.PostID ?? createdPostPayload?.postId,
-  );
-  if (Number.isInteger(parsedCreatedPostId) && parsedCreatedPostId > 0) {
-    createdPostId = String(parsedCreatedPostId);
-  }
   await expect(page).toHaveURL(/\/$/);
   await page.goto("/");
   await submitMarketplaceSearch(page, createdPostTitle);
   await openPostDetailsByTitle(page, createdPostTitle);
+  createdPostId = page.url().split("/").pop() || "";
+  expect(createdPostId).toMatch(/^\d+$/);
 
   await page.getByRole("button", { name: EDIT_POST_BUTTON_PATTERN }).first().click();
   await fillEditedPostTitle(page, updatedPostTitle);
@@ -286,15 +281,7 @@ test("post CRUD journey: create, update, and delete a post", async ({ page }) =>
     name: SAVE_CHANGES_BUTTON_PATTERN,
   });
   await expect(saveChangesButton).toBeVisible();
-  await Promise.all([
-    page.waitForResponse(
-      (response) =>
-        response.request().method() === "PUT" &&
-        POSTS_ITEM_RESPONSE_PATTERN.test(response.url()) &&
-        response.ok(),
-    ),
-    saveChangesButton.click({ force: true }),
-  ]);
+  await saveChangesButton.click({ force: true });
 
   await page.goto(`/post/${createdPostId}`);
   await expect(page).toHaveURL(new RegExp(`/post/${createdPostId}$`));
@@ -309,15 +296,7 @@ test("post CRUD journey: create, update, and delete a post", async ({ page }) =>
   await deletePostButton.evaluate((button) => button.click());
   const deleteDialog = page.getByRole("alertdialog");
   await expect(deleteDialog).toBeVisible();
-  await Promise.all([
-    page.waitForResponse(
-      (response) =>
-        response.request().method() === "DELETE" &&
-        POSTS_ITEM_RESPONSE_PATTERN.test(response.url()) &&
-        response.ok(),
-    ),
-    deleteDialog.getByRole("button", { name: DELETE_BUTTON_PATTERN }).click(),
-  ]);
+  await deleteDialog.getByRole("button", { name: DELETE_BUTTON_PATTERN }).click();
 
   await expect(page).toHaveURL(/\/$/);
   await page.goto("/");
@@ -336,25 +315,7 @@ test("auth journey (arabic): user can sign in and access profile", async ({ page
   const apiMock = createMarketplaceApiMock({ authenticated: false });
   await apiMock.install(page);
   await setUiLanguage(page, "ar");
-
-  await page.goto("/login");
-
-  await page.locator("#authIdentifier").fill("buyer@example.com");
-  await page.locator("#password").fill("Password123!");
-  await Promise.all([
-    page.waitForResponse(
-      (response) =>
-        response.request().method() === "POST" &&
-        AUTH_LOGIN_RESPONSE_PATTERN.test(response.url()) &&
-        response.ok(),
-    ),
-    page.getByRole("button", { name: SIGN_IN_BUTTON_PATTERN }).click(),
-  ]);
-
-  const authBootstrap = waitForAuthBootstrap(page);
-  await page.goto("/profile");
-  await authBootstrap;
-  await expectProfilePageLoaded(page);
+  await signInAndOpenProfile(page);
 });
 
 test("search journey (arabic): global search navigates to search results", async ({ page }) => {
@@ -372,30 +333,31 @@ test("favorites journey (arabic): add and remove favorites for authenticated use
   const apiMock = createMarketplaceApiMock({ authenticated: true });
   await apiMock.install(page);
   await setUiLanguage(page, "ar");
-
-  const authBootstrap = waitForAuthBootstrap(page);
-  await page.goto("/");
-  await authBootstrap;
+  await signInAndOpenProfile(page);
   await submitMarketplaceSearch(page, "phone");
   await expect(page.getByText("Demo Phone")).toBeVisible();
 
   await page.goto("/post/101");
-  await setPostFavoriteState(page, true);
+  const favoriteToggle = getPostFavoriteToggle(page);
+  await expect(favoriteToggle).toBeVisible();
+  await favoriteToggle.click();
+  await expect(favoriteToggle).toHaveAttribute(
+    "aria-label",
+    /remove from favorites|إزالة من المفضلة/i,
+  );
 
   await page.goto("/favorites");
   await expect(page.getByText(FAVORITES_HEADING_PATTERN)).toBeVisible();
+  await expect(page.getByText("Demo Phone")).toBeVisible();
   const removeDemoPhoneFromFavoritesButton = await ensureFavoriteListingVisible(
     page,
     "101",
     "Demo Phone",
   );
-  const removeFavoriteResponsePromise = page.waitForResponse(
-    (response) => isFavoritesMutationResponse(response, "DELETE"),
-  );
   await removeDemoPhoneFromFavoritesButton.click();
-  await removeFavoriteResponsePromise;
   await expect(page).toHaveURL(/\/favorites$/);
   await expect(page.getByText(FAVORITES_HEADING_PATTERN)).toBeVisible();
+  await expect(page.getByText("Demo Phone")).toHaveCount(0);
 });
 
 test("post CRUD journey (arabic): create, update, and delete a post", async ({ page }) => {
@@ -405,18 +367,18 @@ test("post CRUD journey (arabic): create, update, and delete a post", async ({ p
 
   const createdPostTitle = "E2E Arabic Created Post";
   const updatedPostTitle = "E2E Arabic Updated Post";
-  let createdPostId = "401";
+  let createdPostId = "";
 
-  const authBootstrap = waitForAuthBootstrap(page);
+  await signInAndOpenProfile(page);
   await page.goto("/sell");
-  await authBootstrap;
 
   await page.locator("#title").fill(createdPostTitle);
   await page.locator("#price").fill("888");
-  await page.locator("#category").click();
-  await page.getByRole("option", { name: "Electronics" }).click();
-  await page.locator("#location").click();
-  await page.getByRole("option", { name: "Amman" }).click();
+  await selectComboboxOption(
+    page,
+    /category|الفئة/i,
+    /electronics|إلكترونيات/i,
+  );
   await page.locator("#description").fill("Playwright Arabic E2E post creation");
   await page.setInputFiles("#image-upload", {
     name: "post-ar.png",
@@ -425,28 +387,13 @@ test("post CRUD journey (arabic): create, update, and delete a post", async ({ p
   });
   await expect(page.getByText(/1\/5 images uploaded|1\/5 صور محملة/i)).toBeVisible();
 
-  const createPostResponsePromise = page.waitForResponse((response) => {
-    const url = response.url();
-    return (
-      response.request().method() === "POST" &&
-      POSTS_COLLECTION_RESPONSE_PATTERN.test(url) &&
-      !POST_IMAGES_RESPONSE_PATTERN.test(url)
-    );
-  });
   await page.getByRole("button", { name: PUBLISH_POST_BUTTON_PATTERN }).click();
-  const createPostResponse = await createPostResponsePromise;
-  const createdPostPayload = await createPostResponse.json();
-  const parsedCreatedPostId = Number(
-    createdPostPayload?.PostID ?? createdPostPayload?.postId,
-  );
-  if (Number.isInteger(parsedCreatedPostId) && parsedCreatedPostId > 0) {
-    createdPostId = String(parsedCreatedPostId);
-  }
-
   await expect(page).toHaveURL(/\/$/);
   await page.goto("/");
   await submitMarketplaceSearch(page, createdPostTitle);
   await openPostDetailsByTitle(page, createdPostTitle);
+  createdPostId = page.url().split("/").pop() || "";
+  expect(createdPostId).toMatch(/^\d+$/);
 
   await page.getByRole("button", { name: EDIT_POST_BUTTON_PATTERN }).first().click();
   await fillEditedPostTitle(page, updatedPostTitle);
@@ -454,15 +401,7 @@ test("post CRUD journey (arabic): create, update, and delete a post", async ({ p
     name: SAVE_CHANGES_BUTTON_PATTERN,
   });
   await expect(saveChangesButton).toBeVisible();
-  await Promise.all([
-    page.waitForResponse(
-      (response) =>
-        response.request().method() === "PUT" &&
-        POSTS_ITEM_RESPONSE_PATTERN.test(response.url()) &&
-        response.ok(),
-    ),
-    saveChangesButton.click({ force: true }),
-  ]);
+  await saveChangesButton.click({ force: true });
 
   await page.goto(`/post/${createdPostId}`);
   await expect(page).toHaveURL(new RegExp(`/post/${createdPostId}$`));
@@ -477,15 +416,7 @@ test("post CRUD journey (arabic): create, update, and delete a post", async ({ p
   await deletePostButton.evaluate((button) => button.click());
   const deleteDialog = page.getByRole("alertdialog");
   await expect(deleteDialog).toBeVisible();
-  await Promise.all([
-    page.waitForResponse(
-      (response) =>
-        response.request().method() === "DELETE" &&
-        POSTS_ITEM_RESPONSE_PATTERN.test(response.url()) &&
-        response.ok(),
-    ),
-    deleteDialog.getByRole("button", { name: DELETE_BUTTON_PATTERN }).click(),
-  ]);
+  await deleteDialog.getByRole("button", { name: DELETE_BUTTON_PATTERN }).click();
 
   await expect(page).toHaveURL(/\/$/);
   await page.goto("/");

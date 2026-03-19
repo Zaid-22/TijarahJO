@@ -4,7 +4,7 @@ import {
   BACKEND_CONNECTION_SHORT_MESSAGE,
   debugError,
 } from "./client";
-import { asRecord, readString } from "./normalizers";
+import { asRecord, readString, toBoolean } from "./normalizers";
 import { parseAuthEnvelope, type ParsedAuthUser } from "./schemas/authSchema";
 
 export type AuthApiError = {
@@ -170,18 +170,22 @@ export function parseTwoFactorSetupStartPayload(
     payloadRecord.OtpAuthUri ?? payloadRecord.otpAuthUri,
   );
   const message = readString(payloadRecord.Message ?? payloadRecord.message);
+  const success = toBoolean(
+    payloadRecord.Success ?? payloadRecord.success,
+    true,
+  );
 
-  if (!secretKey || !otpAuthUri) {
+  if (!success) {
     return {
       success: false,
-      message: message || "Two-factor setup response is incomplete.",
+      message: message || "Two-factor setup could not be started.",
     };
   }
 
   return {
     success: true,
-    secretKey,
-    otpAuthUri,
+    secretKey: secretKey || undefined,
+    otpAuthUri: otpAuthUri || undefined,
     message,
   };
 }

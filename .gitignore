@@ -58,6 +58,7 @@ yarn-error.log*
 # Testing
 coverage/
 .nyc_output/
+apps/web/test-results/
 
 # Temporary files
 *.tmp

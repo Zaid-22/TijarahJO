@@ -25,6 +25,7 @@ export interface TwoFactorCopy {
   defaultDescription: string;
   copySuccess: string;
   setupStarted: string;
+  disableStarted: string;
   enabledSuccess: string;
   disabledSuccess: string;
   genericError: string;
@@ -76,6 +77,7 @@ function getTwoFactorCopy(language: Language): TwoFactorCopy {
       defaultDescription: "أضف طبقة إضافية من الأمان عبر البريد الإلكتروني.",
       copySuccess: "تم النسخ.",
       setupStarted: "تم إنشاء إعداد المصادقة الثنائية.",
+      disableStarted: "تم إرسال رمز تحقق إلى بريدك الإلكتروني لتأكيد تعطيل المصادقة الثنائية.",
       enabledSuccess: "تم تفعيل المصادقة الثنائية.",
       disabledSuccess: "تم تعطيل المصادقة الثنائية.",
       genericError: "حدث خطأ أثناء تحديث إعدادات المصادقة الثنائية.",
@@ -104,6 +106,7 @@ function getTwoFactorCopy(language: Language): TwoFactorCopy {
     defaultDescription: "Add an extra security layer using email verification.",
     copySuccess: "Copied.",
     setupStarted: "Two-factor setup generated.",
+    disableStarted: "A verification code has been sent to your email to confirm disabling two-factor authentication.",
     enabledSuccess: "Two-factor authentication enabled.",
     disabledSuccess: "Two-factor authentication disabled.",
     genericError: "Something went wrong while updating two-factor settings.",
@@ -183,26 +186,22 @@ export function useTwoFactorSettings({
       return;
     }
 
-    if (isTwoFactorEnabled) {
-      setTwoFactorDialogMode("disable");
-      setTwoFactorCode("");
-      setTwoFactorError("");
-      setIsTwoFactorDialogOpen(true);
-      return;
-    }
-
     setIsTwoFactorMutationPending(true);
     setTwoFactorError("");
     try {
       const response = await api.auth.startTwoFactorSetup();
-      if (!response.success || !response.secretKey || !response.otpAuthUri) {
+      if (!response.success) {
         toast.error(response.message || copy.genericError);
         return;
       }
 
-      setTwoFactorDialogMode("setup");
+      setTwoFactorDialogMode(isTwoFactorEnabled ? "disable" : "setup");
+      setTwoFactorCode("");
+      setTwoFactorError("");
       setIsTwoFactorDialogOpen(true);
-      toast.success(response.message || copy.setupStarted);
+      toast.success(
+        response.message || (isTwoFactorEnabled ? copy.disableStarted : copy.setupStarted),
+      );
       await loadTwoFactorStatus();
     } catch (error) {
       logger.warn("[SettingsPage] Failed to start 2FA setup", error);
@@ -212,6 +211,7 @@ export function useTwoFactorSettings({
     }
   }, [
     copy.genericError,
+    copy.disableStarted,
     copy.setupStarted,
     isTwoFactorEnabled,
     isTwoFactorLoading,
