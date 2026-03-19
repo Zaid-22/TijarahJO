@@ -21,11 +21,9 @@
 - Buttons: `src/shared/ui/button.tsx`
 - Inputs/Textareas/Selects: `src/shared/ui/input.tsx`, `src/shared/ui/textarea.tsx`, `src/shared/ui/select.tsx`
 - Subpage page-shell header: `src/shared/ui/subpage-header.tsx`
-- Listing view mode control: `src/shared/ui/view-mode-toggle.tsx`
 
 ## Automated Enforcement
 - `npm run lint:styles:tokens`: blocks hardcoded hex in TS/TSX.
 - `npm run lint:a11y:native`: checks native button/link accessibility.
 - `npm run lint:a11y:icons`: checks icon-only button labels.
 - `npm run lint`: runs all enforcement checks.
-

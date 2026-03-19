@@ -7,7 +7,6 @@ Use Storybook stories as the source of truth for reusable UI states before page-
 Maintain these required stories:
 - `stories/ui/Button.stories.tsx`
 - `stories/ui/SubpageHeader.stories.tsx`
-- `stories/ui/ViewModeToggle.stories.tsx`
 - `stories/ui/ProductCard.stories.tsx`
 
 ## Update Rules
@@ -24,4 +23,3 @@ Maintain these required stories:
 2. Update/add story.
 3. Run `npm run lint` and `npm run build`.
 4. Include story notes in PR description (changed states and why).
-
