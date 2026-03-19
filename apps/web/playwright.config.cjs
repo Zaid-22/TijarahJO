@@ -27,10 +27,10 @@ module.exports = defineConfig({
     video: process.env.CI ? "retain-on-failure" : "off",
   },
   webServer: {
-    command: `npm run build && npm run preview -- --host ${frontendHost} --port ${frontendPort}`,
+    command: `npm run build && node tools/serve-dist.cjs ${frontendHost} ${frontendPort}`,
     url: frontendBaseUrl,
     reuseExistingServer,
-    timeout: 120000,
+    timeout: 240000,
   },
   projects: [
     {
