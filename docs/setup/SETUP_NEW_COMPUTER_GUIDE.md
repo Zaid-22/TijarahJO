@@ -422,7 +422,7 @@ npm run dev
 - **Database Setup**: See `apps/api/database/scripts/README.md`
 - **Backend Setup**: See `docs/setup/BACKEND_SETUP_STEP_BY_STEP.md`
 - **Troubleshooting**: See `docs/troubleshooting/`
-- **Integration Report**: See `docs/reports/INTEGRATION_REPORT.md`
+- **Historical Integration Report**: See `docs/reports/archive/INTEGRATION_REPORT_2024.md`
 
 ---
 

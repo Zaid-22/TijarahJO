@@ -1020,7 +1020,7 @@ The TijarahJo marketplace platform represents a complete, professional-grade imp
 
 ### A. API Endpoint Reference
 
-See `INTEGRATION_REPORT.md` for complete API endpoint documentation.
+See `INTEGRATION_REPORT_2024.md` for the historical integration snapshot.
 
 ### B. Database Schema
 
@@ -1029,7 +1029,7 @@ See `TijarahJo-Backend/README.md` for complete database ERD documentation.
 ### C. Setup Guides
 
 - **New Computer Setup**: `SETUP_NEW_COMPUTER_GUIDE.md` - Complete guide for setting up on a new computer
-- **Quick Setup Checklist**: `QUICK_SETUP_CHECKLIST.md` - Quick reference checklist
+- **Quick Setup Checklist**: `../setup/QUICK_SETUP_CHECKLIST.md` - Quick reference checklist
 - **Environment Template**: `ENV_TEMPLATE.txt` - Environment variables template
 - Backend Setup: `docs/setup/BACKEND_SETUP_STEP_BY_STEP.md`
 - Database Setup: `docs/setup/DATABASE_SETUP_CHECKLIST.md`
@@ -1038,7 +1038,7 @@ See `TijarahJo-Backend/README.md` for complete database ERD documentation.
 ### D. Troubleshooting
 
 - Common Issues: `docs/troubleshooting/`
-- Integration Issues: `INTEGRATION_REPORT.md`
+- Integration Issues: `INTEGRATION_REPORT_2024.md`
 - Error Fixes: Various fix documentation files
 
 ---

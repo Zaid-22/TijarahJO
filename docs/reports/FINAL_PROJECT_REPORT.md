@@ -5,11 +5,11 @@ current operational reports.
 
 Use these active reports first:
 
-- `INTEGRATION_REPORT.md`
 - `API_ENDPOINTS_STATUS.md`
 
 Full archived report:
 
 - `archive/FINAL_PROJECT_REPORT_FULL_2026-02-17.md`
+- `archive/INTEGRATION_REPORT_2024.md`
 
 Condensed on: 2026-02-17
