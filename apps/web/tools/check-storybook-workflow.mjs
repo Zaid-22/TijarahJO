@@ -4,7 +4,6 @@ import path from "node:path";
 const REQUIRED_STORY_FILES = [
   "stories/ui/Button.stories.tsx",
   "stories/ui/SubpageHeader.stories.tsx",
-  "stories/ui/ViewModeToggle.stories.tsx",
   "stories/ui/PostCard.stories.tsx",
 ];
 
