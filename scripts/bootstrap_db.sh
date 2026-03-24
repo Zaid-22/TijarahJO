@@ -284,6 +284,11 @@ GRANT SELECT ON dbo.Cities TO [tijarahjo_app_runtime];
 GRANT SELECT ON dbo.Areas TO [tijarahjo_app_runtime];
 GRANT SELECT ON dbo.UserStatusLookup TO [tijarahjo_app_runtime];
 GRANT SELECT ON dbo.PostStatusLookup TO [tijarahjo_app_runtime];
+GRANT SELECT ON dbo.SystemSettings TO [tijarahjo_app_runtime];
+GRANT SELECT ON dbo.Permissions TO [tijarahjo_app_runtime];
+GRANT SELECT ON dbo.RolePermissions TO [tijarahjo_app_runtime];
+GRANT SELECT ON dbo.Reports TO [tijarahjo_app_runtime];
+GRANT SELECT ON dbo.BlacklistedTokens TO [tijarahjo_app_runtime];
 
 GRANT INSERT, UPDATE ON dbo.Users TO [tijarahjo_app_runtime];
 GRANT INSERT, UPDATE ON dbo.Categories TO [tijarahjo_app_runtime];
@@ -296,6 +301,9 @@ GRANT INSERT, UPDATE ON dbo.Messages TO [tijarahjo_app_runtime];
 GRANT INSERT, UPDATE ON dbo.Notifications TO [tijarahjo_app_runtime];
 GRANT INSERT, UPDATE ON dbo.PushSubscriptions TO [tijarahjo_app_runtime];
 GRANT INSERT, UPDATE ON dbo.UserExternalIdentities TO [tijarahjo_app_runtime];
+GRANT INSERT, UPDATE ON dbo.SystemSettings TO [tijarahjo_app_runtime];
+GRANT INSERT, UPDATE, DELETE ON dbo.Reports TO [tijarahjo_app_runtime];
+GRANT INSERT, DELETE ON dbo.BlacklistedTokens TO [tijarahjo_app_runtime];
 
 -- Explicitly keep reference/metadata tables read-only for runtime.
 DENY INSERT, UPDATE, DELETE ON dbo.Roles TO [tijarahjo_app_runtime];
@@ -304,6 +312,8 @@ DENY INSERT, UPDATE, DELETE ON dbo.PostStatusLookup TO [tijarahjo_app_runtime];
 DENY INSERT, UPDATE, DELETE ON dbo.Cities TO [tijarahjo_app_runtime];
 DENY INSERT, UPDATE, DELETE ON dbo.Areas TO [tijarahjo_app_runtime];
 DENY INSERT, UPDATE, DELETE ON dbo.SchemaMigrations TO [tijarahjo_app_runtime];
+DENY INSERT, UPDATE, DELETE ON dbo.Permissions TO [tijarahjo_app_runtime];
+DENY INSERT, UPDATE, DELETE ON dbo.RolePermissions TO [tijarahjo_app_runtime];
 GO
 SQL
 
