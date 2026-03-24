@@ -23,6 +23,7 @@ export const debugAuthError = (...args: unknown[]) => {
 };
 
 export const AUTH_GUEST_KEY = "guestMode";
+export const AUTH_LOGOUT_KEY = "tijarahjo_logged_out";
 export const AUTH_LEGACY_KEYS = [
   "tijarahjo_token",
   "tijarahjo_auth",

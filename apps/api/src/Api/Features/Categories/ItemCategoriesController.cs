@@ -13,16 +13,8 @@ namespace TijarahJo.Api.Features.Categories;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/categories")]
-public class ItemCategoriesController : ControllerBase
+public class ItemCategoriesController(ICategoryQueryHandler categoryQueries, ICategoryCommandService categoryCommands) : ControllerBase
 {
-    private readonly ICategoryQueryHandler _categoryQueries;
-    private readonly ICategoryCommandService _categoryCommands;
-
-    public ItemCategoriesController(ICategoryQueryHandler categoryQueries, ICategoryCommandService categoryCommands)
-    {
-        _categoryQueries = categoryQueries;
-        _categoryCommands = categoryCommands;
-    }
 
     [HttpGet("")]
     [ResponseCache(Duration = 300)]
@@ -32,7 +24,7 @@ public class ItemCategoriesController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50)
     {
-        CategoryListQueryResult result = await _categoryQueries.GetAllAsync(page, pageSize, HttpContext.RequestAborted);
+        CategoryListQueryResult result = await categoryQueries.GetAllAsync(page, pageSize, HttpContext.RequestAborted);
         if (!result.Success)
         {
             return this.ToCategoryListQueryProblem(result, "Failed to fetch categories.");
@@ -43,9 +35,7 @@ public class ItemCategoriesController : ControllerBase
             return Ok(new List<CategoryResponseDTO>());
         }
 
-        List<CategoryResponseDTO> dtoList = result.Categories
-            .Select(DTOMapper.ToCategoryResponseDTO)
-            .ToList();
+        List<CategoryResponseDTO> dtoList = [.. result.Categories.Select(DTOMapper.ToCategoryResponseDTO)];
 
         return Ok(dtoList);
     }
@@ -56,7 +46,7 @@ public class ItemCategoriesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<CategoryResponseDTO>> GetCategoryById(int id)
     {
-        CategoryByIdQueryResult result = await _categoryQueries.GetByIdAsync(id, HttpContext.RequestAborted);
+        CategoryByIdQueryResult result = await categoryQueries.GetByIdAsync(id, HttpContext.RequestAborted);
         if (!result.Success || result.Category == null)
         {
             return this.ToCategoryByIdQueryProblem(result, "Failed to fetch category.");
@@ -71,7 +61,7 @@ public class ItemCategoriesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<CategoryResponseDTO>> AddCategory([FromBody] CreateCategoryRequest request)
     {
-        CategoryCommandResult result = await _categoryCommands.CreateAsync(
+        CategoryCommandResult result = await categoryCommands.CreateAsync(
             new CreateCategoryCommand
             {
                 CategoryName = request.CategoryName,
@@ -101,7 +91,7 @@ public class ItemCategoriesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<CategoryResponseDTO>> UpdateCategory(int id, [FromBody] UpdateCategoryRequest request)
     {
-        CategoryCommandResult result = await _categoryCommands.UpdateAsync(
+        CategoryCommandResult result = await categoryCommands.UpdateAsync(
             new UpdateCategoryCommand
             {
                 CategoryId = id,
@@ -153,7 +143,7 @@ public class ItemCategoriesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> DeleteCategory(int id)
     {
-        CategoryCommandResult result = await _categoryCommands.DeleteAsync(id, HttpContext.RequestAborted);
+        CategoryCommandResult result = await categoryCommands.DeleteAsync(id, HttpContext.RequestAborted);
         if (!result.Success)
         {
             return this.ToCategoryCommandProblem(result, "Category operation failed.");
@@ -167,7 +157,7 @@ public class ItemCategoriesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<bool>> DoesCategoryExist(int id)
     {
-        CategoryExistsQueryResult result = await _categoryQueries.ExistsAsync(id, HttpContext.RequestAborted);
+        CategoryExistsQueryResult result = await categoryQueries.ExistsAsync(id, HttpContext.RequestAborted);
         if (!result.Success)
         {
             return this.ToCategoryExistsQueryProblem(result, "Failed to check category existence.");

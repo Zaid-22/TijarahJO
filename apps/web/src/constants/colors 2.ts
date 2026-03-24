@@ -1,5 +1,0 @@
-export const COLORS = {
-  PRIMARY: "#0A4ABF",
-  PRIMARY_HOVER: "#083a99",
-  SECONDARY: "#3E7EFF",
-};
