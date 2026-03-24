@@ -1,48 +1,110 @@
-# TijarahJo Marketplace Platform
+# TijarahJo — Jordan's C2C Marketplace Platform
 
-Full-stack marketplace application for buying and selling items in Jordan.
+<div align="center">
+
+![TijarahJo](https://img.shields.io/badge/TijarahJo-Marketplace-0A4ABF?style=for-the-badge)
+![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet)
+![React 18](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)
+![SQL Server](https://img.shields.io/badge/SQL%20Server-2022-CC2927?style=for-the-badge&logo=microsoftsqlserver)
+
+**A full-stack Customer-to-Customer (C2C) marketplace for buying and selling items in Jordan.**
+
+</div>
+
+---
 
 ## Repository Layout
 
 ```text
 final project primary/
 ├── apps/
-│   ├── web/                     # React + TypeScript + Vite app
-│   └── api/                     # ASP.NET Core API + SQL scripts
-├── contracts/                   # Shared API/openapi contract artifacts
-├── docs/                        # Project documentation index and guides
-├── infra/                       # Docker compose + infra templates
-├── scripts/                     # Operational/dev scripts
-├── README-RUN.md                # Local run/bootstrap instructions
-└── Makefile                     # Common local CI and dev commands
+│   ├── web/                     # React + TypeScript + Vite frontend
+│   └── api/                     # ASP.NET Core 8 API + SQL migrations
+│       ├── src/
+│       │   ├── Api/             # Controllers, hubs, startup, contracts
+│       │   ├── Application/     # Business logic & service layer
+│       │   ├── Domain/          # Domain entities & interfaces
+│       │   ├── Infrastructure/  # Data access, EF Core, repositories
+│       │   └── Bootstrap/       # DI composition root
+│       ├── database/            # SQL scripts, migrations & bundles
+│       └── tests/               # Unit, integration & contract tests
+├── contracts/                   # Shared OpenAPI contract artifacts
+├── docs/                        # Project documentation & guides
+├── infra/                       # Docker Compose + infra templates
+├── scripts/                     # Operational & dev scripts
+├── README-RUN.md                # Local run / bootstrap instructions
+└── Makefile                     # Common CI and dev commands
 ```
+
+## Core Features
+
+### Marketplace
+- Post creation, editing, status management (active / sold / deleted), and deletion
+- Category browsing (15+ categories) and full-text search
+- Image uploads (server-side file storage)
+- Favorites system and seller profiles
+- Post view tracking
+
+### User & Security
+- JWT-based authentication with token blacklisting
+- Google OAuth 2.0 social login
+- Two-Factor Authentication (TOTP / Authenticator app)
+- Password reset with email verification codes
+- Role-based access control (RBAC)
+
+### Communication
+- Real-time chat via SignalR (with image uploads)
+- In-app notifications with push subscription support
+- User reviews and ratings
+
+### Admin Panel
+- Dashboard with analytics and KPI metrics
+- User management (block, delete, role assignment)
+- Post moderation and reports queue
+- Fraud detection tools
+- Audit logging
+- System settings management
+
+### Internationalization
+- Full English & Arabic language support
+- Complete RTL layout handling
+- Dark mode with per-component theming
+
+---
 
 ## Quick Start
 
-Use `README-RUN.md` for the full local workflow.
-
-Most common commands:
+See [`README-RUN.md`](README-RUN.md) for the full local workflow.
 
 ```bash
-./scripts/check_structure.sh
-./scripts/run-dev.sh
-./scripts/bootstrap_db.sh
-make ci-local
+./scripts/check_structure.sh   # Verify repo conventions
+./scripts/run-dev.sh           # Start backend + frontend
+./scripts/bootstrap_db.sh      # Reset DB, apply migrations, seed, verify
+make ci-local                  # Full local CI mirror
 ```
 
 ## Documentation
 
-Start here:
+| Document | Purpose |
+|----------|---------|
+| [`docs/README.md`](docs/README.md) | Documentation index |
+| [`docs/architecture/CURRENT_STRUCTURE_2026.md`](docs/architecture/CURRENT_STRUCTURE_2026.md) | Canonical project structure |
+| [`docs/architecture/PATH_CONVENTIONS.md`](docs/architecture/PATH_CONVENTIONS.md) | Path ownership & boundaries |
+| [`docs/setup/SETUP_NEW_COMPUTER_GUIDE.md`](docs/setup/SETUP_NEW_COMPUTER_GUIDE.md) | Full setup guide |
+| [`docs/reports/API_ENDPOINTS_STATUS.md`](docs/reports/API_ENDPOINTS_STATUS.md) | API endpoint inventory |
+| [`apps/api/src/Api/ENVIRONMENT_VARIABLES.md`](apps/api/src/Api/ENVIRONMENT_VARIABLES.md) | Environment config reference |
 
-- `docs/README.md`
-- `docs/architecture/CURRENT_STRUCTURE_2026.md`
-- `docs/architecture/PATH_CONVENTIONS.md`
-- `docs/setup/PRODUCTION_DEPLOYMENT_DOCKER.md`
+## Technology Stack
 
-## Core Features
+| Layer | Technologies |
+|-------|-------------|
+| **Frontend** | React 18, TypeScript 5, Vite, Tailwind CSS v4, Radix UI, Framer Motion |
+| **Backend** | ASP.NET Core 8, Entity Framework Core, SignalR |
+| **Database** | SQL Server 2022, Flyway-style ordered migrations |
+| **Auth** | JWT + refresh tokens, Google OAuth 2.0, TOTP 2FA |
+| **Infra** | Docker Compose, GitHub Actions CI |
 
-- User authentication and authorization
-- Post creation, editing, status updates, and deletion
-- Category browsing and search
-- Chat, favorites, and seller profiles
-- Frontend + backend CI workflows
+---
+
+Last Updated: 2026-03-24
