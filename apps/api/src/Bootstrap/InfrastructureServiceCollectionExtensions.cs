@@ -10,6 +10,7 @@ using TijarahJo.Infrastructure.Queries;
 using TijarahJo.Infrastructure.Services;
 using TijarahJo.Infrastructure.Caching;
 using TijarahJo.Infrastructure.DataAccess;
+using TijarahJo.Infrastructure;
 
 namespace TijarahJo.Bootstrap;
 

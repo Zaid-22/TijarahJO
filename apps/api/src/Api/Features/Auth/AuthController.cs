@@ -216,9 +216,26 @@ public class AuthController(
             await _tokenBlacklistService.AddToBlacklistAsync(jti, expiration, cancellationToken);
         }
 
-        Response.Cookies.Delete("jwt");
-        Response.Cookies.Delete("tj-csrf");
-        Response.Cookies.Delete("XSRF-TOKEN");
+        bool isHttps = Request.IsHttps;
+        var jwtDeleteOptions = new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = isHttps,
+            SameSite = isHttps ? SameSiteMode.None : SameSiteMode.Lax,
+            Path = "/"
+        };
+        Response.Cookies.Delete("jwt", jwtDeleteOptions);
+
+        var csrfDeleteOptions = new CookieOptions
+        {
+            HttpOnly = false,
+            Secure = isHttps,
+            SameSite = isHttps ? SameSiteMode.None : SameSiteMode.Lax,
+            Path = "/"
+        };
+        Response.Cookies.Delete("tj-csrf", csrfDeleteOptions);
+        Response.Cookies.Delete("XSRF-TOKEN", csrfDeleteOptions);
+
         return Ok(new ApiMessageResponse { Message = "Logged out successfully" });
     }
 }

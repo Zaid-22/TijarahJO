@@ -73,7 +73,8 @@ internal static class AuthShared
             HttpOnly = true,
             Expires = DateTime.UtcNow.AddDays(7),
             Secure = isHttpsRequest,
-            SameSite = isHttpsRequest ? SameSiteMode.None : SameSiteMode.Lax
+            SameSite = isHttpsRequest ? SameSiteMode.None : SameSiteMode.Lax,
+            Path = "/"
         };
         response.Cookies.Append("jwt", token, cookieOptions);
     }

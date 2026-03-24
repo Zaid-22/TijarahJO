@@ -15,6 +15,7 @@ import {
 import {
   AUTH_GUEST_KEY,
   AUTH_LEGACY_KEYS,
+  AUTH_LOGOUT_KEY,
   AuthFallbackUser,
   BACKEND_UNAVAILABLE_MESSAGE,
   CurrentUserResult,
@@ -54,6 +55,8 @@ export function useAuthProviderController(): AuthContextType {
     for (const key of AUTH_LEGACY_KEYS) {
       localStorage.removeItem(key);
     }
+    // Note: AUTH_LOGOUT_KEY is intentionally NOT cleared here —
+    // it is only cleared on explicit login/signup.
   }, []);
 
   const setSignedOutState = useCallback((message?: string) => {
@@ -114,6 +117,7 @@ export function useAuthProviderController(): AuthContextType {
 
   const persistAuthenticatedSession = useCallback((user: User) => {
     localStorage.removeItem(AUTH_GUEST_KEY);
+    localStorage.removeItem(AUTH_LOGOUT_KEY);
     setIsGuest(false);
     setAuthError(null);
     setAuthState({
@@ -240,6 +244,15 @@ export function useAuthProviderController(): AuthContextType {
 
     if (!authCheckInitializedRef.current) {
       setLoading(true);
+    }
+
+    // If user explicitly logged out, don't auto-restore session.
+    if (localStorage.getItem(AUTH_LOGOUT_KEY) === "true") {
+      clearAuthStorage();
+      setSignedOutState();
+      authCheckInitializedRef.current = true;
+      setLoading(false);
+      return;
     }
 
     const guestMode = localStorage.getItem(AUTH_GUEST_KEY);
@@ -394,6 +407,9 @@ export function useAuthProviderController(): AuthContextType {
   );
 
   const logout = useCallback(async () => {
+    // Set logout flag FIRST so checkAuth won't auto-restore even if
+    // the backend call fails or the cookie isn't properly deleted.
+    localStorage.setItem(AUTH_LOGOUT_KEY, "true");
     try {
       await api.auth.logout();
     } catch (error) {
