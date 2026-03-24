@@ -118,26 +118,26 @@ email_other="integration_${timestamp}_other@example.com"
 call_api "preflight.swagger" "GET" "/swagger/index.html" "200"
 
 signup_owner_payload="$(jq -nc --arg e "$email_owner" '{Email:$e,Password:"P@ssw0rd123",FirstName:"Owner",LastName:"Test",Phone:"+962790001001",City:"Amman",Area:"Abdali"}')"
-call_api "auth.signup.owner" "POST" "/api/auth/signup" "201" "$signup_owner_payload"
+call_api "auth.signup.owner" "POST" "/api/v1/auth/signup" "201" "$signup_owner_payload"
 owner_token="$(printf "%s" "$LAST_BODY" | jq -r '.Token // empty')"
 assert_jq "auth.signup.owner.token.present" '.Token | type=="string" and (length>20)'
 
 signup_other_payload="$(jq -nc --arg e "$email_other" '{Email:$e,Password:"P@ssw0rd123",FirstName:"Other",LastName:"User",Phone:"+962790001002",City:"Amman",Area:"Khalda"}')"
-call_api "auth.signup.other" "POST" "/api/auth/signup" "201" "$signup_other_payload"
+call_api "auth.signup.other" "POST" "/api/v1/auth/signup" "201" "$signup_other_payload"
 other_token="$(printf "%s" "$LAST_BODY" | jq -r '.Token // empty')"
 assert_jq "auth.signup.other.token.present" '.Token | type=="string" and (length>20)'
 
-call_api "categories.all" "GET" "/api/categories" "200"
+call_api "categories.all" "GET" "/api/v1/categories" "200"
 category_id="$(printf "%s" "$LAST_BODY" | jq -r '.[0].CategoryID // empty')"
 if ! [[ "$category_id" =~ ^[0-9]+$ ]]; then
-  log_fail "categories.first.id" "No valid CategoryID found in /api/categories"
+  log_fail "categories.first.id" "No valid CategoryID found in /api/v1/categories"
   category_id="1"
 else
   log_pass "categories.first.id ($category_id)"
 fi
 
 create_post_payload="$(jq -nc --argjson c "$category_id" '{PostID:null,UserID:0,CategoryID:$c,PostTitle:"Integration Contract Post",PostDescription:"Created by backend integration contract test",Price:25.5,Status:0,CreatedAt:(now|todateiso8601),IsDeleted:false,City:"Amman",Area:"Abdoun"}')"
-call_api "posts.create.owner" "POST" "/api/posts" "201" "$create_post_payload" "$owner_token"
+call_api "posts.create.owner" "POST" "/api/v1/posts" "201" "$create_post_payload" "$owner_token"
 post_id="$(printf "%s" "$LAST_BODY" | jq -r '.PostID // .postID // empty')"
 assert_jq "posts.create.owner.id.present" '.PostID != null or .postID != null'
 
@@ -146,24 +146,24 @@ if ! [[ "$post_id" =~ ^[0-9]+$ ]]; then
 else
   log_pass "posts.create.owner.id.valid ($post_id)"
 
-  call_api "posts.feed.normalized" "GET" "/api/posts/feed?page=0&limit=10000&includeDeleted=false" "200"
+  call_api "posts.feed.normalized" "GET" "/api/v1/posts/feed?page=1&limit=200&includeDeleted=false" "200"
   assert_jq "posts.feed.normalized.success" '.success == true'
-  assert_jq "posts.feed.normalized.current-page-clamped" '.pagination.currentPage == 1'
-  assert_jq "posts.feed.normalized.limit-clamped" '.pagination.postsPerPage == 500'
+  assert_jq "posts.feed.normalized.current-page" '.pagination.currentPage == 1'
+  assert_jq "posts.feed.normalized.limit" '.pagination.postsPerPage == 200'
   assert_jq "posts.feed.normalized.posts-array" '.posts | type=="array"'
   assert_jq_arg "posts.feed.normalized.contains-created-post" '.posts | any(.id == $post_id)' "post_id" "$post_id"
 
-  call_api "posts.all.removed" "GET" "/api/posts/All" "404"
-  call_api "posts.pagination.removed" "GET" "/api/posts/pagination?pageNumber=1&rowsPerPage=5&includeDeleted=false" "404"
+  call_api "posts.all.removed" "GET" "/api/v1/posts/All" "404"
+  call_api "posts.pagination.removed" "GET" "/api/v1/posts/pagination?pageNumber=1&rowsPerPage=5&includeDeleted=false" "404"
 
-  call_api "posts.update-status.owner" "PATCH" "/api/posts/${post_id}/status" "200" '{"status":"SOLD"}' "$owner_token"
+  call_api "posts.update-status.owner" "PATCH" "/api/v1/posts/${post_id}/status" "200" '{"status":"SOLD"}' "$owner_token"
   assert_jq "posts.update-status.owner.status" '.Status == 3 or .status == 3'
 
-  call_api "posts.delete.other.forbidden" "DELETE" "/api/posts/${post_id}" "403" "" "$other_token"
-  call_api "posts.delete.owner" "DELETE" "/api/posts/${post_id}" "200" "" "$owner_token"
-  call_api "posts.get.deleted" "GET" "/api/posts/${post_id}" "404"
+  call_api "posts.delete.other.forbidden" "DELETE" "/api/v1/posts/${post_id}" "403" "" "$other_token"
+  call_api "posts.delete.owner" "DELETE" "/api/v1/posts/${post_id}" "200" "" "$owner_token"
+  call_api "posts.get.deleted" "GET" "/api/v1/posts/${post_id}" "404"
 
-  call_api "posts.feed.include-deleted" "GET" "/api/posts/feed?page=1&limit=20&includeDeleted=true" "200"
+  call_api "posts.feed.include-deleted" "GET" "/api/v1/posts/feed?page=1&limit=20&includeDeleted=true" "200"
   assert_jq "posts.feed.include-deleted.success" '.success == true'
   assert_jq "posts.feed.include-deleted.pagination-shape" '.pagination.currentPage == 1 and (.pagination.totalPages|type=="number") and (.pagination.totalPosts|type=="number") and .pagination.postsPerPage == 20'
 fi

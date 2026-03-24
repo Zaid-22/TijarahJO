@@ -33,6 +33,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate required secrets
+        run: |
+          if [ -z "${MSSQL_SA_PASSWORD:-}" ] || [ -z "${JWT_SIGNING_KEY:-}" ] || [ -z "${DB_APP_PASSWORD:-}" ]; then
+            echo "::error::Missing required secrets: MSSQL_SA_PASSWORD, JWT_SIGNING_KEY, and DB_APP_PASSWORD must be configured."
+            exit 1
+          fi
+
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
       - name: Structure compliance check
         run: |
           chmod +x ./scripts/check_structure.sh
@@ -79,13 +89,6 @@ jobs:
           chmod +x ./apps/api/tests/contracts/backend_smoke.sh
           chmod +x ./apps/api/tests/contracts/backend_integration_contract.sh
           chmod +x ./apps/api/database/scripts/diagnostics/run_performance_baseline.sh
-
-      - name: Validate required secrets
-        run: |
-          if [ -z "${MSSQL_SA_PASSWORD:-}" ] || [ -z "${JWT_SIGNING_KEY:-}" ] || [ -z "${DB_APP_PASSWORD:-}" ]; then
-            echo "::error::Missing required secrets: MSSQL_SA_PASSWORD, JWT_SIGNING_KEY, and DB_APP_PASSWORD must be configured."
-            exit 1
-          fi
 
       - name: Bootstrap DB and backend
         run: ./scripts/bootstrap_db.sh --no-verify --keep-backend
