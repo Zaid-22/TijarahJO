@@ -124,7 +124,7 @@ public class AuthController(
         {
             Success = true,
             Token = token,
-            User = DTOMapper.ToUserResponseDTO(result.User)
+            User = DTOMapper.ToUserResponseDTO(result.User, result.RoleName)
         });
     }
 
@@ -158,7 +158,8 @@ public class AuthController(
             return Problem(statusCode: StatusCodes.Status401Unauthorized, detail: "User account is banned or inactive.");
         }
 
-        return Ok(DTOMapper.ToUserResponseDTO(user));
+        string? roleName = await AuthShared.ResolveRoleNameForTokenAsync(_roles, user.RoleID, cancellationToken);
+        return Ok(DTOMapper.ToUserResponseDTO(user, roleName ?? "User"));
     }
 
     [HttpPost("refresh")]

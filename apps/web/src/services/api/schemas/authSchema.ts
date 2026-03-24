@@ -19,6 +19,7 @@ export type ParsedAuthUser = {
   joinedDate: string;
   roleID: number;
   isDeleted: boolean;
+  RoleName?: string;
 };
 
 type ParsedAuthEnvelope = {
@@ -52,6 +53,7 @@ function parseAuthUser(value: unknown): ParsedAuthUser | null {
     joinedDate,
     roleID: toIntegerOrDefault(userRecord.RoleID ?? userRecord.roleID, 2, 1),
     isDeleted: toBoolean(userRecord.IsDeleted ?? userRecord.isDeleted, false),
+    RoleName: readString(userRecord.RoleName ?? userRecord.roleName),
   };
 }
 

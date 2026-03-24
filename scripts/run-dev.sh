@@ -126,8 +126,7 @@ echo "Starting Backend (ASP.NET Core) on http://localhost:5033..."
   dotnet run --no-launch-profile
 ) &
 BACKEND_PID=$!
-
-sleep 4
+sleep 15
 
 BACKEND_HEALTH_CODE="$(curl -s -o /tmp/tijarahjo_backend_health.json -w '%{http_code}' http://localhost:5033/api/categories/All || true)"
 if [[ "$BACKEND_HEALTH_CODE" == "000" ]]; then

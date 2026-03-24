@@ -15,6 +15,8 @@ export type AuthApiError = {
 export type AuthApiUser = ApiUser & {
   roleID?: number;
   isDeleted?: boolean;
+  RoleName?: string;
+  roleName?: string;
 };
 
 export type AuthApiResponse = {
@@ -82,6 +84,7 @@ function mapParsedAuthUser(userPayload: ParsedAuthUser): AuthApiUser {
     updatedAt: new Date().toISOString(),
     roleID: userPayload.roleID,
     isDeleted: userPayload.isDeleted,
+    RoleName: userPayload.RoleName,
   };
 }
 

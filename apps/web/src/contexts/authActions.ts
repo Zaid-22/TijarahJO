@@ -86,7 +86,6 @@ export async function performAuthLogin({
     user = hydrationResult.user;
 
     persistAuthenticatedSession(user);
-    window.dispatchEvent(new CustomEvent("authSessionChanged"));
     debugAuthLog("[AuthContext] Login successful, user set:", user);
     return true;
   } catch (error) {
@@ -173,7 +172,6 @@ export async function performAuthRegister({
       transformedUser = hydrationResult.user;
 
       persistAuthenticatedSession(transformedUser);
-      window.dispatchEvent(new CustomEvent("authSessionChanged"));
       return true;
     }
 

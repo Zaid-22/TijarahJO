@@ -401,7 +401,6 @@ export function useAuthProviderController(): AuthContextType {
     } finally {
       clearAuthStorage();
       setSignedOutState();
-      window.dispatchEvent(new CustomEvent("authSessionChanged"));
     }
   }, [clearAuthStorage, setSignedOutState]);
 
@@ -414,7 +413,6 @@ export function useAuthProviderController(): AuthContextType {
       isAuthenticated: false,
       user: null,
     });
-    window.dispatchEvent(new CustomEvent("authSessionChanged"));
   }, [clearAuthStorage]);
 
   return {

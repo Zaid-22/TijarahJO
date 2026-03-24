@@ -19,6 +19,8 @@ type BackendUserPayload = {
   roleID?: string | number;
   Role?: string | number;
   role?: string | number;
+  RoleName?: string;
+  roleName?: string;
 };
 
 type UserFallback = Partial<User> & {
@@ -68,6 +70,8 @@ function toUserFromBackend(
       backendUser.roleID ??
       backendUser.Role ??
       backendUser.role ??
+      backendUser.RoleName ??
+      backendUser.roleName ??
       fallback.role,
   );
 

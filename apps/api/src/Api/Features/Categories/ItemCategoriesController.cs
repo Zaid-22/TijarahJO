@@ -6,6 +6,7 @@ using TijarahJo.Api.Common.Authorization;
 using TijarahJo.Api.Common.Utils;
 using TijarahJo.Api.Contracts.Requests;
 using TijarahJo.Api.Contracts.Responses;
+using TijarahJo.Api.Common.Services;
 
 namespace TijarahJo.Api.Features.Categories;
 
@@ -118,6 +119,31 @@ public class ItemCategoriesController : ControllerBase
         }
 
         return Ok(DTOMapper.ToCategoryResponseDTO(result.Category.CategoryModel));
+    }
+
+    [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+    [HttpPost("upload-image")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult> UploadCategoryImage(
+        [FromForm] IFormFile file,
+        [FromServices] IPostImageFileStorageService storageService,
+        CancellationToken cancellationToken)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest(new ApiMessageResponse { Message = "File is empty or not provided." });
+        }
+        
+        try
+        {
+            var storedFile = await storageService.SaveAsync(file, cancellationToken);
+            return Ok(new { Url = storedFile.PublicUrl });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new ApiMessageResponse { Message = ex.Message });
+        }
     }
 
     [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
