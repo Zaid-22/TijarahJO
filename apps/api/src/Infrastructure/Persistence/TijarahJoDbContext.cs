@@ -6,9 +6,17 @@ namespace TijarahJo.Infrastructure.Persistence;
 
 public sealed class TijarahJoDbContext : DbContext
 {
+    private readonly TotpEncryptionKey? _totpKey;
+
     public TijarahJoDbContext(DbContextOptions<TijarahJoDbContext> options)
         : base(options)
     {
+    }
+
+    public TijarahJoDbContext(DbContextOptions<TijarahJoDbContext> options, TotpEncryptionKey? totpKey)
+        : base(options)
+    {
+        _totpKey = totpKey;
     }
 
     public DbSet<UserEntity> Users => Set<UserEntity>();
@@ -42,6 +50,19 @@ public sealed class TijarahJoDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(TijarahJoDbContext).Assembly);
+
+        // Apply at-rest encryption to TOTP secret columns
+        if (_totpKey is not null)
+        {
+            var converter = new AesGcmStringConverter(_totpKey.Key);
+            modelBuilder.Entity<UserEntity>(builder =>
+            {
+                builder.Property(e => e.TwoFactorSecret)
+                    .HasConversion(converter);
+                builder.Property(e => e.TwoFactorPendingSecret)
+                    .HasConversion(converter);
+            });
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -138,8 +159,10 @@ public sealed class TijarahJoDbContext : DbContext
         var dict = new Dictionary<string, object?>();
         foreach (var prop in values.Properties)
         {
-            // Never log hashed passwords in audit records
+            // Never log hashed passwords or TOTP secrets in audit records
             if (prop.Name.Contains("Password", StringComparison.OrdinalIgnoreCase)) continue;
+            if (prop.Name.Contains("TwoFactor", StringComparison.OrdinalIgnoreCase) &&
+                prop.Name.Contains("Secret", StringComparison.OrdinalIgnoreCase)) continue;
             dict[prop.Name] = values[prop];
         }
         return JsonSerializer.Serialize(dict);

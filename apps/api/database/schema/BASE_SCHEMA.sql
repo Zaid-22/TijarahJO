@@ -124,6 +124,9 @@ BEGIN
         Status         INT           NOT NULL,
         RoleID         INT           NOT NULL,
         IsDeleted      BIT           NOT NULL CONSTRAINT DF_Users_IsDeleted DEFAULT 0,
+        TwoFactorEnabled       BIT           NOT NULL CONSTRAINT DF_Users_TwoFactorEnabled DEFAULT 0,
+        TwoFactorSecret        NVARCHAR(512) NULL,
+        TwoFactorPendingSecret NVARCHAR(512) NULL,
         SearchFirstNameNormalized AS CONVERT(NVARCHAR(100), UPPER(LTRIM(RTRIM(ISNULL(FirstName, N''))))) PERSISTED,
         SearchLastNameNormalized  AS CONVERT(NVARCHAR(100), UPPER(LTRIM(RTRIM(ISNULL(LastName, N''))))) PERSISTED,
         SearchFullNameNormalized  AS CONVERT(NVARCHAR(201), UPPER(LTRIM(RTRIM(CONCAT(ISNULL(FirstName, N''), N' ', ISNULL(LastName, N'')))))) PERSISTED,
@@ -465,6 +468,132 @@ IF NOT EXISTS (
 BEGIN
     CREATE NONCLUSTERED INDEX IX_PushSubscriptions_User_IsActive
     ON dbo.PushSubscriptions (UserID, IsActive, UpdatedAt DESC, PushSubscriptionID DESC);
+END
+GO
+
+-- ---------------------------------------------------------------------------
+-- Audit Log (append-only mutation history)
+-- ---------------------------------------------------------------------------
+IF OBJECT_ID(N'dbo.AuditLog', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.AuditLog
+    (
+        AuditLogID      BIGINT IDENTITY(1, 1) NOT NULL,
+        TableName       NVARCHAR(100)         NOT NULL,
+        RecordID        INT                   NOT NULL,
+        Action          NVARCHAR(10)          NOT NULL,  -- 'INSERT' | 'UPDATE' | 'DELETE'
+        ChangedByUserID INT                   NULL,      -- NULL = system / unauthenticated
+        ChangedAt       DATETIME2             NOT NULL CONSTRAINT DF_AuditLog_ChangedAt DEFAULT SYSUTCDATETIME(),
+        OldValues       NVARCHAR(MAX)         NULL,      -- JSON snapshot before change
+        NewValues       NVARCHAR(MAX)         NULL,      -- JSON snapshot after change
+        CONSTRAINT PK_AuditLog PRIMARY KEY CLUSTERED (AuditLogID),
+        CONSTRAINT CK_AuditLog_Action CHECK (Action IN (N'INSERT', N'UPDATE', N'DELETE')),
+        CONSTRAINT FK_AuditLog_ChangedByUser FOREIGN KEY (ChangedByUserID) REFERENCES dbo.Users(UserID) ON DELETE NO ACTION ON UPDATE NO ACTION
+    );
+
+    CREATE NONCLUSTERED INDEX IX_AuditLog_TableName_RecordID
+        ON dbo.AuditLog (TableName, RecordID)
+        INCLUDE (Action, ChangedByUserID, ChangedAt);
+
+    CREATE NONCLUSTERED INDEX IX_AuditLog_ChangedByUserID
+        ON dbo.AuditLog (ChangedByUserID, ChangedAt DESC)
+        WHERE ChangedByUserID IS NOT NULL;
+END
+GO
+
+-- ---------------------------------------------------------------------------
+-- Blacklisted Tokens (JWT revocation)
+-- ---------------------------------------------------------------------------
+IF OBJECT_ID(N'dbo.BlacklistedTokens', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.BlacklistedTokens
+    (
+        Jti       NVARCHAR(450) NOT NULL CONSTRAINT PK_BlacklistedTokens PRIMARY KEY,
+        ExpiresAt DATETIME2     NOT NULL
+    );
+
+    CREATE NONCLUSTERED INDEX IX_BlacklistedTokens_ExpiresAt
+        ON dbo.BlacklistedTokens (ExpiresAt);
+END
+GO
+
+-- ---------------------------------------------------------------------------
+-- System Settings (feature flags / admin config)
+-- ---------------------------------------------------------------------------
+IF OBJECT_ID(N'dbo.SystemSettings', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.SystemSettings
+    (
+        SettingID   INT           IDENTITY(1,1) CONSTRAINT PK_SystemSettings PRIMARY KEY,
+        SettingKey  NVARCHAR(100) NOT NULL CONSTRAINT UQ_SystemSettings_Key UNIQUE,
+        Label       NVARCHAR(200) NOT NULL,
+        Value       NVARCHAR(MAX) NOT NULL,
+        ValueType   NVARCHAR(20)  NOT NULL CONSTRAINT DF_SystemSettings_ValueType DEFAULT N'bool',
+        Description NVARCHAR(500) NULL,
+        UpdatedAt   DATETIME2     NOT NULL CONSTRAINT DF_SystemSettings_UpdatedAt DEFAULT SYSUTCDATETIME()
+    );
+END
+GO
+
+-- ---------------------------------------------------------------------------
+-- Reports (abuse / fraud reports)
+-- ---------------------------------------------------------------------------
+IF OBJECT_ID(N'dbo.Reports', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Reports
+    (
+        ReportID         INT            IDENTITY(1,1) CONSTRAINT PK_Reports PRIMARY KEY,
+        ReportType       NVARCHAR(20)   NOT NULL,
+        TargetID         INT            NOT NULL,
+        Reason           NVARCHAR(50)   NOT NULL,
+        Description      NVARCHAR(2000) NULL,
+        ReporterUserID   INT            NOT NULL,
+        Status           INT            NOT NULL CONSTRAINT DF_Reports_Status DEFAULT 0,
+        ResolvedByUserID INT            NULL,
+        ResolutionNotes  NVARCHAR(1000) NULL,
+        CreatedAt        DATETIME2      NOT NULL CONSTRAINT DF_Reports_CreatedAt DEFAULT SYSUTCDATETIME(),
+        ResolvedAt       DATETIME2      NULL,
+        CONSTRAINT FK_Reports_Reporter FOREIGN KEY (ReporterUserID) REFERENCES dbo.Users(UserID),
+        CONSTRAINT FK_Reports_Resolver FOREIGN KEY (ResolvedByUserID) REFERENCES dbo.Users(UserID),
+        CONSTRAINT CK_Reports_Type CHECK (ReportType IN (N'LISTING', N'USER', N'REVIEW', N'CHAT')),
+        CONSTRAINT CK_Reports_Status CHECK (Status IN (0, 1, 2, 3))
+    );
+
+    CREATE NONCLUSTERED INDEX IX_Reports_Status_CreatedAt
+        ON dbo.Reports (Status, CreatedAt DESC)
+        INCLUDE (ReportType, ReporterUserID, TargetID);
+END
+GO
+
+-- ---------------------------------------------------------------------------
+-- Permissions (granular RBAC permissions)
+-- ---------------------------------------------------------------------------
+IF OBJECT_ID(N'dbo.Permissions', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Permissions
+    (
+        PermissionID  INT           IDENTITY(1,1) CONSTRAINT PK_Permissions PRIMARY KEY,
+        PermissionKey NVARCHAR(100) NOT NULL CONSTRAINT UQ_Permissions_Key UNIQUE,
+        Description   NVARCHAR(300) NOT NULL,
+        Category      NVARCHAR(50)  NOT NULL
+    );
+END
+GO
+
+-- ---------------------------------------------------------------------------
+-- Role Permissions (junction: Roles <-> Permissions)
+-- ---------------------------------------------------------------------------
+IF OBJECT_ID(N'dbo.RolePermissions', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.RolePermissions
+    (
+        RolePermissionID INT IDENTITY(1,1) CONSTRAINT PK_RolePermissions PRIMARY KEY,
+        RoleID           INT NOT NULL,
+        PermissionID     INT NOT NULL,
+        CONSTRAINT FK_RolePermissions_Role FOREIGN KEY (RoleID) REFERENCES dbo.Roles(RoleID),
+        CONSTRAINT FK_RolePermissions_Perm FOREIGN KEY (PermissionID) REFERENCES dbo.Permissions(PermissionID),
+        CONSTRAINT UQ_RolePermissions_Role_Perm UNIQUE (RoleID, PermissionID)
+    );
 END
 GO
 

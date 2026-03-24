@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Security.Cryptography;
+using System.Text;
 using TijarahJo.Application.Abstractions.DataAccess;
 using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Infrastructure.Persistence;
@@ -31,8 +33,20 @@ public static class InfrastructureServiceCollectionExtensions
         }
 
         services.AddDbContext<TijarahJoDbContext>(options =>
-            options.UseSqlServer(connectionString));
+            options.UseSqlServer(connectionString)
+                   .AddInterceptors(new UpdatedAtInterceptor()));
 
+        // Derive the TOTP encryption key from configuration (same derivation as TwoFactorService)
+        string? twoFactorEncKey = configuration["TwoFactor:SecretEncryptionKey"];
+        string? jwtKey = configuration["JwtSettings:SigningKey"];
+        string secretKeyMaterial = !string.IsNullOrWhiteSpace(twoFactorEncKey)
+            ? twoFactorEncKey.Trim()
+            : !string.IsNullOrWhiteSpace(jwtKey)
+                ? $"twofactor-secret::{jwtKey}"
+                : throw new InvalidOperationException(
+                    "Either TwoFactor:SecretEncryptionKey or JwtSettings:SigningKey must be configured for TOTP encryption.");
+        byte[] totpKey = SHA256.HashData(Encoding.UTF8.GetBytes(secretKeyMaterial));
+        services.AddSingleton(new TotpEncryptionKey(totpKey));
         services.AddScoped<IUserDataAccess, UserDataAccessAdapter>();
         services.AddScoped<IExternalIdentityDataAccess, ExternalIdentityDataAccessAdapter>();
         services.AddScoped<ICategoryDataAccess, CategoryDataAccessAdapter>();
