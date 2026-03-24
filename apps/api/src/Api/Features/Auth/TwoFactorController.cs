@@ -120,13 +120,21 @@ public class TwoFactorController(
         {
             // Instead of blocking, allow generating a code for disabling later
             string disableCode = _twoFactorService.GenerateAndStoreSetupCode(user.UserID!.Value);
-            _ = _emailSender.SendTwoFactorCodeAsync(
-                user.Email,
-                user.FirstName,
-                disableCode,
-                TimeSpan.FromSeconds(900),
-                cancellationToken
-            );
+            try
+            {
+                await _emailSender.SendTwoFactorCodeAsync(
+                    user.Email,
+                    user.FirstName,
+                    disableCode,
+                    TimeSpan.FromSeconds(900),
+                    cancellationToken
+                );
+                _logger.LogInformation("[2FA] Disable code email sent to {Email}", user.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[2FA] Failed to send disable code email to {Email}", user.Email);
+            }
             return Ok(new TwoFactorSetupStartResponse
             {
                 Success = true,
@@ -138,13 +146,21 @@ public class TwoFactorController(
 
         string code = _twoFactorService.GenerateAndStoreSetupCode(user.UserID!.Value);
 
-        _ = _emailSender.SendTwoFactorCodeAsync(
-            user.Email,
-            user.FirstName,
-            code,
-            TimeSpan.FromSeconds(900), // match standard challenge lifetime
-            cancellationToken
-        );
+        try
+        {
+            await _emailSender.SendTwoFactorCodeAsync(
+                user.Email,
+                user.FirstName,
+                code,
+                TimeSpan.FromSeconds(900),
+                cancellationToken
+            );
+            _logger.LogInformation("[2FA] Setup code email sent to {Email}", user.Email);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[2FA] Failed to send setup code email to {Email}", user.Email);
+        }
 
         user = user with { TwoFactorPendingSecret = "PENDING_EMAIL_SETUP" }; // Just a marker
         bool persisted = await _users.UpdateUserAsync(user, userId, cancellationToken);

@@ -62,7 +62,7 @@ jobs:
         run: chmod +x ./scripts/bootstrap_db.sh
 
       - name: Bootstrap DB and backend
-        run: ./scripts/bootstrap_db.sh --no-verify --keep-backend
+        run: CONFIGURATION=Release ./scripts/bootstrap_db.sh --no-verify --keep-backend
 
       - name: Install frontend dependencies
         working-directory: apps/web
