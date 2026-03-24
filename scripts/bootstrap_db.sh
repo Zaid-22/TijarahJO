@@ -367,22 +367,24 @@ if [[ "$KEEP_BACKEND_RUNNING" -eq 1 ]]; then
       fi
     fi
 
+    ADONET_PASSWORD="$(printf "%s" "$RUNTIME_DB_PASSWORD" | sed "s/'/''/g")"
     nohup env \
       ASPNETCORE_ENVIRONMENT=Development \
       ASPNETCORE_URLS="$BACKEND_URL" \
       JWT_SIGNING_KEY="$JWT_SIGNING_KEY" \
-      DATABASE_CONNECTION_STRING="Data Source=localhost,1433;Database=TijarahJoDB;User Id=${RUNTIME_DB_USER};Password=${RUNTIME_DB_PASSWORD};Encrypt=True;TrustServerCertificate=True;" \
+      DATABASE_CONNECTION_STRING="Data Source=localhost,1433;Database=TijarahJoDB;User Id=${RUNTIME_DB_USER};Password='${ADONET_PASSWORD}';Encrypt=True;TrustServerCertificate=True;" \
       dotnet "$BACKEND_DLL_PATH" >>"$BACKEND_LOG_FILE" 2>&1 < /dev/null &
     echo $! > "$BACKEND_PID_FILE"
   )
   BACKEND_PID="$(cat "$BACKEND_PID_FILE")"
 else
+  ADONET_PASSWORD="$(printf "%s" "$RUNTIME_DB_PASSWORD" | sed "s/'/''/g")"
   (
     cd "$BACKEND_DIR"
     ASPNETCORE_ENVIRONMENT=Development \
     ASPNETCORE_URLS="$BACKEND_URL" \
     JWT_SIGNING_KEY="$JWT_SIGNING_KEY" \
-    DATABASE_CONNECTION_STRING="Data Source=localhost,1433;Database=TijarahJoDB;User Id=${RUNTIME_DB_USER};Password=${RUNTIME_DB_PASSWORD};Encrypt=True;TrustServerCertificate=True;" \
+    DATABASE_CONNECTION_STRING="Data Source=localhost,1433;Database=TijarahJoDB;User Id=${RUNTIME_DB_USER};Password='${ADONET_PASSWORD}';Encrypt=True;TrustServerCertificate=True;" \
     dotnet run -c "$CONFIGURATION" --no-launch-profile >"$BACKEND_LOG_FILE" 2>&1
   ) &
 
