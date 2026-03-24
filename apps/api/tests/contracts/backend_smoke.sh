@@ -101,36 +101,36 @@ timestamp="$(date +%s)"
 email="smoke_${timestamp}@example.com"
 
 call_api "preflight.swagger" "GET" "/swagger/index.html" "200"
-call_api "categories.all" "GET" "/api/categories" "200"
+call_api "categories.all" "GET" "/api/v1/categories" "200"
 assert_jq "categories.all.array" 'type=="array"'
 
-call_api "roles.all" "GET" "/api/roles" "200"
+call_api "roles.all" "GET" "/api/v1/roles" "200"
 assert_jq "roles.all.array" 'type=="array"'
 
-call_api "posts.feed" "GET" "/api/posts/feed?page=1&limit=5&includeDeleted=false" "200"
+call_api "posts.feed" "GET" "/api/v1/posts/feed?page=1&limit=5&includeDeleted=false" "200"
 assert_jq "posts.feed.shape" '.success==true and (.posts|type=="array") and (.pagination|type=="object")'
 
-call_api "posts.all.removed" "GET" "/api/posts/All" "404"
-call_api "posts.pagination.removed" "GET" "/api/posts/pagination?pageNumber=1&rowsPerPage=5&includeDeleted=false" "404"
+call_api "posts.all.removed" "GET" "/api/v1/posts/All" "404"
+call_api "posts.pagination.removed" "GET" "/api/v1/posts/pagination?pageNumber=1&rowsPerPage=5&includeDeleted=false" "404"
 
-call_api "users.all.restricted" "GET" "/api/users" "401,403"
+call_api "users.all.restricted" "GET" "/api/v1/users" "401,403"
 
 signup_payload="$(jq -nc --arg e "$email" '{Email:$e,Password:"P@ssw0rd123",FirstName:"Smoke",LastName:"Test",Phone:"+962790000099",City:"Amman",Area:"Abdali"}')"
-call_api "auth.signup" "POST" "/api/auth/signup" "201" "$signup_payload"
+call_api "auth.signup" "POST" "/api/v1/auth/signup" "201" "$signup_payload"
 token="$(printf "%s" "$LAST_BODY" | jq -r '.Token // empty')"
 assert_jq "auth.signup.token.present" '.Token | type=="string" and (length>20)'
 
 if [ -n "$token" ]; then
-  call_api "auth.me" "GET" "/api/auth/me" "200" "" "$token"
+  call_api "auth.me" "GET" "/api/v1/auth/me" "200" "" "$token"
   assert_jq "auth.me.id.present" '.Id != null'
 
-  call_api "favorites.get" "GET" "/api/favorites" "200" "" "$token"
+  call_api "favorites.get" "GET" "/api/v1/favorites" "200" "" "$token"
   assert_jq "favorites.get.shape" '.success==true and (.favorites|type=="array")'
 
-  call_api "search.basic" "GET" "/api/search?query=smoke&page=1&limit=5" "200"
+  call_api "search.basic" "GET" "/api/v1/search?query=smoke&page=1&limit=5" "200"
   assert_jq "search.basic.shape" '.success==true and (.posts|type=="array")'
 
-  call_api "auth.logout" "POST" "/api/auth/logout" "200" "" "$token"
+  call_api "auth.logout" "POST" "/api/v1/auth/logout" "200" "" "$token"
 else
   log_fail "auth.me/favorites/logout" "Token missing from signup response."
 fi
