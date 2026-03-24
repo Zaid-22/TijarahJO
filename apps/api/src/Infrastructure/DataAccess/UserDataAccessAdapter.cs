@@ -91,7 +91,17 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
         entity.TwoFactorPendingSecret = user.TwoFactorPendingSecret;
 
         _dbContext.AuditActorUserId = actorUserId;
-        return await _dbContext.SaveChangesAsync(cancellationToken) > 0;
+        try
+        {
+            int rowsAffected = await _dbContext.SaveChangesAsync(cancellationToken);
+            Console.WriteLine($"[UpdateUserAsync] SaveChangesAsync returned {rowsAffected} rows affected for user {user.UserID}");
+            return rowsAffected >= 0;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[UpdateUserAsync] SaveChangesAsync EXCEPTION for user {user.UserID}: {ex}");
+            return false;
+        }
     }
 
     public async Task<bool> DeleteUserAsync(int? userId, int actorUserId, CancellationToken cancellationToken = default)

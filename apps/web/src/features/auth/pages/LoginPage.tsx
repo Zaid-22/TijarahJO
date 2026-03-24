@@ -397,6 +397,9 @@ export function LoginPage({
     }
 
     dispatch({ type: "SET_GENERAL_ERROR", error: "" });
+    // Clear the logged-out flag so checkAuth will detect the new JWT
+    // session when Google OAuth redirects back to the frontend.
+    localStorage.removeItem("tijarahjo_logged_out");
     const authModeStr = state.mode === "signUp" ? "signup" : "login";
     window.location.assign(api.auth.getGoogleAuthStartUrl(authModeStr));
   };

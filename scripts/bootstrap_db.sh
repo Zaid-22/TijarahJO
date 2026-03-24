@@ -17,6 +17,8 @@ CONTAINER_NAME="tijarahjo-db"
 SQLCMD_IN_CONTAINER="/opt/mssql-tools18/bin/sqlcmd"
 BACKEND_LOG_FILE="${BACKEND_LOG_FILE:-/tmp/tijarahjo_bootstrap_backend.log}"
 BACKEND_PID_FILE="${BACKEND_PID_FILE:-$ROOT_DIR/.tijarahjo_backend.pid}"
+CONFIGURATION="${CONFIGURATION:-Debug}"
+
 
 RESET_VOLUME=1
 RUN_VERIFY=1
@@ -345,15 +347,18 @@ if lsof -ti tcp:5033 >/dev/null 2>&1; then
 fi
 
 if [[ "$KEEP_BACKEND_RUNNING" -eq 1 ]]; then
-  BACKEND_DLL_PATH="$BACKEND_DIR/bin/Debug/net8.0/TijarahJo.Api.dll"
+  BACKEND_DLL_PATH="$BACKEND_DIR/bin/$CONFIGURATION/net8.0/TijarahJo.Api.dll"
   (
     cd "$BACKEND_DIR"
     # Build once, then run the compiled app directly so PID tracking stays stable.
-    dotnet build --nologo >/dev/null
     if [[ ! -f "$BACKEND_DLL_PATH" ]]; then
-      echo "Error: backend build output not found at $BACKEND_DLL_PATH" >&2
-      exit 1
+      dotnet build -c "$CONFIGURATION" --nologo >/dev/null
+      if [[ ! -f "$BACKEND_DLL_PATH" ]]; then
+        echo "Error: backend build output not found at $BACKEND_DLL_PATH" >&2
+        exit 1
+      fi
     fi
+
     nohup env \
       ASPNETCORE_ENVIRONMENT=Development \
       ASPNETCORE_URLS="$BACKEND_URL" \
@@ -370,8 +375,9 @@ else
     ASPNETCORE_URLS="$BACKEND_URL" \
     JWT_SIGNING_KEY="$JWT_SIGNING_KEY" \
     DATABASE_CONNECTION_STRING="Data Source=localhost,1433;Database=TijarahJoDB;User Id=${RUNTIME_DB_USER};Password=${RUNTIME_DB_PASSWORD};Encrypt=True;TrustServerCertificate=True;" \
-    dotnet run --no-launch-profile >"$BACKEND_LOG_FILE" 2>&1
+    dotnet run -c "$CONFIGURATION" --no-launch-profile >"$BACKEND_LOG_FILE" 2>&1
   ) &
+
   BACKEND_PID=$!
 fi
 
