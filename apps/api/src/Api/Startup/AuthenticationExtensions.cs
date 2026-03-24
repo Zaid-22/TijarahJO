@@ -14,10 +14,19 @@ public static class AuthenticationExtensions
     {
         var jwtSection = configuration.GetSection("JWT");
 
-        // Resolve values with environment variable overrides
-        string signingKey = jwtSection["SigningKey"] ?? Environment.GetEnvironmentVariable("JWT_SIGNING_KEY") ?? "";
-        string issuer = jwtSection["Issuer"] ?? Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "";
-        string audience = jwtSection["Audience"] ?? Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "";
+        // Resolve values prioritizing environment variables over (potentially empty) appsettings.json values
+        string? signingKey = Environment.GetEnvironmentVariable("JWT_SIGNING_KEY");
+        if (string.IsNullOrEmpty(signingKey)) signingKey = jwtSection["SigningKey"];
+        signingKey ??= "";
+
+        string? issuer = Environment.GetEnvironmentVariable("JWT_ISSUER");
+        if (string.IsNullOrEmpty(issuer)) issuer = jwtSection["Issuer"];
+        issuer ??= "";
+
+        string? audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE");
+        if (string.IsNullOrEmpty(audience)) audience = jwtSection["Audience"];
+        audience ??= "";
+
         int lifetime = int.TryParse(jwtSection["Lifetime"], out int lt) ? lt : 120;
 
         // Validate SigningKey is not empty
