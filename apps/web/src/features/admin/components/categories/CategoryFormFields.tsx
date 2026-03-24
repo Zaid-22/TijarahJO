@@ -1,5 +1,7 @@
-import { useRef } from "react";
-import { Upload } from "lucide-react";
+import { useRef, useState } from "react";
+import { Upload, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { api } from "../../../../services/api";
 import { Button } from "../../../../shared/ui/button";
 import { Input } from "../../../../shared/ui/input";
 import { Label } from "../../../../shared/ui/label";
@@ -16,21 +18,35 @@ export function CategoryFormFields({
   idPrefix,
   onChange,
 }: CategoryFormFieldsProps) {
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      return; // file too large
+      toast.error("File size must be under 5MB");
+      return; 
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      onChange({ ...formData, image: String(reader.result || "") });
-    };
-    reader.readAsDataURL(file);
+    setIsUploading(true);
+    try {
+      const response = await api.categories.uploadImage(file);
+      if (response.success && response.url) {
+        onChange({ ...formData, image: response.url });
+        toast.success("Image uploaded successfully");
+      } else {
+        toast.error(response.message || "Failed to upload image");
+      }
+    } catch (error) {
+      toast.error("Failed to upload image");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
   return (
@@ -99,9 +115,14 @@ export function CategoryFormFields({
             variant="outline"
             className="w-full justify-start text-muted-foreground"
             onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
           >
-            <Upload className="w-4 h-4 mr-2" />
-            {formData.image.trim() ? "Change Image" : "Upload Image"}
+            {isUploading ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Upload className="w-4 h-4 mr-2" />
+            )}
+            {isUploading ? "Uploading..." : formData.image.trim() ? "Change Image" : "Upload Image"}
           </Button>
           <input
             ref={fileInputRef}

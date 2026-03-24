@@ -212,4 +212,23 @@ export const categoriesApi = {
 
     return response.success ? parseCategoryExistsPayload(response.data) : false;
   },
+
+  uploadImage: async (file: File): Promise<{ success: boolean; url?: string; message?: string }> => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await apiRequest<{ Url?: string }>("/categories/upload-image", {
+      method: "POST",
+      body: formData as unknown as BodyInit,
+    });
+
+    if (response.success) {
+      return { success: true, url: response.data?.Url };
+    }
+
+    return { 
+      success: false, 
+      message: response.error?.message || "Failed to upload category image" 
+    };
+  },
 };

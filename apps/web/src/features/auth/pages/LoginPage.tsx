@@ -278,7 +278,7 @@ export function LoginPage({
       phone: user?.phone || normalizedPhone,
       avatar: user?.avatar,
       joinedDate: formatJoinedDateLabel(user?.joinedDate, language),
-      role: user?.roleID === 1 || (user as unknown as Record<string, unknown>)?.role === "admin" ? "admin" : "user",
+      role: user?.RoleName === "Admin" || user?.roleName === "admin" || user?.roleID === 1 || (user as unknown as Record<string, unknown>)?.role === "admin" ? "admin" : "user",
     });
   };
 
@@ -327,7 +327,7 @@ export function LoginPage({
       phone: user?.phone || "",
       avatar: user?.avatar,
       joinedDate: formatJoinedDateLabel(user?.joinedDate, language),
-      role: user?.roleID === 1 || (user as unknown as Record<string, unknown>)?.role === "admin" ? "admin" : "user",
+      role: user?.RoleName === "Admin" || user?.roleName === "admin" || user?.roleID === 1 || (user as unknown as Record<string, unknown>)?.role === "admin" ? "admin" : "user",
     });
   };
 
@@ -383,7 +383,7 @@ export function LoginPage({
       phone: user?.phone || "",
       avatar: user?.avatar,
       joinedDate: formatJoinedDateLabel(user?.joinedDate, language),
-      role: user?.roleID === 1 || (user as unknown as Record<string, unknown>)?.role === "admin" ? "admin" : "user",
+      role: user?.RoleName === "Admin" || user?.roleName === "admin" || user?.roleID === 1 || (user as unknown as Record<string, unknown>)?.role === "admin" ? "admin" : "user",
     });
   };
 

@@ -38,7 +38,8 @@ public static class InfrastructureServiceCollectionExtensions
 
         // Derive the TOTP encryption key from configuration (same derivation as TwoFactorService)
         string? twoFactorEncKey = configuration["TwoFactor:SecretEncryptionKey"];
-        string? jwtKey = configuration["JwtSettings:SigningKey"];
+        string? jwtKey = configuration["JwtSettings:SigningKey"]
+                         ?? Environment.GetEnvironmentVariable("JWT_SIGNING_KEY");
         string secretKeyMaterial = !string.IsNullOrWhiteSpace(twoFactorEncKey)
             ? twoFactorEncKey.Trim()
             : !string.IsNullOrWhiteSpace(jwtKey)

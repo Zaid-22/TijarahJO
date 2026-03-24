@@ -64,10 +64,20 @@ IF EXISTS (
       AND c.max_length = -1  -- -1 means MAX
 )
 BEGIN
+    IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_PostImages_PostID_Active' AND object_id = OBJECT_ID(N'dbo.PostImages'))
+    BEGIN
+        DROP INDEX IX_PostImages_PostID_Active ON dbo.PostImages;
+    END
+
     ALTER TABLE dbo.PostImages
     ALTER COLUMN PostImageURL NVARCHAR(2048) NOT NULL;
 
-    PRINT 'Altered PostImageURL to NVARCHAR(2048)';
+    CREATE NONCLUSTERED INDEX IX_PostImages_PostID_Active
+        ON dbo.PostImages (PostID)
+        INCLUDE (PostImageURL, UploadedAt)
+        WHERE IsDeleted = 0;
+
+    PRINT 'Altered PostImageURL to NVARCHAR(2048) and recreated index';
 END
 GO
 
