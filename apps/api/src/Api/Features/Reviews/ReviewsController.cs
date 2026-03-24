@@ -29,7 +29,7 @@ namespace TijarahJo.Api.Features.Reviews
         {
             if (userId < 1) return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid user ID");
             IReadOnlyList<TijarahJo.Domain.Models.ReviewModel> reviews = await _reviews.GetReviewsAsync(userId, HttpContext.RequestAborted);
-            return Ok(reviews.Select(DTOMapper.ToReviewResponseDTO).ToList());
+            return Ok(reviews.Select(r => DTOMapper.ToReviewResponseDTO(r, Request)).ToList());
         }
 
         [Authorize]
@@ -65,7 +65,7 @@ namespace TijarahJo.Api.Features.Reviews
             return CreatedAtAction(
                 nameof(GetUserReviews),
                 new { userId = result.Review.ReviewModel.ReviewedUserID },
-                DTOMapper.ToReviewResponseDTO(result.Review.ReviewModel)
+                DTOMapper.ToReviewResponseDTO(result.Review.ReviewModel, Request)
             );
         }
 

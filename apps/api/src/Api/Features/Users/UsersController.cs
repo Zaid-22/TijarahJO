@@ -43,7 +43,7 @@ public class UsersController : ControllerBase
         }
 
         List<UserResponseDTO> dtoList = result.Users
-            .Select(u => DTOMapper.ToUserResponseDTO(u))
+            .Select(u => DTOMapper.ToUserResponseDTO(u, request: Request))
             .ToList();
         return Ok(dtoList);
     }
@@ -66,7 +66,7 @@ public class UsersController : ControllerBase
             return this.ToUserByIdQueryProblem(result, "Failed to fetch user.");
         }
 
-        return Ok(DTOMapper.ToUserResponseDTO(result.User));
+        return Ok(DTOMapper.ToUserResponseDTO(result.User, request: Request));
     }
 
     [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
@@ -101,7 +101,7 @@ public class UsersController : ControllerBase
         return CreatedAtAction(
             nameof(GetUserById),
             new { id = result.User.UserID },
-            DTOMapper.ToUserResponseDTO(result.User)
+            DTOMapper.ToUserResponseDTO(result.User, request: Request)
         );
     }
 
@@ -141,7 +141,7 @@ public class UsersController : ControllerBase
             return this.ToUserCommandProblem(result, "Error updating user.");
         }
 
-        return Ok(DTOMapper.ToUserResponseDTO(result.User));
+        return Ok(DTOMapper.ToUserResponseDTO(result.User, request: Request));
     }
 
     [Authorize]

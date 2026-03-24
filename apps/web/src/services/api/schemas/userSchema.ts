@@ -1,7 +1,6 @@
 import { toPositiveIntegerId } from "../../../utils/idValidation";
 import { asRecord, readString, toIntegerOrDefault } from "../normalizers";
 import { toIsoStringOrNow } from "../shared";
-import { APP_CONFIG } from "../../../constants/appConfig";
 
 const DEFAULT_ACTIVE_STATUS = 1;
 const DEFAULT_USER_ROLE_ID = 2;
@@ -73,31 +72,6 @@ function resolveJoinDate(record: Record<string, unknown>): string {
   );
 }
 
-function resolveAvatarUrl(rawUrl: string | undefined | null): string | undefined {
-  if (!rawUrl) return undefined;
-  
-  const trimmed = rawUrl.trim();
-  if (!trimmed) return undefined;
-
-  if (
-    trimmed.startsWith("http://") ||
-    trimmed.startsWith("https://") ||
-    trimmed.startsWith("data:image/") ||
-    trimmed.startsWith("blob:")
-  ) {
-    return trimmed;
-  }
-
-  const backendHost = APP_CONFIG.backendHostUrl.replace(/\/+$/, "");
-  if (!backendHost) {
-    return trimmed;
-  }
-
-  return trimmed.startsWith("/") 
-    ? `${backendHost}${trimmed}` 
-    : `${backendHost}/${trimmed}`;
-}
-
 export function parseUserSchema(
   value: unknown,
   fallbackUserId = "",
@@ -126,7 +100,7 @@ export function parseUserSchema(
     city: readString(userRecord.City ?? userRecord.city),
     area: readString(userRecord.Area ?? userRecord.area),
     bio: readString(userRecord.Bio ?? userRecord.bio),
-    avatar: resolveAvatarUrl(readString(userRecord.Avatar ?? userRecord.avatar)),
+    avatar: readString(userRecord.Avatar ?? userRecord.avatar) || undefined,
     joinedDate,
     joinedAt: toIsoStringOrNow(joinedDate),
     status: toIntegerOrDefault(

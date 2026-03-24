@@ -6,7 +6,35 @@ namespace TijarahJo.Api.Common.Utils;
 
 public static class DTOMapper
 {
-    public static UserResponseDTO ToUserResponseDTO(UserModel userModel, string roleName = "")
+    /// <summary>
+    /// Converts a relative asset path (e.g. "/uploads/avatar.jpg") into an absolute URL
+    /// using the current request's scheme and host. Already-absolute URLs are returned as-is.
+    /// </summary>
+    public static string? ResolveAssetUrl(HttpRequest? request, string? relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath))
+            return relativePath;
+
+        var trimmed = relativePath.Trim();
+
+        // Already absolute — return as-is
+        if (trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            return trimmed;
+        }
+
+        // No request context — return the relative path unchanged
+        if (request == null)
+            return trimmed;
+
+        var baseUrl = $"{request.Scheme}://{request.Host}";
+        return trimmed.StartsWith('/')
+            ? $"{baseUrl}{trimmed}"
+            : $"{baseUrl}/{trimmed}";
+    }
+
+    public static UserResponseDTO ToUserResponseDTO(UserModel userModel, string roleName = "", HttpRequest? request = null)
     {
         return new UserResponseDTO
         {
@@ -18,7 +46,7 @@ public static class DTOMapper
             CityId = userModel.CityId,
             AreaId = userModel.AreaId,
             Bio = userModel.Bio,
-            Avatar = userModel.Avatar,
+            Avatar = ResolveAssetUrl(request, userModel.Avatar),
             JoinedDate = userModel.JoinDate,
             Status = userModel.Status,
             RoleName = roleName
@@ -85,7 +113,7 @@ public static class DTOMapper
         };
     }
 
-    public static ReviewResponseDTO ToReviewResponseDTO(ReviewModel reviewModel)
+    public static ReviewResponseDTO ToReviewResponseDTO(ReviewModel reviewModel, HttpRequest? request = null)
     {
         return new ReviewResponseDTO
         {
@@ -97,7 +125,7 @@ public static class DTOMapper
             Comment = reviewModel.Comment ?? string.Empty,
             Timestamp = reviewModel.Timestamp,
             ReviewerName = reviewModel.ReviewerName,
-            ReviewerAvatar = reviewModel.ReviewerAvatar
+            ReviewerAvatar = ResolveAssetUrl(request, reviewModel.ReviewerAvatar)
         };
     }
 
@@ -157,7 +185,7 @@ public static class DTOMapper
         };
     }
 
-    public static TopSellerResponseDTO ToTopSellerResponseDTO(TopSellerReadModel seller)
+    public static TopSellerResponseDTO ToTopSellerResponseDTO(TopSellerReadModel seller, HttpRequest? request = null)
     {
         return new TopSellerResponseDTO
         {
@@ -166,7 +194,7 @@ public static class DTOMapper
             Phone = seller.Phone,
             City = seller.City,
             Area = seller.Area,
-            Avatar = seller.Avatar,
+            Avatar = ResolveAssetUrl(request, seller.Avatar) ?? string.Empty,
             JoinedDate = seller.JoinedDate,
             ActiveListingsCount = seller.ActiveListingsCount,
             TotalSalesCount = seller.TotalSalesCount,
@@ -174,7 +202,7 @@ public static class DTOMapper
         };
     }
 
-    public static SellerProfileResponseDTO ToSellerProfileResponseDTO(SellerProfileReadModel profile)
+    public static SellerProfileResponseDTO ToSellerProfileResponseDTO(SellerProfileReadModel profile, HttpRequest? request = null)
     {
         return new SellerProfileResponseDTO
         {
@@ -187,7 +215,7 @@ public static class DTOMapper
                 City = profile.Seller.City,
                 Area = profile.Seller.Area,
                 Bio = profile.Seller.Bio,
-                Avatar = profile.Seller.Avatar,
+                Avatar = ResolveAssetUrl(request, profile.Seller.Avatar) ?? string.Empty,
                 JoinedDate = profile.Seller.JoinedDate,
                 ActiveListingsCount = profile.Seller.ActiveListingsCount,
                 TotalSalesCount = profile.Seller.TotalSalesCount
