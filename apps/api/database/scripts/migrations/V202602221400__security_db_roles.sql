@@ -90,6 +90,20 @@ GRANT SELECT ON dbo.SchemaMigrations  TO tijarahjo_app_role;
 -- Explicitly deny DDL operations
 DENY ALTER  ON SCHEMA::dbo TO tijarahjo_app_role;
 DENY CREATE TABLE TO tijarahjo_app_role;
+
+-- DML on additional transactional tables
+IF OBJECT_ID(N'dbo.UserExternalIdentities', N'U') IS NOT NULL
+    GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.UserExternalIdentities TO tijarahjo_app_role;
+IF OBJECT_ID(N'dbo.BlacklistedTokens', N'U') IS NOT NULL
+    GRANT SELECT, INSERT, DELETE ON dbo.BlacklistedTokens TO tijarahjo_app_role;
+IF OBJECT_ID(N'dbo.Reports', N'U') IS NOT NULL
+    GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.Reports TO tijarahjo_app_role;
+IF OBJECT_ID(N'dbo.SystemSettings', N'U') IS NOT NULL
+    GRANT SELECT, INSERT, UPDATE ON dbo.SystemSettings TO tijarahjo_app_role;
+IF OBJECT_ID(N'dbo.Permissions', N'U') IS NOT NULL
+    GRANT SELECT ON dbo.Permissions TO tijarahjo_app_role;
+IF OBJECT_ID(N'dbo.RolePermissions', N'U') IS NOT NULL
+    GRANT SELECT ON dbo.RolePermissions TO tijarahjo_app_role;
 GO
 
 -- ---------------------------------------------------------------------------
@@ -115,6 +129,20 @@ GRANT SELECT ON dbo.PostStatusLookup  TO tijarahjo_readonly_role;
 GRANT SELECT ON dbo.Cities            TO tijarahjo_readonly_role;
 GRANT SELECT ON dbo.Areas             TO tijarahjo_readonly_role;
 GRANT SELECT ON dbo.SchemaMigrations  TO tijarahjo_readonly_role;
+
+-- Readonly on additional tables
+IF OBJECT_ID(N'dbo.UserExternalIdentities', N'U') IS NOT NULL
+    GRANT SELECT ON dbo.UserExternalIdentities TO tijarahjo_readonly_role;
+IF OBJECT_ID(N'dbo.BlacklistedTokens', N'U') IS NOT NULL
+    GRANT SELECT ON dbo.BlacklistedTokens TO tijarahjo_readonly_role;
+IF OBJECT_ID(N'dbo.Reports', N'U') IS NOT NULL
+    GRANT SELECT ON dbo.Reports TO tijarahjo_readonly_role;
+IF OBJECT_ID(N'dbo.SystemSettings', N'U') IS NOT NULL
+    GRANT SELECT ON dbo.SystemSettings TO tijarahjo_readonly_role;
+IF OBJECT_ID(N'dbo.Permissions', N'U') IS NOT NULL
+    GRANT SELECT ON dbo.Permissions TO tijarahjo_readonly_role;
+IF OBJECT_ID(N'dbo.RolePermissions', N'U') IS NOT NULL
+    GRANT SELECT ON dbo.RolePermissions TO tijarahjo_readonly_role;
 
 DENY INSERT, UPDATE, DELETE ON SCHEMA::dbo TO tijarahjo_readonly_role;
 DENY ALTER  ON SCHEMA::dbo  TO tijarahjo_readonly_role;

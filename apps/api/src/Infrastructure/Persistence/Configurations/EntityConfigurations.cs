@@ -199,7 +199,7 @@ public class PostImageConfiguration : IEntityTypeConfiguration<PostImageEntity>
         builder.ToTable("PostImages");
         builder.HasKey(e => e.PostImageID);
         builder.Property(e => e.PostImageID).ValueGeneratedOnAdd();
-        builder.Property(e => e.PostImageURL).HasColumnType("nvarchar(max)");
+        builder.Property(e => e.PostImageURL).HasMaxLength(2048).IsRequired();
         builder.Property(e => e.UploadedAt).HasColumnType("datetime2");
         
         builder.HasOne<PostEntity>()
@@ -421,3 +421,94 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLogEntity>
             .OnDelete(DeleteBehavior.NoAction);
     }
 }
+
+public class SystemSettingConfiguration : IEntityTypeConfiguration<SystemSettingEntity>
+{
+    public void Configure(EntityTypeBuilder<SystemSettingEntity> builder)
+    {
+        builder.ToTable("SystemSettings");
+        builder.HasKey(e => e.SettingID);
+        builder.Property(e => e.SettingID).ValueGeneratedOnAdd();
+        builder.Property(e => e.SettingKey).HasMaxLength(100).IsRequired();
+        builder.Property(e => e.Label).HasMaxLength(200).IsRequired();
+        builder.Property(e => e.Value).IsRequired();
+        builder.Property(e => e.ValueType).HasMaxLength(20).IsRequired();
+        builder.Property(e => e.Description).HasMaxLength(500);
+        builder.Property(e => e.UpdatedAt).HasColumnType("datetime2");
+
+        builder.HasIndex(e => e.SettingKey)
+            .IsUnique()
+            .HasDatabaseName("UQ_SystemSettings_Key");
+    }
+}
+
+public class ReportConfiguration : IEntityTypeConfiguration<ReportEntity>
+{
+    public void Configure(EntityTypeBuilder<ReportEntity> builder)
+    {
+        builder.ToTable("Reports");
+        builder.HasKey(e => e.ReportID);
+        builder.Property(e => e.ReportID).ValueGeneratedOnAdd();
+        builder.Property(e => e.ReportType).HasMaxLength(20).IsRequired();
+        builder.Property(e => e.Reason).HasMaxLength(50).IsRequired();
+        builder.Property(e => e.Description).HasMaxLength(2000);
+        builder.Property(e => e.ResolutionNotes).HasMaxLength(1000);
+        builder.Property(e => e.CreatedAt).HasColumnType("datetime2");
+        builder.Property(e => e.ResolvedAt).HasColumnType("datetime2");
+
+        builder.HasIndex(e => new { e.Status, e.CreatedAt })
+            .HasDatabaseName("IX_Reports_Status_CreatedAt");
+
+        builder.HasOne(e => e.Reporter)
+            .WithMany()
+            .HasForeignKey(e => e.ReporterUserID)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.ResolvedBy)
+            .WithMany()
+            .HasForeignKey(e => e.ResolvedByUserID)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public class PermissionConfiguration : IEntityTypeConfiguration<PermissionEntity>
+{
+    public void Configure(EntityTypeBuilder<PermissionEntity> builder)
+    {
+        builder.ToTable("Permissions");
+        builder.HasKey(e => e.PermissionID);
+        builder.Property(e => e.PermissionID).ValueGeneratedOnAdd();
+        builder.Property(e => e.PermissionKey).HasMaxLength(100).IsRequired();
+        builder.Property(e => e.Description).HasMaxLength(300).IsRequired();
+        builder.Property(e => e.Category).HasMaxLength(50).IsRequired();
+
+        builder.HasIndex(e => e.PermissionKey)
+            .IsUnique()
+            .HasDatabaseName("UQ_Permissions_Key");
+    }
+}
+
+public class RolePermissionConfiguration : IEntityTypeConfiguration<RolePermissionEntity>
+{
+    public void Configure(EntityTypeBuilder<RolePermissionEntity> builder)
+    {
+        builder.ToTable("RolePermissions");
+        builder.HasKey(e => e.RolePermissionID);
+        builder.Property(e => e.RolePermissionID).ValueGeneratedOnAdd();
+
+        builder.HasIndex(e => new { e.RoleID, e.PermissionID })
+            .IsUnique()
+            .HasDatabaseName("UQ_RolePermissions_Role_Perm");
+
+        builder.HasOne(e => e.Role)
+            .WithMany()
+            .HasForeignKey(e => e.RoleID)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.Permission)
+            .WithMany()
+            .HasForeignKey(e => e.PermissionID)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+

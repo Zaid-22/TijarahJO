@@ -42,7 +42,6 @@ BEGIN
         VALUES
             (0, N'ACTIVE', N'ACTIVE', CAST(1 AS BIT), N'Visible active listing'),
             (1, N'BLOCKED', N'BLOCKED', CAST(0 AS BIT), N'Moderated listing'),
-            (2, N'DELETED', N'DELETED', CAST(0 AS BIT), N'Soft deleted listing'),
             (3, N'SOLD', N'SOLD', CAST(1 AS BIT), N'Sold listing')
     ) AS source (StatusID, Code, StatusName, IsVisible, Description)
       ON target.StatusID = source.StatusID
@@ -100,13 +99,17 @@ GO
 
 -- ------------------------------------------------------------
 -- 3) Status domain constraints
+--    FK to UserStatusLookup / PostStatusLookup is the authority.
+--    Drop any redundant CHECK constraints that may have been added earlier.
 -- ------------------------------------------------------------
 IF OBJECT_ID(N'dbo.Users', N'U') IS NOT NULL
 BEGIN
+    -- Fix invalid status values to ACTIVE
     UPDATE dbo.Users
     SET Status = 1
     WHERE Status NOT IN (1, 2, 3);
 
+    -- Drop redundant CK if it exists (FK is the authority)
     IF EXISTS (
         SELECT 1
         FROM sys.check_constraints
@@ -116,20 +119,17 @@ BEGIN
     BEGIN
         ALTER TABLE dbo.Users DROP CONSTRAINT CK_Users_Status;
     END
-
-    ALTER TABLE dbo.Users WITH CHECK
-    ADD CONSTRAINT CK_Users_Status CHECK (Status IN (1, 2, 3));
-
-    ALTER TABLE dbo.Users CHECK CONSTRAINT CK_Users_Status;
 END
 GO
 
 IF OBJECT_ID(N'dbo.Posts', N'U') IS NOT NULL
 BEGIN
+    -- Fix invalid status values to ACTIVE
     UPDATE dbo.Posts
     SET Status = 0
-    WHERE Status NOT IN (0, 1, 2, 3);
+    WHERE Status NOT IN (0, 1, 3);
 
+    -- Drop redundant CK if it exists (FK is the authority)
     IF EXISTS (
         SELECT 1
         FROM sys.check_constraints
@@ -139,11 +139,6 @@ BEGIN
     BEGIN
         ALTER TABLE dbo.Posts DROP CONSTRAINT CK_Posts_Status;
     END
-
-    ALTER TABLE dbo.Posts WITH CHECK
-    ADD CONSTRAINT CK_Posts_Status CHECK (Status IN (0, 1, 2, 3));
-
-    ALTER TABLE dbo.Posts CHECK CONSTRAINT CK_Posts_Status;
 END
 GO
 
