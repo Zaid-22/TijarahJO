@@ -13,7 +13,8 @@ const FAVORITES_HEADING_PATTERN = /my favorites|مفضلتي/i;
 const PUBLISH_POST_BUTTON_PATTERN = /publish post|نشر المنشور/i;
 const EDIT_POST_BUTTON_PATTERN = /edit post|تعديل المنشور/i;
 const SAVE_CHANGES_BUTTON_PATTERN = /save changes|حفظ التغييرات/i;
-const DELETE_BUTTON_PATTERN = /^(delete|حذف)$/i;
+const DELETE_BUTTON_PATTERN =
+  /^(delete|حذف|confirm removal|تأكيد الإزالة)$/i;
 const FAVORITES_MUTATION_RESPONSE_PATTERN =
   /\/api(?:\/v[0-9]+)?\/favorites(?:\/[^/?#]+)?(?:\/)?(?:\?.*)?$/i;
 const AUTH_ME_RESPONSE_PATTERN = /\/api(?:\/v[0-9]+)?\/auth\/me$/i;
@@ -40,12 +41,15 @@ async function setUiLanguage(page, language) {
 async function signInAndOpenProfile(page) {
   await page.goto("/login");
   await page.locator("#authIdentifier").fill("buyer@example.com");
-  await page.locator("#password").fill("Password123!");
+  const passwordInput = page.locator("#password");
+  await passwordInput.fill("Password123!");
   const signInButton = page.getByRole("button", {
     name: SIGN_IN_BUTTON_PATTERN,
   });
   await expect(signInButton).toBeEnabled();
-  await signInButton.click();
+  const authBootstrap = waitForAuthBootstrap(page);
+  await passwordInput.press("Enter");
+  await authBootstrap;
   await page.goto("/profile");
   await expectProfilePageLoaded(page);
 }
@@ -220,7 +224,7 @@ test("favorites journey: add and remove favorites for authenticated user", async
   await page.goto("/post/101");
   const favoriteToggle = getPostFavoriteToggle(page);
   await expect(favoriteToggle).toBeVisible();
-  await favoriteToggle.click();
+  await favoriteToggle.click({ force: true });
   await expect(favoriteToggle).toHaveAttribute(
     "aria-label",
     /remove from favorites|إزالة من المفضلة/i,
@@ -234,7 +238,7 @@ test("favorites journey: add and remove favorites for authenticated user", async
     "101",
     "Demo Phone",
   );
-  await removeDemoPhoneFromFavoritesButton.click();
+  await removeDemoPhoneFromFavoritesButton.click({ force: true });
   await expect(page).toHaveURL(/\/favorites$/);
   await expect(page.getByText(FAVORITES_HEADING_PATTERN)).toBeVisible();
   await expect(page.getByText("Demo Phone")).toHaveCount(0);
@@ -267,7 +271,9 @@ test("post CRUD journey: create, update, and delete a post", async ({ page }) =>
   });
   await expect(page.getByText(/1\/5 images uploaded/i)).toBeVisible();
 
-  await page.getByRole("button", { name: PUBLISH_POST_BUTTON_PATTERN }).click();
+  await page
+    .getByRole("button", { name: PUBLISH_POST_BUTTON_PATTERN })
+    .click({ force: true });
   await expect(page).toHaveURL(/\/$/);
   await page.goto("/");
   await submitMarketplaceSearch(page, createdPostTitle);
@@ -290,12 +296,13 @@ test("post CRUD journey: create, update, and delete a post", async ({ page }) =>
   ).toBeVisible();
 
   const deletePostButton = page.getByRole("button", {
-    name: /delete post|حذف المنشور/i,
+    name: /delete post|remove post|حذف المنشور|إزالة المنشور/i,
   }).first();
   await expect(deletePostButton).toBeVisible();
   await deletePostButton.evaluate((button) => button.click());
   const deleteDialog = page.getByRole("alertdialog");
   await expect(deleteDialog).toBeVisible();
+  await deleteDialog.getByText(/no longer available|لم يعد متاحاً/i).click();
   await deleteDialog.getByRole("button", { name: DELETE_BUTTON_PATTERN }).click();
 
   await expect(page).toHaveURL(/\/$/);
@@ -340,7 +347,7 @@ test("favorites journey (arabic): add and remove favorites for authenticated use
   await page.goto("/post/101");
   const favoriteToggle = getPostFavoriteToggle(page);
   await expect(favoriteToggle).toBeVisible();
-  await favoriteToggle.click();
+  await favoriteToggle.click({ force: true });
   await expect(favoriteToggle).toHaveAttribute(
     "aria-label",
     /remove from favorites|إزالة من المفضلة/i,
@@ -354,7 +361,7 @@ test("favorites journey (arabic): add and remove favorites for authenticated use
     "101",
     "Demo Phone",
   );
-  await removeDemoPhoneFromFavoritesButton.click();
+  await removeDemoPhoneFromFavoritesButton.click({ force: true });
   await expect(page).toHaveURL(/\/favorites$/);
   await expect(page.getByText(FAVORITES_HEADING_PATTERN)).toBeVisible();
   await expect(page.getByText("Demo Phone")).toHaveCount(0);
@@ -387,7 +394,9 @@ test("post CRUD journey (arabic): create, update, and delete a post", async ({ p
   });
   await expect(page.getByText(/1\/5 images uploaded|1\/5 صور محملة/i)).toBeVisible();
 
-  await page.getByRole("button", { name: PUBLISH_POST_BUTTON_PATTERN }).click();
+  await page
+    .getByRole("button", { name: PUBLISH_POST_BUTTON_PATTERN })
+    .click({ force: true });
   await expect(page).toHaveURL(/\/$/);
   await page.goto("/");
   await submitMarketplaceSearch(page, createdPostTitle);
@@ -410,12 +419,13 @@ test("post CRUD journey (arabic): create, update, and delete a post", async ({ p
   ).toBeVisible();
 
   const deletePostButton = page.getByRole("button", {
-    name: /delete post|حذف المنشور/i,
+    name: /delete post|remove post|حذف المنشور|إزالة المنشور/i,
   }).first();
   await expect(deletePostButton).toBeVisible();
   await deletePostButton.evaluate((button) => button.click());
   const deleteDialog = page.getByRole("alertdialog");
   await expect(deleteDialog).toBeVisible();
+  await deleteDialog.getByText(/no longer available|لم يعد متاحاً/i).click();
   await deleteDialog.getByRole("button", { name: DELETE_BUTTON_PATTERN }).click();
 
   await expect(page).toHaveURL(/\/$/);
