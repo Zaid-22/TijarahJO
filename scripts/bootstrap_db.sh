@@ -266,10 +266,7 @@ END
 REVOKE SELECT, INSERT, UPDATE, DELETE ON SCHEMA::dbo TO [tijarahjo_app_runtime];
 
 -- Runtime principal is data-access only: block destructive/DDL paths.
-DENY DELETE ON SCHEMA::dbo TO [tijarahjo_app_runtime];
 DENY ALTER ON SCHEMA::dbo TO [tijarahjo_app_runtime];
-DENY CONTROL ON SCHEMA::dbo TO [tijarahjo_app_runtime];
-DENY REFERENCES ON SCHEMA::dbo TO [tijarahjo_app_runtime];
 
 GRANT SELECT ON dbo.Users TO [tijarahjo_app_runtime];
 GRANT SELECT ON dbo.Roles TO [tijarahjo_app_runtime];
