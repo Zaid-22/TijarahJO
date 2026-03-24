@@ -205,13 +205,17 @@ END
 GO
 
 USE TijarahJoDB;
-IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'${DB_APP_LOGIN}')
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'${DB_APP_LOGIN}')
 BEGIN
-    CREATE USER [${DB_APP_LOGIN}] FOR LOGIN [${DB_APP_LOGIN}];
+    -- The user was created WITHOUT LOGIN by the schema migrations.
+    -- We must drop it to recreate it mapped to the new server login.
+    DROP USER [${DB_APP_LOGIN}];
 END
-ELSE
+CREATE USER [${DB_APP_LOGIN}] FOR LOGIN [${DB_APP_LOGIN}];
+
+IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'${DB_APP_LOGIN}_role' AND type = 'R')
 BEGIN
-    ALTER USER [${DB_APP_LOGIN}] WITH LOGIN = [${DB_APP_LOGIN}];
+    ALTER ROLE [${DB_APP_LOGIN}_role] ADD MEMBER [${DB_APP_LOGIN}];
 END
 GO
 
