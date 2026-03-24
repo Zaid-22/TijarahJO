@@ -124,7 +124,7 @@ public class AuthController(
         {
             Success = true,
             Token = token,
-            User = DTOMapper.ToUserResponseDTO(result.User, result.RoleName)
+            User = DTOMapper.ToUserResponseDTO(result.User, result.RoleName, Request)
         });
     }
 
@@ -159,7 +159,7 @@ public class AuthController(
         }
 
         string? roleName = await AuthShared.ResolveRoleNameForTokenAsync(_roles, user.RoleID, cancellationToken);
-        return Ok(DTOMapper.ToUserResponseDTO(user, roleName ?? "User"));
+        return Ok(DTOMapper.ToUserResponseDTO(user, roleName ?? "User", Request));
     }
 
     [HttpPost("refresh")]

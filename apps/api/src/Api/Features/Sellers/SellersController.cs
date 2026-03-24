@@ -31,7 +31,7 @@ public class SellersController : ControllerBase
             return this.ToSellerProfileProblem(result, "Failed to fetch seller profile.");
         }
 
-        return Ok(DTOMapper.ToSellerProfileResponseDTO(result.Profile));
+        return Ok(DTOMapper.ToSellerProfileResponseDTO(result.Profile, Request));
     }
 
     [HttpGet("top")]
@@ -47,7 +47,7 @@ public class SellersController : ControllerBase
         }
 
         IReadOnlyList<TopSellerResponseDTO> response = result.Sellers
-            .Select(DTOMapper.ToTopSellerResponseDTO)
+            .Select(s => DTOMapper.ToTopSellerResponseDTO(s, Request))
             .ToList();
 
         return Ok(response);
