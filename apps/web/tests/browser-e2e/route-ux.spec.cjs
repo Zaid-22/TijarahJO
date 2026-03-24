@@ -35,10 +35,16 @@ test("unknown route shows recovery context and home action", async ({ page }) =>
   await page.goto("/unknown/deep/link");
 
   await expect(
-    page.getByRole("heading", { name: /page not found/i }).first(),
+    page
+      .getByRole("heading", { name: /page not found|الصفحة غير موجودة/i })
+      .first(),
   ).toBeVisible();
-  await expect(page.getByText(/requested path:/i)).toContainText("/unknown/deep/link");
-  await page.getByRole("button", { name: /go home/i }).click();
+  await expect(
+    page.getByText(/requested path:|المسار المطلوب:/i),
+  ).toContainText("/unknown/deep/link");
+  await page
+    .getByRole("button", { name: /go home|الذهاب إلى الرئيسية/i })
+    .click();
   await expect(page).toHaveURL(/\/$/);
 });
 
