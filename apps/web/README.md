@@ -1,14 +1,13 @@
-# TijarahJo Marketplace
+# TijarahJo Frontend
 
 <div align="center">
 
 ![TijarahJo](https://img.shields.io/badge/TijarahJo-Marketplace-0A4ABF?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-Production%20Ready-success?style=for-the-badge)
-![Backend](https://img.shields.io/badge/Backend-Integration%20Ready-blue?style=for-the-badge)
+![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)
+![Tailwind](https://img.shields.io/badge/Tailwind-4-38B2AC?style=for-the-badge&logo=tailwind-css)
 
-**A modern, full-featured marketplace application built with React, TypeScript, and Tailwind CSS**
-
-[Features](#-features) • [Getting Started](#-getting-started) • [Documentation](#-documentation) • [Backend Integration](#-backend-integration)
+**Modern, fully-integrated marketplace frontend built with React, TypeScript, and Tailwind CSS v4**
 
 </div>
 
@@ -16,143 +15,105 @@
 
 ## 🌟 Features
 
-### ✅ Complete CRUD Operations
-- **Create**: Add new posts with detailed information, location, and phone number
-- **Read**: Browse posts in multiple views (grid, list)
-- **Update**: Edit your posts with real-time updates
-- **Delete**: Remove posts with confirmation dialogs
-- **Post Status System**: Active, Sold, and Deleted states for listings
-
-### 👤 User Management
-- Login and registration pages with login/email support
-- Guest browsing mode (full marketplace access)
-- User profiles with editable information
-- Post ownership detection and permissions
-- Login or email login with proper validation
-- Phone number with Jordan "+962" prefix validation
-
-### 🛍️ Post Features
-- Multiple view modes (4-column grid, 3-column grid, 2-column grid, list view)
-- Advanced search functionality with "Search all posts"
+### 🛍️ Marketplace
+- Post creation, editing, status management (`active` / `sold` / `deleted`), and deletion
+- Multiple view modes (4-column, 3-column, 2-column grid, list view)
+- Advanced search with full-text support ("Search all posts")
 - Category filtering with 15+ dedicated category pages
 - Post favorites system (owners cannot favorite their own posts)
-- Post details with image gallery
-- Similar posts suggestions
-- Share posts functionality
-- WhatsApp integration for seller contact
-- **Direct image upload** from device (no URL needed)
-- Image preview and management
+- Post details with image gallery and similar posts suggestions
+- Share posts functionality and WhatsApp integration for seller contact
+- Direct image upload from device (server-side file storage)
 - Price validation (minimum 0.01 JOD, no negative prices)
 - Location management with "City, Area" display format
+- Post view tracking
+
+### 👤 User & Authentication
+- Login with username/email and registration pages
+- Guest browsing mode (full marketplace access without login)
+- Google OAuth 2.0 social login
+- Two-Factor Authentication (TOTP via authenticator app)
+- Password reset with email verification codes
+- User profiles with editable information
+- Post ownership detection and permissions
+- Phone number with Jordan "+962" prefix validation
+- JWT token authentication with auto-refresh
+
+### 💬 Real-Time Chat
+- Real-time messaging via SignalR WebSocket connection
+- Image sharing in chat conversations
+- Online/offline presence indicators
+- Conversation list with recent messages
+- Message read receipts
+
+### 🔔 Notifications
+- In-app notification system with unread count badge
+- Push notification subscription support
+- Mark as read / mark all as read
+
+### ⭐ Reviews
+- Seller reviews and ratings
+- Public seller profile pages with review history
+
+### 🛡️ Admin Panel
+- Dashboard with key analytics and KPIs
+- User management (view, block, delete, role assignment)
+- Post moderation and content management
+- Reports queue for flagged content
+- Fraud detection tools
+- Conversation monitoring
+- Audit log viewer
+- Location management
+- System settings administration
+- Admin-specific search tools
 
 ### 🌍 Internationalization
-- **Full English and Arabic languages**
+- Full English and Arabic languages
 - Complete RTL (Right-to-Left) support
-- **Translated categories** in both languages
+- Translated categories in both languages
 - All UI elements fully translated
 - Language switcher in settings
 - Proper date/time localization
 
 ### 🎨 Modern UI/UX
 - Responsive design (mobile, tablet, desktop)
-- **Full dark mode support** with comfortable color scheme
-- Dark mode logo support
-- Improved contrast and readability in dark mode
-- Smooth animations and transitions with Motion (Framer Motion)
+- Full dark mode support with comfortable color scheme
+- Smooth animations and transitions with Framer Motion
 - Loading and error states
-- Confirmation dialogs
-- Toast notifications (Sonner)
-- Pagination instead of infinite scrolling
+- Confirmation dialogs and toast notifications (Sonner)
+- Pagination with configurable page sizes
 - Professional UX audit completed (8.5/10 rating)
-
-### 🔐 Security & Ownership
-- Post ownership verification
-- Edit/Delete buttons only for own posts
-- Contact buttons for other users' posts
-- Owner-based favorite button visibility
-- JWT token authentication (ready)
-
-### 📱 Category System
-- **15 Dedicated Category Pages**:
-  - Electronics
-  - Mobile Phones & Tablets
-  - Computers & Laptops
-  - Home Appliances
-  - Furniture
-  - Vehicles
-  - Fashion & Clothing
-  - Health & Beauty
-  - Sports & Fitness
-  - Books & Stationery
-  - Toys & Games
-  - Real Estate
-  - Pets & Animals
-  - Services
-  - Other
-
-### 🎯 Additional Features
-- String-based ID system for all entities
-- Professional logo with shopping bag and "T" design
-- Location with Jordan city/area format
-- Phone number with +962 prefix requirement
-- "Item" to "Post" terminology throughout the app
-- Fixed form submission without page reload
-- Comprehensive dark mode across all pages
 
 ---
 
 ## 📁 Project Structure
 
-```
-tijarah-jo/
-├── /                          # Root
-│   ├── App.tsx               # Main application component
-│   ├── translations.ts       # i18n translations (English & Arabic)
-│   └── *.md                  # Documentation files
-│
-├── types/                     # TypeScript Definitions
-│   └── index.ts              # Product, User, ApiResponse interfaces
-│
-├── services/                  # Backend Services
-│   └── api.ts                # API service layer (ready for backend)
-│
-├── contexts/                  # React Contexts
-│   └── AuthContext.tsx       # Authentication context
-│
-├── hooks/                     # Custom Hooks
-│   ├── useDebounce.ts        # Search debouncing
-│   ├── useFavorites.ts       # Favorites management
-│   ├── useInfiniteScroll.ts  # Pagination logic
-│   ├── useLocalStorage.ts    # LocalStorage hook
-│   └── useNavigationHistory.ts # Navigation history
-│
-├── components/
-│   ├── figma/                # Main Application Components
-│   │   ├── ProductDetailsPage.tsx
-│   │   ├── ProfilePage.tsx
-│   │   ├── SearchResultsPage.tsx
-│   │   ├── EditProductDialog.tsx
-│   │   ├── LoginPage.tsx
-│   │   ├── SellItemPage.tsx
-│   │   ├── SettingsPage.tsx
-│   │   ├── FavoritesPage.tsx
-│   │   ├── AllProductsPage.tsx
-│   │   ├── SellerProfilePage.tsx
-│   │   ├── EditProfilePage.tsx
-│   │   └── ProductCard.tsx
-│   │
-│   └── ui/                   # Reusable UI Components
-│       ├── button.tsx
-│       ├── card.tsx
-│       ├── dialog.tsx
-│       ├── input.tsx
-│       ├── select.tsx
-│       ├── textarea.tsx
-│       ├── alert-dialog.tsx
-│       └── ... (20+ components)
-│
-└── styles/
-    └── globals.css           # Global styles & Tailwind config
+```text
+apps/web/src/
+├── app/                          # Bootstrap, root composition, route shell
+├── features/                     # Domain feature slices
+│   ├── admin/                    # Admin panel (dashboard, users, posts, analytics)
+│   ├── auth/                     # Login, signup, password reset, 2FA
+│   ├── chat/                     # Real-time messaging
+│   ├── home/                     # Landing page & hero section
+│   ├── marketplace/              # Post browsing, categories, search
+│   ├── post-details/             # Single post view, image gallery
+│   ├── profile/                  # User profile editing
+│   ├── seller-profile/           # Public seller pages & reviews
+│   └── settings/                 # User settings, language, theme, 2FA
+├── pages/                        # Route-level page composition
+├── shared/                       # Reusable UI primitives (Radix-based)
+├── services/                     # API client layer & chat service
+├── contexts/                     # React contexts (auth, theme, language)
+├── hooks/                        # Custom hooks
+├── translations/                 # i18n string bundles (EN, AR)
+├── types/                        # TypeScript interfaces
+├── utils/                        # Utility functions
+├── constants/                    # App constants & config
+├── styles/                       # Global styles & Tailwind config
+├── data/                         # Static data & seed content
+├── lib/                          # Third-party lib wrappers
+└── assets/                       # Static assets (logos, images)
 ```
 
 ---
@@ -160,300 +121,127 @@ tijarah-jo/
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 16+ 
-- npm or yarn
+- Node.js 18+
+- npm
 
 ### Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-repo/tijarah-jo.git
-
-# Navigate to project directory
-cd tijarah-jo
-
-# Install dependencies
+cd apps/web
 npm install
-
-# Start development server
 npm run dev
 ```
 
-The application will be available at `http://localhost:5173`
+The application will be available at **http://localhost:5173**
 
-### Build for Production
-
-```bash
-npm run build
-```
-
----
-
-## 📚 Documentation
-
-| Document | Description |
-|----------|-------------|
-| **[README.md](README.md)** | This file - comprehensive project documentation |
-| **[PROJECT_REPORT.md](PROJECT_REPORT.md)** | Frontend project report and implementation summary |
-| **[docs/](docs/README.md)** | Frontend-focused technical notes and fix reports |
-
-For backend integration details, see the API layer in `src/services/api.ts`.
-
----
-
-## 🔌 Backend Integration
-
-### Current State
-✅ **Frontend and backend are integrated** via REST APIs  
-✅ **Auth, posts, favorites, categories, search, sellers, chat endpoints wired**  
-✅ **API service layer is active** (not mock-only)  
-✅ **TypeScript interfaces defined** for all data structures  
-
-### Backend API Surface (High Level)
-
-Primary groups used by the frontend:
-
-- `/api/auth/*` (login, signup, me, logout)
-- `/api/posts/*` (list, details, create, update, delete, status, views)
-- `/api/categories/*`
-- `/api/favorites/*`
-- `/api/search`
-- `/api/sellers/*`
-- `/api/chat/*` + SignalR chat hub
-
-### Local Integration Run
-
-Use root scripts:
+### Using Root Scripts (Recommended)
 
 ```bash
+# From project root — starts both backend and frontend
 ./scripts/run-dev.sh
-./scripts/verify_all_apis.sh
 ```
 
 ---
 
 ## 🛠️ Technology Stack
 
-### Core
-- **React 18** - UI library
-- **TypeScript** - Type safety
-- **Vite** - Build tool and dev server
-
-### Styling
-- **Tailwind CSS v4** - Utility-first CSS
-- **Custom Design System** - Consistent theming
-
-### UI Components
-- **Radix UI** - Accessible component primitives
-- **Lucide React** - Icon library
-- **Framer Motion** - Animation library
-
-### State Management
-- **React Hooks** - useState, useEffect, useContext
-- **Context API** - Global state (auth)
-- **Custom Hooks** - Products management
-
-### Development
-- **ESLint** - Code linting
-- **TypeScript** - Static type checking
+| Layer | Technology |
+|-------|-----------|
+| **UI Library** | React 18 |
+| **Language** | TypeScript 5 |
+| **Build Tool** | Vite |
+| **Styling** | Tailwind CSS v4 |
+| **Components** | Radix UI (accessible primitives) |
+| **Icons** | Lucide React |
+| **Animations** | Framer Motion |
+| **Realtime** | SignalR (@microsoft/signalr) |
+| **Notifications** | Sonner (toast) |
+| **Linting** | ESLint |
 
 ---
 
-## 🎯 Key Features Explained
+## 🔌 Backend Integration
 
-### Product Ownership System
+### Current State
+✅ Frontend and backend are **fully integrated** via REST APIs
+✅ Auth, posts, favorites, categories, search, sellers, chat, reviews, notifications all wired
+✅ Real-time chat via SignalR WebSocket hub
+✅ Google OAuth flow integrated
+✅ Two-Factor Authentication (TOTP) setup and verification
+✅ Server-side image uploads for posts and chat
 
-Products are owned by users via the `sellerId` field:
+### Backend API Surface
 
-```typescript
-// Current user
-CURRENT_USER_ID = "user-001"
-
-// Product
-{
-  id: 1,
-  name: "iPhone 13 Pro",
-  seller: "Ahmed K.",
-  sellerId: "user-001",  // Matches current user
-  ...
-}
-
-// UI shows Edit/Delete buttons because:
-isOwnProduct = product.sellerId === CURRENT_USER_ID // true
-```
-
-### Multi-Language Support
-
-Switch between English and Arabic:
-
-```typescript
-// translations.ts contains all strings
-const translations = {
-  en: { ... },
-  ar: { ... }
-};
-
-// Usage in components
-const t = translations[language];
-<h1>{t.title}</h1>  // "Welcome" or "مرحباً"
-```
-
-### CRUD Operations
-
-All operations update local state and are ready for backend:
-
-```typescript
-// Create
-const newProduct = await createProduct(productData);
-
-// Read
-const products = await getProducts();
-
-// Update
-await updateProduct(id, updatedData);
-
-// Delete
-await deleteProduct(id);
-```
+| Group | Endpoints |
+|-------|-----------|
+| **Auth** | `/api/auth/*` — login, signup, logout, me, Google OAuth |
+| **2FA** | `/api/v1/auth/2fa/*` — status, setup/start, setup/confirm, verify-login, disable |
+| **Password Reset** | `/api/v1/auth/forgot-password/*` — request, confirm |
+| **Posts** | `/api/posts/*` — feed, CRUD, status, views |
+| **Post Images** | `/api/post-images/*` — CRUD, file upload |
+| **Categories** | `/api/categories/*` — list, CRUD (admin) |
+| **Favorites** | `/api/v1/favorites/*` — list, add, remove |
+| **Chat** | `/api/v1/chat/*` + `/chatHub` — messages, history, presence, upload |
+| **Search** | `/api/search` — full-text search |
+| **Sellers** | `/api/sellers/*` — profile, top sellers |
+| **Reviews** | `/api/v1/reviews/*` — list, create |
+| **Notifications** | `/api/v1/notifications/*` — list, read, push subscriptions |
+| **Admin** | `/api/v1/admin/*` — dashboard, users, posts, analytics, reports, settings |
 
 ---
 
 ## 📱 Responsive Design
 
-The application is fully responsive with breakpoints:
-
-- **Mobile**: < 640px (1-column layouts)
-- **Tablet**: 640px - 1024px (2-column layouts)
-- **Desktop**: > 1024px (3-4 column layouts)
-
-All components adapt seamlessly to different screen sizes.
+| Breakpoint | Layout |
+|-----------|--------|
+| Mobile (< 640px) | 1-column |
+| Tablet (640px – 1024px) | 2-column |
+| Desktop (> 1024px) | 3–4 column |
 
 ---
 
-## 🎨 Customization
+## 📱 Category System
 
-### Colors
-
-Main color palette defined in `globals.css`:
-
-```css
---primary: #0A4ABF;      /* Blue */
---primary-light: #3E7EFF; /* Light Blue */
---success: #10B981;       /* Green */
---danger: #EF4444;        /* Red */
---warning: #FFB800;       /* Yellow */
-```
-
-### Typography
-
-Font sizes and weights are handled via custom CSS, not Tailwind classes.
+15 dedicated category pages:
+Electronics • Mobile Phones & Tablets • Computers & Laptops • Home Appliances • Furniture • Vehicles • Fashion & Clothing • Health & Beauty • Sports & Fitness • Books & Stationery • Toys & Games • Real Estate • Pets & Animals • Services • Other
 
 ---
 
 ## 🧪 Testing
 
-### Current Testing
-- ✅ Manual testing of all CRUD operations
-- ✅ Cross-browser testing
-- ✅ Responsive design testing
-- ✅ Multi-language testing
+```bash
+# Unit tests
+cd apps/web && npm test
 
-### Recommended Testing (Future)
-- Unit tests with Jest/Vitest
-- Component tests with React Testing Library
-- E2E tests with Playwright/Cypress
-- API integration tests
+# E2E tests (Playwright)
+cd apps/web && npx playwright test
 
----
-
-## 📈 Performance
-
-### Current Optimizations
-- Component-based architecture
-- Lazy loading with React.lazy()
-- Efficient state updates
-- Image optimization with Unsplash
-- Minimal bundle size
-
-### Future Optimizations
-- API response caching
-- Optimistic UI updates
-- Virtual scrolling for large lists
-- Code splitting
-- Service Worker for offline support
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
----
-
-## 👥 Team
-
-- **Frontend Development**: Complete ✅
-- **Backend Development**: Integrated ✅
-- **UI/UX Design**: Complete ✅
+# Frontend API contract checks
+./apps/web/tests/frontend_api_contract.sh
+```
 
 ---
 
 ## 🗺️ Roadmap
 
-### Phase 1: Current (✅ Complete)
-- [x] All UI components
-- [x] CRUD operations with local state
-- [x] Product ownership system
-- [x] Multi-language support
-- [x] Responsive design
-- [x] Search and filtering
-- [x] Favorites system
+### ✅ Completed
+- [x] All UI components and responsive design
+- [x] Full backend integration (REST + SignalR)
+- [x] JWT authentication with Google OAuth
+- [x] Two-Factor Authentication (TOTP)
+- [x] Real-time chat with image sharing
+- [x] Notifications with push support
+- [x] Seller reviews and ratings
+- [x] Admin panel with full moderation
+- [x] Multi-language support (EN/AR)
+- [x] Dark mode
+- [x] Server-side image uploads
 
-### Phase 2: Backend Integration (⏳ Next)
-- [x] Connect to REST API
-- [x] User authentication
-- [x] Data persistence
-- [x] Image upload
-- [x] Error handling
-
-### Phase 3: Enhancements (🔮 Future)
-- [ ] Real-time chat
+### 🔮 Future
 - [ ] Payment integration
-- [ ] Email notifications
-- [ ] Product reviews
-- [ ] Advanced analytics
 - [ ] Mobile app (React Native)
-
----
-
-## 💬 Support
-
-For questions or issues:
-- 📖 Check the documentation files
-- 🐛 Open an issue on GitHub
-- 💬 Contact the development team
-
----
-
-## ⭐ Acknowledgments
-
-- Built with React and TypeScript
-- UI components from Radix UI
-- Icons from Lucide
-- Styled with Tailwind CSS
-- Images from Unsplash
+- [ ] Advanced analytics dashboard
+- [ ] Service Worker for offline support
 
 ---
 
@@ -464,5 +252,6 @@ For questions or issues:
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript)
 ![Tailwind](https://img.shields.io/badge/Tailwind-4-38B2AC?style=flat-square&logo=tailwind-css)
+![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=flat-square&logo=vite)
 
 </div>

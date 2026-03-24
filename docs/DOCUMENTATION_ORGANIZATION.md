@@ -8,31 +8,46 @@ This file defines the current documentation map and maintenance rules.
 docs/
 ├── README.md
 ├── DOCUMENTATION_ORGANIZATION.md
-├── reports/
+├── api/                    # API conventions & versioning
+├── architecture/           # Structure, ADRs, path conventions
+│   ├── adr/
 │   └── archive/
-├── setup/
-├── troubleshooting/
+├── backend/                # Operational runbooks & quick start
 │   └── archive/
-├── architecture/
+├── frontend/               # ID system, auth QA matrix
 │   └── archive/
-└── checklists/
+├── setup/                  # Machine setup, env config, DB setup
+├── reports/                # Project & API status reports
+│   └── archive/
+├── checklists/             # Launch readiness & PR quality
+├── troubleshooting/        # Active troubleshooting guides
+│   └── archive/
+├── assets/                 # Documentation assets
+└── archive/                # Top-level historical docs
 ```
 
 ## Category Purpose
 
-- `reports/`: consolidated project and integration reports.
-- `reports/archive/`: historical full report snapshots.
-- `setup/`: installation, environment, and onboarding instructions.
-- `troubleshooting/`: active issue investigations and current fix guides.
-- `troubleshooting/archive/`: historical troubleshooting and verification logs.
-- `architecture/`: current structure reference and active migration docs.
-- `architecture/archive/`: historical restructure execution artifacts.
-- `checklists/`: launch/readiness and PR quality gates.
+| Folder | Purpose |
+|--------|---------|
+| `api/` | API endpoint conventions, route versioning, OpenAPI notes |
+| `architecture/` | Current structure reference, ADRs, path conventions |
+| `architecture/archive/` | Historical restructure artifacts |
+| `backend/` | Backend operational notes, runbooks, quick start |
+| `frontend/` | Frontend ID system, auth QA matrix |
+| `setup/` | Installation, environment, and onboarding instructions |
+| `reports/` | Consolidated project and API endpoint reports |
+| `reports/archive/` | Historical full report snapshots |
+| `checklists/` | Launch readiness and PR quality gates |
+| `troubleshooting/` | Active issue investigations and fix guides |
+| `troubleshooting/archive/` | Historical troubleshooting logs |
+| `assets/` | Images, diagrams, and other static doc assets |
 
 ## Canonical References
 
 - Primary docs index: `docs/README.md`
 - Current repository/file structure: `docs/architecture/CURRENT_STRUCTURE_2026.md`
+- Environment variables: `apps/api/src/Api/ENVIRONMENT_VARIABLES.md`
 
 ## Consistency Rules
 
@@ -53,4 +68,4 @@ Historical docs are tracked through archive indices:
 
 Treat `docs/architecture/CURRENT_STRUCTURE_2026.md` as the authoritative structure reference.
 
-Last Updated: 2026-02-17
+Last Updated: 2026-03-24

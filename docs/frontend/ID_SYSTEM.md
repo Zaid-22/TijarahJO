@@ -1,7 +1,13 @@
 # TijarahJo ID System Documentation
 
+> [!WARNING]
+> **Legacy Document**: This describes the original frontend string-based ID system.
+> The backend database now uses **integer primary keys** for all entities.
+> The API service layer handles ID translation between frontend representations and backend integers.
+> Refer to the [`apps/api/README.md`](../../../apps/api/README.md) ERD for the current database schema.
+
 ## Overview
-TijarahJo uses a comprehensive unique ID system for all frontend entities. All IDs are **string-based** and follow consistent naming patterns for easy identification and debugging.
+TijarahJo originally used a string-based ID system for frontend entities. The backend has since migrated to integer IDs, but some frontend utilities and mock data may still reference this pattern.
 
 ## ID Format
 
