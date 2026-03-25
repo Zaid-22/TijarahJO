@@ -5,11 +5,7 @@ type GlobalWithRuntimeEnv = typeof globalThis & {
 };
 
 function resolveRuntimeEnv(): RuntimeEnv {
-  // Vite exposes frontend env through import.meta.env in browser code.
-  if (typeof import.meta !== "undefined" && import.meta.env) {
-    return import.meta.env as RuntimeEnv;
-  }
-
+  // Browser entrypoint copies Vite env onto a runtime global before app code loads.
   const runtimeEnv = (globalThis as GlobalWithRuntimeEnv).__APP_RUNTIME_ENV__;
   if (runtimeEnv) {
     return runtimeEnv;
