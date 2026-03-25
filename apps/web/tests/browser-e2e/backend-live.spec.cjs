@@ -39,7 +39,7 @@ async function registerUser(page, user) {
   await page.locator("#lastName").fill(user.lastName);
   await page.locator("#phone").fill(user.phone);
   await page.locator("#city").selectOption("Amman");
-  await page.locator("#area").fill("Khalda");
+  await page.locator("#area").fill("Sweifieh");
   await page.locator("#authIdentifier").fill(user.email);
   await page.locator("#password").fill(user.password);
   await page.locator("#confirmPassword").fill(user.password);
