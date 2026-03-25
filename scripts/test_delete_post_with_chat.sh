@@ -151,11 +151,11 @@ fi
 
 # 6) Cleanup users.
 if [ -n "$user1_id" ] && [ -n "$token1" ]; then
-  call_api "users.delete.user1" "DELETE" "/users/$user1_id" "200" "" "$token1"
+  call_api "users.delete.user1" "DELETE" "/users/$user1_id" "204" "" "$token1"
 fi
 
 if [ -n "$user2_id" ] && [ -n "$token2" ]; then
-  call_api "users.delete.user2" "DELETE" "/users/$user2_id" "200" "" "$token2"
+  call_api "users.delete.user2" "DELETE" "/users/$user2_id" "204" "" "$token2"
 fi
 
 echo
