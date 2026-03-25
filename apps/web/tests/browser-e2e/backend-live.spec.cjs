@@ -19,7 +19,7 @@ function buildJordanPhone(seed) {
 
 async function forceEnglishUi(page) {
   await page.addInitScript(() => {
-    window.localStorage.setItem("tijarahjo_language", "en");
+    window.localStorage.setItem("tijarahjo_language", JSON.stringify("en"));
   });
 }
 
