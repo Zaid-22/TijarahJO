@@ -346,6 +346,8 @@ fi
 
 configure_runtime_db_principal
 
+RUNTIME_DB_PASSWORD_ESCAPED="$(printf "%s" "$RUNTIME_DB_PASSWORD" | sed "s/'/''/g")"
+
 echo "==> Starting backend..."
 if lsof -ti tcp:5033 >/dev/null 2>&1; then
   lsof -ti tcp:5033 | xargs kill -9 || true
