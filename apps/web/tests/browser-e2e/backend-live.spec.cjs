@@ -17,7 +17,14 @@ function buildJordanPhone(seed) {
   return `+96279${digits}`;
 }
 
+async function forceEnglishUi(page) {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("tijarahjo_language", "en");
+  });
+}
+
 async function registerUser(page, user) {
+  await forceEnglishUi(page);
   await page.goto("/login");
 
   const firstNameField = page.locator("#firstName");
