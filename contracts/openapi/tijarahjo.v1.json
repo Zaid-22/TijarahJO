@@ -1594,7 +1594,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ReviewModel"
+                    "$ref": "#/components/schemas/ReviewResponseDTO"
                   }
                 }
               },
@@ -1602,7 +1602,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ReviewModel"
+                    "$ref": "#/components/schemas/ReviewResponseDTO"
                   }
                 }
               },
@@ -1610,7 +1610,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ReviewModel"
+                    "$ref": "#/components/schemas/ReviewResponseDTO"
                   }
                 }
               }
@@ -1628,17 +1628,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ReviewModel"
+                "$ref": "#/components/schemas/CreateReviewRequest"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/ReviewModel"
+                "$ref": "#/components/schemas/CreateReviewRequest"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/ReviewModel"
+                "$ref": "#/components/schemas/CreateReviewRequest"
               }
             }
           }
@@ -1649,17 +1649,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReviewModel"
+                  "$ref": "#/components/schemas/ReviewResponseDTO"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReviewModel"
+                  "$ref": "#/components/schemas/ReviewResponseDTO"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReviewModel"
+                  "$ref": "#/components/schemas/ReviewResponseDTO"
                 }
               }
             }
@@ -3771,6 +3771,510 @@
           }
         }
       }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "operationId": "RefreshToken",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "GetNotifications",
+        "parameters": [
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 25
+            }
+          },
+          {
+            "name": "unreadOnly",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotificationResponseDTO"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotificationResponseDTO"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotificationResponseDTO"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/unread-count": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "GetUnreadCount",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationUnreadCountResponseDTO"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationUnreadCountResponseDTO"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationUnreadCountResponseDTO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/{notificationId}/read": {
+      "put": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "MarkAsRead",
+        "parameters": [
+          {
+            "name": "notificationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationSuccessResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationSuccessResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/read-all": {
+      "put": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "MarkAllAsRead",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationMarkReadAllResponseDTO"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationMarkReadAllResponseDTO"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationMarkReadAllResponseDTO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/push-config": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "GetPushConfig",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushNotificationConfigResponseDTO"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushNotificationConfigResponseDTO"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushNotificationConfigResponseDTO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/push-subscriptions": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "UpsertPushSubscription",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertPushSubscriptionRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertPushSubscriptionRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertPushSubscriptionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationSuccessResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationSuccessResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "RemovePushSubscription",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemovePushSubscriptionRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemovePushSubscriptionRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemovePushSubscriptionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationSuccessResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationSuccessResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cities": {
+      "get": {
+        "tags": [
+          "Locations"
+        ],
+        "operationId": "GetCities",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CityResponseDTO"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CityResponseDTO"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CityResponseDTO"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cities/{cityId}/areas": {
+      "get": {
+        "tags": [
+          "Locations"
+        ],
+        "operationId": "GetAreasByCity",
+        "parameters": [
+          {
+            "name": "cityId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AreaResponseDTO"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AreaResponseDTO"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AreaResponseDTO"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3790,6 +4294,13 @@
         "properties": {
           "Success": {
             "type": "boolean"
+          },
+          "RequiresTwoFactor": {
+            "type": "boolean"
+          },
+          "TwoFactorToken": {
+            "type": "string",
+            "nullable": true
           },
           "Token": {
             "type": "string",
@@ -4739,6 +5250,234 @@
             "nullable": true
           },
           "Content": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "OperationSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NotificationResponseDTO": {
+        "type": "object",
+        "properties": {
+          "notificationId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "notificationType": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "body": {
+            "type": "string",
+            "nullable": true
+          },
+          "senderUserId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "conversationId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "messageId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "routeUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "isRead": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "readAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "NotificationUnreadCountResponseDTO": {
+        "type": "object",
+        "properties": {
+          "unreadCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NotificationMarkReadAllResponseDTO": {
+        "type": "object",
+        "properties": {
+          "updatedCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PushNotificationConfigResponseDTO": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "publicKey": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PushSubscriptionKeysRequest": {
+        "type": "object",
+        "properties": {
+          "P256dh": {
+            "type": "string",
+            "nullable": true
+          },
+          "Auth": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpsertPushSubscriptionRequest": {
+        "type": "object",
+        "properties": {
+          "Endpoint": {
+            "type": "string",
+            "nullable": true
+          },
+          "Keys": {
+            "$ref": "#/components/schemas/PushSubscriptionKeysRequest"
+          },
+          "UserAgent": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "RemovePushSubscriptionRequest": {
+        "type": "object",
+        "properties": {
+          "Endpoint": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CityResponseDTO": {
+        "type": "object",
+        "properties": {
+          "CityId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "CityName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AreaResponseDTO": {
+        "type": "object",
+        "properties": {
+          "AreaId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "AreaName": {
+            "type": "string",
+            "nullable": true
+          },
+          "CityId": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateReviewRequest": {
+        "type": "object",
+        "properties": {
+          "ReviewedUserID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "Rating": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "Comment": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReviewResponseDTO": {
+        "type": "object",
+        "properties": {
+          "ReviewID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "Id": {
+            "type": "string",
+            "nullable": true
+          },
+          "ReviewerID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "ReviewedUserID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "Rating": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "Comment": {
+            "type": "string",
+            "nullable": true
+          },
+          "Timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ReviewerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "ReviewerAvatar": {
             "type": "string",
             "nullable": true
           }
