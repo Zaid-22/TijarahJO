@@ -9,6 +9,12 @@ namespace TijarahJo.Api.Startup;
 
 public static class MiddlewareExtensions
 {
+    private static Task WriteProblemDetailsAsync(HttpResponse response, ProblemDetails problem, CancellationToken cancellationToken = default)
+    {
+        response.ContentType = "application/problem+json";
+        return response.WriteAsJsonAsync(problem, contentType: "application/problem+json", cancellationToken: cancellationToken);
+    }
+
     public static WebApplication UseTijarahJoExceptionHandler(this WebApplication app)
     {
         app.UseExceptionHandler(errorApp =>
@@ -41,7 +47,7 @@ public static class MiddlewareExtensions
                 };
                 problem.Extensions["traceId"] = context.TraceIdentifier;
 
-                await context.Response.WriteAsJsonAsync(problem);
+                await WriteProblemDetailsAsync(context.Response, problem, context.RequestAborted);
             });
         });
 
@@ -142,7 +148,7 @@ public static class MiddlewareExtensions
                         Instance = context.Request.Path
                     };
                     problem.Extensions["traceId"] = context.TraceIdentifier;
-                    await context.Response.WriteAsJsonAsync(problem);
+                    await WriteProblemDetailsAsync(context.Response, problem, context.RequestAborted);
                     return;
                 }
             }
@@ -178,8 +184,7 @@ public static class MiddlewareExtensions
             };
             problem.Extensions["traceId"] = httpContext.TraceIdentifier;
 
-            response.ContentType = "application/problem+json";
-            await response.WriteAsJsonAsync(problem);
+            await WriteProblemDetailsAsync(response, problem, httpContext.RequestAborted);
         });
 
         return app;
