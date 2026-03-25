@@ -113,13 +113,15 @@ public class ItemCategoriesController(ICategoryQueryHandler categoryQueries, ICa
 
     [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
     [HttpPost("upload-image")]
+    [Consumes("multipart/form-data")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult> UploadCategoryImage(
-        [FromForm] IFormFile file,
+        [FromForm] UploadCategoryImageRequest request,
         [FromServices] IPostImageFileStorageService storageService,
         CancellationToken cancellationToken)
     {
+        IFormFile? file = request.File;
         if (file == null || file.Length == 0)
         {
             return BadRequest(new ApiMessageResponse { Message = "File is empty or not provided." });

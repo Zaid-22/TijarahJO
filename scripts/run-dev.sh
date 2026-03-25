@@ -12,6 +12,13 @@ DOCKER_COMPOSE_FILE="$ROOT_DIR/infra/docker-compose.yml"
 BACKEND_URL="${ASPNETCORE_URLS:-http://localhost:5033}"
 DATABASE_CONNECTION_SOURCE=""
 
+resolve_primary_backend_url() {
+  local configured_urls="$1"
+  local primary_url="${configured_urls%%;*}"
+  primary_url="${primary_url%%,*}"
+  printf "%s" "${primary_url%/}"
+}
+
 if [[ -f "$ROOT_DIR/.env" ]]; then
   # Load local environment variables if present.
   set -a
@@ -128,7 +135,10 @@ echo "Starting Backend (ASP.NET Core) on http://localhost:5033..."
 BACKEND_PID=$!
 sleep 15
 
-BACKEND_HEALTH_CODE="$(curl -s -o /tmp/tijarahjo_backend_health.json -w '%{http_code}' http://localhost:5033/api/categories/All || true)"
+PRIMARY_BACKEND_URL="$(resolve_primary_backend_url "$BACKEND_URL")"
+BACKEND_HEALTH_ENDPOINT="${PRIMARY_BACKEND_URL}/api/v1/categories"
+
+BACKEND_HEALTH_CODE="$(curl -s -o /tmp/tijarahjo_backend_health.json -w '%{http_code}' "$BACKEND_HEALTH_ENDPOINT" || true)"
 if [[ "$BACKEND_HEALTH_CODE" == "000" ]]; then
   echo "Error: backend did not respond on $BACKEND_URL."
   echo "Check backend startup logs above."
@@ -136,7 +146,7 @@ if [[ "$BACKEND_HEALTH_CODE" == "000" ]]; then
 fi
 
 if [[ "$BACKEND_HEALTH_CODE" =~ ^5 ]]; then
-  echo "Error: backend returned HTTP $BACKEND_HEALTH_CODE for /api/categories/All."
+  echo "Error: backend returned HTTP $BACKEND_HEALTH_CODE for $BACKEND_HEALTH_ENDPOINT."
   echo "Database/auth config is not healthy (source: $DATABASE_CONNECTION_SOURCE)."
   print_db_fix_instructions
   exit 1

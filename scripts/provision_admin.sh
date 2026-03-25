@@ -15,6 +15,22 @@ LAST_NAME="User"
 PROMOTE_ONLY=0
 GENERATE_PASSWORD=0
 
+normalize_api_base_url() {
+  local base_url="${1%/}"
+
+  if [[ "$base_url" =~ /api/v[0-9]+$ ]]; then
+    printf "%s" "$base_url"
+    return
+  fi
+
+  if [[ "$base_url" =~ /api$ ]]; then
+    printf "%s/v1" "$base_url"
+    return
+  fi
+
+  printf "%s/api/v1" "$base_url"
+}
+
 usage() {
   cat <<'EOF'
 Usage: ./scripts/provision_admin.sh --email <admin@email> [options]
@@ -80,6 +96,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+API_BASE_URL="$(normalize_api_base_url "$API_BASE_URL")"
+
 if [[ -z "$ADMIN_EMAIL" ]]; then
   echo "Error: --email is required." >&2
   usage
@@ -126,7 +144,7 @@ if [[ "$PROMOTE_ONLY" -eq 0 ]]; then
     -w "%{http_code}" \
     -H "Content-Type: application/json" \
     -d "$signup_payload" \
-    "$API_BASE_URL/api/auth/signup" || true)"
+    "$API_BASE_URL/auth/signup" || true)"
 
   if [[ "$signup_status" == "201" || "$signup_status" == "200" ]]; then
     echo "Signup created user: $ADMIN_EMAIL"
