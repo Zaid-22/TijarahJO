@@ -6,7 +6,7 @@
     "version": "v1"
   },
   "paths": {
-    "/api/auth/login": {
+    "/api/v1/auth/login": {
       "post": {
         "tags": [
           "Auth"
@@ -95,7 +95,7 @@
         }
       }
     },
-    "/api/auth/signup": {
+    "/api/v1/auth/signup": {
       "post": {
         "tags": [
           "Auth"
@@ -164,7 +164,7 @@
         }
       }
     },
-    "/api/auth/me": {
+    "/api/v1/auth/me": {
       "get": {
         "tags": [
           "Auth"
@@ -214,14 +214,14 @@
         }
       }
     },
-    "/api/auth/logout": {
+    "/api/v1/auth/logout": {
       "post": {
         "tags": [
           "Auth"
         ],
         "operationId": "Logout",
         "responses": {
-          "200": {
+          "204": {
             "description": "OK"
           },
           "401": {
@@ -247,7 +247,7 @@
         }
       }
     },
-    "/api/chat/history/{otherUserId}": {
+    "/api/v1/chat/history/{otherUserId}": {
       "get": {
         "tags": [
           "Chat"
@@ -296,7 +296,7 @@
         }
       }
     },
-    "/api/chat/recent": {
+    "/api/v1/chat/recent": {
       "get": {
         "tags": [
           "Chat"
@@ -334,7 +334,7 @@
         }
       }
     },
-    "/api/chat/presence/{otherUserId}": {
+    "/api/v1/chat/presence/{otherUserId}": {
       "get": {
         "tags": [
           "Chat"
@@ -351,7 +351,7 @@
           }
         ],
         "responses": {
-          "200": {
+          "204": {
             "description": "OK"
           },
           "400": {
@@ -377,7 +377,7 @@
         }
       }
     },
-    "/api/chat/send": {
+    "/api/v1/chat/send": {
       "post": {
         "tags": [
           "Chat"
@@ -428,7 +428,7 @@
         }
       }
     },
-    "/api/favorites": {
+    "/api/v1/favorites": {
       "get": {
         "tags": [
           "Favorites"
@@ -549,7 +549,7 @@
         }
       }
     },
-    "/api/favorites/{postId}": {
+    "/api/v1/favorites/{postId}": {
       "delete": {
         "tags": [
           "Favorites"
@@ -631,7 +631,74 @@
         }
       }
     },
-    "/api/categories/All": {
+    "/api/v1/categories": {
+      "post": {
+        "tags": [
+          "ItemCategories"
+        ],
+        "operationId": "AddCategory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryModel"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryModel"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryModel"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryModel"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryModel"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryModel"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
         "tags": [
           "ItemCategories"
@@ -690,7 +757,7 @@
         }
       }
     },
-    "/api/categories/{id}": {
+    "/api/v1/categories/{id}": {
       "get": {
         "tags": [
           "ItemCategories"
@@ -931,76 +998,7 @@
         }
       }
     },
-    "/api/categories": {
-      "post": {
-        "tags": [
-          "ItemCategories"
-        ],
-        "operationId": "AddCategory",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CategoryModel"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CategoryModel"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/CategoryModel"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Created",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/CategoryModel"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CategoryModel"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CategoryModel"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/categories/Exists/{id}": {
+    "/api/v1/categories/Exists/{id}": {
       "get": {
         "tags": [
           "ItemCategories"
@@ -1061,7 +1059,7 @@
         }
       }
     },
-    "/api/TbPostImages/All": {
+    "/api/v1/post-images": {
       "get": {
         "tags": [
           "PostImages"
@@ -1120,7 +1118,7 @@
         }
       }
     },
-    "/api/TbPostImages/post/{postId}": {
+    "/api/v1/post-images/post/{postId}": {
       "get": {
         "tags": [
           "PostImages"
@@ -1193,7 +1191,7 @@
         }
       }
     },
-    "/api/TbPostImages/{id}": {
+    "/api/v1/post-images/{id}": {
       "get": {
         "tags": [
           "PostImages"
@@ -1434,76 +1432,7 @@
         }
       }
     },
-    "/api/TbPostImages": {
-      "post": {
-        "tags": [
-          "PostImages"
-        ],
-        "operationId": "AddPostImage",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PostImageModel"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PostImageModel"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/PostImageModel"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Created",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/PostImageModel"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PostImageModel"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PostImageModel"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/TbPostImages/Exists/{id}": {
+    "/api/v1/post-images/Exists/{id}": {
       "get": {
         "tags": [
           "PostImages"
@@ -1564,7 +1493,7 @@
         }
       }
     },
-    "/api/reviews/user/{userId}": {
+    "/api/v1/reviews/user/{userId}": {
       "get": {
         "tags": [
           "Reviews"
@@ -1614,7 +1543,7 @@
         }
       }
     },
-    "/api/reviews": {
+    "/api/v1/reviews": {
       "post": {
         "tags": [
           "Reviews"
@@ -1722,7 +1651,7 @@
         }
       }
     },
-    "/api/TbRoles/All": {
+    "/api/v1/roles": {
       "get": {
         "tags": [
           "Roles"
@@ -1781,7 +1710,7 @@
         }
       }
     },
-    "/api/TbRoles/{id}": {
+    "/api/v1/roles/{id}": {
       "get": {
         "tags": [
           "Roles"
@@ -2022,76 +1951,7 @@
         }
       }
     },
-    "/api/TbRoles": {
-      "post": {
-        "tags": [
-          "Roles"
-        ],
-        "operationId": "AddRole",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RoleModel"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RoleModel"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/RoleModel"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Created",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/RoleModel"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RoleModel"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RoleModel"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/TbRoles/Exists/{id}": {
+    "/api/v1/roles/Exists/{id}": {
       "get": {
         "tags": [
           "Roles"
@@ -2152,7 +2012,7 @@
         }
       }
     },
-    "/api/search": {
+    "/api/v1/search": {
       "get": {
         "tags": [
           "Search"
@@ -2263,7 +2123,7 @@
         }
       }
     },
-    "/api/sellers/{sellerId}": {
+    "/api/v1/sellers/{sellerId}": {
       "get": {
         "tags": [
           "Sellers"
@@ -2325,7 +2185,7 @@
         }
       }
     },
-    "/api/sellers/top": {
+    "/api/v1/sellers/top": {
       "get": {
         "tags": [
           "Sellers"
@@ -2340,7 +2200,7 @@
         }
       }
     },
-    "/api/posts/feed": {
+    "/api/v1/posts/feed": {
       "get": {
         "tags": [
           "UserPosts"
@@ -2381,7 +2241,7 @@
         }
       }
     },
-    "/api/posts/All": {
+    "/api/v1/posts/All": {
       "get": {
         "tags": [
           "UserPosts"
@@ -2411,7 +2271,7 @@
         }
       }
     },
-    "/api/posts/pagination": {
+    "/api/v1/posts/pagination": {
       "get": {
         "tags": [
           "UserPosts"
@@ -2441,7 +2301,7 @@
         }
       }
     },
-    "/api/posts/{id}": {
+    "/api/v1/posts/{id}": {
       "get": {
         "tags": [
           "UserPosts"
@@ -2464,17 +2324,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostModel"
+                  "$ref": "#/components/schemas/PostResponseDTO"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostModel"
+                  "$ref": "#/components/schemas/PostResponseDTO"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostModel"
+                  "$ref": "#/components/schemas/PostResponseDTO"
                 }
               }
             }
@@ -2541,17 +2401,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PostModel"
+                "$ref": "#/components/schemas/UpdatePostRequest"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/PostModel"
+                "$ref": "#/components/schemas/UpdatePostRequest"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/PostModel"
+                "$ref": "#/components/schemas/UpdatePostRequest"
               }
             }
           }
@@ -2562,17 +2422,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostModel"
+                  "$ref": "#/components/schemas/PostResponseDTO"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostModel"
+                  "$ref": "#/components/schemas/PostResponseDTO"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostModel"
+                  "$ref": "#/components/schemas/PostResponseDTO"
                 }
               }
             }
@@ -2725,7 +2585,7 @@
         }
       }
     },
-    "/api/posts/Exists/{id}": {
+    "/api/v1/posts/Exists/{id}": {
       "get": {
         "tags": [
           "UserPosts"
@@ -2786,7 +2646,7 @@
         }
       }
     },
-    "/api/posts/{id}/views": {
+    "/api/v1/posts/{id}/views": {
       "post": {
         "tags": [
           "UserPosts"
@@ -2804,7 +2664,7 @@
           }
         ],
         "responses": {
-          "200": {
+          "204": {
             "description": "OK"
           },
           "400": {
@@ -2850,7 +2710,7 @@
         }
       }
     },
-    "/api/posts/user/{userId}": {
+    "/api/v1/posts/user/{userId}": {
       "get": {
         "tags": [
           "UserPosts"
@@ -2875,7 +2735,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PostModel"
+                    "$ref": "#/components/schemas/PostResponseDTO"
                   }
                 }
               },
@@ -2883,7 +2743,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PostModel"
+                    "$ref": "#/components/schemas/PostResponseDTO"
                   }
                 }
               },
@@ -2891,7 +2751,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PostModel"
+                    "$ref": "#/components/schemas/PostResponseDTO"
                   }
                 }
               }
@@ -2940,7 +2800,7 @@
         }
       }
     },
-    "/api/posts/category/{categoryId}": {
+    "/api/v1/posts/category/{categoryId}": {
       "get": {
         "tags": [
           "UserPosts"
@@ -2965,7 +2825,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PostModel"
+                    "$ref": "#/components/schemas/PostResponseDTO"
                   }
                 }
               },
@@ -2973,7 +2833,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PostModel"
+                    "$ref": "#/components/schemas/PostResponseDTO"
                   }
                 }
               },
@@ -2981,7 +2841,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PostModel"
+                    "$ref": "#/components/schemas/PostResponseDTO"
                   }
                 }
               }
@@ -3030,7 +2890,7 @@
         }
       }
     },
-    "/api/posts": {
+    "/api/v1/posts": {
       "post": {
         "tags": [
           "UserPosts"
@@ -3040,17 +2900,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PostModel"
+                "$ref": "#/components/schemas/CreatePostRequest"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/PostModel"
+                "$ref": "#/components/schemas/CreatePostRequest"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/PostModel"
+                "$ref": "#/components/schemas/CreatePostRequest"
               }
             }
           }
@@ -3061,17 +2921,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostModel"
+                  "$ref": "#/components/schemas/PostResponseDTO"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostModel"
+                  "$ref": "#/components/schemas/PostResponseDTO"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostModel"
+                  "$ref": "#/components/schemas/PostResponseDTO"
                 }
               }
             }
@@ -3099,7 +2959,7 @@
         }
       }
     },
-    "/api/posts/{id}/status": {
+    "/api/v1/posts/{id}/status": {
       "patch": {
         "tags": [
           "UserPosts"
@@ -3141,17 +3001,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostModel"
+                  "$ref": "#/components/schemas/PostResponseDTO"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostModel"
+                  "$ref": "#/components/schemas/PostResponseDTO"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostModel"
+                  "$ref": "#/components/schemas/PostResponseDTO"
                 }
               }
             }
@@ -3239,7 +3099,7 @@
         }
       }
     },
-    "/api/users/All": {
+    "/api/v1/users": {
       "get": {
         "tags": [
           "Users"
@@ -3296,9 +3156,116 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "RegisterUser",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDTO"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDTO"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDTO"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
       }
     },
-    "/api/users/{id}": {
+    "/api/v1/users/{id}": {
       "get": {
         "tags": [
           "Users"
@@ -3513,7 +3480,7 @@
           }
         ],
         "responses": {
-          "200": {
+          "204": {
             "description": "OK"
           },
           "400": {
@@ -3602,116 +3569,7 @@
         }
       }
     },
-    "/api/users": {
-      "post": {
-        "tags": [
-          "Users"
-        ],
-        "operationId": "RegisterUser",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateUserRequest"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateUserRequest"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateUserRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Created",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserResponseDTO"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserResponseDTO"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserResponseDTO"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/users/Exists/{id}": {
+    "/api/v1/users/Exists/{id}": {
       "get": {
         "tags": [
           "Users"
@@ -3745,6 +3603,75 @@
               "text/json": {
                 "schema": {
                   "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/post-images/upload": {
+      "post": {
+        "tags": [
+          "PostImages"
+        ],
+        "operationId": "AddPostImage",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostImageModel"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostImageModel"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostImageModel"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostImageModel"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostImageModel"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostImageModel"
                 }
               }
             }
@@ -3839,6 +3766,45 @@
           },
           "IsDeleted": {
             "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreatePostRequest": {
+        "type": "object",
+        "properties": {
+          "CategoryID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "PostTitle": {
+            "type": "string"
+          },
+          "PostDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "Price": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "CityId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "AreaId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "Images": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -4025,6 +3991,87 @@
         },
         "additionalProperties": false
       },
+      "PostResponseDTO": {
+        "type": "object",
+        "properties": {
+          "PostID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "CategoryID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "Category": {
+            "type": "string",
+            "nullable": true
+          },
+          "PostTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "Name": {
+            "type": "string",
+            "nullable": true
+          },
+          "PostDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "Description": {
+            "type": "string",
+            "nullable": true
+          },
+          "Price": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "Status": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "CreatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "IsDeleted": {
+            "type": "boolean"
+          },
+          "Views": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "CityId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "AreaId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "Location": {
+            "type": "string",
+            "nullable": true
+          },
+          "Area": {
+            "type": "string",
+            "nullable": true
+          },
+          "Seller": {
+            "type": "string",
+            "nullable": true
+          },
+          "SellerId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "ProblemDetails": {
         "type": "object",
         "properties": {
@@ -4050,7 +4097,7 @@
             "nullable": true
           }
         },
-        "additionalProperties": { }
+        "additionalProperties": {}
       },
       "ReviewModel": {
         "type": "object",
@@ -4152,6 +4199,38 @@
         "properties": {
           "Status": {
             "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdatePostRequest": {
+        "type": "object",
+        "properties": {
+          "CategoryID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "PostTitle": {
+            "type": "string"
+          },
+          "PostDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "Price": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "CityId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "AreaId": {
+            "type": "integer",
+            "format": "int32",
             "nullable": true
           }
         },
@@ -4280,7 +4359,7 @@
   },
   "security": [
     {
-      "Bearer": [ ]
+      "Bearer": []
     }
   ]
 }
