@@ -17,7 +17,7 @@
 ## Repository Layout
 
 ```text
-final project primary/
+
 ├── apps/
 │   ├── web/                     # React + TypeScript + Vite frontend
 │   └── api/                     # ASP.NET Core 8 API + SQL migrations
