@@ -12,7 +12,7 @@ public static class MiddlewareExtensions
     private static Task WriteProblemDetailsAsync(HttpResponse response, ProblemDetails problem, CancellationToken cancellationToken = default)
     {
         response.ContentType = "application/problem+json";
-        return response.WriteAsJsonAsync(problem, contentType: "application/problem+json", cancellationToken: cancellationToken);
+        return response.WriteAsJsonAsync(problem, cancellationToken);
     }
 
     public static WebApplication UseTijarahJoExceptionHandler(this WebApplication app)
