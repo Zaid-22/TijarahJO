@@ -47,6 +47,17 @@ PasswordResetEmail__Password=your-smtp-password
 PasswordResetEmail__FromAddress=no-reply@your-domain.com
 PasswordResetEmail__FromName=TijarahJo Security
 PasswordResetEmail__LogCodesWhenEmailDisabled=false
+
+# SMTP transport for two-factor codes
+EmailTwoFactor__Enabled=true
+EmailTwoFactor__Host=smtp.your-provider.com
+EmailTwoFactor__Port=587
+EmailTwoFactor__EnableSsl=true
+EmailTwoFactor__Username=your-smtp-username
+EmailTwoFactor__Password=your-smtp-password
+EmailTwoFactor__FromAddress=no-reply@your-domain.com
+EmailTwoFactor__FromName=TijarahJo Security
+EmailTwoFactor__LogCodesWhenEmailDisabled=false
 ```
 
 #### Two-Factor Authentication Configuration (Optional)

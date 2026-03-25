@@ -1,5 +1,6 @@
-using System.Net;
-using System.Net.Mail;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Options;
 using TijarahJo.Api.Common.Configuration;
 
@@ -7,7 +8,7 @@ namespace TijarahJo.Api.Common.Services;
 
 public interface IEmailTwoFactorSender
 {
-    Task SendTwoFactorCodeAsync(
+    Task<EmailTwoFactorSendResult> SendTwoFactorCodeAsync(
         string recipientEmail,
         string? recipientFirstName,
         string code,
@@ -16,14 +17,25 @@ public interface IEmailTwoFactorSender
     );
 }
 
+public sealed record EmailTwoFactorSendResult(
+    bool Delivered,
+    string? FailureMessage = null,
+    string? DebugCode = null,
+    bool UsedDevelopmentFallback = false
+);
+
 public sealed class EmailTwoFactorSender(
     IOptions<EmailTwoFactorOptions> options,
-    ILogger<EmailTwoFactorSender> logger) : IEmailTwoFactorSender
+    IHostEnvironment hostEnvironment,
+    ILogger<EmailTwoFactorSender> logger,
+    IHttpClientFactory httpClientFactory) : IEmailTwoFactorSender
 {
     private readonly EmailTwoFactorOptions _options = options.Value;
+    private readonly IHostEnvironment _hostEnvironment = hostEnvironment;
     private readonly ILogger<EmailTwoFactorSender> _logger = logger;
+    private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 
-    public async Task SendTwoFactorCodeAsync(
+    public async Task<EmailTwoFactorSendResult> SendTwoFactorCodeAsync(
         string recipientEmail,
         string? recipientFirstName,
         string code,
@@ -32,10 +44,10 @@ public sealed class EmailTwoFactorSender(
     {
         if (string.IsNullOrWhiteSpace(recipientEmail) || string.IsNullOrWhiteSpace(code))
         {
-            return;
+            return new EmailTwoFactorSendResult(false, "A valid recipient email and verification code are required.");
         }
 
-        if (!IsSmtpConfigured())
+        if (!IsApiConfigured())
         {
             if (_options.LogCodesWhenEmailDisabled)
             {
@@ -47,7 +59,19 @@ public sealed class EmailTwoFactorSender(
                 );
             }
 
-            return;
+            if (_hostEnvironment.IsDevelopment() && _options.LogCodesWhenEmailDisabled)
+            {
+                return new EmailTwoFactorSendResult(
+                    true,
+                    DebugCode: code,
+                    UsedDevelopmentFallback: true
+                );
+            }
+
+            return new EmailTwoFactorSendResult(
+                false,
+                "Two-factor email delivery is not configured on the server."
+            );
         }
 
         string greetingName = string.IsNullOrWhiteSpace(recipientFirstName)
@@ -63,37 +87,74 @@ public sealed class EmailTwoFactorSender(
             "If you didn't attempt to log in, please secure your account.\n\n" +
             "- TijarahJo Security";
 
-        using var mail = new MailMessage
+        var payload = new
         {
-            From = new MailAddress(_options.FromAddress, _options.FromName),
-            Subject = subject,
-            Body = body,
-            IsBodyHtml = false
-        };
-        mail.To.Add(recipientEmail);
-
-        using var smtp = new SmtpClient(_options.Host, _options.Port)
-        {
-            EnableSsl = _options.EnableSsl,
-            DeliveryMethod = SmtpDeliveryMethod.Network
+            from = $"{_options.FromName} <{_options.FromAddress}>",
+            to = new[] { recipientEmail },
+            subject = subject,
+            text = body
         };
 
-        if (!string.IsNullOrWhiteSpace(_options.Username))
+        var requestContent = new StringContent(
+            JsonSerializer.Serialize(payload),
+            Encoding.UTF8,
+            "application/json"
+        );
+
+        using var client = _httpClientFactory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _options.ResendApiKey);
+
+        try
         {
-            smtp.Credentials = new NetworkCredential(_options.Username, _options.Password);
+            var response = await client.PostAsync("https://api.resend.com/emails", requestContent, cancellationToken);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                return new EmailTwoFactorSendResult(true);
+            }
+            
+            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            _logger.LogError("Resend API failed. Status: {StatusCode}, Body: {Body}", response.StatusCode, errorBody);
+            
+            return new EmailTwoFactorSendResult(false, "Two-factor email could not be sent. Please try again later.");
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send two-factor email to {Recipient}.", recipientEmail);
 
-        await smtp.SendMailAsync(mail, cancellationToken);
+            if (_hostEnvironment.IsDevelopment() && _options.LogCodesWhenEmailDisabled)
+            {
+                _logger.LogInformation(
+                    "Using development fallback for two-factor code delivery. Recipient={Recipient} Code={Code}",
+                    recipientEmail,
+                    code
+                );
+                return new EmailTwoFactorSendResult(
+                    true,
+                    DebugCode: code,
+                    UsedDevelopmentFallback: true
+                );
+            }
+
+            return new EmailTwoFactorSendResult(
+                false,
+                "Two-factor email could not be sent. Please try again later."
+            );
+        }
     }
 
-    private bool IsSmtpConfigured()
+    private bool IsApiConfigured()
     {
         if (!_options.Enabled)
         {
             return false;
         }
 
-        return !string.IsNullOrWhiteSpace(_options.Host)
+        return !string.IsNullOrWhiteSpace(_options.ResendApiKey)
             && !string.IsNullOrWhiteSpace(_options.FromAddress);
     }
 }

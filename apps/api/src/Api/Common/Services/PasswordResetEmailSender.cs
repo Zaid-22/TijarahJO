@@ -1,5 +1,6 @@
-using System.Net;
-using System.Net.Mail;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Options;
 using TijarahJo.Api.Common.Configuration;
 
@@ -16,18 +17,14 @@ public interface IPasswordResetEmailSender
     );
 }
 
-public sealed class PasswordResetEmailSender : IPasswordResetEmailSender
+public sealed class PasswordResetEmailSender(
+    IOptions<PasswordResetEmailOptions> options,
+    ILogger<PasswordResetEmailSender> logger,
+    IHttpClientFactory httpClientFactory) : IPasswordResetEmailSender
 {
-    private readonly PasswordResetEmailOptions _options;
-    private readonly ILogger<PasswordResetEmailSender> _logger;
-
-    public PasswordResetEmailSender(
-        IOptions<PasswordResetEmailOptions> options,
-        ILogger<PasswordResetEmailSender> logger)
-    {
-        _options = options.Value;
-        _logger = logger;
-    }
+    private readonly PasswordResetEmailOptions _options = options.Value;
+    private readonly ILogger<PasswordResetEmailSender> _logger = logger;
+    private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
 
     public async Task SendPasswordResetCodeAsync(
         string recipientEmail,
@@ -41,7 +38,7 @@ public sealed class PasswordResetEmailSender : IPasswordResetEmailSender
             return;
         }
 
-        if (!IsSmtpConfigured())
+        if (!IsApiConfigured())
         {
             if (_options.LogCodesWhenEmailDisabled)
             {
@@ -69,37 +66,51 @@ public sealed class PasswordResetEmailSender : IPasswordResetEmailSender
             "If you didn't request a password reset, you can ignore this email.\n\n" +
             "- TijarahJo Security";
 
-        using var mail = new MailMessage
+        var payload = new
         {
-            From = new MailAddress(_options.FromAddress, _options.FromName),
-            Subject = subject,
-            Body = body,
-            IsBodyHtml = false
-        };
-        mail.To.Add(recipientEmail);
-
-        using var smtp = new SmtpClient(_options.Host, _options.Port)
-        {
-            EnableSsl = _options.EnableSsl,
-            DeliveryMethod = SmtpDeliveryMethod.Network
+            from = $"{_options.FromName} <{_options.FromAddress}>",
+            to = new[] { recipientEmail },
+            subject = subject,
+            text = body
         };
 
-        if (!string.IsNullOrWhiteSpace(_options.Username))
+        var requestContent = new StringContent(
+            JsonSerializer.Serialize(payload),
+            Encoding.UTF8,
+            "application/json"
+        );
+
+        using var client = _httpClientFactory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _options.ResendApiKey);
+
+        try
         {
-            smtp.Credentials = new NetworkCredential(_options.Username, _options.Password);
+            var response = await client.PostAsync("https://api.resend.com/emails", requestContent, cancellationToken);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError("Resend API failed for Password Reset. Status: {StatusCode}, Body: {Body}", response.StatusCode, errorBody);
+            }
         }
-
-        await smtp.SendMailAsync(mail, cancellationToken).WaitAsync(cancellationToken);
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send password reset email to {Recipient}.", recipientEmail);
+        }
     }
 
-    private bool IsSmtpConfigured()
+    private bool IsApiConfigured()
     {
         if (!_options.Enabled)
         {
             return false;
         }
 
-        return !string.IsNullOrWhiteSpace(_options.Host)
+        return !string.IsNullOrWhiteSpace(_options.ResendApiKey)
             && !string.IsNullOrWhiteSpace(_options.FromAddress);
     }
 }

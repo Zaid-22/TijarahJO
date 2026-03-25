@@ -51,9 +51,12 @@ export function useNotificationPolling() {
       UNREAD_COUNT_REFRESH_MS,
     );
 
+    window.addEventListener("tijarahjo:refreshUnreadCount", refreshUnreadCount);
+
     return () => {
       isCancelled = true;
       window.clearInterval(intervalId);
+      window.removeEventListener("tijarahjo:refreshUnreadCount", refreshUnreadCount);
     };
   }, [isAuthenticated]);
 

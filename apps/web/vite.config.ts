@@ -1,9 +1,9 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
-const DEV_DEFAULT_API_BASE_URL = "http://localhost:5033/api";
+const DEV_DEFAULT_API_BASE_URL = "http://localhost:5033/api/v1";
 const PROD_DEFAULT_API_BASE_URL = "/api";
 
 function parseApiOrigin(apiBaseUrl: string): string | null {
@@ -92,6 +92,22 @@ function buildConnectSources(isProduction: boolean): string {
     if (socketOrigin) {
       connectSources.add(socketOrigin);
     }
+
+    try {
+      const parsed = new URL(apiOrigin);
+      if (!isProduction) {
+        if (parsed.hostname === "localhost") {
+          connectSources.add(`http://127.0.0.1:${parsed.port}`);
+          connectSources.add(`ws://127.0.0.1:${parsed.port}`);
+        }
+        if (parsed.hostname === "127.0.0.1") {
+          connectSources.add(`http://localhost:${parsed.port}`);
+          connectSources.add(`ws://localhost:${parsed.port}`);
+        }
+      }
+    } catch {
+      // Keep the CSP builder resilient if the origin cannot be parsed.
+    }
   }
   if (isProduction && !shouldApplyProdExtras) {
     return `connect-src ${Array.from(connectSources).join(" ")}`;
@@ -148,7 +164,8 @@ function buildCspPolicy(isProduction: boolean): string {
   ].join("; ");
 }
 
-function injectCspPolicy(mode: string) {
+function injectCspPolicy(mode: string, env: Record<string, string>) {
+  Object.assign(process.env, env);
   const cspPolicy = buildCspPolicy(mode === "production");
 
   return {
@@ -160,95 +177,99 @@ function injectCspPolicy(mode: string) {
 }
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  plugins: [tailwindcss(), react(), injectCspPolicy(mode)],
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          const normalizedId = id.replace(/\\/g, "/");
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, __dirname, "");
 
-          if (!normalizedId.includes("/node_modules/")) {
+  return {
+    plugins: [tailwindcss(), react(), injectCspPolicy(mode, env)],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            const normalizedId = id.replace(/\\/g, "/");
+
+            if (!normalizedId.includes("/node_modules/")) {
+              return undefined;
+            }
+
+            if (normalizedId.includes("/node_modules/@microsoft/signalr/")) {
+              return "signalr-vendor";
+            }
+
+            if (normalizedId.includes("/node_modules/framer-motion/")) {
+              return "motion-vendor";
+            }
+
+            if (
+              normalizedId.includes("/node_modules/react-router/") ||
+              normalizedId.includes("/node_modules/react-router-dom/") ||
+              normalizedId.includes("/node_modules/@remix-run/router/")
+            ) {
+              return "router-vendor";
+            }
+
+            if (
+              normalizedId.includes("/node_modules/react/") ||
+              normalizedId.includes("/node_modules/react-dom/") ||
+              normalizedId.includes("/node_modules/scheduler/")
+            ) {
+              return "react-vendor";
+            }
+
+            if (normalizedId.includes("/node_modules/lucide-react/")) {
+              return "icons-vendor";
+            }
+
+            if (normalizedId.includes("/node_modules/sonner/")) {
+              return "sonner-vendor";
+            }
+
+            if (
+              normalizedId.includes("/node_modules/class-variance-authority/") ||
+              normalizedId.includes("/node_modules/clsx/") ||
+              normalizedId.includes("/node_modules/tailwind-merge/")
+            ) {
+              return "ui-utils-vendor";
+            }
+
+            if (normalizedId.includes("/node_modules/@tanstack/")) {
+              return "query-vendor";
+            }
+
             return undefined;
+          },
+        },
+        onwarn(warning, warn) {
+          const isSignalrPureAnnotationWarning =
+            warning.code === "INVALID_ANNOTATION" &&
+            typeof warning.id === "string" &&
+            warning.id.includes("@microsoft/signalr/dist/esm/Utils.js");
+
+          if (isSignalrPureAnnotationWarning) {
+            return;
           }
 
-          if (normalizedId.includes("/node_modules/@microsoft/signalr/")) {
-            return "signalr-vendor";
-          }
-
-          if (normalizedId.includes("/node_modules/framer-motion/")) {
-            return "motion-vendor";
-          }
-
-          if (
-            normalizedId.includes("/node_modules/react-router/") ||
-            normalizedId.includes("/node_modules/react-router-dom/") ||
-            normalizedId.includes("/node_modules/@remix-run/router/")
-          ) {
-            return "router-vendor";
-          }
-
-          if (
-            normalizedId.includes("/node_modules/react/") ||
-            normalizedId.includes("/node_modules/react-dom/") ||
-            normalizedId.includes("/node_modules/scheduler/")
-          ) {
-            return "react-vendor";
-          }
-
-          if (normalizedId.includes("/node_modules/lucide-react/")) {
-            return "icons-vendor";
-          }
-
-          if (normalizedId.includes("/node_modules/sonner/")) {
-            return "sonner-vendor";
-          }
-
-          if (
-            normalizedId.includes("/node_modules/class-variance-authority/") ||
-            normalizedId.includes("/node_modules/clsx/") ||
-            normalizedId.includes("/node_modules/tailwind-merge/")
-          ) {
-            return "ui-utils-vendor";
-          }
-
-          if (normalizedId.includes("/node_modules/@tanstack/")) {
-            return "query-vendor";
-          }
-
-          return undefined;
+          warn(warning);
         },
       },
-      onwarn(warning, warn) {
-        const isSignalrPureAnnotationWarning =
-          warning.code === "INVALID_ANNOTATION" &&
-          typeof warning.id === "string" &&
-          warning.id.includes("@microsoft/signalr/dist/esm/Utils.js");
-
-        if (isSignalrPureAnnotationWarning) {
-          return;
-        }
-
-        warn(warning);
+    },
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
       },
     },
-  },
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+    server: {
+      host: "localhost",
+      port: 5173,
+      // open: true, // commented out to prevent dev server from hanging
+      hmr: {
+        // Prevent full page reloads on HMR errors
+        overlay: true,
+      },
     },
-  },
-  server: {
-    host: "localhost",
-    port: 5173,
-    // open: true, // commented out to prevent dev server from hanging
-    hmr: {
-      // Prevent full page reloads on HMR errors
-      overlay: true,
+    // Optimize HMR to prevent unnecessary reloads
+    optimizeDeps: {
+      exclude: [],
     },
-  },
-  // Optimize HMR to prevent unnecessary reloads
-  optimizeDeps: {
-    exclude: [],
-  },
-}));
+  };
+});

@@ -95,12 +95,14 @@ export function HeaderNotificationsDropdown({
     );
     const newCount = Math.max(0, unreadCount - 1);
     onUnreadCountChange?.(newCount);
+    window.dispatchEvent(new Event("tijarahjo:refreshUnreadCount"));
   };
 
   const handleMarkAllAsRead = async () => {
     await api.notifications.markAllAsRead();
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     onUnreadCountChange?.(0);
+    window.dispatchEvent(new Event("tijarahjo:refreshUnreadCount"));
   };
 
   const handleNotificationClick = (notification: AppNotification) => {
