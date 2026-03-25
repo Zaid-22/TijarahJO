@@ -641,17 +641,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CategoryModel"
+                "$ref": "#/components/schemas/CreateCategoryRequest"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/CategoryModel"
+                "$ref": "#/components/schemas/CreateCategoryRequest"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/CategoryModel"
+                "$ref": "#/components/schemas/CreateCategoryRequest"
               }
             }
           }
@@ -662,17 +662,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/CategoryModel"
+                  "$ref": "#/components/schemas/CategoryResponseDTO"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CategoryModel"
+                  "$ref": "#/components/schemas/CategoryResponseDTO"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CategoryModel"
+                  "$ref": "#/components/schemas/CategoryResponseDTO"
                 }
               }
             }
@@ -712,7 +712,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/CategoryModel"
+                    "$ref": "#/components/schemas/CategoryResponseDTO"
                   }
                 }
               },
@@ -720,7 +720,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/CategoryModel"
+                    "$ref": "#/components/schemas/CategoryResponseDTO"
                   }
                 }
               },
@@ -728,7 +728,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/CategoryModel"
+                    "$ref": "#/components/schemas/CategoryResponseDTO"
                   }
                 }
               }
@@ -780,17 +780,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/CategoryModel"
+                  "$ref": "#/components/schemas/CategoryResponseDTO"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CategoryModel"
+                  "$ref": "#/components/schemas/CategoryResponseDTO"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CategoryModel"
+                  "$ref": "#/components/schemas/CategoryResponseDTO"
                 }
               }
             }
@@ -857,17 +857,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CategoryModel"
+                "$ref": "#/components/schemas/UpdateCategoryRequest"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/CategoryModel"
+                "$ref": "#/components/schemas/UpdateCategoryRequest"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/CategoryModel"
+                "$ref": "#/components/schemas/UpdateCategoryRequest"
               }
             }
           }
@@ -878,17 +878,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/CategoryModel"
+                  "$ref": "#/components/schemas/CategoryResponseDTO"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CategoryModel"
+                  "$ref": "#/components/schemas/CategoryResponseDTO"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CategoryModel"
+                  "$ref": "#/components/schemas/CategoryResponseDTO"
                 }
               }
             }
@@ -1073,7 +1073,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PostImageModel"
+                    "$ref": "#/components/schemas/PostImageResponseDTO"
                   }
                 }
               },
@@ -1081,7 +1081,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PostImageModel"
+                    "$ref": "#/components/schemas/PostImageResponseDTO"
                   }
                 }
               },
@@ -1089,7 +1089,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PostImageModel"
+                    "$ref": "#/components/schemas/PostImageResponseDTO"
                   }
                 }
               }
@@ -1111,6 +1111,48 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePostImageRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePostImageRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePostImageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostImageResponseDTO"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostImageResponseDTO"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostImageResponseDTO"
                 }
               }
             }
@@ -1143,7 +1185,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PostImageModel"
+                    "$ref": "#/components/schemas/PostImageResponseDTO"
                   }
                 }
               },
@@ -1151,7 +1193,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PostImageModel"
+                    "$ref": "#/components/schemas/PostImageResponseDTO"
                   }
                 }
               },
@@ -1159,7 +1201,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PostImageModel"
+                    "$ref": "#/components/schemas/PostImageResponseDTO"
                   }
                 }
               }
@@ -1214,17 +1256,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostImageModel"
+                  "$ref": "#/components/schemas/PostImageResponseDTO"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostImageModel"
+                  "$ref": "#/components/schemas/PostImageResponseDTO"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostImageModel"
+                  "$ref": "#/components/schemas/PostImageResponseDTO"
                 }
               }
             }
@@ -1291,17 +1333,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PostImageModel"
+                "$ref": "#/components/schemas/UpdatePostImageRequest"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/PostImageModel"
+                "$ref": "#/components/schemas/UpdatePostImageRequest"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/PostImageModel"
+                "$ref": "#/components/schemas/UpdatePostImageRequest"
               }
             }
           }
@@ -1312,17 +1354,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostImageModel"
+                  "$ref": "#/components/schemas/PostImageResponseDTO"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostImageModel"
+                  "$ref": "#/components/schemas/PostImageResponseDTO"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostImageModel"
+                  "$ref": "#/components/schemas/PostImageResponseDTO"
                 }
               }
             }
@@ -1665,7 +1707,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/RoleModel"
+                    "$ref": "#/components/schemas/RoleResponseDTO"
                   }
                 }
               },
@@ -1673,7 +1715,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/RoleModel"
+                    "$ref": "#/components/schemas/RoleResponseDTO"
                   }
                 }
               },
@@ -1681,7 +1723,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/RoleModel"
+                    "$ref": "#/components/schemas/RoleResponseDTO"
                   }
                 }
               }
@@ -1689,6 +1731,73 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Roles"
+        ],
+        "operationId": "AddRole",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleResponseDTO"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleResponseDTO"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleResponseDTO"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
             "content": {
               "text/plain": {
                 "schema": {
@@ -1733,17 +1842,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/RoleModel"
+                  "$ref": "#/components/schemas/RoleResponseDTO"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RoleModel"
+                  "$ref": "#/components/schemas/RoleResponseDTO"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RoleModel"
+                  "$ref": "#/components/schemas/RoleResponseDTO"
                 }
               }
             }
@@ -1810,17 +1919,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RoleModel"
+                "$ref": "#/components/schemas/UpdateRoleRequest"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/RoleModel"
+                "$ref": "#/components/schemas/UpdateRoleRequest"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/RoleModel"
+                "$ref": "#/components/schemas/UpdateRoleRequest"
               }
             }
           }
@@ -1831,17 +1940,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/RoleModel"
+                  "$ref": "#/components/schemas/RoleResponseDTO"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RoleModel"
+                  "$ref": "#/components/schemas/RoleResponseDTO"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RoleModel"
+                  "$ref": "#/components/schemas/RoleResponseDTO"
                 }
               }
             }
@@ -2237,66 +2346,6 @@
           },
           "500": {
             "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/api/v1/posts/All": {
-      "get": {
-        "tags": [
-          "UserPosts"
-        ],
-        "operationId": "GetAllPosts",
-        "responses": {
-          "410": {
-            "description": "Gone",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/posts/pagination": {
-      "get": {
-        "tags": [
-          "UserPosts"
-        ],
-        "operationId": "GetPaginatedPosts",
-        "responses": {
-          "410": {
-            "description": "Gone",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
           }
         }
       }
@@ -3638,19 +3687,9 @@
         "operationId": "AddPostImage",
         "requestBody": {
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/PostImageModel"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PostImageModel"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/PostImageModel"
+                "$ref": "#/components/schemas/UploadPostImageFileRequest"
               }
             }
           }
@@ -3661,17 +3700,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostImageModel"
+                  "$ref": "#/components/schemas/PostImageUploadResponseDTO"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostImageModel"
+                  "$ref": "#/components/schemas/PostImageUploadResponseDTO"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostImageModel"
+                  "$ref": "#/components/schemas/PostImageUploadResponseDTO"
                 }
               }
             }
@@ -4343,6 +4382,242 @@
             "type": "string",
             "nullable": true,
             "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateCategoryRequest": {
+        "type": "object",
+        "properties": {
+          "CategoryName": {
+            "type": "string"
+          },
+          "NameAr": {
+            "type": "string",
+            "nullable": true
+          },
+          "Icon": {
+            "type": "string",
+            "nullable": true
+          },
+          "Color": {
+            "type": "string",
+            "nullable": true
+          },
+          "Image": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CategoryResponseDTO": {
+        "type": "object",
+        "properties": {
+          "CategoryID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "Id": {
+            "type": "string",
+            "nullable": true
+          },
+          "CategoryName": {
+            "type": "string",
+            "nullable": true
+          },
+          "Name": {
+            "type": "string",
+            "nullable": true
+          },
+          "NameAr": {
+            "type": "string",
+            "nullable": true
+          },
+          "Slug": {
+            "type": "string",
+            "nullable": true
+          },
+          "Icon": {
+            "type": "string",
+            "nullable": true
+          },
+          "Color": {
+            "type": "string",
+            "nullable": true
+          },
+          "Image": {
+            "type": "string",
+            "nullable": true
+          },
+          "CreatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "IsDeleted": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UploadPostImageFileRequest": {
+        "type": "object",
+        "properties": {
+          "PostID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "File": {
+            "type": "string",
+            "format": "binary"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PostImageResponseDTO": {
+        "type": "object",
+        "properties": {
+          "PostImageID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "Id": {
+            "type": "string",
+            "nullable": true
+          },
+          "PostID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "PostImageURL": {
+            "type": "string",
+            "nullable": true
+          },
+          "UploadedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "IsDeleted": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PostImageUploadResponseDTO": {
+        "type": "object",
+        "properties": {
+          "Url": {
+            "type": "string",
+            "nullable": true
+          },
+          "PostImage": {
+            "$ref": "#/components/schemas/PostImageResponseDTO"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateCategoryRequest": {
+        "type": "object",
+        "properties": {
+          "CategoryName": {
+            "type": "string"
+          },
+          "NameAr": {
+            "type": "string",
+            "nullable": true
+          },
+          "Icon": {
+            "type": "string",
+            "nullable": true
+          },
+          "Color": {
+            "type": "string",
+            "nullable": true
+          },
+          "Image": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateRoleRequest": {
+        "type": "object",
+        "properties": {
+          "RoleName": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateRoleRequest": {
+        "type": "object",
+        "properties": {
+          "RoleName": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RoleResponseDTO": {
+        "type": "object",
+        "properties": {
+          "RoleID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "Id": {
+            "type": "string",
+            "nullable": true
+          },
+          "RoleName": {
+            "type": "string",
+            "nullable": true
+          },
+          "CreatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "IsDeleted": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreatePostImageRequest": {
+        "type": "object",
+        "properties": {
+          "PostID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "PostImageURL": {
+            "type": "string",
+            "nullable": true
+          },
+          "UploadedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdatePostImageRequest": {
+        "type": "object",
+        "properties": {
+          "PostID": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "PostImageURL": {
+            "type": "string",
+            "nullable": true
+          },
+          "UploadedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           }
         },
         "additionalProperties": false
