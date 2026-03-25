@@ -14,7 +14,7 @@ function escapeForRegex(value) {
 
 function buildJordanPhone(seed) {
   const digits = String(seed).replace(/\D/g, "").slice(-7).padStart(7, "0");
-  return `+96279${digits}`;
+  return `79${digits}`;
 }
 
 async function forceEnglishUi(page) {
@@ -38,7 +38,7 @@ async function registerUser(page, user) {
   await page.locator("#firstName").fill(user.firstName);
   await page.locator("#lastName").fill(user.lastName);
   await page.locator("#phone").fill(user.phone);
-  await page.locator("#city").fill("Amman");
+  await page.locator("#city").selectOption("Amman");
   await page.locator("#area").fill("Khalda");
   await page.locator("#authIdentifier").fill(user.email);
   await page.locator("#password").fill(user.password);
@@ -46,7 +46,7 @@ async function registerUser(page, user) {
 
   await page.getByRole("button", { name: /create account/i }).click();
   await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
-  await expect(page.getByRole("button", { name: /create post/i })).toBeVisible({
+  await expect(page.getByRole("button", { name: /sell|create post/i })).toBeVisible({
     timeout: 30_000,
   });
 }
