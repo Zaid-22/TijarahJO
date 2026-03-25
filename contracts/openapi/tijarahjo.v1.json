@@ -271,7 +271,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/MessageModel"
+                    "$ref": "#/components/schemas/MessageResponseDTO"
                   }
                 }
               },
@@ -279,7 +279,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/MessageModel"
+                    "$ref": "#/components/schemas/MessageResponseDTO"
                   }
                 }
               },
@@ -287,7 +287,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/MessageModel"
+                    "$ref": "#/components/schemas/MessageResponseDTO"
                   }
                 }
               }
@@ -309,7 +309,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/MessageModel"
+                    "$ref": "#/components/schemas/MessageResponseDTO"
                   }
                 }
               },
@@ -317,7 +317,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/MessageModel"
+                    "$ref": "#/components/schemas/MessageResponseDTO"
                   }
                 }
               },
@@ -325,7 +325,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/MessageModel"
+                    "$ref": "#/components/schemas/MessageResponseDTO"
                   }
                 }
               }
@@ -351,9 +351,6 @@
           }
         ],
         "responses": {
-          "204": {
-            "description": "OK"
-          },
           "400": {
             "description": "Bad Request",
             "content": {
@@ -373,6 +370,26 @@
                 }
               }
             }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresenceResponseDTO"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresenceResponseDTO"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresenceResponseDTO"
+                }
+              }
+            }
           }
         }
       }
@@ -386,24 +403,41 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/MessageModel"
+                "$ref": "#/components/schemas/SendChatMessageRequest"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/MessageModel"
+                "$ref": "#/components/schemas/SendChatMessageRequest"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/MessageModel"
+                "$ref": "#/components/schemas/SendChatMessageRequest"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponseDTO"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponseDTO"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponseDTO"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
@@ -4617,6 +4651,95 @@
           "UploadedAt": {
             "type": "string",
             "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MessageResponseDTO": {
+        "type": "object",
+        "properties": {
+          "MessageId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "Id": {
+            "type": "string",
+            "nullable": true
+          },
+          "SenderId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "ReceiverId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "ConversationId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "PostId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "Content": {
+            "type": "string",
+            "nullable": true
+          },
+          "Timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "IsRead": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PresenceResponseDTO": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isOnline": {
+            "type": "boolean"
+          },
+          "lastSeenAtUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "statusText": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SendChatMessageRequest": {
+        "type": "object",
+        "properties": {
+          "ConversationId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "ReceiverId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "PostId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "Content": {
+            "type": "string",
             "nullable": true
           }
         },
