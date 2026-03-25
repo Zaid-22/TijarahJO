@@ -814,6 +814,65 @@
         }
       }
     },
+    "/api/v1/categories/upload-image": {
+      "post": {
+        "tags": [
+          "ItemCategories"
+        ],
+        "operationId": "UploadCategoryImage",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadCategoryImageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryImageUploadResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryImageUploadResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryImageUploadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiMessageResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiMessageResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiMessageResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/categories/{id}": {
       "get": {
         "tags": [
@@ -8676,6 +8735,26 @@
           },
           "IsDeleted": {
             "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UploadCategoryImageRequest": {
+        "type": "object",
+        "properties": {
+          "File": {
+            "type": "string",
+            "format": "binary"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CategoryImageUploadResponse": {
+        "type": "object",
+        "properties": {
+          "Url": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false
