@@ -122,7 +122,7 @@ if [[ "$DB_RUNTIME_PRINCIPAL" == "app" && -z "${DB_APP_PASSWORD:-}" ]]; then
   exit 1
 fi
 
-for required_cmd in docker dotnet curl jq awk sed lsof; do
+for required_cmd in docker dotnet curl jq awk sed lsof rg; do
   if ! command -v "$required_cmd" >/dev/null 2>&1; then
     echo "Error: required command '$required_cmd' was not found in PATH." >&2
     exit 1
