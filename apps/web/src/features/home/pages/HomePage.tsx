@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Globe, Star } from "lucide-react";
+import { Globe } from "lucide-react";
 import { PostResultsGrid } from "../../marketplace/components/PostResultsGrid";
 import { PostResultsGridSkeleton } from "../../marketplace/components/PostResultsGridSkeleton";
 import { MarketplaceResultsPagination } from "../../marketplace/components/MarketplaceResultsPagination";
@@ -157,19 +157,7 @@ export function HomePage({
         />
       )}
 
-      {/* 4. Promotional Banner */}
-      <HomePromotionalBanner
-        title={language === "ar" ? "تسوّق بثقة وأمان" : "Shop with Confidence"}
-        subtitle={
-          language === "ar"
-            ? "تحقق من التقييمات واتصل بالبائعين مباشرة"
-            : "Verified reviews & direct seller communication"
-        }
-        buttonLabel={language === "ar" ? "ابدأ التسوق" : "Start Shopping"}
-        onButtonClick={scrollToTop}
-        icon={Star}
-        variant="accent"
-      />
+
 
       {/* 5. Recent Items Carousel */}
       {!isLoadingPosts && recentPosts.length > 0 && (

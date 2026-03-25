@@ -10,5 +10,6 @@ public sealed class PasswordResetEmailOptions
     public string Password { get; set; } = string.Empty;
     public string FromAddress { get; set; } = "no-reply@tijarahjo.local";
     public string FromName { get; set; } = "TijarahJo Security";
+    public string ResendApiKey { get; set; } = string.Empty;
     public bool LogCodesWhenEmailDisabled { get; set; } = false;
 }

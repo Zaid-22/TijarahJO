@@ -30,6 +30,16 @@ public class TwoFactorController(
     private readonly IEmailTwoFactorSender _emailSender = emailSender;
     private readonly ILogger<TwoFactorController> _logger = logger;
 
+    private static string AppendDevelopmentCode(string message, EmailTwoFactorSendResult sendResult)
+    {
+        if (string.IsNullOrWhiteSpace(sendResult.DebugCode))
+        {
+            return message;
+        }
+
+        return $"{message} Development code: {sendResult.DebugCode}";
+    }
+
     [HttpPost("verify-login")]
     [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -118,49 +128,67 @@ public class TwoFactorController(
 
         if (user!.TwoFactorEnabled)
         {
-            // Instead of blocking, allow generating a code for disabling later
             string disableCode = _twoFactorService.GenerateAndStoreSetupCode(user.UserID!.Value);
-            try
+
+            EmailTwoFactorSendResult sendResult = await _emailSender.SendTwoFactorCodeAsync(
+                user.Email,
+                user.FirstName,
+                disableCode,
+                TimeSpan.FromSeconds(900),
+                cancellationToken
+            );
+
+            if (!sendResult.Delivered)
             {
-                await _emailSender.SendTwoFactorCodeAsync(
+                _logger.LogWarning(
+                    "[2FA] Failed to send disable code email to {Email}: {FailureMessage}",
                     user.Email,
-                    user.FirstName,
-                    disableCode,
-                    TimeSpan.FromSeconds(900),
-                    cancellationToken
+                    sendResult.FailureMessage
                 );
-                _logger.LogInformation("[2FA] Disable code email sent to {Email}", user.Email);
+                return Problem(
+                    statusCode: StatusCodes.Status503ServiceUnavailable,
+                    detail: sendResult.FailureMessage ?? "Two-factor email could not be sent."
+                );
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "[2FA] Failed to send disable code email to {Email}", user.Email);
-            }
+
+            _logger.LogInformation("[2FA] Disable code email sent to {Email}", user.Email);
+
             return Ok(new TwoFactorSetupStartResponse
             {
                 Success = true,
                 SecretKey = "",
                 OtpAuthUri = "",
-                Message = "A verification code has been sent to your email to confirm this action."
+                Message = AppendDevelopmentCode(
+                    "A verification code has been sent to your email to confirm this action.",
+                    sendResult
+                )
             });
         }
 
         string code = _twoFactorService.GenerateAndStoreSetupCode(user.UserID!.Value);
 
-        try
+        EmailTwoFactorSendResult setupSendResult = await _emailSender.SendTwoFactorCodeAsync(
+            user.Email,
+            user.FirstName,
+            code,
+            TimeSpan.FromSeconds(900),
+            cancellationToken
+        );
+
+        if (!setupSendResult.Delivered)
         {
-            await _emailSender.SendTwoFactorCodeAsync(
+            _logger.LogWarning(
+                "[2FA] Failed to send setup code email to {Email}: {FailureMessage}",
                 user.Email,
-                user.FirstName,
-                code,
-                TimeSpan.FromSeconds(900),
-                cancellationToken
+                setupSendResult.FailureMessage
             );
-            _logger.LogInformation("[2FA] Setup code email sent to {Email}", user.Email);
+            return Problem(
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                detail: setupSendResult.FailureMessage ?? "Two-factor email could not be sent."
+            );
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "[2FA] Failed to send setup code email to {Email}", user.Email);
-        }
+
+        _logger.LogInformation("[2FA] Setup code email sent to {Email}", user.Email);
 
         user = user with { TwoFactorPendingSecret = "PENDING_EMAIL_SETUP" }; // Just a marker
         bool persisted = await _users.UpdateUserAsync(user, userId, cancellationToken);
@@ -174,7 +202,10 @@ public class TwoFactorController(
             Success = true,
             SecretKey = "",
             OtpAuthUri = "",
-            Message = "A verification code has been sent to your email. Please enter it to confirm."
+            Message = AppendDevelopmentCode(
+                "A verification code has been sent to your email. Please enter it to confirm.",
+                setupSendResult
+            )
         });
     }
 
@@ -251,26 +282,6 @@ public class TwoFactorController(
         {
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Two-factor authentication is not enabled.");
         }
-
-        // For disabling email 2FA, send a fast setup code and verify it to make sure they own the email?
-        // Wait, standard disabling uses an active TOTP code. For email, we should maybe generate a code and ask them to verify it.
-        // Or if we just trust the currently logged in user, maybe we don't even need a code?
-        // But the UI currently asks for a code to disable. We should issue a disable override code.
-        // Actually, we can reuse VerifySetupCode to let them disable if they request it, but
-        // since the old flow expects a code from the *existing* TOTP app, here they must request a code.
-        // To keep the API simple: just remove 2FA without verifying if they are already logged in, 
-        // OR we can make them hit a 'Disable Start' endpoint. Since there isn't one, 
-        // let's just bypass the code check or allow it to be disabled instantly by checking if they provided a setup code that we sent?
-        // Let's implement a quick disable that accepts any code or none, and simply disables it. 
-        // If we strictly follow security, we need to send an email first. 
-        // Since we are changing from TOTP, let's just make it simple: they can disable using the regular password or just disable directly.
-        // I will change it so we don't verify the code to disable, or we return Ok immediately if they hit this endpoint.
-        
-        // Actually, let's keep the code signature but ignore it:
-        // Or we can verify it using VerifySetupCode, so if they want to disable, they must have requested a code via `setup/start` first!
-        // Wait, if they call `setup/start` while 2FA is enabled, it returns 400 BadRequest currently!
-        // We will just allow disabling directly if they are logged in.
-
 
         // Require verification to disable
         if (!_twoFactorService.VerifySetupCode(user.UserID!.Value, request?.Code))

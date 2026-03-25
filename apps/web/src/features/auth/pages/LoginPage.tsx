@@ -41,6 +41,8 @@ interface LoginPageProps {
   }) => void;
   onContinueAsGuest: () => void;
   language: Language;
+  isModal?: boolean;
+  onSuccess?: () => void;
 }
 
 const extractErrorMessage = (
@@ -96,6 +98,8 @@ export function LoginPage({
   onLogin,
   onContinueAsGuest,
   language,
+  isModal,
+  onSuccess,
 }: LoginPageProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -483,6 +487,54 @@ export function LoginPage({
     dispatch({ type: "CANCEL_TWO_FACTOR" });
   };
 
+  const formComponent = (
+    <LoginForm
+      language={language}
+      isSignUp={state.mode === "signUp"}
+      showGoogleAuth={googleAuthEnabled}
+      isLoading={state.isLoading}
+      generalError={state.generalError}
+      canSubmit={canSubmit}
+      values={state.values}
+      errors={state.errors}
+      copy={copy}
+      focusedField={state.focusedField}
+      showPassword={state.showPassword}
+      showConfirmPassword={state.showConfirmPassword}
+      isTwoFactorStep={state.step === "twoFactor"}
+      twoFactorCode={state.twoFactorCode}
+      onSubmit={handleSubmit}
+      onToggleAuthMode={toggleAuthMode}
+      onForgotPassword={() => {
+        if (isModal) {
+          onSuccess?.();
+        }
+        navigate("/forgot-password");
+      }}
+      onContinueWithGoogle={handleGoogleAuth}
+      onContinueAsGuest={onContinueAsGuest}
+      onCancelTwoFactor={handleCancelTwoFactor}
+      onTwoFactorCodeChange={(value) =>
+        dispatch({
+          type: "SET_TWO_FACTOR_CODE",
+          code: normalizeTwoFactorCode(value),
+        })
+      }
+      onFieldChange={setFieldValue}
+      onFieldFocus={handleFieldFocus}
+      onFieldBlur={handleFieldBlur}
+      onTogglePasswordVisibility={() => dispatch({ type: "TOGGLE_PASSWORD" })}
+      onToggleConfirmPasswordVisibility={() =>
+        dispatch({ type: "TOGGLE_CONFIRM_PASSWORD" })
+      }
+      isModal={isModal}
+    />
+  );
+
+  if (isModal) {
+    return formComponent;
+  }
+
   return (
     <PageShell tone="account">
       <SubpageHeader
@@ -491,41 +543,7 @@ export function LoginPage({
         backLabel={isRTL ? "العودة إلى السوق" : "Back to marketplace"}
         onLogoClick={() => navigate("/")}
       />
-      <LoginForm
-        language={language}
-        isSignUp={state.mode === "signUp"}
-        showGoogleAuth={googleAuthEnabled}
-        isLoading={state.isLoading}
-        generalError={state.generalError}
-        canSubmit={canSubmit}
-        values={state.values}
-        errors={state.errors}
-        copy={copy}
-        focusedField={state.focusedField}
-        showPassword={state.showPassword}
-        showConfirmPassword={state.showConfirmPassword}
-        isTwoFactorStep={state.step === "twoFactor"}
-        twoFactorCode={state.twoFactorCode}
-        onSubmit={handleSubmit}
-        onToggleAuthMode={toggleAuthMode}
-        onForgotPassword={() => navigate("/forgot-password")}
-        onContinueWithGoogle={handleGoogleAuth}
-        onContinueAsGuest={onContinueAsGuest}
-        onCancelTwoFactor={handleCancelTwoFactor}
-        onTwoFactorCodeChange={(value) =>
-          dispatch({
-            type: "SET_TWO_FACTOR_CODE",
-            code: normalizeTwoFactorCode(value),
-          })
-        }
-        onFieldChange={setFieldValue}
-        onFieldFocus={handleFieldFocus}
-        onFieldBlur={handleFieldBlur}
-        onTogglePasswordVisibility={() => dispatch({ type: "TOGGLE_PASSWORD" })}
-        onToggleConfirmPasswordVisibility={() =>
-          dispatch({ type: "TOGGLE_CONFIRM_PASSWORD" })
-        }
-      />
+      {formComponent}
     </PageShell>
   );
 }

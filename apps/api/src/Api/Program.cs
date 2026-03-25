@@ -20,7 +20,9 @@ using TijarahJo.Api.Common.Health;
 using TijarahJo.Api.Common.Services;
 using TijarahJo.Api.Startup;
 
+Console.WriteLine("--> STARTING PROGRAM.CS");
 var builder = WebApplication.CreateBuilder(args);
+Console.WriteLine("--> WebApplication.CreateBuilder FINISHED");
 
 
 // ---------------------------------------------------------------------------

@@ -17,9 +17,32 @@ import {
   toAuthFailure,
 } from "./authHelpers";
 
+function normalizeLocalGoogleAuthBackendHost(rawBackendHost: string): string {
+  if (!rawBackendHost) {
+    return rawBackendHost;
+  }
+
+  try {
+    const parsed = new URL(rawBackendHost);
+
+    // Google OAuth state/nonce cookies are host-bound. The backend callback is
+    // configured for localhost in local development, so normalize loopback auth
+    // starts to localhost as well and avoid 127.0.0.1/localhost cookie splits.
+    if (parsed.hostname === "127.0.0.1" || parsed.hostname === "::1") {
+      parsed.hostname = "localhost";
+    }
+
+    return parsed.origin;
+  } catch {
+    return rawBackendHost;
+  }
+}
+
 function buildGoogleAuthStartUrl(mode: "login" | "signup"): string {
   const normalizedMode = mode === "signup" ? "signup" : "login";
-  const backendHost = APP_CONFIG.backendHostUrl.replace(/\/+$/, "");
+  const backendHost = normalizeLocalGoogleAuthBackendHost(
+    APP_CONFIG.backendHostUrl.replace(/\/+$/, ""),
+  );
   const path = `/api/v1/auth/google/start?mode=${encodeURIComponent(
     normalizedMode,
   )}`;

@@ -10,5 +10,6 @@ public sealed class EmailTwoFactorOptions
     public string Password { get; set; } = string.Empty;
     public string FromAddress { get; set; } = "noreply@tijarahjo.local";
     public string FromName { get; set; } = "TijarahJo Security";
+    public string ResendApiKey { get; set; } = string.Empty;
     public bool LogCodesWhenEmailDisabled { get; set; } = true;
 }

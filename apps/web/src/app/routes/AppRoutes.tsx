@@ -11,6 +11,7 @@ import { useAppSettings } from "../../contexts/AppSettingsContext";
 import { useUserProfileContext } from "../../contexts/UserProfileContext";
 import { LoginPromptModal } from "../../features/auth/components/LoginPromptModal";
 import { useState } from "react";
+import { applyLoginUserDataToProfile } from "./appRoutesUtils";
 
 export function AppRoutes() {
   const navigate = useNavigate();
@@ -81,6 +82,16 @@ export function AppRoutes() {
         isOpen={showAuthModal} 
         onClose={() => setShowAuthModal(false)} 
         language={language}
+        onLogin={(userData) => {
+          setUserProfile(
+            applyLoginUserDataToProfile(userProfile, userData),
+          );
+          if (userData.role === "admin") {
+            navigate("/admin", { replace: true });
+          }
+          setShowAuthModal(false);
+        }}
+        onContinueAsGuest={() => setShowAuthModal(false)}
       />
     </Suspense>
   );

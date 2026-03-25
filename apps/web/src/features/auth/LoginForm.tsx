@@ -51,6 +51,7 @@ interface LoginFormProps {
   onFieldBlur: (field: LoginField) => void;
   onTogglePasswordVisibility: () => void;
   onToggleConfirmPasswordVisibility: () => void;
+  isModal?: boolean;
 }
 
 export function LoginForm({
@@ -80,6 +81,7 @@ export function LoginForm({
   onFieldBlur,
   onTogglePasswordVisibility,
   onToggleConfirmPasswordVisibility,
+  isModal,
 }: LoginFormProps) {
   const isRTL = language === "ar";
 
@@ -93,70 +95,67 @@ export function LoginForm({
     ? "bg-primary text-primary-foreground hover:bg-primary/90"
     : "bg-muted text-muted-foreground cursor-not-allowed opacity-70 hover:bg-muted";
 
-  return (
-    <AuthPageLayout
-      direction={isRTL ? "rtl" : "ltr"}
-      title={
-        isTwoFactorStep
-          ? copy.form.twoFactorTitle
-          : isSignUp
-            ? copy.form.signUpTitle
-            : copy.form.signInTitle
-      }
-      subtitle={
-        isTwoFactorStep
-          ? copy.form.twoFactorSubtitle
-          : isSignUp
-            ? copy.form.signUpSubtitle
-            : copy.form.signInSubtitle
-      }
-      footer={
-        <>
-          {!isTwoFactorStep && (
-            <div className="mt-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                {isSignUp
-                  ? copy.form.alreadyHaveAccount
-                  : copy.form.dontHaveAccount}{" "}
-                <button
-                  type="button"
-                  onClick={onToggleAuthMode}
-                  className="font-medium text-primary hover:underline"
-                >
-                  {isSignUp ? copy.form.signInLink : copy.form.signUpLink}
-                </button>
-              </p>
-            </div>
-          )}
+  const title = isTwoFactorStep
+    ? copy.form.twoFactorTitle
+    : isSignUp
+      ? copy.form.signUpTitle
+      : copy.form.signInTitle;
 
-          {!isTwoFactorStep && (
-            <div className="mt-4 text-center">
-              <button
-                type="button"
-                onClick={onContinueAsGuest}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {copy.form.continueAsGuest}
-              </button>
-            </div>
-          )}
-        </>
-      }
-    >
-          {generalError && (
-            <Alert
-              variant="destructive"
-              className="mb-4 sm:mb-6"
-              aria-live="polite"
+  const subtitle = isTwoFactorStep
+    ? copy.form.twoFactorSubtitle
+    : isSignUp
+      ? copy.form.signUpSubtitle
+      : copy.form.signInSubtitle;
+
+  const footer = (
+    <>
+      {!isTwoFactorStep && (
+        <div className="mt-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            {isSignUp
+              ? copy.form.alreadyHaveAccount
+              : copy.form.dontHaveAccount}{" "}
+            <button
+              type="button"
+              onClick={onToggleAuthMode}
+              className="font-medium text-primary hover:underline"
             >
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-sm">
-                {generalError}
-              </AlertDescription>
-            </Alert>
-          )}
+              {isSignUp ? copy.form.signInLink : copy.form.signUpLink}
+            </button>
+          </p>
+        </div>
+      )}
 
-          <form
+      {!isTwoFactorStep && (
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            onClick={onContinueAsGuest}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {copy.form.continueAsGuest}
+          </button>
+        </div>
+      )}
+    </>
+  );
+
+  const formContent = (
+    <>
+      {generalError && (
+        <Alert
+          variant="destructive"
+          className="mb-4 sm:mb-6"
+          aria-live="polite"
+        >
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-sm">
+            {generalError}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <form
             onSubmit={onSubmit}
             className="space-y-4 sm:space-y-5"
             autoComplete="off"
@@ -419,7 +418,34 @@ export function LoginForm({
               </Button>
             )}
           </form>
+    </>
+  );
 
+  if (isModal) {
+    return (
+      <div dir={isRTL ? "rtl" : "ltr"} className="flex flex-col w-full pb-4 items-stretch text-left rtl:text-right">
+        <div className="flex flex-col space-y-2 mb-6 text-left rtl:text-right">
+          <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
+            {title}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {subtitle}
+          </p>
+        </div>
+        {formContent}
+        {footer}
+      </div>
+    );
+  }
+
+  return (
+    <AuthPageLayout
+      direction={isRTL ? "rtl" : "ltr"}
+      title={title}
+      subtitle={subtitle}
+      footer={footer}
+    >
+      {formContent}
     </AuthPageLayout>
   );
 }

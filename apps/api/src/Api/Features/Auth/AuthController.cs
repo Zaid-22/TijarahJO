@@ -24,8 +24,8 @@ public class AuthController(
     IUserQueryHandler userQueries,
     IRoleService roles,
     TwoFactorService twoFactorService,
+    IEmailTwoFactorSender emailSender,
     ITokenBlacklistService tokenBlacklistService,
-    IBackgroundJobService backgroundJobService,
     ILogger<AuthController> logger) : ControllerBase
 {
     private readonly ITokenService _tokenService = tokenService;
@@ -33,8 +33,8 @@ public class AuthController(
     private readonly IUserQueryHandler _userQueries = userQueries;
     private readonly IRoleService _roles = roles;
     private readonly TwoFactorService _twoFactorService = twoFactorService;
+    private readonly IEmailTwoFactorSender _emailSender = emailSender;
     private readonly ITokenBlacklistService _tokenBlacklistService = tokenBlacklistService;
-    private readonly IBackgroundJobService _backgroundJobService = backgroundJobService;
     private readonly ILogger<AuthController> _logger = logger;
 
     [HttpPost("login")]
@@ -67,19 +67,38 @@ public class AuthController(
         if (result.User.TwoFactorEnabled)
         {
             string code = _twoFactorService.GenerateAndStoreLoginCode(result.User.UserID.Value);
-            
-            await _backgroundJobService.EnqueueAsync(async (sp, ct) =>
-            {
-                var sender = sp.GetRequiredService<IEmailTwoFactorSender>();
-                await sender.SendTwoFactorCodeAsync(
-                    result.User.Email,
-                    result.User.FirstName,
-                    code,
-                    TimeSpan.FromSeconds(900),
-                    ct);
-            }, cancellationToken);
 
-            return Ok(AuthShared.BuildTwoFactorChallengeResponse(_twoFactorService, result.User.UserID.Value));
+            EmailTwoFactorSendResult sendResult = await _emailSender.SendTwoFactorCodeAsync(
+                result.User.Email,
+                result.User.FirstName,
+                code,
+                TimeSpan.FromSeconds(900),
+                cancellationToken
+            );
+
+            if (!sendResult.Delivered)
+            {
+                _logger.LogWarning(
+                    "Two-factor login code delivery failed for user {UserId}: {FailureMessage}",
+                    result.User.UserID.Value,
+                    sendResult.FailureMessage
+                );
+
+                return Problem(
+                    statusCode: StatusCodes.Status503ServiceUnavailable,
+                    detail: sendResult.FailureMessage ?? "Two-factor email could not be sent."
+                );
+            }
+
+            string message = sendResult.DebugCode is { Length: > 0 }
+                ? $"Two-factor verification is required. Development code: {sendResult.DebugCode}"
+                : "Two-factor verification is required.";
+
+            return Ok(AuthShared.BuildTwoFactorChallengeResponse(
+                _twoFactorService,
+                result.User.UserID.Value,
+                message
+            ));
         }
 
         return Ok(AuthShared.CreateAuthenticatedResponse(_tokenService, Response, result.User, result.RoleName));

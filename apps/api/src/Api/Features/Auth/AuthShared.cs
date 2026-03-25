@@ -53,7 +53,9 @@ internal static class AuthShared
     }
 
     public static AuthResponse BuildTwoFactorChallengeResponse(
-        TwoFactorService twoFactorService, int userId)
+        TwoFactorService twoFactorService,
+        int userId,
+        string? message = null)
     {
         string challengeToken = twoFactorService.IssueLoginChallengeToken(userId, DateTimeOffset.UtcNow);
         return new AuthResponse
@@ -61,7 +63,9 @@ internal static class AuthShared
             Success = true,
             RequiresTwoFactor = true,
             TwoFactorToken = challengeToken,
-            Message = "Two-factor verification is required."
+            Message = string.IsNullOrWhiteSpace(message)
+                ? "Two-factor verification is required."
+                : message.Trim()
         };
     }
 
