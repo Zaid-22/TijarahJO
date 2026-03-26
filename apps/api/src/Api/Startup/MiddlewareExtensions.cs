@@ -9,10 +9,12 @@ namespace TijarahJo.Api.Startup;
 
 public static class MiddlewareExtensions
 {
+    private static readonly JsonSerializerOptions ProblemJsonOptions = new(JsonSerializerDefaults.Web);
+
     private static Task WriteProblemDetailsAsync(HttpResponse response, ProblemDetails problem, CancellationToken cancellationToken = default)
     {
         response.ContentType = "application/problem+json";
-        return response.WriteAsJsonAsync(problem, cancellationToken);
+        return JsonSerializer.SerializeAsync(response.Body, problem, ProblemJsonOptions, cancellationToken);
     }
 
     public static WebApplication UseTijarahJoExceptionHandler(this WebApplication app)
