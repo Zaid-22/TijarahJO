@@ -5,6 +5,9 @@ namespace TijarahJo.Application.Services;
 
 public sealed class ChatOrchestrationService : IChatOrchestrationService
 {
+    private const int MaxMessageContentLength = 4000;
+    private const string ChatImagePrefix = "[chat-image]";
+
     private readonly IMessageService _messages;
     private readonly INotificationService _notifications;
     private readonly IChatPresenceLookup _presenceLookup;
@@ -175,6 +178,16 @@ public sealed class ChatOrchestrationService : IChatOrchestrationService
             return Failure<SendChatMessageOutcome>(ChatFailureReason.InvalidRequest, "Message content is required.");
         }
 
+        if (content.Length > MaxMessageContentLength)
+        {
+            return Failure<SendChatMessageOutcome>(ChatFailureReason.InvalidRequest, "Message content exceeds the maximum length.");
+        }
+
+        if (ContainsInlineImagePayload(content))
+        {
+            return Failure<SendChatMessageOutcome>(ChatFailureReason.InvalidRequest, "Inline image payloads are not allowed. Upload the image first.");
+        }
+
         int conversationId;
         int receiverId;
         int? postId = command.PostId;
@@ -298,6 +311,34 @@ public sealed class ChatOrchestrationService : IChatOrchestrationService
                 Notification = notification
             }
         };
+    }
+
+    private static bool ContainsInlineImagePayload(string content)
+    {
+        string trimmed = content.Trim();
+        if (trimmed.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.StartsWith("blob:", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (!trimmed.StartsWith(ChatImagePrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        string payload = trimmed[ChatImagePrefix.Length..].Trim();
+        if (payload.Length == 0)
+        {
+            return false;
+        }
+
+        string firstLine = payload
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault() ?? string.Empty;
+
+        return firstLine.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) ||
+               firstLine.StartsWith("blob:", StringComparison.OrdinalIgnoreCase);
     }
 
     public Task<ChatServiceResult<SendChatMessageOutcome>> SendRealtimeMessageAsync(

@@ -28,10 +28,6 @@ function isLikelyImageUrl(value: string): boolean {
     return false;
   }
 
-  if (trimmed.startsWith("data:image/")) {
-    return true;
-  }
-
   if (trimmed.startsWith("/uploads/")) {
     return true;
   }
@@ -58,11 +54,7 @@ function resolveImageUrl(value: string): string {
     return "";
   }
 
-  if (
-    trimmed.startsWith("data:image/") ||
-    trimmed.startsWith("blob:") ||
-    isHttpUrl(trimmed)
-  ) {
+  if (isHttpUrl(trimmed)) {
     return trimmed;
   }
 

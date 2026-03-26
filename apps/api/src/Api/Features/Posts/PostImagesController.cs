@@ -145,7 +145,24 @@ public class PostImagesController : ControllerBase
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Image file is required.");
         }
 
+        try
+        {
+            _postImageStorage.ValidateFileOrThrow(request.File);
+        }
+        catch (ArgumentException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: ex.Message);
+        }
+
         ModerationResult moderationResult = await _imageModeration.CheckImageAsync(request.File);
+        if (moderationResult.IsUnavailable)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                detail: moderationResult.FailureReason ?? "Image moderation service is unavailable."
+            );
+        }
+
         if (moderationResult.IsFlagged)
         {
             _logger.LogWarning("User {UserId} attempted to upload a flagged image (Adult: {Adult}, Violence: {Violence}).", currentUserId, moderationResult.RawAdult, moderationResult.RawViolence);

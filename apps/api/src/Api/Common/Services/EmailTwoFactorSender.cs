@@ -49,24 +49,24 @@ public sealed class EmailTwoFactorSender(
 
         if (!IsApiConfigured())
         {
-            if (_options.LogCodesWhenEmailDisabled)
-            {
-                _logger.LogInformation(
-                    "Two-Factor email transport disabled. Recipient={Recipient} Code={Code} TTLMinutes={TtlMinutes}",
-                    recipientEmail,
-                    code,
-                    Math.Max(1, (int)Math.Round(ttl.TotalMinutes))
-                );
-            }
-
             if (_hostEnvironment.IsDevelopment() && _options.LogCodesWhenEmailDisabled)
             {
+                _logger.LogInformation(
+                    "Two-factor email transport disabled in development. Recipient={Recipient} TTLMinutes={TtlMinutes}",
+                    recipientEmail,
+                    Math.Max(1, (int)Math.Round(ttl.TotalMinutes))
+                );
                 return new EmailTwoFactorSendResult(
                     true,
                     DebugCode: code,
                     UsedDevelopmentFallback: true
                 );
             }
+
+            _logger.LogWarning(
+                "Two-factor email transport is not configured. Recipient={Recipient}",
+                recipientEmail
+            );
 
             return new EmailTwoFactorSendResult(
                 false,
@@ -129,9 +129,8 @@ public sealed class EmailTwoFactorSender(
             if (_hostEnvironment.IsDevelopment() && _options.LogCodesWhenEmailDisabled)
             {
                 _logger.LogInformation(
-                    "Using development fallback for two-factor code delivery. Recipient={Recipient} Code={Code}",
-                    recipientEmail,
-                    code
+                    "Using development fallback for two-factor code delivery. Recipient={Recipient}",
+                    recipientEmail
                 );
                 return new EmailTwoFactorSendResult(
                     true,
