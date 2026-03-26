@@ -213,7 +213,7 @@ if (featureFlags.EnableRateLimiting)
             string partition = RateLimitPartitionResolver.Resolve(httpContext);
             return RateLimitPartition.GetFixedWindowLimiter($"auth:{partition}", _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 10,
+                PermitLimit = 30,
                 Window = TimeSpan.FromMinutes(1),
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit = 0
