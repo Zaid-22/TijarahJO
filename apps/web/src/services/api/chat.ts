@@ -126,13 +126,29 @@ export const chatApi = {
     return null;
   },
 
-  uploadImage: async (file: File): Promise<string | null> => {
+  uploadImage: async (
+    file: File,
+    receiverId: number,
+    postId?: number,
+  ): Promise<string | null> => {
     if (!(file instanceof File) || file.size <= 0) {
       return null;
     }
 
+    const normalizedReceiverId = normalizeChatUserId(receiverId);
+    if (!normalizedReceiverId) {
+      return null;
+    }
+
+    const normalizedPostId =
+      postId === undefined ? undefined : normalizeChatUserId(postId);
+
     const formData = new FormData();
     formData.append("File", file);
+    formData.append("ReceiverId", String(normalizedReceiverId));
+    if (normalizedPostId) {
+      formData.append("PostId", String(normalizedPostId));
+    }
 
     const response = await apiRequest<unknown>("/chat/upload-image", {
       method: "POST",
