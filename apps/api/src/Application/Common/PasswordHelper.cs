@@ -34,7 +34,7 @@ public static class PasswordHelper
         return Convert.ToBase64String(hash);
     }
 
-    public static bool VerifyPassword(string password, string hashedPassword)
+    public static bool VerifyPassword(string password, string hashedPassword, bool allowLegacyHashFallback = false)
     {
         ValidatePassword(password);
 
@@ -52,6 +52,11 @@ public static class PasswordHelper
         if (!string.IsNullOrEmpty(pepperHash) && FixedTimeEquals(pepperHash, hashedPassword))
         {
             return true;
+        }
+
+        if (!allowLegacyHashFallback)
+        {
+            return false;
         }
 
         string legacyHash = HashPasswordLegacy(password);
