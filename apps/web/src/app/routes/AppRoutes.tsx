@@ -18,7 +18,7 @@ export function AppRoutes() {
   const location = useLocation();
 
   const { language, darkMode, setDarkMode, toggleLanguage } = useAppSettings();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, loading: isAuthLoading } = useAuth();
   const { userProfile, setUserProfile, currentUserDisplayName } =
     useUserProfileContext();
   const { activeSearchQuery } = useSearch();
@@ -46,7 +46,9 @@ export function AppRoutes() {
 
   const redirectToLogin = () => navigate("/login");
   const requireAuth = (element: ReactElement) =>
-    isAuthenticated ? (
+    isAuthLoading ? (
+      <LoadingState minHeightClassName="min-h-[40vh]" />
+    ) : isAuthenticated ? (
       element
     ) : (
       <Navigate
