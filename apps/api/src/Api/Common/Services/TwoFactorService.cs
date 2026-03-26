@@ -24,16 +24,18 @@ public sealed class TwoFactorService
     {
         _options = optionsAccessor.Value ?? new TwoFactorOptions();
 
-        string baseKey = string.IsNullOrWhiteSpace(jwtOptions.SigningKey)
-            ? throw new InvalidOperationException("JWT signing key is required to derive 2FA keys.")
-            : jwtOptions.SigningKey;
-
-        string secretKeyMaterial = string.IsNullOrWhiteSpace(_options.SecretEncryptionKey)
-            ? $"twofactor-secret::{baseKey}"
-            : _options.SecretEncryptionKey.Trim();
-        string challengeKeyMaterial = string.IsNullOrWhiteSpace(_options.ChallengeSigningKey)
-            ? $"twofactor-challenge::{baseKey}"
-            : _options.ChallengeSigningKey.Trim();
+        string secretKeyMaterial = ResolveTwoFactorKeyMaterial(
+            _options.SecretEncryptionKey,
+            jwtOptions.SigningKey,
+            "TwoFactor:SecretEncryptionKey",
+            "twofactor-secret"
+        );
+        string challengeKeyMaterial = ResolveTwoFactorKeyMaterial(
+            _options.ChallengeSigningKey,
+            jwtOptions.SigningKey,
+            "TwoFactor:ChallengeSigningKey",
+            "twofactor-challenge"
+        );
 
         _secretEncryptionKey = SHA256.HashData(Encoding.UTF8.GetBytes(secretKeyMaterial));
         _challengeSigningKey = SHA256.HashData(Encoding.UTF8.GetBytes(challengeKeyMaterial));
@@ -41,6 +43,41 @@ public sealed class TwoFactorService
         _options.Digits = Math.Clamp(_options.Digits, 6, 8);
         _options.LoginChallengeLifetimeSeconds = Math.Clamp(_options.LoginChallengeLifetimeSeconds, 60, 900);
         _options.Issuer = string.IsNullOrWhiteSpace(_options.Issuer) ? "TijarahJo" : _options.Issuer.Trim();
+    }
+
+    internal static string ResolveTwoFactorKeyMaterial(
+        string? configuredKey,
+        string? jwtSigningKey,
+        string configurationName,
+        string fallbackPurposePrefix)
+    {
+        if (!string.IsNullOrWhiteSpace(configuredKey))
+        {
+            return configuredKey.Trim();
+        }
+
+        if (IsDevelopmentEnvironment())
+        {
+            if (string.IsNullOrWhiteSpace(jwtSigningKey))
+            {
+                throw new InvalidOperationException(
+                    $"JWT signing key is required to derive a development fallback for {configurationName}.");
+            }
+
+            return $"{fallbackPurposePrefix}::{jwtSigningKey}";
+        }
+
+        throw new InvalidOperationException(
+            $"{configurationName} must be configured outside development. Do not reuse the JWT signing key for 2FA secrets.");
+    }
+
+    private static bool IsDevelopmentEnvironment()
+    {
+        string? environmentName =
+            Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ??
+            Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
+
+        return string.Equals(environmentName, "Development", StringComparison.OrdinalIgnoreCase);
     }
 
     public string Issuer => _options.Issuer;
