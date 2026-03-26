@@ -2,6 +2,7 @@ import type { Category } from "../../../types/api";
 import { asRecord, readString } from "../normalizers";
 import { toPositiveIntegerId } from "../../../utils/idValidation";
 import { COLORS } from "../../../constants/colors";
+import { APP_CONFIG } from "../../../constants/appConfig";
 
 type RawCategory = {
   CategoryID?: unknown;
@@ -162,7 +163,13 @@ export function normalizeCategory(
     color:
       readString(categoryModel.Color ?? categoryModel.color) ||
       DEFAULT_CATEGORY_COLOR,
-    image: readString(categoryModel.Image ?? categoryModel.image),
+    image: (() => {
+      const img = readString(categoryModel.Image ?? categoryModel.image) || "";
+      if (img.startsWith("/")) {
+        return `${APP_CONFIG.backendHostUrl}${img}`;
+      }
+      return img;
+    })(),
     postCount: 0,
   };
 }
