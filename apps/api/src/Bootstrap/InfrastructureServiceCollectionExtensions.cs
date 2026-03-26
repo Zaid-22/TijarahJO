@@ -16,6 +16,41 @@ namespace TijarahJo.Bootstrap;
 
 public static class InfrastructureServiceCollectionExtensions
 {
+    private static string ResolveTwoFactorKeyMaterial(
+        string? configuredKey,
+        string? jwtSigningKey,
+        string configurationName,
+        string fallbackPurposePrefix)
+    {
+        if (!string.IsNullOrWhiteSpace(configuredKey))
+        {
+            return configuredKey.Trim();
+        }
+
+        if (IsDevelopmentEnvironment())
+        {
+            if (string.IsNullOrWhiteSpace(jwtSigningKey))
+            {
+                throw new InvalidOperationException(
+                    $"JWT signing key is required to derive a development fallback for {configurationName}.");
+            }
+
+            return $"{fallbackPurposePrefix}::{jwtSigningKey}";
+        }
+
+        throw new InvalidOperationException(
+            $"{configurationName} must be configured outside development. Do not reuse the JWT signing key for 2FA secrets.");
+    }
+
+    private static bool IsDevelopmentEnvironment()
+    {
+        string? environmentName =
+            Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ??
+            Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
+
+        return string.Equals(environmentName, "Development", StringComparison.OrdinalIgnoreCase);
+    }
+
     public static IServiceCollection AddTijarahJoInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -41,7 +76,7 @@ public static class InfrastructureServiceCollectionExtensions
         string? twoFactorEncKey = configuration["TwoFactor:SecretEncryptionKey"];
         string? jwtKey = configuration["JWT:SigningKey"]
                          ?? Environment.GetEnvironmentVariable("JWT_SIGNING_KEY");
-        string secretKeyMaterial = TijarahJo.Api.Common.Services.TwoFactorService.ResolveTwoFactorKeyMaterial(
+        string secretKeyMaterial = ResolveTwoFactorKeyMaterial(
             twoFactorEncKey,
             jwtKey,
             "TwoFactor:SecretEncryptionKey",
