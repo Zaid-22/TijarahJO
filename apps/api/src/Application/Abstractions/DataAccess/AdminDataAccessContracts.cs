@@ -55,9 +55,27 @@ public sealed class AdminPostListResult
 
 public sealed class AdminUserDetails
 {
-    public TijarahJo.Domain.Models.UserModel? User { get; init; }
+    public AdminUserProfile? User { get; init; }
     public System.Collections.Generic.IReadOnlyList<AdminPostItem> RecentPosts { get; init; } = System.Array.Empty<AdminPostItem>();
     public System.Collections.Generic.IReadOnlyList<TijarahJo.Domain.Models.ReviewModel> RecentReviews { get; init; } = System.Array.Empty<TijarahJo.Domain.Models.ReviewModel>();
+}
+
+public sealed class AdminUserProfile
+{
+    public int UserID { get; init; }
+    public string Email { get; init; } = string.Empty;
+    public string FirstName { get; init; } = string.Empty;
+    public string LastName { get; init; } = string.Empty;
+    public string? Phone { get; init; }
+    public int? CityID { get; init; }
+    public int? AreaID { get; init; }
+    public string? Bio { get; init; }
+    public string? Avatar { get; init; }
+    public System.DateTime JoinDate { get; init; }
+    public int Status { get; init; }
+    public int RoleID { get; init; }
+    public bool IsDeleted { get; init; }
+    public bool TwoFactorEnabled { get; init; }
 }
 
 // ── Phase 2: Reviews Moderation ──

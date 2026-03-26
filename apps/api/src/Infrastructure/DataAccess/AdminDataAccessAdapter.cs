@@ -188,30 +188,27 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
                 r.CreatedAt))
             .ToListAsync(cancellationToken);
 
-        var userModel = new TijarahJo.Domain.Models.UserModel(
-            userEntity.UserID,
-            userEntity.HashedPassword,
-
-            userEntity.Email,
-            userEntity.FirstName,
-            userEntity.LastName ?? string.Empty,
-            userEntity.Phone,
-            userEntity.CityID,
-            userEntity.AreaID,
-            userEntity.Bio,
-            userEntity.Avatar,
-            userEntity.JoinDate,
-            userEntity.Status,
-            userEntity.RoleID,
-            userEntity.IsDeleted,
-            userEntity.TwoFactorEnabled,
-            userEntity.TwoFactorSecret,
-            userEntity.TwoFactorPendingSecret
-        );
+        var userProfile = new AdminUserProfile
+        {
+            UserID = userEntity.UserID,
+            Email = userEntity.Email,
+            FirstName = userEntity.FirstName,
+            LastName = userEntity.LastName ?? string.Empty,
+            Phone = userEntity.Phone,
+            CityID = userEntity.CityID,
+            AreaID = userEntity.AreaID,
+            Bio = userEntity.Bio,
+            Avatar = userEntity.Avatar,
+            JoinDate = userEntity.JoinDate,
+            Status = userEntity.Status,
+            RoleID = userEntity.RoleID,
+            IsDeleted = userEntity.IsDeleted,
+            TwoFactorEnabled = userEntity.TwoFactorEnabled
+        };
 
         return new AdminUserDetails
         {
-            User = userModel,
+            User = userProfile,
             RecentPosts = recentPosts,
             RecentReviews = recentReviews
         };
