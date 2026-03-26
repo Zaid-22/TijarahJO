@@ -1,7 +1,10 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.Options;
 using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Api.Common.Configuration;
 using TijarahJo.Api.Common.Services;
 using TijarahJo.Api.Common.Utils;
 using TijarahJo.Api.Contracts.Requests;
@@ -18,15 +21,22 @@ public class ChatController : ControllerBase
     private readonly IChatOrchestrationService _chat;
     private readonly IChatRealtimeDeliveryService _realtimeDelivery;
     private readonly IPostImageFileStorageService _postImageStorage;
+    private readonly IWebHostEnvironment _environment;
+    private readonly FileStorageOptions _fileStorageOptions;
+    private static readonly FileExtensionContentTypeProvider ContentTypeProvider = new();
 
     public ChatController(
         IChatOrchestrationService chat,
         IChatRealtimeDeliveryService realtimeDelivery,
-        IPostImageFileStorageService postImageStorage)
+        IPostImageFileStorageService postImageStorage,
+        IWebHostEnvironment environment,
+        IOptions<FileStorageOptions> fileStorageOptions)
     {
         _chat = chat;
         _realtimeDelivery = realtimeDelivery;
         _postImageStorage = postImageStorage;
+        _environment = environment;
+        _fileStorageOptions = fileStorageOptions.Value;
     }
 
     [HttpGet("history/{otherUserId}")]
@@ -192,32 +202,45 @@ public class ChatController : ControllerBase
 
         try
         {
-            if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri))
+            if (Uri.TryCreate(url, UriKind.Absolute, out Uri? absoluteUri))
             {
-                return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid URL format.");
+                bool isHttpScheme =
+                    absoluteUri.Scheme == Uri.UriSchemeHttp ||
+                    absoluteUri.Scheme == Uri.UriSchemeHttps;
+                if (!isHttpScheme ||
+                    !absoluteUri.Host.Equals(Request.Host.Host, StringComparison.OrdinalIgnoreCase))
+                {
+                    return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Unsupported image URL.");
+                }
             }
 
-            using var client = new HttpClient();
-            var response = await client.GetAsync(uri, cancellationToken);
-            
-            if (!response.IsSuccessStatusCode)
+            if (!LocalPostImageFileStorageService.TryResolveAbsoluteStoredFilePath(
+                url,
+                _environment.ContentRootPath,
+                _fileStorageOptions,
+                out string absoluteFilePath))
+            {
+                return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Unsupported image URL.");
+            }
+
+            if (!System.IO.File.Exists(absoluteFilePath))
             {
                 return NotFound();
             }
 
-            var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            var memoryStream = new MemoryStream();
-            await stream.CopyToAsync(memoryStream, cancellationToken);
-            memoryStream.Position = 0;
-
-            var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
-            var fileName = Path.GetFileName(uri.AbsolutePath);
+            string fileName = Path.GetFileName(absoluteFilePath);
             if (string.IsNullOrWhiteSpace(fileName))
             {
                 fileName = "chat-image.jpg";
             }
 
-            return File(memoryStream, contentType, fileName);
+            if (!ContentTypeProvider.TryGetContentType(fileName, out string? contentType))
+            {
+                contentType = "application/octet-stream";
+            }
+
+            byte[] fileBytes = await System.IO.File.ReadAllBytesAsync(absoluteFilePath, cancellationToken);
+            return File(fileBytes, contentType, fileName);
         }
         catch (Exception)
         {
