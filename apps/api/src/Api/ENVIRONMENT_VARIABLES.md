@@ -60,14 +60,15 @@ EmailTwoFactor__FromName=TijarahJo Security
 EmailTwoFactor__LogCodesWhenEmailDisabled=false
 ```
 
-#### Two-Factor Authentication Configuration (Optional)
+#### Two-Factor Authentication Configuration
 ```bash
 TwoFactor__Issuer=TijarahJo
 TwoFactor__TimeStepSeconds=30
 TwoFactor__AllowedTimeDriftSteps=1
 TwoFactor__Digits=6
 TwoFactor__LoginChallengeLifetimeSeconds=300
-# Optional key overrides (defaults derive from JWT_SIGNING_KEY when omitted)
+# Required outside development. In Development only, these may fall back to
+# values derived from JWT_SIGNING_KEY for local convenience.
 TwoFactor__SecretEncryptionKey=your-random-secret-for-at-rest-totp-encryption
 TwoFactor__ChallengeSigningKey=your-random-secret-for-2fa-login-challenges
 ```
@@ -132,6 +133,8 @@ For local development, you can still use `appsettings.Development.json` or set t
 JWT_SIGNING_KEY=your-local-dev-signing-key
 PASSWORD_PEPPER=your-local-dev-password-pepper
 DATABASE_CONNECTION_STRING=Data Source=localhost;Database=TijarahJoDB;User Id=sa;Password=your-local-dev-db-password;TrustServerCertificate=True;
+TwoFactor__SecretEncryptionKey=your-local-dev-2fa-secret-encryption-key
+TwoFactor__ChallengeSigningKey=your-local-dev-2fa-challenge-signing-key
 ```
 
 ## Runtime Semantics
