@@ -463,7 +463,7 @@ else
   post_update_payload="$(printf "%s" "$post_for_update" | jq '.PostTitle="API test post updated" | .Price=222.22')"
   require_api "posts.update" "PUT" "/api/v1/posts/$new_post_id" "200" "$post_update_payload" "$token2"
 
-  require_api "posts.views.increment" "POST" "/api/v1/posts/$new_post_id/views" "200"
+  require_api "posts.views.increment" "POST" "/api/v1/posts/$new_post_id/views" "204"
   require_api "posts.status.patch" "PATCH" "/api/v1/posts/$new_post_id/status" "200" '{"Status":"ACTIVE"}' "$token2"
   require_api "posts.feed.newpost" "GET" "/api/v1/posts/feed?page=1&limit=100&includeDeleted=false" "200"
   assert_jq "posts.feed.newpost.present" ".success==true and ((.posts|map(.id|tostring)|index(\"$new_post_id\")) != null)"
