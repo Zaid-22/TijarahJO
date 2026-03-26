@@ -30,16 +30,6 @@ public class TwoFactorController(
     private readonly IEmailTwoFactorSender _emailSender = emailSender;
     private readonly ILogger<TwoFactorController> _logger = logger;
 
-    private static string AppendDevelopmentCode(string message, EmailTwoFactorSendResult sendResult)
-    {
-        if (string.IsNullOrWhiteSpace(sendResult.DebugCode))
-        {
-            return message;
-        }
-
-        return $"{message} Development code: {sendResult.DebugCode}";
-    }
-
     [HttpPost("verify-login")]
     [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -152,16 +142,17 @@ public class TwoFactorController(
             }
 
             _logger.LogInformation("[2FA] Disable code email sent to {Email}", user.Email);
+            if (sendResult.DebugCode is { Length: > 0 })
+            {
+                _logger.LogInformation("[2FA] Disable code debug fallback active for {Email}", user.Email);
+            }
 
             return Ok(new TwoFactorSetupStartResponse
             {
                 Success = true,
                 SecretKey = "",
                 OtpAuthUri = "",
-                Message = AppendDevelopmentCode(
-                    "A verification code has been sent to your email to confirm this action.",
-                    sendResult
-                )
+                Message = "A verification code has been sent to your email to confirm this action."
             });
         }
 
@@ -189,6 +180,10 @@ public class TwoFactorController(
         }
 
         _logger.LogInformation("[2FA] Setup code email sent to {Email}", user.Email);
+        if (setupSendResult.DebugCode is { Length: > 0 })
+        {
+            _logger.LogInformation("[2FA] Setup code debug fallback active for {Email}", user.Email);
+        }
 
         user = user with { TwoFactorPendingSecret = "PENDING_EMAIL_SETUP" }; // Just a marker
         bool persisted = await _users.UpdateUserAsync(user, userId, cancellationToken);
@@ -202,10 +197,7 @@ public class TwoFactorController(
             Success = true,
             SecretKey = "",
             OtpAuthUri = "",
-            Message = AppendDevelopmentCode(
-                "A verification code has been sent to your email. Please enter it to confirm.",
-                setupSendResult
-            )
+            Message = "A verification code has been sent to your email. Please enter it to confirm."
         });
     }
 

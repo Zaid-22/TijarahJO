@@ -90,14 +90,18 @@ public class AuthController(
                 );
             }
 
-            string message = sendResult.DebugCode is { Length: > 0 }
-                ? $"Two-factor verification is required. Development code: {sendResult.DebugCode}"
-                : "Two-factor verification is required.";
+            if (sendResult.DebugCode is { Length: > 0 })
+            {
+                _logger.LogInformation(
+                    "Two-factor login debug code issued for user {UserId}.",
+                    result.User.UserID.Value
+                );
+            }
 
             return Ok(AuthShared.BuildTwoFactorChallengeResponse(
                 _twoFactorService,
                 result.User.UserID.Value,
-                message
+                "Two-factor verification is required."
             ));
         }
 

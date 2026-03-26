@@ -88,7 +88,7 @@ public sealed class TwoFactorDeliveryTests
     }
 
     [Fact]
-    public async Task StartTwoFactorSetup_ReturnsDevelopmentCode_WhenFallbackIsUsed()
+    public async Task StartTwoFactorSetup_DoesNotReturnDevelopmentCode_WhenFallbackIsUsed()
     {
         var user = CreateUser(twoFactorEnabled: false, twoFactorSecret: null);
         var users = new FakeUserDataAccess(user);
@@ -114,7 +114,8 @@ public sealed class TwoFactorDeliveryTests
         ActionResult<TwoFactorSetupStartResponse> actionResult = await controller.StartTwoFactorSetup(CancellationToken.None);
 
         TwoFactorSetupStartResponse response = Assert.IsType<TwoFactorSetupStartResponse>(Assert.IsType<OkObjectResult>(actionResult.Result).Value);
-        Assert.Contains("Development code: 123456", response.Message);
+        Assert.DoesNotContain("Development code:", response.Message);
+        Assert.Equal("A verification code has been sent to your email. Please enter it to confirm.", response.Message);
         Assert.True(users.UpdateCalled);
     }
 
