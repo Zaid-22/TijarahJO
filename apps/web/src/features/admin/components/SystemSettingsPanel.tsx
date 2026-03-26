@@ -3,6 +3,7 @@ import { Settings, Save, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../../../shared/ui/button";
 import { Badge } from "../../../shared/ui/badge";
+import { Switch } from "../../../shared/ui/switch";
 import { api } from "../../../services/api";
 import { SystemSettingItem } from "../../../services/api/admin";
 import { logger } from "../../../shared/lib/logger";
@@ -128,33 +129,16 @@ export function SystemSettingsPanel() {
 
               <div className="flex items-center gap-3">
                 {setting.valueType === "bool" ? (
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={editedValues[setting.settingKey] === "true"}
+                  <Switch
+                    checked={editedValues[setting.settingKey] === "true"}
                     aria-label={`Toggle ${setting.label}`}
-                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
-                      editedValues[setting.settingKey] === "true"
-                        ? "bg-primary"
-                        : "bg-muted"
-                    }`}
-                    onClick={() =>
+                    onCheckedChange={(checked) =>
                       handleValueChange(
                         setting.settingKey,
-                        editedValues[setting.settingKey] === "true"
-                          ? "false"
-                          : "true",
+                        checked ? "true" : "false"
                       )
                     }
-                  >
-                    <span
-                      className={`inline-block h-5 w-5 transform rounded-full bg-background shadow-md transition-transform ${
-                        editedValues[setting.settingKey] === "true"
-                          ? "translate-x-6"
-                          : "translate-x-1"
-                      }`}
-                    />
-                  </button>
+                  />
                 ) : (
                   <input
                     type={setting.valueType === "int" ? "number" : "text"}
