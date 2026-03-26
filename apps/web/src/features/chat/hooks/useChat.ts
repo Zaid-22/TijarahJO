@@ -119,8 +119,12 @@ export function useChat(otherUserId?: number) {
     caption?: string,
     postId?: number,
   ): Promise<boolean> => {
+    if (!otherUserId) {
+      return false;
+    }
+
     try {
-      const imageUrl = await api.chat.uploadImage(file);
+      const imageUrl = await api.chat.uploadImage(file, otherUserId, postId);
       if (!imageUrl) {
         setError("Failed to upload image.");
         return false;

@@ -2,7 +2,10 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
+using System.Security.Cryptography;
+using System.Text;
 using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Api.Common.Configuration;
 using TijarahJo.Api.Common.Services;
@@ -19,30 +22,71 @@ namespace TijarahJo.Api.Features.Chat;
 public class ChatController : ControllerBase
 {
     private readonly IChatOrchestrationService _chat;
+    private readonly IMessageService _messages;
     private readonly IChatRealtimeDeliveryService _realtimeDelivery;
     private readonly IPostImageFileStorageService _postImageStorage;
+    private readonly IImageModerationService _imageModeration;
     private readonly IWebHostEnvironment _environment;
     private readonly FileStorageOptions _fileStorageOptions;
+    private readonly ILogger<ChatController> _logger;
+    private readonly byte[] _chatImageSigningKey;
     private static readonly FileExtensionContentTypeProvider ContentTypeProvider = new();
 
     public ChatController(
         IChatOrchestrationService chat,
+        IMessageService messages,
         IChatRealtimeDeliveryService realtimeDelivery,
         IPostImageFileStorageService postImageStorage,
+        IImageModerationService imageModeration,
         IWebHostEnvironment environment,
-        IOptions<FileStorageOptions> fileStorageOptions)
+        IOptions<FileStorageOptions> fileStorageOptions,
+        JwtOptions jwtOptions,
+        ILogger<ChatController> logger)
     {
         _chat = chat;
+        _messages = messages;
         _realtimeDelivery = realtimeDelivery;
         _postImageStorage = postImageStorage;
+        _imageModeration = imageModeration;
         _environment = environment;
         _fileStorageOptions = fileStorageOptions.Value;
+        _logger = logger;
+        _chatImageSigningKey = SHA256.HashData(Encoding.UTF8.GetBytes($"{jwtOptions.SigningKey}::chat-image-download"));
     }
 
-    private string BuildChatImageDownloadUrl(string storedPath)
+    private string BuildChatImageDownloadUrl(string storedPath, int conversationId)
     {
         string encodedPath = Uri.EscapeDataString(storedPath);
-        return $"/api/v1/chat/download-image?url={encodedPath}";
+        string signature = WebEncoders.Base64UrlEncode(ComputeChatImageSignature(storedPath, conversationId));
+        return $"/api/v1/chat/download-image?conversationId={conversationId}&url={encodedPath}&sig={signature}";
+    }
+
+    private byte[] ComputeChatImageSignature(string storedPath, int conversationId)
+    {
+        using var hmac = new HMACSHA256(_chatImageSigningKey);
+        return hmac.ComputeHash(Encoding.UTF8.GetBytes($"{conversationId}:{storedPath.Trim()}"));
+    }
+
+    private bool IsValidChatImageSignature(string storedPath, int conversationId, string? submittedSignature)
+    {
+        if (string.IsNullOrWhiteSpace(submittedSignature))
+        {
+            return false;
+        }
+
+        byte[] providedSignature;
+        try
+        {
+            providedSignature = WebEncoders.Base64UrlDecode(submittedSignature.Trim());
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+
+        byte[] expectedSignature = ComputeChatImageSignature(storedPath, conversationId);
+        return providedSignature.Length == expectedSignature.Length &&
+               CryptographicOperations.FixedTimeEquals(providedSignature, expectedSignature);
     }
 
     [HttpGet("history/{otherUserId}")]
@@ -168,7 +212,7 @@ public class ChatController : ControllerBase
         [FromForm] UploadChatImageRequest request,
         CancellationToken cancellationToken)
     {
-        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int _, out ActionResult? failureResult))
+        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int currentUserId, out ActionResult? failureResult))
         {
             return failureResult!;
         }
@@ -176,6 +220,49 @@ public class ChatController : ControllerBase
         if (request.File == null)
         {
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Image file is required.");
+        }
+
+        if (!request.ReceiverId.HasValue || request.ReceiverId.Value < 1 || request.ReceiverId.Value == currentUserId)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "A valid receiver is required.");
+        }
+
+        try
+        {
+            _postImageStorage.ValidateFileOrThrow(request.File);
+        }
+        catch (ArgumentException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: ex.Message);
+        }
+
+        ModerationResult moderationResult = await _imageModeration.CheckImageAsync(request.File);
+        if (moderationResult.IsUnavailable)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                detail: moderationResult.FailureReason ?? "Image moderation service is unavailable."
+            );
+        }
+
+        if (moderationResult.IsFlagged)
+        {
+            _logger.LogWarning(
+                "User {UserId} attempted to upload a flagged chat image (Adult: {Adult}, Violence: {Violence}).",
+                currentUserId,
+                moderationResult.RawAdult,
+                moderationResult.RawViolence);
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Image rejected by moderation filters (inappropriate content detected).");
+        }
+
+        int? conversationId = await _messages.GetOrCreateConversationIdAsync(
+            currentUserId,
+            request.ReceiverId.Value,
+            request.PostId,
+            cancellationToken);
+        if (!conversationId.HasValue || conversationId.Value < 1)
+        {
+            return Problem(statusCode: StatusCodes.Status500InternalServerError, detail: "Failed to resolve conversation for image upload.");
         }
 
         StoredPostImageFile storedFile;
@@ -190,19 +277,29 @@ public class ChatController : ControllerBase
 
         return Ok(new ChatImageUploadResponseDTO
         {
-            Url = BuildChatImageDownloadUrl(storedFile.PublicUrl)
+            Url = BuildChatImageDownloadUrl(storedFile.PublicUrl, conversationId.Value)
         });
     }
 
     [HttpGet("download-image")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DownloadImage([FromQuery] string url, CancellationToken cancellationToken)
+    public async Task<IActionResult> DownloadImage(
+        [FromQuery] int conversationId,
+        [FromQuery] string url,
+        [FromQuery] string sig,
+        CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(url))
+        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int currentUserId, out ActionResult? failureResult))
         {
-            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "URL is required.");
+            return failureResult!;
+        }
+
+        if (conversationId < 1 || string.IsNullOrWhiteSpace(url))
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Conversation ID and URL are required.");
         }
 
         try
@@ -230,6 +327,16 @@ public class ChatController : ControllerBase
             if (!candidatePath.StartsWith(normalizedChatPrefix, StringComparison.OrdinalIgnoreCase))
             {
                 return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Unsupported image URL.");
+            }
+
+            if (!IsValidChatImageSignature(candidatePath, conversationId, sig))
+            {
+                return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid image signature.");
+            }
+
+            if (!await _messages.CanAccessConversationAsync(currentUserId, conversationId, cancellationToken))
+            {
+                return Forbid();
             }
 
             string uploadsRoot = LocalPostImageFileStorageService.ResolveAbsoluteUploadsRootPath(
