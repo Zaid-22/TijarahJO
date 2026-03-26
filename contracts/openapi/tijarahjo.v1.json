@@ -5064,9 +5064,6 @@
           "Chat"
         ],
         "operationId": "DownloadImage",
-        "security": [
-
-        ],
         "parameters": [
           {
             "name": "url",

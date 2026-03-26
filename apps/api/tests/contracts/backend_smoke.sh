@@ -8,6 +8,7 @@ PASS_COUNT=0
 FAIL_COUNT=0
 LAST_CODE=""
 LAST_BODY=""
+LAST_HEADERS=""
 
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -40,10 +41,11 @@ call_api() {
   local payload="${5:-}"
   local token="${6:-}"
   local body_file="$TMP_DIR/body.json"
+  local header_file="$TMP_DIR/headers.txt"
   local err_file="$TMP_DIR/err.log"
 
   local -a args
-  args=(-sS -o "$body_file" -w "%{http_code}" -X "$method" "$BASE_URL$path" -H "Content-Type: application/json")
+  args=(-sS -D "$header_file" -o "$body_file" -w "%{http_code}" -X "$method" "$BASE_URL$path" -H "Content-Type: application/json")
 
   if [ -n "$token" ]; then
     args+=(-H "Authorization: Bearer $token")
@@ -56,6 +58,7 @@ call_api() {
   LAST_CODE="$(curl "${args[@]}" 2>"$err_file")"
   local curl_rc=$?
   LAST_BODY="$(cat "$body_file" 2>/dev/null || true)"
+  LAST_HEADERS="$(cat "$header_file" 2>/dev/null || true)"
   local err_out
   err_out="$(cat "$err_file" 2>/dev/null || true)"
 
@@ -83,6 +86,13 @@ assert_jq() {
   else
     log_fail "$name" "jq assertion failed: $expr; body=$input"
   fi
+}
+
+extract_jwt_cookie() {
+  printf "%s" "$LAST_HEADERS" \
+    | tr -d '\r' \
+    | sed -n 's/^Set-Cookie: jwt=\([^;]*\).*/\1/p' \
+    | head -n 1
 }
 
 print_summary() {
@@ -117,8 +127,8 @@ call_api "users.all.restricted" "GET" "/api/v1/users" "401,403"
 
 signup_payload="$(jq -nc --arg e "$email" '{Email:$e,Password:"P@ssw0rd123",FirstName:"Smoke",LastName:"Test",Phone:"+962790000099",City:"Amman",Area:"Abdali"}')"
 call_api "auth.signup" "POST" "/api/v1/auth/signup" "201" "$signup_payload"
-token="$(printf "%s" "$LAST_BODY" | jq -r '.Token // empty')"
-assert_jq "auth.signup.token.present" '.Token | type=="string" and (length>20)'
+token="$(extract_jwt_cookie)"
+assert_jq "auth.signup.token.absent" '(.Token // null) == null'
 
 if [ -n "$token" ]; then
   call_api "auth.me" "GET" "/api/v1/auth/me" "200" "" "$token"
@@ -132,7 +142,7 @@ if [ -n "$token" ]; then
 
   call_api "auth.logout" "POST" "/api/v1/auth/logout" "200" "" "$token"
 else
-  log_fail "auth.me/favorites/logout" "Token missing from signup response."
+  log_fail "auth.me/favorites/logout" "JWT cookie missing from signup response headers."
 fi
 
 print_summary

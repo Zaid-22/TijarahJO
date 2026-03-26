@@ -8,6 +8,7 @@ PASS_COUNT=0
 FAIL_COUNT=0
 LAST_CODE=""
 LAST_BODY=""
+LAST_HEADERS=""
 
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -40,10 +41,11 @@ call_api() {
   local payload="${5:-}"
   local token="${6:-}"
   local body_file="$TMP_DIR/body.json"
+  local header_file="$TMP_DIR/headers.txt"
   local err_file="$TMP_DIR/err.log"
 
   local -a args
-  args=(-sS -o "$body_file" -w "%{http_code}" -X "$method" "$BASE_URL$path" -H "Content-Type: application/json")
+  args=(-sS -D "$header_file" -o "$body_file" -w "%{http_code}" -X "$method" "$BASE_URL$path" -H "Content-Type: application/json")
 
   if [ -n "$token" ]; then
     args+=(-H "Authorization: Bearer $token")
@@ -56,6 +58,7 @@ call_api() {
   LAST_CODE="$(curl "${args[@]}" 2>"$err_file")"
   local curl_rc=$?
   LAST_BODY="$(cat "$body_file" 2>/dev/null || true)"
+  LAST_HEADERS="$(cat "$header_file" 2>/dev/null || true)"
   local err_out
   err_out="$(cat "$err_file" 2>/dev/null || true)"
 
@@ -83,6 +86,13 @@ assert_jq() {
   else
     log_fail "$name" "jq assertion failed: $expr; body=$input"
   fi
+}
+
+extract_jwt_cookie() {
+  printf "%s" "$LAST_HEADERS" \
+    | tr -d '\r' \
+    | sed -n 's/^Set-Cookie: jwt=\([^;]*\).*/\1/p' \
+    | head -n 1
 }
 
 assert_jq_arg() {
@@ -119,13 +129,13 @@ call_api "preflight.swagger" "GET" "/swagger/index.html" "200"
 
 signup_owner_payload="$(jq -nc --arg e "$email_owner" '{Email:$e,Password:"P@ssw0rd123",FirstName:"Owner",LastName:"Test",Phone:"+962790001001",City:"Amman",Area:"Abdali"}')"
 call_api "auth.signup.owner" "POST" "/api/v1/auth/signup" "201" "$signup_owner_payload"
-owner_token="$(printf "%s" "$LAST_BODY" | jq -r '.Token // empty')"
-assert_jq "auth.signup.owner.token.present" '.Token | type=="string" and (length>20)'
+owner_token="$(extract_jwt_cookie)"
+assert_jq "auth.signup.owner.token.absent" '(.Token // null) == null'
 
 signup_other_payload="$(jq -nc --arg e "$email_other" '{Email:$e,Password:"P@ssw0rd123",FirstName:"Other",LastName:"User",Phone:"+962790001002",City:"Amman",Area:"Khalda"}')"
 call_api "auth.signup.other" "POST" "/api/v1/auth/signup" "201" "$signup_other_payload"
-other_token="$(printf "%s" "$LAST_BODY" | jq -r '.Token // empty')"
-assert_jq "auth.signup.other.token.present" '.Token | type=="string" and (length>20)'
+other_token="$(extract_jwt_cookie)"
+assert_jq "auth.signup.other.token.absent" '(.Token // null) == null'
 
 call_api "categories.all" "GET" "/api/v1/categories" "200"
 category_id="$(printf "%s" "$LAST_BODY" | jq -r '.[0].CategoryID // empty')"

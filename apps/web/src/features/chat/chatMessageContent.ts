@@ -2,6 +2,7 @@ import { APP_CONFIG } from "../../constants/appConfig";
 import type { Language } from "../../types";
 
 const CHAT_IMAGE_PREFIX = "[chat-image]";
+const CHAT_DOWNLOAD_ROUTE_FRAGMENT = "/chat/download-image";
 
 type ParsedChatMessageContent =
   | {
@@ -32,6 +33,10 @@ function isLikelyImageUrl(value: string): boolean {
   }
 
   if (trimmed.startsWith("/uploads/")) {
+    return true;
+  }
+
+  if (trimmed.includes(CHAT_DOWNLOAD_ROUTE_FRAGMENT)) {
     return true;
   }
 

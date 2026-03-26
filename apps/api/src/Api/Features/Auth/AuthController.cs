@@ -142,7 +142,6 @@ public class AuthController(
         return StatusCode(StatusCodes.Status201Created, new AuthResponse
         {
             Success = true,
-            Token = token,
             User = DTOMapper.ToUserResponseDTO(result.User, result.RoleName, Request)
         });
     }
