@@ -37,16 +37,16 @@ public static class InfrastructureServiceCollectionExtensions
             options.UseSqlServer(connectionString)
                    .AddInterceptors(new UpdatedAtInterceptor()));
 
-        // Derive the TOTP encryption key from configuration (same derivation as TwoFactorService)
+        // Resolve the TOTP encryption key using the same environment rules as TwoFactorService.
         string? twoFactorEncKey = configuration["TwoFactor:SecretEncryptionKey"];
-        string? jwtKey = configuration["JwtSettings:SigningKey"]
+        string? jwtKey = configuration["JWT:SigningKey"]
                          ?? Environment.GetEnvironmentVariable("JWT_SIGNING_KEY");
-        string secretKeyMaterial = !string.IsNullOrWhiteSpace(twoFactorEncKey)
-            ? twoFactorEncKey.Trim()
-            : !string.IsNullOrWhiteSpace(jwtKey)
-                ? $"twofactor-secret::{jwtKey}"
-                : throw new InvalidOperationException(
-                    "Either TwoFactor:SecretEncryptionKey or JwtSettings:SigningKey must be configured for TOTP encryption.");
+        string secretKeyMaterial = TijarahJo.Api.Common.Services.TwoFactorService.ResolveTwoFactorKeyMaterial(
+            twoFactorEncKey,
+            jwtKey,
+            "TwoFactor:SecretEncryptionKey",
+            "twofactor-secret"
+        );
         byte[] totpKey = SHA256.HashData(Encoding.UTF8.GetBytes(secretKeyMaterial));
         services.AddSingleton(new TotpEncryptionKey(totpKey));
         services.AddScoped<IUserDataAccess, UserDataAccessAdapter>();

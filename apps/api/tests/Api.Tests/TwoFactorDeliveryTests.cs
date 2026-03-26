@@ -125,7 +125,9 @@ public sealed class TwoFactorDeliveryTests
             Options.Create(new TwoFactorOptions
             {
                 Digits = 6,
-                LoginChallengeLifetimeSeconds = 300
+                LoginChallengeLifetimeSeconds = 300,
+                SecretEncryptionKey = "UnitTestTwoFactorSecretKey_AtLeast32Chars",
+                ChallengeSigningKey = "UnitTestTwoFactorChallengeKey_AtLeast32"
             }),
             new JwtOptions
             {
