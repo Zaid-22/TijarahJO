@@ -39,7 +39,15 @@ public class ImageModerationService : IImageModerationService
         if (_client.Value == null) 
         {
             _logger.LogWarning("Cloud Vision client not available. Skipping moderation.");
-            return new ModerationResult { IsAdult = false, IsViolent = false, IsMedical = false, IsSpoof = false }; // Safe fallback
+            return new ModerationResult
+            {
+                IsAdult = false,
+                IsViolent = false,
+                IsMedical = false,
+                IsSpoof = false,
+                IsUnavailable = true,
+                FailureReason = "Image moderation service is unavailable."
+            };
         }
 
         try
@@ -69,8 +77,15 @@ public class ImageModerationService : IImageModerationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during image moderation");
-            // If the Vision API fails, we fail open (or closed, depending on requirements, but fallback open prevents breaking all uploads).
-            return new ModerationResult { IsAdult = false, IsViolent = false, IsMedical = false, IsSpoof = false };
+            return new ModerationResult
+            {
+                IsAdult = false,
+                IsViolent = false,
+                IsMedical = false,
+                IsSpoof = false,
+                IsUnavailable = true,
+                FailureReason = "Image moderation service is unavailable."
+            };
         }
     }
 }
@@ -83,5 +98,7 @@ public class ModerationResult
     public bool IsSpoof { get; set; }
     public string RawAdult { get; set; } = "";
     public string RawViolence { get; set; } = "";
+    public bool IsUnavailable { get; set; }
+    public string? FailureReason { get; set; }
     public bool IsFlagged => IsAdult || IsViolent || IsMedical;
 }

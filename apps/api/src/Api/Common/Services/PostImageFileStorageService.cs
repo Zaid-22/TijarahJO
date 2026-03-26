@@ -13,6 +13,7 @@ public sealed record StoredPostImageFile(
 
 public interface IPostImageFileStorageService
 {
+    void ValidateFileOrThrow(IFormFile file);
     Task<StoredPostImageFile> SaveAsync(IFormFile file, CancellationToken cancellationToken = default);
     Task<StoredPostImageFile> SaveChatImageAsync(IFormFile file, CancellationToken cancellationToken = default);
     Task DeleteByPublicUrlAsync(string publicUrl, CancellationToken cancellationToken = default);
@@ -42,7 +43,7 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
 
     public async Task<StoredPostImageFile> SaveAsync(IFormFile file, CancellationToken cancellationToken = default)
     {
-        ValidateFile(file);
+        ValidateFileOrThrow(file);
 
         return await SaveValidatedFile(
             file,
@@ -54,7 +55,7 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
 
     public async Task<StoredPostImageFile> SaveChatImageAsync(IFormFile file, CancellationToken cancellationToken = default)
     {
-        ValidateFile(file);
+        ValidateFileOrThrow(file);
 
         return await SaveValidatedFile(
             file,
@@ -196,7 +197,7 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
         return $"{basePath}/{chatImagesSegment}/{fileName}";
     }
 
-    private void ValidateFile(IFormFile file)
+    public void ValidateFileOrThrow(IFormFile file)
     {
         if (file == null)
         {
@@ -220,6 +221,12 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
         {
             string allowed = string.Join(", ", _allowedImageExtensions.OrderBy(value => value, StringComparer.Ordinal));
             throw new ArgumentException($"Unsupported image extension. Allowed: {allowed}");
+        }
+
+        if (string.IsNullOrWhiteSpace(file.ContentType) ||
+            !file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("Unsupported image content type.");
         }
     }
 

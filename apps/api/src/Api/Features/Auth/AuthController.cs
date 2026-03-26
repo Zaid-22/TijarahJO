@@ -45,6 +45,8 @@ public class AuthController(
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
     {
+        const string InvalidLoginMessage = "Invalid email/phone or password.";
+
         AuthCommandResult result = await _authCommands.LoginAsync(new LoginCommand
         {
             Login = request?.Login,
@@ -56,9 +58,9 @@ public class AuthController(
             return result.FailureReason switch
             {
                 AuthCommandFailureReason.InvalidRequest => Problem(statusCode: StatusCodes.Status400BadRequest, detail: result.Message),
-                AuthCommandFailureReason.InvalidCredentials => Problem(statusCode: StatusCodes.Status401Unauthorized, detail: result.Message),
-                AuthCommandFailureReason.UserDeleted => Problem(statusCode: StatusCodes.Status401Unauthorized, detail: result.Message),
-                AuthCommandFailureReason.UserInactive => Problem(statusCode: StatusCodes.Status401Unauthorized, detail: result.Message),
+                AuthCommandFailureReason.InvalidCredentials => Problem(statusCode: StatusCodes.Status401Unauthorized, detail: InvalidLoginMessage),
+                AuthCommandFailureReason.UserDeleted => Problem(statusCode: StatusCodes.Status401Unauthorized, detail: InvalidLoginMessage),
+                AuthCommandFailureReason.UserInactive => Problem(statusCode: StatusCodes.Status401Unauthorized, detail: InvalidLoginMessage),
                 AuthCommandFailureReason.RoleResolutionFailed => Problem(statusCode: StatusCodes.Status500InternalServerError, detail: result.Message),
                 _ => Problem(statusCode: StatusCodes.Status500InternalServerError, detail: "Authentication failed.")
             };
