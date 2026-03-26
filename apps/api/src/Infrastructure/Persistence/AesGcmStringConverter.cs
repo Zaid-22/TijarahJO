@@ -16,6 +16,7 @@ public sealed class AesGcmStringConverter : ValueConverter<string?, string?>
 {
     private const int NonceSize = 12; // AES-GCM standard
     private const int TagSize = 16;   // AES-GCM standard
+    private const string LegacyFallbackEnvironmentVariable = "ALLOW_LEGACY_PLAINTEXT_TOTP";
 
     public AesGcmStringConverter(byte[] key)
         : base(
@@ -60,16 +61,22 @@ public sealed class AesGcmStringConverter : ValueConverter<string?, string?>
         }
         catch (FormatException)
         {
-            // Not encrypted (legacy plaintext value) — return as-is.
-            // This allows gradual migration: old unencrypted values still readable,
-            // re-encrypted on next write via EF change tracking.
-            return base64Ciphertext;
+            if (ShouldAllowLegacyPlaintextFallback())
+            {
+                return base64Ciphertext;
+            }
+
+            throw new CryptographicException("Stored TOTP secret is not valid encrypted data.");
         }
 
         if (packed.Length < NonceSize + TagSize)
         {
-            // Too short to be a valid encrypted payload — treat as legacy plaintext.
-            return base64Ciphertext;
+            if (ShouldAllowLegacyPlaintextFallback())
+            {
+                return base64Ciphertext;
+            }
+
+            throw new CryptographicException("Stored TOTP secret has an invalid encrypted payload.");
         }
 
         byte[] nonce = new byte[NonceSize];
@@ -90,9 +97,19 @@ public sealed class AesGcmStringConverter : ValueConverter<string?, string?>
         }
         catch (CryptographicException)
         {
-            // Decryption failed — likely a legacy plaintext value or wrong key.
-            // Return raw value so the application can handle gracefully.
-            return base64Ciphertext;
+            if (ShouldAllowLegacyPlaintextFallback())
+            {
+                return base64Ciphertext;
+            }
+
+            throw new CryptographicException("Stored TOTP secret could not be decrypted.");
         }
+    }
+
+    private static bool ShouldAllowLegacyPlaintextFallback()
+    {
+        string? raw = Environment.GetEnvironmentVariable(LegacyFallbackEnvironmentVariable);
+        return string.Equals(raw, "1", StringComparison.Ordinal) ||
+               string.Equals(raw, "true", StringComparison.OrdinalIgnoreCase);
     }
 }

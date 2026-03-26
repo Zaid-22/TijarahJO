@@ -284,11 +284,17 @@ public sealed class ApiValidationIntegrationTests
         HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/auth/signup", signupPayload);
         string content = await response.Content.ReadAsStringAsync();
         Assert.True(response.IsSuccessStatusCode, $"Signup failed ({(int)response.StatusCode}): {content}");
+        Assert.True(
+            response.Headers.TryGetValues("Set-Cookie", out IEnumerable<string>? cookieHeaders),
+            "Signup response did not include any Set-Cookie headers.");
 
-        AuthTokenResponse? auth = JsonSerializer.Deserialize<AuthTokenResponse>(content, JsonOptions);
-        Assert.False(string.IsNullOrWhiteSpace(auth?.Token), "Signup response did not return a token.");
+        string? jwtCookie = cookieHeaders
+            .FirstOrDefault(header => header.StartsWith("jwt=", StringComparison.Ordinal));
+        Assert.False(string.IsNullOrWhiteSpace(jwtCookie), "Signup response did not set the jwt cookie.");
 
-        return auth!.Token!;
+        string token = jwtCookie!.Split(';', 2)[0]["jwt=".Length..];
+        Assert.False(string.IsNullOrWhiteSpace(token), "JWT cookie did not contain a token value.");
+        return token;
     }
 
     private static async Task<int> GetFirstCategoryIdAsync(HttpClient client)
@@ -340,11 +346,6 @@ public sealed class ApiValidationIntegrationTests
         string content = await response.Content.ReadAsStringAsync();
         Assert.False(string.IsNullOrWhiteSpace(content), "Expected a ProblemDetails JSON body.");
         return JsonDocument.Parse(content);
-    }
-
-    private sealed class AuthTokenResponse
-    {
-        public string? Token { get; set; }
     }
 
     private sealed class CategoryResponse

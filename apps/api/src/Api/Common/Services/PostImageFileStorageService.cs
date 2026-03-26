@@ -14,6 +14,7 @@ public sealed record StoredPostImageFile(
 public interface IPostImageFileStorageService
 {
     Task<StoredPostImageFile> SaveAsync(IFormFile file, CancellationToken cancellationToken = default);
+    Task<StoredPostImageFile> SaveChatImageAsync(IFormFile file, CancellationToken cancellationToken = default);
     Task DeleteByPublicUrlAsync(string publicUrl, CancellationToken cancellationToken = default);
 }
 
@@ -43,30 +44,23 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
     {
         ValidateFile(file);
 
-        string extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-        string fileName = $"{DateTime.UtcNow:yyyyMMddHHmmssfff}_{Guid.NewGuid():N}{extension}";
-        string absoluteDirectory = ResolveAbsolutePostImagesRootPath(_environment.ContentRootPath, _options);
-        Directory.CreateDirectory(absoluteDirectory);
-
-        string absoluteFilePath = Path.Combine(absoluteDirectory, fileName);
-        await using (var stream = new FileStream(absoluteFilePath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-        {
-            await file.CopyToAsync(stream, cancellationToken);
-        }
-
-        string publicUrl = BuildPublicPostImageUrl(fileName, _options);
-        _logger.LogInformation(
-            "Stored post image file {FileName} ({SizeBytes} bytes) at {Path}.",
-            fileName,
-            file.Length,
-            absoluteFilePath
+        return await SaveValidatedFile(
+            file,
+            ResolveAbsolutePostImagesRootPath(_environment.ContentRootPath, _options),
+            fileName => BuildPublicPostImageUrl(fileName, _options),
+            cancellationToken
         );
+    }
 
-        return new StoredPostImageFile(
-            PublicUrl: publicUrl,
-            FileName: fileName,
-            SizeBytes: file.Length,
-            ContentType: string.IsNullOrWhiteSpace(file.ContentType) ? null : file.ContentType
+    public async Task<StoredPostImageFile> SaveChatImageAsync(IFormFile file, CancellationToken cancellationToken = default)
+    {
+        ValidateFile(file);
+
+        return await SaveValidatedFile(
+            file,
+            ResolveAbsoluteChatImagesRootPath(_environment.ContentRootPath, _options),
+            fileName => BuildPublicChatImagePath(fileName, _options),
+            cancellationToken
         );
     }
 
@@ -167,6 +161,13 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
         return Path.GetFullPath(Path.Combine(uploadsRoot, postImagesSegment));
     }
 
+    public static string ResolveAbsoluteChatImagesRootPath(string contentRootPath, FileStorageOptions options)
+    {
+        string uploadsRoot = ResolveAbsoluteUploadsRootPath(contentRootPath, options);
+        string chatImagesSegment = NormalizePathSegment(options.ChatImagesPath, "chat-images");
+        return Path.GetFullPath(Path.Combine(uploadsRoot, chatImagesSegment));
+    }
+
     public static string NormalizeRequestPath(string requestPath)
     {
         string normalized = string.IsNullOrWhiteSpace(requestPath)
@@ -186,6 +187,13 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
         string basePath = NormalizeRequestPath(options.PublicBasePath);
         string postImagesSegment = NormalizePathSegment(options.PostImagesPath, "post-images");
         return $"{basePath}/{postImagesSegment}/{fileName}";
+    }
+
+    public static string BuildPublicChatImagePath(string fileName, FileStorageOptions options)
+    {
+        string basePath = NormalizeRequestPath(options.PublicBasePath);
+        string chatImagesSegment = NormalizePathSegment(options.ChatImagesPath, "chat-images");
+        return $"{basePath}/{chatImagesSegment}/{fileName}";
     }
 
     private void ValidateFile(IFormFile file)
@@ -213,6 +221,38 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
             string allowed = string.Join(", ", _allowedImageExtensions.OrderBy(value => value, StringComparer.Ordinal));
             throw new ArgumentException($"Unsupported image extension. Allowed: {allowed}");
         }
+    }
+
+    private async Task<StoredPostImageFile> SaveValidatedFile(
+        IFormFile file,
+        string absoluteDirectory,
+        Func<string, string> publicUrlBuilder,
+        CancellationToken cancellationToken)
+    {
+        string extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        string fileName = $"{DateTime.UtcNow:yyyyMMddHHmmssfff}_{Guid.NewGuid():N}{extension}";
+        Directory.CreateDirectory(absoluteDirectory);
+
+        string absoluteFilePath = Path.Combine(absoluteDirectory, fileName);
+        await using (var stream = new FileStream(absoluteFilePath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+        {
+            await file.CopyToAsync(stream, cancellationToken);
+        }
+
+        string publicUrl = publicUrlBuilder(fileName);
+        _logger.LogInformation(
+            "Stored image file {FileName} ({SizeBytes} bytes) at {Path}.",
+            fileName,
+            file.Length,
+            absoluteFilePath
+        );
+
+        return new StoredPostImageFile(
+            PublicUrl: publicUrl,
+            FileName: fileName,
+            SizeBytes: file.Length,
+            ContentType: string.IsNullOrWhiteSpace(file.ContentType) ? null : file.ContentType
+        );
     }
 
     private static string NormalizePathSegment(string value, string fallback)

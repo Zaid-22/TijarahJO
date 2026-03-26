@@ -47,7 +47,6 @@ internal static class AuthShared
         return new AuthResponse
         {
             Success = true,
-            Token = token,
             User = DTOMapper.ToUserResponseDTO(user, roleName, httpResponse.HttpContext.Request)
         };
     }

@@ -269,15 +269,15 @@ else
 if (!app.Environment.IsDevelopment())
     app.UseHsts();
 
-// Static files (uploads)
+// Static files (public post/category images only)
 var fileStorageOptions = app.Services.GetRequiredService<IOptions<FileStorageOptions>>().Value;
-string uploadsRootPath = LocalPostImageFileStorageService.ResolveAbsoluteUploadsRootPath(
+string publicPostImagesRootPath = LocalPostImageFileStorageService.ResolveAbsolutePostImagesRootPath(
     app.Environment.ContentRootPath, fileStorageOptions);
-Directory.CreateDirectory(uploadsRootPath);
+Directory.CreateDirectory(publicPostImagesRootPath);
 app.UseStaticFiles(new StaticFileOptions
 {
-    FileProvider = new PhysicalFileProvider(uploadsRootPath),
-    RequestPath = LocalPostImageFileStorageService.NormalizeRequestPath(fileStorageOptions.PublicBasePath)
+    FileProvider = new PhysicalFileProvider(publicPostImagesRootPath),
+    RequestPath = $"{LocalPostImageFileStorageService.NormalizeRequestPath(fileStorageOptions.PublicBasePath)}/{fileStorageOptions.PostImagesPath.Trim('/')}"
 });
 
 if (featureFlags.EnableHttpLogging)

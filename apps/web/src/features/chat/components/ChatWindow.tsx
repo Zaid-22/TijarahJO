@@ -431,8 +431,9 @@ export function ChatWindow({
               type="button"
               onClick={async () => {
                 try {
-                  const { APP_CONFIG } = await import("../../../constants/appConfig");
-                  const downloadUrl = `${APP_CONFIG.apiBaseUrl}/chat/download-image?url=${encodeURIComponent(fullscreenImage)}`;
+                  const downloadUrl = fullscreenImage.includes("/chat/download-image?")
+                    ? fullscreenImage
+                    : `${(await import("../../../constants/appConfig")).APP_CONFIG.apiBaseUrl}/chat/download-image?url=${encodeURIComponent(fullscreenImage)}`;
                   window.location.href = downloadUrl;
                 } catch {
                   window.open(fullscreenImage, "_blank");

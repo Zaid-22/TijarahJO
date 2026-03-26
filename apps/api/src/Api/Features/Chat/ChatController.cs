@@ -39,6 +39,12 @@ public class ChatController : ControllerBase
         _fileStorageOptions = fileStorageOptions.Value;
     }
 
+    private string BuildChatImageDownloadUrl(string storedPath)
+    {
+        string encodedPath = Uri.EscapeDataString(storedPath);
+        return $"/api/v1/chat/download-image?url={encodedPath}";
+    }
+
     [HttpGet("history/{otherUserId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -175,7 +181,7 @@ public class ChatController : ControllerBase
         StoredPostImageFile storedFile;
         try
         {
-            storedFile = await _postImageStorage.SaveAsync(request.File, cancellationToken);
+            storedFile = await _postImageStorage.SaveChatImageAsync(request.File, cancellationToken);
         }
         catch (ArgumentException ex)
         {
@@ -184,12 +190,11 @@ public class ChatController : ControllerBase
 
         return Ok(new ChatImageUploadResponseDTO
         {
-            Url = storedFile.PublicUrl
+            Url = BuildChatImageDownloadUrl(storedFile.PublicUrl)
         });
     }
 
     [HttpGet("download-image")]
-    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -214,11 +219,32 @@ public class ChatController : ControllerBase
                 }
             }
 
-            if (!LocalPostImageFileStorageService.TryResolveAbsoluteStoredFilePath(
-                url,
+            string candidatePath = url.Trim();
+            if (Uri.TryCreate(candidatePath, UriKind.Absolute, out Uri? candidateUri))
+            {
+                candidatePath = candidateUri.AbsolutePath;
+            }
+
+            string normalizedPublicBasePath = LocalPostImageFileStorageService.NormalizeRequestPath(_fileStorageOptions.PublicBasePath);
+            string normalizedChatPrefix = $"{normalizedPublicBasePath}/{_fileStorageOptions.ChatImagesPath.Trim('/')}";
+            if (!candidatePath.StartsWith(normalizedChatPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Unsupported image URL.");
+            }
+
+            string uploadsRoot = LocalPostImageFileStorageService.ResolveAbsoluteUploadsRootPath(
                 _environment.ContentRootPath,
-                _fileStorageOptions,
-                out string absoluteFilePath))
+                _fileStorageOptions);
+            string relativePath = candidatePath[normalizedPublicBasePath.Length..].TrimStart('/');
+            string absoluteFilePath = Path.GetFullPath(Path.Combine(uploadsRoot, relativePath));
+            string chatRoot = LocalPostImageFileStorageService.ResolveAbsoluteChatImagesRootPath(
+                _environment.ContentRootPath,
+                _fileStorageOptions);
+            string normalizedChatRoot = chatRoot.EndsWith(Path.DirectorySeparatorChar)
+                ? chatRoot
+                : chatRoot + Path.DirectorySeparatorChar;
+
+            if (!absoluteFilePath.StartsWith(normalizedChatRoot, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
             {
                 return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Unsupported image URL.");
             }

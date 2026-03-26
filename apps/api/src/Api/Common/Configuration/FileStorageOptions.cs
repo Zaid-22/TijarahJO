@@ -7,6 +7,8 @@ public sealed class FileStorageOptions
 
     public string PostImagesPath { get; set; } = "post-images";
 
+    public string ChatImagesPath { get; set; } = "chat-images";
+
     // Public URL prefix used to serve files via static file middleware.
     public string PublicBasePath { get; set; } = "/uploads";
 
