@@ -105,6 +105,48 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
         return Task.CompletedTask;
     }
 
+    public static bool TryResolveAbsoluteStoredFilePath(
+        string publicUrl,
+        string contentRootPath,
+        FileStorageOptions options,
+        out string absoluteFilePath)
+    {
+        absoluteFilePath = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(publicUrl))
+        {
+            return false;
+        }
+
+        string candidatePath = publicUrl.Trim();
+        if (Uri.TryCreate(candidatePath, UriKind.Absolute, out Uri? absoluteUri))
+        {
+            candidatePath = absoluteUri.AbsolutePath;
+        }
+
+        string normalizedPublicBasePath = NormalizeRequestPath(options.PublicBasePath);
+        if (!candidatePath.StartsWith(normalizedPublicBasePath, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        string relativePath = candidatePath[normalizedPublicBasePath.Length..].TrimStart('/');
+        if (string.IsNullOrWhiteSpace(relativePath))
+        {
+            return false;
+        }
+
+        string uploadsRoot = ResolveAbsoluteUploadsRootPath(contentRootPath, options);
+        string targetPath = Path.GetFullPath(Path.Combine(uploadsRoot, relativePath));
+        if (!IsUnderRoot(targetPath, uploadsRoot))
+        {
+            return false;
+        }
+
+        absoluteFilePath = targetPath;
+        return true;
+    }
+
     public static string ResolveAbsoluteUploadsRootPath(string contentRootPath, FileStorageOptions options)
     {
         string configuredRoot = string.IsNullOrWhiteSpace(options.RootPath)
