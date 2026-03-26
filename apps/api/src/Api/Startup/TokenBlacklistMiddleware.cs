@@ -39,6 +39,23 @@ public sealed class TokenBlacklistMiddleware
                     return;
                 }
             }
+
+            string? userIdStr = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            string? iatStr = context.User.FindFirstValue(JwtRegisteredClaimNames.Iat);
+
+            if (int.TryParse(userIdStr, out int userId) && long.TryParse(iatStr, out long iatUnix))
+            {
+                var tokenIssuedAt = DateTimeOffset.FromUnixTimeSeconds(iatUnix);
+                bool isSessionInvalidated = await tokenBlacklistService.IsUserSessionInvalidatedAsync(userId, tokenIssuedAt, context.RequestAborted);
+                
+                if (isSessionInvalidated)
+                {
+                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    context.Response.ContentType = "application/json";
+                    await context.Response.WriteAsync("{\"error\":\"Session has been invalidated due to a password change.\"}");
+                    return;
+                }
+            }
         }
 
         await _next(context);

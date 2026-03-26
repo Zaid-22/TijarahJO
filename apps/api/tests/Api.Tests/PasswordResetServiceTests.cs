@@ -5,6 +5,7 @@ using TijarahJo.Application.Abstractions.DataAccess;
 using TijarahJo.Application.Common;
 using TijarahJo.Api.Common.Configuration;
 using TijarahJo.Api.Common.Services;
+using TijarahJo.Application.Abstractions.Services;
 
 namespace TijarahJo.Api.Tests;
 
@@ -89,8 +90,24 @@ public sealed class PasswordResetServiceTests
             users,
             sender,
             Options.Create(options),
-            NullLogger<PasswordResetService>.Instance
+            NullLogger<PasswordResetService>.Instance,
+            new FakeTokenBlacklistService()
         );
+    }
+
+    private sealed class FakeTokenBlacklistService : ITokenBlacklistService
+    {
+        public Task AddToBlacklistAsync(string jti, DateTimeOffset expiresAt, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task<bool> IsBlacklistedAsync(string jti, CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
+
+        public Task InvalidateAllUserSessionsAsync(int userId, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task<bool> IsUserSessionInvalidatedAsync(int userId, DateTimeOffset tokenIssuedAt, CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
     }
 
     private static UserModel CreateUser(string email)

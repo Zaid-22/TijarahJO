@@ -74,8 +74,12 @@ public static class InfrastructureServiceCollectionExtensions
 
         // Resolve the TOTP encryption key using the same environment rules as TwoFactorService.
         string? twoFactorEncKey = configuration["TwoFactor:SecretEncryptionKey"];
-        string? jwtKey = configuration["JWT:SigningKey"]
-                         ?? Environment.GetEnvironmentVariable("JWT_SIGNING_KEY");
+        string? jwtKey = configuration["JWT:SigningKey"];
+        if (string.IsNullOrWhiteSpace(jwtKey))
+        {
+            jwtKey = Environment.GetEnvironmentVariable("JWT_SIGNING_KEY");
+        }
+
         string secretKeyMaterial = ResolveTwoFactorKeyMaterial(
             twoFactorEncKey,
             jwtKey,

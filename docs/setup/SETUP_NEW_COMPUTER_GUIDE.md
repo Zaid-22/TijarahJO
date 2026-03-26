@@ -239,7 +239,7 @@ The frontend should start on: `http://localhost:5173`
 - [ ] JWT signing key configured
 - [ ] Backend runs without errors
 - [ ] Swagger UI is accessible
-- [ ] Can test an endpoint (e.g., GET /api/categories/All)
+- [ ] Can test an endpoint (e.g., GET /api/v1/categories)
 
 ### Frontend
 - [ ] Node.js and npm are installed

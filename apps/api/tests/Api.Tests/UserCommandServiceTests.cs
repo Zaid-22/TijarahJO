@@ -39,7 +39,7 @@ public sealed class UserCommandServiceTests
 
         UserCommandResult result = await service.RegisterAsync(new RegisterUserCommand
         {
-            Password = "pass",
+            Password = "Test1234!",
             Email = null,
             FirstName = "Test"
         });
@@ -55,7 +55,7 @@ public sealed class UserCommandServiceTests
 
         UserCommandResult result = await service.RegisterAsync(new RegisterUserCommand
         {
-            Password = "pass",
+            Password = "Test1234!",
             Email = "user@example.com",
             FirstName = ""
         });
@@ -71,7 +71,7 @@ public sealed class UserCommandServiceTests
 
         UserCommandResult result = await service.RegisterAsync(new RegisterUserCommand
         {
-            Password = "pass",
+            Password = "Test1234!",
             Email = "user@example.com",
             FirstName = "Test",
             AreaId = 5,
@@ -89,7 +89,7 @@ public sealed class UserCommandServiceTests
 
         UserCommandResult result = await service.RegisterAsync(new RegisterUserCommand
         {
-            Password = "pass",
+            Password = "Test1234!",
             Email = "user@example.com",
             FirstName = "Test",
             Status = 99
@@ -106,7 +106,7 @@ public sealed class UserCommandServiceTests
 
         UserCommandResult result = await service.RegisterAsync(new RegisterUserCommand
         {
-            Password = "pass",
+            Password = "Test1234!",
             Email = "user@example.com",
             FirstName = "Test",
             Avatar = "javascript:alert(1)"
@@ -123,7 +123,7 @@ public sealed class UserCommandServiceTests
 
         UserCommandResult result = await service.RegisterAsync(new RegisterUserCommand
         {
-            Password = "pass",
+            Password = "Test1234!",
             Email = "newuser@example.com",
             FirstName = "Test"
         });
@@ -310,7 +310,7 @@ public sealed class UserCommandServiceTests
     {
         var model = new UserModel(
             userid: 1,
-            hashedpassword: TijarahJo.Application.Common.PasswordHelper.HashPassword("default"),
+            hashedpassword: TijarahJo.Application.Common.PasswordHelper.HashPassword("Test1234!"),
             email: "user@example.com",
             firstname: "Test",
             lastname: "User",

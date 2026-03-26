@@ -78,4 +78,34 @@ public sealed class DatabaseTokenBlacklistService : ITokenBlacklistService
 
         return deleted;
     }
+
+    public async Task InvalidateAllUserSessionsAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        long invalidationTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        string jti = $"user:{userId}:{invalidationTime}";
+        await AddToBlacklistAsync(jti, DateTimeOffset.UtcNow.AddDays(30), cancellationToken);
+    }
+
+    public async Task<bool> IsUserSessionInvalidatedAsync(int userId, DateTimeOffset tokenIssuedAt, CancellationToken cancellationToken = default)
+    {
+        string prefix = $"user:{userId}:";
+        var recentInvalidations = await _dbContext.BlacklistedTokens
+            .AsNoTracking()
+            .Where(t => t.Jti.StartsWith(prefix) && t.ExpiresAt > DateTime.UtcNow)
+            .ToListAsync(cancellationToken);
+
+        foreach (var entry in recentInvalidations)
+        {
+            var parts = entry.Jti.Split(':');
+            if (parts.Length == 3 && long.TryParse(parts[2], out long invalidationTimeUnix))
+            {
+                var invalidationTime = DateTimeOffset.FromUnixTimeSeconds(invalidationTimeUnix);
+                if (invalidationTime > tokenIssuedAt)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 }

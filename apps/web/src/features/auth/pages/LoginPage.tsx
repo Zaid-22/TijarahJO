@@ -132,15 +132,32 @@ export function LoginPage({
       dispatch({ type: "SET_GENERAL_ERROR", error: normalizedMessage });
     }
 
-    if (twoFactorRequired === "1" && queryTwoFactorToken) {
-      dispatch({
-        type: "ENTER_TWO_FACTOR",
-        token: queryTwoFactorToken.trim(),
-        message: copy.errors.twoFactorRequiredPrompt,
-      });
+    if (twoFactorRequired === "1") {
+      if (queryTwoFactorToken) {
+        dispatch({
+          type: "ENTER_TWO_FACTOR",
+          token: queryTwoFactorToken.trim(),
+          message: copy.errors.twoFactorRequiredPrompt,
+        });
+      } else {
+        api.auth.getTwoFactorChallenge().then((res) => {
+          if (res.success && res.twoFactorToken) {
+            dispatch({
+              type: "ENTER_TWO_FACTOR",
+              token: res.twoFactorToken,
+              message: res.message || copy.errors.twoFactorRequiredPrompt,
+            });
+          } else {
+            dispatch({
+              type: "SET_GENERAL_ERROR",
+              error: res.message || "Failed to retrieve two-factor challenge.",
+            });
+          }
+        });
+      }
     }
 
-    if (!googleError && !(twoFactorRequired === "1" && queryTwoFactorToken)) {
+    if (!googleError && !twoFactorRequired) {
       return;
     }
 
@@ -269,6 +286,7 @@ export function LoginPage({
       return;
     }
 
+    localStorage.removeItem("tijarahjo_logged_out");
     await checkAuth();
 
     const user = response.data.user;
@@ -319,6 +337,7 @@ export function LoginPage({
       return;
     }
 
+    localStorage.removeItem("tijarahjo_logged_out");
     await checkAuth();
 
     const user = response.user;
@@ -376,6 +395,7 @@ export function LoginPage({
       return;
     }
 
+    localStorage.removeItem("tijarahjo_logged_out");
     await checkAuth();
 
     const user = response.user;

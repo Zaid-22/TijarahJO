@@ -17,6 +17,9 @@ public sealed class TwoFactorService
     private readonly byte[] _secretEncryptionKey;
     private readonly byte[] _challengeSigningKey;
 
+    // WARNING: Storing challenges in a static ConcurrentDictionary means that 2FA 
+    // flows will fail in a multi-instance deployment unless sticky sessions are 
+    // used. For proper horizontal scaling, move this to a distributed cache (e.g., Redis).
     private static readonly ConcurrentDictionary<int, TwoFactorChallengeState> _loginChallenges = new();
     private static readonly ConcurrentDictionary<int, TwoFactorChallengeState> _setupChallenges = new();
 

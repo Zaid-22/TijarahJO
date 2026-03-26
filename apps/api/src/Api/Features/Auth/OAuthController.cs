@@ -151,13 +151,11 @@ public class OAuthController : ControllerBase
                 DateTimeOffset.UtcNow
             );
 
+            AuthShared.SetShortLivedAuthCookie(Response, "tj-2fa-challenge", challengeToken, TimeSpan.FromMinutes(5));
+
             string challengeRedirect = QueryHelpers.AddQueryString(
                 _googleAuthService.GetFrontendFailureUrl(),
-                new Dictionary<string, string?>
-                {
-                    ["twoFactorRequired"] = "1",
-                    ["twoFactorToken"] = challengeToken
-                }
+                "twoFactorRequired", "1"
             );
             return Redirect(challengeRedirect);
         }

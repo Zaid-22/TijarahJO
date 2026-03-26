@@ -67,5 +67,34 @@ public sealed class TokenBlacklistServiceTests
 
             return Task.FromResult(false);
         }
+
+        public Task InvalidateAllUserSessionsAsync(int userId, CancellationToken cancellationToken = default)
+        {
+            long invalidationTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            string jti = $"user:{userId}:{invalidationTime}";
+            _store[jti] = DateTimeOffset.UtcNow.AddDays(30);
+            return Task.CompletedTask;
+        }
+
+        public Task<bool> IsUserSessionInvalidatedAsync(int userId, DateTimeOffset tokenIssuedAt, CancellationToken cancellationToken = default)
+        {
+            string prefix = $"user:{userId}:";
+            foreach (var key in _store.Keys)
+            {
+                if (key.StartsWith(prefix))
+                {
+                    var parts = key.Split(':');
+                    if (parts.Length == 3 && long.TryParse(parts[2], out long invalidationTimeUnix))
+                    {
+                        var invalidationTime = DateTimeOffset.FromUnixTimeSeconds(invalidationTimeUnix);
+                        if (invalidationTime > tokenIssuedAt && _store[key] > DateTimeOffset.UtcNow)
+                        {
+                            return Task.FromResult(true);
+                        }
+                    }
+                }
+            }
+            return Task.FromResult(false);
+        }
     }
 }

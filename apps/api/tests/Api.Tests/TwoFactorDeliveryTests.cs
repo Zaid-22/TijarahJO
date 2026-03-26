@@ -233,6 +233,12 @@ public sealed class TwoFactorDeliveryTests
 
         public Task<bool> IsBlacklistedAsync(string jti, CancellationToken cancellationToken = default)
             => Task.FromResult(false);
+
+        public Task InvalidateAllUserSessionsAsync(int userId, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task<bool> IsUserSessionInvalidatedAsync(int userId, DateTimeOffset tokenIssuedAt, CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
     }
 
     private sealed class FakeUserDataAccess(UserModel user) : IUserDataAccess
