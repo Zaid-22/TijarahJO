@@ -12,6 +12,15 @@ function escapeForRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+async function selectRadixOption(page, triggerSelector, optionName) {
+  await page.locator(triggerSelector).click();
+  const option = page.getByRole("option", {
+    name: new RegExp(`^${escapeForRegex(optionName)}$`, "i"),
+  });
+  await expect(option).toBeVisible({ timeout: 20_000 });
+  await option.click();
+}
+
 function buildJordanPhone(seed) {
   const digits = String(seed).replace(/\D/g, "").slice(-7).padStart(7, "0");
   return `79${digits}`;
@@ -110,10 +119,8 @@ test("backend live journey: auth, search, favorites, and post CRUD", async ({
   await page.goto("/sell");
   await page.locator("#title").fill(createdPostTitle);
   await page.locator("#price").fill("777");
-  await page.locator("#category").click();
-  await page.getByRole("option", { name: "Electronics" }).click();
-  await page.locator("#location").click();
-  await page.getByRole("option", { name: "Amman" }).click();
+  await selectRadixOption(page, "#category", "Electronics");
+  await selectRadixOption(page, "#location", "Amman");
   await page.locator("#description").fill("Playwright backend live post creation");
   await page.locator("input#image-upload").last().setInputFiles({
     name: "post.png",
