@@ -10,4 +10,10 @@ public interface ITokenBlacklistService
 
     /// <summary>Check whether a JTI has been blacklisted.</summary>
     Task<bool> IsBlacklistedAsync(string jti, CancellationToken cancellationToken = default);
+
+    /// <summary>Invalidate all sessions for a user, usually after a password reset.</summary>
+    Task InvalidateAllUserSessionsAsync(int userId, CancellationToken cancellationToken = default);
+
+    /// <summary>Check if a user session was invalidated after the token was issued.</summary>
+    Task<bool> IsUserSessionInvalidatedAsync(int userId, DateTimeOffset tokenIssuedAt, CancellationToken cancellationToken = default);
 }

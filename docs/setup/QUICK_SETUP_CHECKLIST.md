@@ -47,7 +47,7 @@ Use this checklist when setting up the project on a new computer.
 - [ ] Run `dotnet run`
 - [ ] Backend starts on: `http://localhost:5033`
 - [ ] Swagger UI accessible: `http://localhost:5033/swagger`
-- [ ] Test endpoint: GET `/api/categories/All` (should return data)
+- [ ] Test endpoint: GET `/api/v1/categories` (should return data)
 
 ---
 

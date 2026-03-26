@@ -156,6 +156,24 @@ export const authApi = {
     };
   },
 
+  getTwoFactorChallenge: async (): Promise<AuthApiResponse> => {
+    const response = await apiRequest<unknown>("/auth/2fa/challenge", {
+      method: "GET",
+    });
+
+    if (response.success && response.data) {
+      const data = response.data as { twoFactorToken?: string; message?: string };
+      return {
+        success: true,
+        requiresTwoFactor: true,
+        twoFactorToken: data.twoFactorToken,
+        message: data.message,
+      };
+    }
+
+    return toAuthFailure("TWO_FACTOR_CHALLENGE_FAILED", "Unable to retrieve two-factor challenge.");
+  },
+
   startTwoFactorSetup: async (): Promise<TwoFactorSetupStartApiResponse> => {
     const response = await apiRequest<unknown>("/auth/2fa/setup/start", {
       method: "POST",

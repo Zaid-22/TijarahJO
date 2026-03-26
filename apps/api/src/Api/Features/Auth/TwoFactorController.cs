@@ -74,6 +74,29 @@ public class TwoFactorController(
         return Ok(AuthShared.CreateAuthenticatedResponse(_tokenService, Response, user, roleName));
     }
 
+    [HttpGet("challenge")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public ActionResult<AuthResponse> GetTwoFactorChallengeToken()
+    {
+        string? challengeToken = Request.Cookies["tj-2fa-challenge"];
+        if (string.IsNullOrWhiteSpace(challengeToken))
+        {
+            return NotFound(new ApiMessageResponse { Message = "No pending two-factor challenge found." });
+        }
+
+        AuthShared.DeleteCookie(Response, "tj-2fa-challenge");
+
+        return Ok(new AuthResponse
+        {
+            Success = true,
+            RequiresTwoFactor = true,
+            TwoFactorToken = challengeToken,
+            Message = "Two-factor verification is required."
+        });
+    }
+
     [HttpGet("status")]
     [Authorize]
     [ProducesResponseType(StatusCodes.Status200OK)]

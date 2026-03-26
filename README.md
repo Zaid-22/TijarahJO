@@ -73,6 +73,12 @@
 
 ---
 
+## Known Limitations
+
+- **In-Memory State**: Password reset and Two-Factor Authentication (2FA) challenge states are currently stored in memory (`ConcurrentDictionary`). In a multi-instance production environment, this requires either configuring **sticky sessions** (session affinity) on your load balancer, or migrating these stores to a distributed cache (like Redis).
+
+---
+
 ## Quick Start
 
 See [`README-RUN.md`](README-RUN.md) for the full local workflow.

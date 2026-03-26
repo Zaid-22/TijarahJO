@@ -52,7 +52,7 @@ public sealed class AuthCommandServiceTests
         AuthCommandResult result = await service.LoginAsync(new LoginCommand
         {
             Login = "user@example.com",
-            Password = "wrong-password"
+            Password = "wrong-passw0rd!X"
         });
 
         Assert.False(result.Success);
@@ -62,13 +62,13 @@ public sealed class AuthCommandServiceTests
     [Fact]
     public async Task LoginAsync_ReturnsInvalidCredentials_WhenUserIsSoftDeleted()
     {
-        var hash = TijarahJo.Application.Common.PasswordHelper.HashPassword("pass");
+        var hash = TijarahJo.Application.Common.PasswordHelper.HashPassword("Test1234!");
         var service = BuildService(hashedPassword: hash, isDeleted: true);
 
         AuthCommandResult result = await service.LoginAsync(new LoginCommand
         {
             Login = "user@example.com",
-            Password = "pass"
+            Password = "Test1234!"
         });
 
         Assert.False(result.Success);
@@ -78,14 +78,14 @@ public sealed class AuthCommandServiceTests
     [Fact]
     public async Task LoginAsync_ReturnsUserInactive_WhenUserIsBanned()
     {
-        var hash = TijarahJo.Application.Common.PasswordHelper.HashPassword("pass");
+        var hash = TijarahJo.Application.Common.PasswordHelper.HashPassword("Test1234!");
         // Status = 2 means banned/inactive (Active = 1 per UserStatusPolicy)
         var service = BuildService(hashedPassword: hash, status: 2);
 
         AuthCommandResult result = await service.LoginAsync(new LoginCommand
         {
             Login = "user@example.com",
-            Password = "pass"
+            Password = "Test1234!"
         });
 
         Assert.False(result.Success);
@@ -95,13 +95,13 @@ public sealed class AuthCommandServiceTests
     [Fact]
     public async Task LoginAsync_ReturnsSuccess_WhenCredentialsAreValid()
     {
-        var hash = TijarahJo.Application.Common.PasswordHelper.HashPassword("correct-pass");
+        var hash = TijarahJo.Application.Common.PasswordHelper.HashPassword("Test1234!");
         var service = BuildService(hashedPassword: hash);
 
         AuthCommandResult result = await service.LoginAsync(new LoginCommand
         {
             Login = "user@example.com",
-            Password = "correct-pass"
+            Password = "Test1234!"
         });
 
         Assert.True(result.Success);
@@ -120,7 +120,7 @@ public sealed class AuthCommandServiceTests
 
         AuthCommandResult result = await service.SignupAsync(new SignupCommand
         {
-            Password = "pass",
+            Password = "Test1234!",
             FirstName = "",
             Email = "a@b.com"
         });
@@ -136,7 +136,7 @@ public sealed class AuthCommandServiceTests
 
         AuthCommandResult result = await service.SignupAsync(new SignupCommand
         {
-            Password = "pass",
+            Password = "Test1234!",
             FirstName = "Test",
             Email = null,
             Phone = null
@@ -153,7 +153,7 @@ public sealed class AuthCommandServiceTests
 
         AuthCommandResult result = await service.SignupAsync(new SignupCommand
         {
-            Password = "pass",
+            Password = "Test1234!",
             FirstName = "Test",
             Email = "a@b.com",
             AreaId = 5,
@@ -171,7 +171,7 @@ public sealed class AuthCommandServiceTests
 
         AuthCommandResult result = await service.SignupAsync(new SignupCommand
         {
-            Password = "pass",
+            Password = "Test1234!",
             FirstName = "Test",
             Email = "a@b.com",
             Avatar = "javascript:alert(1)"
@@ -188,7 +188,7 @@ public sealed class AuthCommandServiceTests
 
         AuthCommandResult result = await service.SignupAsync(new SignupCommand
         {
-            Password = "pass",
+            Password = "Test1234!",
             FirstName = "Test",
             Email = "a@b.com",
             CityId = 9999
@@ -205,7 +205,7 @@ public sealed class AuthCommandServiceTests
 
         AuthCommandResult result = await service.SignupAsync(new SignupCommand
         {
-            Password = "pass",
+            Password = "Test1234!",
             FirstName = "Test",
             Email = "a@b.com",
             CityId = 1,
@@ -223,7 +223,7 @@ public sealed class AuthCommandServiceTests
 
         AuthCommandResult result = await service.SignupAsync(new SignupCommand
         {
-            Password = "pass",
+            Password = "Test1234!",
             FirstName = "Test",
             Email = "newuser@example.com"
         });
@@ -245,7 +245,7 @@ public sealed class AuthCommandServiceTests
     {
         var model = new UserModel(
             userid: 1,
-            hashedpassword: hashedPassword ?? TijarahJo.Application.Common.PasswordHelper.HashPassword("default"),
+            hashedpassword: hashedPassword ?? TijarahJo.Application.Common.PasswordHelper.HashPassword("Test1234!"),
             email: "user@example.com",
             firstname: "Test",
             lastname: "User",

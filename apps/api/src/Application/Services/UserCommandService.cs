@@ -30,6 +30,12 @@ public sealed class UserCommandService : IUserCommandService
             return Failure(UserCommandFailureReason.InvalidRequest, invalidMessage ?? "Invalid user data.");
         }
 
+        var (isPasswordValid, passwordError) = PasswordHelper.IsPasswordPolicyCompliant(command.Password!);
+        if (!isPasswordValid)
+        {
+            return Failure(UserCommandFailureReason.InvalidRequest, passwordError!);
+        }
+
         int status = command.Status ?? UserStatusPolicy.Active;
         if (!UserStatusPolicy.IsValid(status))
         {
@@ -101,6 +107,11 @@ public sealed class UserCommandService : IUserCommandService
 
         if (!string.IsNullOrWhiteSpace(command.Password))
         {
+            var (isPasswordValid, passwordError) = PasswordHelper.IsPasswordPolicyCompliant(command.Password.Trim());
+            if (!isPasswordValid)
+            {
+                return Failure(UserCommandFailureReason.InvalidRequest, passwordError!);
+            }
             user = user with { HashedPassword = PasswordHelper.HashPassword(command.Password.Trim()) };
         }
 

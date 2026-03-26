@@ -109,6 +109,12 @@ public sealed class AuthCommandService : IAuthCommandService
             return Failure(AuthCommandFailureReason.InvalidRequest, "Invalid signup data. Password and first name are required.");
         }
 
+        var (isPasswordValid, passwordError) = PasswordHelper.IsPasswordPolicyCompliant(command.Password);
+        if (!isPasswordValid)
+        {
+            return Failure(AuthCommandFailureReason.InvalidRequest, passwordError!);
+        }
+
         string? normalizedEmail = NormalizeEmail(command.Email);
         string? normalizedPhone = PhoneNumberNormalizer.NormalizeJordanPhone(command.Phone) ??
                                   PhoneNumberNormalizer.NormalizeJordanPhone(command.Email);

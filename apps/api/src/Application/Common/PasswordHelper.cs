@@ -144,6 +144,32 @@ public static class PasswordHelper
         return CryptographicOperations.FixedTimeEquals(leftBytes, rightBytes);
     }
 
+    public static (bool IsValid, string? ErrorMessage) IsPasswordPolicyCompliant(string password)
+    {
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            return (false, "Password is required.");
+        }
+
+        if (password.Length < 8)
+        {
+            return (false, "Password must be at least 8 characters long.");
+        }
+
+        bool hasUpper = password.Any(char.IsUpper);
+        bool hasLower = password.Any(char.IsLower);
+        bool hasDigit = password.Any(char.IsDigit);
+        bool hasSpecial = password.Any(c => !char.IsLetterOrDigit(c));
+
+        if (!hasUpper) return (false, "Password must contain at least one uppercase letter.");
+        if (!hasLower) return (false, "Password must contain at least one lowercase letter.");
+        if (!hasDigit) return (false, "Password must contain at least one digit.");
+        if (!hasSpecial) return (false, "Password must contain at least one special character.");
+
+        return (true, null);
+    }
+
+
     private static void ValidatePassword(string password)
     {
         if (string.IsNullOrWhiteSpace(password))

@@ -6,6 +6,7 @@ using TijarahJo.Domain.Models;
 using TijarahJo.Application.Abstractions.DataAccess;
 using TijarahJo.Application.Common;
 using TijarahJo.Api.Common.Configuration;
+using TijarahJo.Application.Abstractions.Services;
 
 namespace TijarahJo.Api.Common.Services;
 
@@ -42,6 +43,9 @@ public sealed class PasswordResetService : IPasswordResetService
 {
     private const int MinimumPasswordLength = 8;
     private static readonly byte[] _challengeHashKey = RandomNumberGenerator.GetBytes(32);
+    // WARNING: Storing challenges in a static ConcurrentDictionary means that password 
+    // reset flows will fail in a multi-instance deployment unless sticky sessions are 
+    // used. For proper horizontal scaling, move this to a distributed cache (e.g., Redis).
     private static readonly ConcurrentDictionary<string, PasswordResetChallengeState> _challenges =
         new(StringComparer.OrdinalIgnoreCase);
 
@@ -49,17 +53,20 @@ public sealed class PasswordResetService : IPasswordResetService
     private readonly IPasswordResetEmailSender _emailSender;
     private readonly PasswordResetOptions _options;
     private readonly ILogger<PasswordResetService> _logger;
+    private readonly ITokenBlacklistService _tokenBlacklist;
 
     public PasswordResetService(
         IUserDataAccess users,
         IPasswordResetEmailSender emailSender,
         IOptions<PasswordResetOptions> options,
-        ILogger<PasswordResetService> logger)
+        ILogger<PasswordResetService> logger,
+        ITokenBlacklistService tokenBlacklist)
     {
         _users = users;
         _emailSender = emailSender;
         _options = options.Value;
         _logger = logger;
+        _tokenBlacklist = tokenBlacklist;
     }
 
     public async Task RequestResetAsync(string? email, CancellationToken cancellationToken = default)
@@ -157,11 +164,12 @@ public sealed class PasswordResetService : IPasswordResetService
             );
         }
 
-        if (submittedPassword.Length < MinimumPasswordLength)
+        var (isPasswordValid, passwordError) = PasswordHelper.IsPasswordPolicyCompliant(submittedPassword);
+        if (!isPasswordValid)
         {
             return Failure(
                 PasswordResetConfirmationFailureReason.PasswordPolicyViolation,
-                $"Password must be at least {MinimumPasswordLength} characters."
+                passwordError!
             );
         }
 
@@ -235,6 +243,8 @@ public sealed class PasswordResetService : IPasswordResetService
                 "Unable to save the new password. Please try again."
             );
         }
+
+        await _tokenBlacklist.InvalidateAllUserSessionsAsync(user.UserID.Value, cancellationToken);
 
         _challenges.TryRemove(normalizedEmail, out _);
         return new PasswordResetConfirmationResult
