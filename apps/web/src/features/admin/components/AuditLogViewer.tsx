@@ -1,5 +1,5 @@
 /* eslint-disable jsx-a11y/control-has-associated-label */
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment } from "react";
 import { Search, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../../../shared/ui/button";
@@ -171,9 +171,8 @@ export function AuditLogViewer() {
                 </tr>
               ) : (
                 filteredEntries.map((entry) => (
-                  <>
+                  <Fragment key={entry.auditLogID}>
                     <tr
-                      key={entry.auditLogID}
                       className="border-b border-border hover:bg-muted/50 transition-colors cursor-pointer"
                       onClick={() =>
                         setExpandedRow(
@@ -244,7 +243,7 @@ export function AuditLogViewer() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))
               )}
             </tbody>
