@@ -154,7 +154,6 @@ function buildCspPolicy(isProduction: boolean): string {
     "default-src 'self'",
     "base-uri 'self'",
     "object-src 'none'",
-    "frame-ancestors 'none'",
     "script-src 'self'",
     styleSrc,
     imgSrc,
@@ -261,6 +260,9 @@ export default defineConfig(({ mode }) => {
     server: {
       host: "localhost",
       port: 5173,
+      headers: {
+        "Content-Security-Policy": "frame-ancestors 'none';",
+      },
       // open: true, // commented out to prevent dev server from hanging
       hmr: {
         // Prevent full page reloads on HMR errors
