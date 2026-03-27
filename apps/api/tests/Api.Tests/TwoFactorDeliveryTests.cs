@@ -132,7 +132,8 @@ public sealed class TwoFactorDeliveryTests
             new JwtOptions
             {
                 SigningKey = "UnitTestSigningKey_AtLeast32Chars_Long"
-            }
+            },
+            new FakeVerificationChallengeDataAccess()
         );
     }
 
@@ -274,5 +275,32 @@ public sealed class TwoFactorDeliveryTests
 
         public Task<UserModel?> GetUserByLoginCandidatesAsync(IReadOnlyList<string> candidates, CancellationToken cancellationToken = default)
             => Task.FromResult<UserModel?>(candidates.Any(candidate => string.Equals(candidate, StoredUser.Email, StringComparison.OrdinalIgnoreCase)) ? StoredUser : null);
+    }
+
+    private sealed class FakeVerificationChallengeDataAccess : IVerificationChallengeDataAccess
+    {
+        private sealed record Challenge(string StateJson, DateTime ExpiresAt);
+        private readonly Dictionary<(int, string), Challenge> _challenges = [];
+
+        public Task<string?> GetChallengeStateAsync(int userId, string challengeType, CancellationToken cancellationToken = default)
+        {
+             if (_challenges.TryGetValue((userId, challengeType), out var c) && c.ExpiresAt > DateTime.UtcNow)
+             {
+                 return Task.FromResult<string?>(c.StateJson);
+             }
+             return Task.FromResult<string?>(null);
+        }
+
+        public Task UpsertChallengeStateAsync(int userId, string challengeType, string stateJson, DateTime expiresAt, CancellationToken cancellationToken = default)
+        {
+             _challenges[(userId, challengeType)] = new Challenge(stateJson, expiresAt);
+             return Task.CompletedTask;
+        }
+
+        public Task DeleteChallengeStateAsync(int userId, string challengeType, CancellationToken cancellationToken = default)
+        {
+             _challenges.Remove((userId, challengeType));
+             return Task.CompletedTask;
+        }
     }
 }

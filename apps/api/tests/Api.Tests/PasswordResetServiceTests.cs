@@ -88,10 +88,12 @@ public sealed class PasswordResetServiceTests
     {
         return new PasswordResetService(
             users,
+            new FakeVerificationChallengeDataAccess(),
             sender,
             Options.Create(options),
             NullLogger<PasswordResetService>.Instance,
-            new FakeTokenBlacklistService()
+            new FakeTokenBlacklistService(),
+            new JwtOptions { SigningKey = "UnitTestSigningKey_AtLeast32Chars_Long" }
         );
     }
 
@@ -146,14 +148,9 @@ public sealed class PasswordResetServiceTests
         }
     }
 
-    private sealed class FakeUserDataAccess : IUserDataAccess
+    private sealed class FakeUserDataAccess(UserModel storedUser) : IUserDataAccess
     {
-        public FakeUserDataAccess(UserModel storedUser)
-        {
-            StoredUser = storedUser;
-        }
-
-        public UserModel StoredUser { get; private set; }
+        public UserModel StoredUser { get; private set; } = storedUser;
         public bool UpdateCalled { get; private set; }
 
         public Task<UserModel?> GetUserByIDAsync(int? userId, CancellationToken cancellationToken = default)
@@ -186,7 +183,7 @@ public sealed class PasswordResetServiceTests
             int pageNumber = 1,
             int pageSize = 50,
             CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<UserModel>>(Array.Empty<UserModel>());
+            => Task.FromResult<IReadOnlyList<UserModel>>([]);
 
         public Task<UserModel?> GetUserByLoginAsync(string login, CancellationToken cancellationToken = default)
         {
@@ -202,6 +199,33 @@ public sealed class PasswordResetServiceTests
                 if (u != null) return u;
             }
             return null;
+        }
+    }
+
+    private sealed class FakeVerificationChallengeDataAccess : IVerificationChallengeDataAccess
+    {
+        private sealed record Challenge(string StateJson, DateTime ExpiresAt);
+        private readonly Dictionary<(int, string), Challenge> _challenges = [];
+
+        public Task<string?> GetChallengeStateAsync(int userId, string challengeType, CancellationToken cancellationToken = default)
+        {
+             if (_challenges.TryGetValue((userId, challengeType), out var c) && c.ExpiresAt > DateTime.UtcNow)
+             {
+                 return Task.FromResult<string?>(c.StateJson);
+             }
+             return Task.FromResult<string?>(null);
+        }
+
+        public Task UpsertChallengeStateAsync(int userId, string challengeType, string stateJson, DateTime expiresAt, CancellationToken cancellationToken = default)
+        {
+             _challenges[(userId, challengeType)] = new Challenge(stateJson, expiresAt);
+             return Task.CompletedTask;
+        }
+
+        public Task DeleteChallengeStateAsync(int userId, string challengeType, CancellationToken cancellationToken = default)
+        {
+             _challenges.Remove((userId, challengeType));
+             return Task.CompletedTask;
         }
     }
 }

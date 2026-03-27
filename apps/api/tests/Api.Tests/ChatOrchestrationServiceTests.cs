@@ -61,23 +61,14 @@ public sealed class ChatOrchestrationServiceTests
     }
 
     [Fact]
-    public async Task GetHistoryAsync_UsesRecentConversationForOtherUser_WhenAvailable()
+    public async Task GetHistoryAsync_ResolvesConversationAndReturnsHistory()
     {
         var now = DateTime.UtcNow;
         var messages = new FakeMessageService
         {
             CanAccessConversationResult = true,
-            NextConversationId = 999
+            NextConversationId = 55
         };
-        messages.RecentChatsResult.Add(new MessageModel(
-            messageId: 1,
-            senderId: 22,
-            conversationId: 55,
-            content: "latest",
-            timestamp: now,
-            isRead: false,
-            receiverId: 10,
-            postId: 3));
         messages.HistoryByConversationId[55] =
         [
             new(
@@ -99,49 +90,23 @@ public sealed class ChatOrchestrationServiceTests
         Assert.Single(result.Value!);
         Assert.Equal(55, messages.LastGetChatHistoryConversationId);
         Assert.Equal(55, messages.LastMarkAsReadConversationId);
-        Assert.Equal(0, messages.GetOrCreateConversationIdCalls);
+        Assert.Equal(1, messages.GetOrCreateConversationIdCalls);
     }
 
     [Fact]
-    public async Task GetHistoryAsync_FallsBackToCanonicalConversation_WhenRecentConversationIsMissing()
+    public async Task GetHistoryAsync_ReturnsEmptyWhenConversationCannotBeResolved()
     {
-        var now = DateTime.UtcNow;
         var messages = new FakeMessageService
         {
-            CanAccessConversationResult = true,
-            NextConversationId = 77
+            NextConversationId = null
         };
-        messages.RecentChatsResult.Add(new MessageModel(
-            messageId: 11,
-            senderId: 90,
-            conversationId: 12,
-            content: "other chat",
-            timestamp: now,
-            isRead: false,
-            receiverId: 10,
-            postId: null));
-        messages.HistoryByConversationId[77] =
-        [
-            new(
-                messageId: 12,
-                senderId: 10,
-                conversationId: 77,
-                content: "fallback",
-                timestamp: now,
-                isRead: true,
-                receiverId: 22,
-                postId: null)
-        ];
         var service = CreateService(messages, new FakeNotificationService(), new FakePresenceLookup());
 
         ChatServiceResult<IReadOnlyList<ChatMessageEnvelope>> result = await service.GetHistoryAsync(10, 22);
 
         Assert.True(result.Success);
-        Assert.NotNull(result.Value);
-        Assert.Single(result.Value!);
-        Assert.Equal(77, messages.LastGetChatHistoryConversationId);
-        Assert.Equal(77, messages.LastMarkAsReadConversationId);
-        Assert.Equal(1, messages.GetOrCreateConversationIdCalls);
+        Assert.Empty(result.Value!);
+        Assert.Null(messages.LastGetChatHistoryConversationId);
     }
 
     [Fact]
