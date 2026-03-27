@@ -88,7 +88,6 @@ final project primary/
 - `docs/reports/` — project and API endpoint reports
 - `docs/checklists/` — quality and launch checklists
 - `docs/troubleshooting/` — active troubleshooting docs
-- `docs/**/archive/` and `docs/archive/` — historical snapshots
 
 ## Operational Entry Points
 
