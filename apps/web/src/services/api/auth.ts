@@ -76,11 +76,8 @@ export const authApi = {
       }),
     });
 
-    debugLog("Login API response:", JSON.stringify(response, null, 2));
-    debugLog("Response success:", response.success);
-    if (response.success) {
-      debugLog("Response data:", JSON.stringify(response.data, null, 2));
-    } else {
+    debugLog("Login API response: success=", response.success);
+    if (!response.success) {
       debugLog("Response error:", response.error);
     }
 
@@ -303,11 +300,8 @@ export const authApi = {
       }),
     });
 
-    debugLog("Signup API response:", response);
-    debugLog("Response success:", response.success);
-    if (response.success) {
-      debugLog("Response data:", response.data);
-    } else {
+    debugLog("Signup API response: success=", response.success);
+    if (!response.success) {
       debugLog("Response error:", response.error);
     }
 

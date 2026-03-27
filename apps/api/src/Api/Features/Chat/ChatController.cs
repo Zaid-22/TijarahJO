@@ -19,40 +19,27 @@ namespace TijarahJo.Api.Features.Chat;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/chat")]
-public class ChatController : ControllerBase
+public class ChatController(
+    IChatOrchestrationService chat,
+    IMessageService messages,
+    IChatRealtimeDeliveryService realtimeDelivery,
+    IPostImageFileStorageService postImageStorage,
+    IImageModerationService imageModeration,
+    IWebHostEnvironment environment,
+    IOptions<FileStorageOptions> fileStorageOptions,
+    JwtOptions jwtOptions,
+    ILogger<ChatController> logger) : ControllerBase
 {
-    private readonly IChatOrchestrationService _chat;
-    private readonly IMessageService _messages;
-    private readonly IChatRealtimeDeliveryService _realtimeDelivery;
-    private readonly IPostImageFileStorageService _postImageStorage;
-    private readonly IImageModerationService _imageModeration;
-    private readonly IWebHostEnvironment _environment;
-    private readonly FileStorageOptions _fileStorageOptions;
-    private readonly ILogger<ChatController> _logger;
-    private readonly byte[] _chatImageSigningKey;
+    private readonly IChatOrchestrationService _chat = chat;
+    private readonly IMessageService _messages = messages;
+    private readonly IChatRealtimeDeliveryService _realtimeDelivery = realtimeDelivery;
+    private readonly IPostImageFileStorageService _postImageStorage = postImageStorage;
+    private readonly IImageModerationService _imageModeration = imageModeration;
+    private readonly IWebHostEnvironment _environment = environment;
+    private readonly FileStorageOptions _fileStorageOptions = fileStorageOptions.Value;
+    private readonly ILogger<ChatController> _logger = logger;
+    private readonly byte[] _chatImageSigningKey = SHA256.HashData(Encoding.UTF8.GetBytes($"{jwtOptions.SigningKey}::chat-image-download"));
     private static readonly FileExtensionContentTypeProvider ContentTypeProvider = new();
-
-    public ChatController(
-        IChatOrchestrationService chat,
-        IMessageService messages,
-        IChatRealtimeDeliveryService realtimeDelivery,
-        IPostImageFileStorageService postImageStorage,
-        IImageModerationService imageModeration,
-        IWebHostEnvironment environment,
-        IOptions<FileStorageOptions> fileStorageOptions,
-        JwtOptions jwtOptions,
-        ILogger<ChatController> logger)
-    {
-        _chat = chat;
-        _messages = messages;
-        _realtimeDelivery = realtimeDelivery;
-        _postImageStorage = postImageStorage;
-        _imageModeration = imageModeration;
-        _environment = environment;
-        _fileStorageOptions = fileStorageOptions.Value;
-        _logger = logger;
-        _chatImageSigningKey = SHA256.HashData(Encoding.UTF8.GetBytes($"{jwtOptions.SigningKey}::chat-image-download"));
-    }
 
     private string BuildChatImageDownloadUrl(string storedPath, int conversationId)
     {
@@ -107,9 +94,8 @@ public class ChatController : ControllerBase
             return this.ToChatProblem(result, "Chat operation failed.");
         }
 
-        List<MessageResponseDTO> response = result.Value
-            .Select(item => DTOMapper.ToMessageResponseDTO(item.Message, item.ReceiverId, item.PostId))
-            .ToList();
+        List<MessageResponseDTO> response = [.. result.Value
+            .Select(item => DTOMapper.ToMessageResponseDTO(item.Message, item.ReceiverId, item.PostId))];
         return Ok(response);
     }
 
@@ -128,9 +114,8 @@ public class ChatController : ControllerBase
             return this.ToChatProblem(result, "Chat operation failed.");
         }
 
-        List<MessageResponseDTO> response = result.Value
-            .Select(item => DTOMapper.ToMessageResponseDTO(item.Message, item.ReceiverId, item.PostId))
-            .ToList();
+        List<MessageResponseDTO> response = [.. result.Value
+            .Select(item => DTOMapper.ToMessageResponseDTO(item.Message, item.ReceiverId, item.PostId))];
         return Ok(response);
     }
 
@@ -372,8 +357,8 @@ public class ChatController : ControllerBase
                 contentType = "application/octet-stream";
             }
 
-            byte[] fileBytes = await System.IO.File.ReadAllBytesAsync(absoluteFilePath, cancellationToken);
-            return File(fileBytes, contentType, fileName);
+            var stream = new FileStream(absoluteFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true);
+            return File(stream, contentType, fileName);
         }
         catch (Exception)
         {

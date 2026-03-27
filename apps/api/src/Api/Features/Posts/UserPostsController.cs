@@ -21,27 +21,18 @@ namespace TijarahJo.Api.Features.Posts
     [ApiController]
     [ApiVersion("1.0")]
     [Route("api/v{version:apiVersion}/posts")]
-    public class UserPostsController : ControllerBase
+    public class UserPostsController(
+        ILogger<UserPostsController> logger,
+        IPostsFeedService postsFeedService,
+        IPostReadService postReads,
+        IPostMutationService postMutations,
+        IPostStatusTransitionService postStatusTransitions) : ControllerBase
     {
-        private readonly ILogger<UserPostsController> _logger;
-        private readonly IPostsFeedService _postsFeedService;
-        private readonly IPostReadService _postReads;
-        private readonly IPostMutationService _postMutations;
-        private readonly IPostStatusTransitionService _postStatusTransitions;
-
-        public UserPostsController(
-            ILogger<UserPostsController> logger,
-            IPostsFeedService postsFeedService,
-            IPostReadService postReads,
-            IPostMutationService postMutations,
-            IPostStatusTransitionService postStatusTransitions)
-        {
-            _logger = logger;
-            _postsFeedService = postsFeedService;
-            _postReads = postReads;
-            _postMutations = postMutations;
-            _postStatusTransitions = postStatusTransitions;
-        }
+        private readonly ILogger<UserPostsController> _logger = logger;
+        private readonly IPostsFeedService _postsFeedService = postsFeedService;
+        private readonly IPostReadService _postReads = postReads;
+        private readonly IPostMutationService _postMutations = postMutations;
+        private readonly IPostStatusTransitionService _postStatusTransitions = postStatusTransitions;
 
 
 
@@ -54,8 +45,7 @@ namespace TijarahJo.Api.Features.Posts
         {
             var normalizedRequest = _postsFeedService.NormalizeRequest(
                 request.Page,
-                request.Limit,
-                request.IncludeDeleted
+                request.Limit
             );
 
             FeedResponse response = await _postsFeedService.FetchPostsFeedAsync(normalizedRequest, cancellationToken);
@@ -200,7 +190,7 @@ namespace TijarahJo.Api.Features.Posts
         }
 
         [Authorize]
-        [HttpPut("{id}")]
+        [HttpPut("{id:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

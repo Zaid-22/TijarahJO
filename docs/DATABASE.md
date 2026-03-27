@@ -59,6 +59,14 @@ erDiagram
         datetime2 ExpiresAt
     }
 
+    VerificationChallenges {
+        nvarchar TokenHash PK
+        int UserID FK
+        nvarchar Purpose
+        datetime2 ExpiresAt
+        nvarchar StateData "JSON"
+    }
+
     %% ==========================================
     %% RBAC / Permissions
     %% ==========================================
@@ -179,6 +187,7 @@ erDiagram
     Messages {
         int MessageID PK "IDENTITY"
         int SenderID FK
+        int ReceiverID FK
         int ConversationID FK
         nvarchar Content
         datetime2 CreatedAt
@@ -273,6 +282,7 @@ erDiagram
     Roles ||--o{ Users : "assigns"
     UserStatusLookup ||--o{ Users : "status of"
     Users ||--o{ UserExternalIdentities : "logs in via"
+    Users ||--o{ VerificationChallenges: "has"
     
     %% RBAC
     Roles ||--o{ RolePermissions : "has"
@@ -302,7 +312,8 @@ erDiagram
     Users ||--o{ Conversations : "participates (User2)"
     Posts |o--o{ Conversations : "discussed in"
     Conversations ||--o{ Messages : "contains"
-    Users ||--o{ Messages : "sends"
+    Users ||--o{ Messages : "sends (Sender)"
+    Users ||--o{ Messages : "receives (Receiver)"
 
     %% Notifications
     Users ||--o{ Notifications : "receives"

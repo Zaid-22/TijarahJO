@@ -94,12 +94,10 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
         try
         {
             int rowsAffected = await _dbContext.SaveChangesAsync(cancellationToken);
-            Console.WriteLine($"[UpdateUserAsync] SaveChangesAsync returned {rowsAffected} rows affected for user {user.UserID}");
-            return rowsAffected >= 0;
+            return rowsAffected > 0;
         }
-        catch (Exception ex)
+        catch (DbUpdateException)
         {
-            Console.WriteLine($"[UpdateUserAsync] SaveChangesAsync EXCEPTION for user {user.UserID}: {ex}");
             return false;
         }
     }

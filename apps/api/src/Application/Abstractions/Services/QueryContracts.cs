@@ -49,6 +49,7 @@ public sealed class PostListingRow
     public string SellerName { get; init; } = string.Empty;
     public string CategoryName { get; init; } = string.Empty;
     public DateTime CreatedAt { get; init; }
+    public DateTime UpdatedAt { get; init; }
     public long Views { get; init; }
     public string ClientStatus { get; init; } = "ACTIVE";
     public IReadOnlyList<string> Images { get; init; } = Array.Empty<string>();

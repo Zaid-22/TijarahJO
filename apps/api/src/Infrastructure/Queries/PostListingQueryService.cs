@@ -154,6 +154,7 @@ WITH FilteredPosts AS
         ISNULL(ct.CityName, '') AS City,
         ISNULL(a.AreaName, '') AS Area,
         p.CreatedAt,
+        p.UpdatedAt,
         ISNULL(p.Views, 0) AS Views,
         ISNULL(c.CategoryName, '') AS CategoryName,
         COALESCE(
@@ -190,6 +191,7 @@ SELECT
     fp.SellerName,
     fp.CategoryName,
     fp.CreatedAt,
+    fp.UpdatedAt,
     fp.Views,
     fp.ClientStatus,
     fp.ImageURLs,
@@ -224,6 +226,7 @@ OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY;";
                 SellerName = reader.GetString(reader.GetOrdinal("SellerName")),
                 CategoryName = reader.GetString(reader.GetOrdinal("CategoryName")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
+                UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
                 Views = reader.GetInt64(reader.GetOrdinal("Views")),
                 ClientStatus = reader.GetString(reader.GetOrdinal("ClientStatus")),
                 Images = ParseAggregatedImageUrls(imageCsv)

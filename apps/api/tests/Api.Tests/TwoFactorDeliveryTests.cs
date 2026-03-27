@@ -138,14 +138,15 @@ public sealed class TwoFactorDeliveryTests
 
     private static DefaultHttpContext CreateAuthenticatedHttpContext(int userId)
     {
-        var httpContext = new DefaultHttpContext();
-        httpContext.User = new ClaimsPrincipal(
-            new ClaimsIdentity(
-                [new Claim(ClaimTypes.NameIdentifier, userId.ToString())],
-                authenticationType: "Test"
+        return new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(
+                new ClaimsIdentity(
+                    [new Claim(ClaimTypes.NameIdentifier, userId.ToString())],
+                    authenticationType: "Test"
+                )
             )
-        );
-        return httpContext;
+        };
     }
 
     private static UserModel CreateUser(
@@ -215,7 +216,7 @@ public sealed class TwoFactorDeliveryTests
     private sealed class FakeRoleService : IRoleService
     {
         public Task<IReadOnlyList<RoleModel>> GetAllRolesAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<RoleModel>>(Array.Empty<RoleModel>());
+            => Task.FromResult<IReadOnlyList<RoleModel>>([]);
 
         public Task<Role?> FindAsync(int? roleId, CancellationToken cancellationToken = default)
             => Task.FromResult<Role?>(null);
@@ -266,7 +267,7 @@ public sealed class TwoFactorDeliveryTests
             => Task.FromResult(userId == StoredUser.UserID);
 
         public Task<IReadOnlyList<UserModel>> GetAllUsersAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<UserModel>>(Array.Empty<UserModel>());
+            => Task.FromResult<IReadOnlyList<UserModel>>([]);
 
         public Task<UserModel?> GetUserByLoginAsync(string login, CancellationToken cancellationToken = default)
             => Task.FromResult(string.Equals(login, StoredUser.Email, StringComparison.OrdinalIgnoreCase) ? StoredUser : null);

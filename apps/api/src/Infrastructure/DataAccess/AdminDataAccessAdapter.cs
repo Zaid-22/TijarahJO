@@ -214,6 +214,21 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
         };
     }
 
+    public async Task<int> BulkUpdateUserStatusAsync(System.Collections.Generic.IReadOnlyList<int> userIds, int newStatusId, CancellationToken cancellationToken = default)
+    {
+        var users = await _dbContext.Users
+            .Where(u => userIds.Contains(u.UserID) && !u.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        foreach (var user in users)
+        {
+            user.Status = newStatusId;
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return users.Count;
+    }
+
     // ── Phase 2: Reviews Moderation ──
 
     public async Task<AdminReviewListResult> GetAdminReviewsAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)

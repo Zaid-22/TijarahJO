@@ -68,7 +68,7 @@ public class AuthController(
 
         if (result.User.TwoFactorEnabled)
         {
-            string code = _twoFactorService.GenerateAndStoreLoginCode(result.User.UserID.Value);
+            string code = await _twoFactorService.GenerateAndStoreLoginCodeAsync(result.User.UserID.Value, cancellationToken);
 
             EmailTwoFactorSendResult sendResult = await _emailSender.SendTwoFactorCodeAsync(
                 result.User.Email,

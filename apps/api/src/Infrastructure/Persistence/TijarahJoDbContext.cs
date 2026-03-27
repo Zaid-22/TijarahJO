@@ -41,6 +41,7 @@ public sealed class TijarahJoDbContext : DbContext
     public DbSet<ReportEntity> Reports => Set<ReportEntity>();
     public DbSet<PermissionEntity> Permissions => Set<PermissionEntity>();
     public DbSet<RolePermissionEntity> RolePermissions => Set<RolePermissionEntity>();
+    public DbSet<VerificationChallengeEntity> VerificationChallenges => Set<VerificationChallengeEntity>();
 
     // Set this to the current actor's UserID before calling SaveChangesAsync on a
     // mutating operation so that AuditLog entries carry the correct ChangedByUserID.

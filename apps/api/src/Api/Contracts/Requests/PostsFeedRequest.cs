@@ -12,6 +12,4 @@ public sealed class PostsFeedRequest
 
     [Range(1, 200)]
     public int? Limit { get; set; } = 20;
-
-    public bool? IncludeDeleted { get; set; } = false;
 }

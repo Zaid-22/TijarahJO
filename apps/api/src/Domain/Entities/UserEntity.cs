@@ -22,6 +22,7 @@ namespace TijarahJo.Domain.Entities
         public bool TwoFactorEnabled { get; set; }
         public string? TwoFactorSecret { get; set; }
         public string? TwoFactorPendingSecret { get; set; }
+        public DateTime? LastInvalidatedAt { get; set; }
 
         public UserStatusLookupEntity? StatusLookup { get; set; }
         public string? SearchFirstNameNormalized { get; private set; }

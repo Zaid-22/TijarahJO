@@ -126,7 +126,7 @@ public static class PasswordHelper
             return null;
         }
 
-        using HMACSHA256 hmac = new HMACSHA256(Encoding.UTF8.GetBytes(pepper));
+        using HMACSHA256 hmac = new(Encoding.UTF8.GetBytes(pepper));
         byte[] bytes = Encoding.UTF8.GetBytes(password);
         byte[] hash = hmac.ComputeHash(bytes);
         return Convert.ToBase64String(hash);
@@ -134,14 +134,23 @@ public static class PasswordHelper
 
     private static bool FixedTimeEquals(string left, string right)
     {
-        byte[] leftBytes = Encoding.UTF8.GetBytes(left);
-        byte[] rightBytes = Encoding.UTF8.GetBytes(right);
-        if (leftBytes.Length != rightBytes.Length)
+        byte[] leftBytes = Encoding.UTF8.GetBytes(left ?? string.Empty);
+        byte[] rightBytes = Encoding.UTF8.GetBytes(right ?? string.Empty);
+        
+        int maxLen = Math.Max(leftBytes.Length, rightBytes.Length);
+        if (maxLen == 0)
         {
-            return false;
+            return true;
         }
 
-        return CryptographicOperations.FixedTimeEquals(leftBytes, rightBytes);
+        byte[] paddedLeft = new byte[maxLen];
+        byte[] paddedRight = new byte[maxLen];
+        
+        Array.Copy(leftBytes, paddedLeft, leftBytes.Length);
+        Array.Copy(rightBytes, paddedRight, rightBytes.Length);
+        
+        bool lengthMatch = leftBytes.Length == rightBytes.Length;
+        return CryptographicOperations.FixedTimeEquals(paddedLeft, paddedRight) && lengthMatch;
     }
 
     public static (bool IsValid, string? ErrorMessage) IsPasswordPolicyCompliant(string password)
@@ -149,6 +158,11 @@ public static class PasswordHelper
         if (string.IsNullOrWhiteSpace(password))
         {
             return (false, "Password is required.");
+        }
+
+        if (password.Length > 128)
+        {
+            return (false, "Password is too long (maximum 128 characters).");
         }
 
         if (password.Length < 8)
