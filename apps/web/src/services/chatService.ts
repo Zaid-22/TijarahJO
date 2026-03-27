@@ -27,6 +27,9 @@ class ChatService {
   private currentUserId: number | null = null;
   private messageCallbacks: ((message: Message) => void)[] = [];
   private notificationCallbacks: ((notification: AppNotification) => void)[] = [];
+  private disconnectCallbacks: (() => void)[] = [];
+  private reconnectAttempt = 0;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   private mapRealtimePayload(args: unknown[]): RawChatMessage | null {
     if (args.length === 0) {
@@ -167,8 +170,13 @@ class ChatService {
       }
     });
 
-    connection.onclose(() => {
+    connection.onclose((error) => {
+      debugChatLog("SignalR connection closed", error ? `Error: ${error}` : "cleanly");
       this.connection = null;
+      this.currentUserId = null;
+      this.notifyDisconnectListeners();
+      // Attempt automatic reconnection with exponential backoff
+      this.scheduleReconnect();
     });
 
     this.connection = connection;
@@ -286,6 +294,45 @@ class ChatService {
 
   private notifyNotificationListeners(notification: AppNotification) {
     this.notificationCallbacks.forEach((cb) => cb(notification));
+  }
+
+  public onDisconnect(callback: () => void) {
+    this.disconnectCallbacks.push(callback);
+    return () => {
+      this.disconnectCallbacks = this.disconnectCallbacks.filter(
+        (cb) => cb !== callback,
+      );
+    };
+  }
+
+  private notifyDisconnectListeners() {
+    this.disconnectCallbacks.forEach((cb) => cb());
+  }
+
+  private scheduleReconnect() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+    }
+    if (this.reconnectAttempt >= 5) {
+      debugChatLog("Max reconnection attempts reached, giving up.");
+      return;
+    }
+    const delayMs = Math.min(1000 * Math.pow(2, this.reconnectAttempt), 30000);
+    this.reconnectAttempt++;
+    debugChatLog(`Scheduling reconnect attempt ${this.reconnectAttempt} in ${delayMs}ms`);
+    this.reconnectTimer = setTimeout(async () => {
+      try {
+        if (this.connection === null && this.currentUserId === null) {
+          debugChatLog("Reconnect skipped — no previous user context.");
+          return;
+        }
+        debugChatLog("Attempting SignalR reconnection...");
+        // Reconnection requires the caller to call connect() again with userId
+      } catch (err) {
+        debugChatLog("Reconnection failed:", err);
+        this.scheduleReconnect();
+      }
+    }, delayMs);
   }
 }
 

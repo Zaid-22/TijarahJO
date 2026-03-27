@@ -5,27 +5,25 @@ using System.Text.Json;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
 using TijarahJo.Api.Common.Configuration;
+using TijarahJo.Application.Abstractions.DataAccess;
 
 namespace TijarahJo.Api.Common.Services;
 
 public sealed class TwoFactorService
 {
-
-    private static readonly byte[] _challengeHashKey = RandomNumberGenerator.GetBytes(32);
-
     private readonly TwoFactorOptions _options;
     private readonly byte[] _secretEncryptionKey;
     private readonly byte[] _challengeSigningKey;
+    private readonly byte[] _challengeHashKey;
+    private readonly IVerificationChallengeDataAccess _challenges;
 
-    // WARNING: Storing challenges in a static ConcurrentDictionary means that 2FA 
-    // flows will fail in a multi-instance deployment unless sticky sessions are 
-    // used. For proper horizontal scaling, move this to a distributed cache (e.g., Redis).
-    private static readonly ConcurrentDictionary<int, TwoFactorChallengeState> _loginChallenges = new();
-    private static readonly ConcurrentDictionary<int, TwoFactorChallengeState> _setupChallenges = new();
-
-    public TwoFactorService(IOptions<TwoFactorOptions> optionsAccessor, JwtOptions jwtOptions)
+    public TwoFactorService(
+        IOptions<TwoFactorOptions> optionsAccessor, 
+        JwtOptions jwtOptions,
+        IVerificationChallengeDataAccess challenges)
     {
         _options = optionsAccessor.Value ?? new TwoFactorOptions();
+        _challenges = challenges;
 
         string secretKeyMaterial = ResolveTwoFactorKeyMaterial(
             _options.SecretEncryptionKey,
@@ -42,6 +40,7 @@ public sealed class TwoFactorService
 
         _secretEncryptionKey = SHA256.HashData(Encoding.UTF8.GetBytes(secretKeyMaterial));
         _challengeSigningKey = SHA256.HashData(Encoding.UTF8.GetBytes(challengeKeyMaterial));
+        _challengeHashKey = Encoding.UTF8.GetBytes(jwtOptions.SigningKey);
 
         _options.Digits = Math.Clamp(_options.Digits, 6, 8);
         _options.LoginChallengeLifetimeSeconds = Math.Clamp(_options.LoginChallengeLifetimeSeconds, 60, 900);
@@ -129,8 +128,15 @@ public sealed class TwoFactorService
         }
 
         byte[] expectedSignature = ComputeChallengeSignature(payloadBytes);
-        if (signatureBytes.Length != expectedSignature.Length ||
-            !CryptographicOperations.FixedTimeEquals(signatureBytes, expectedSignature))
+        
+        bool sigLengthMatch = signatureBytes.Length == expectedSignature.Length;
+        int maxLen = Math.Max(signatureBytes.Length, expectedSignature.Length);
+        byte[] p1 = new byte[maxLen];
+        byte[] p2 = new byte[maxLen];
+        Array.Copy(signatureBytes, p1, signatureBytes.Length);
+        Array.Copy(expectedSignature, p2, expectedSignature.Length);
+        
+        if (!sigLengthMatch || !CryptographicOperations.FixedTimeEquals(p1, p2))
         {
             return false;
         }
@@ -159,92 +165,118 @@ public sealed class TwoFactorService
         return true;
     }
 
-    // -----------------------------------------------------------------------------------------
-    // Email 2FA Specific logic
-    // -----------------------------------------------------------------------------------------
-
-    public string GenerateAndStoreLoginCode(int userId)
+    public async Task<string> GenerateAndStoreLoginCodeAsync(int userId, CancellationToken cancellationToken = default)
     {
-        return GenerateAndStoreCode(userId, _loginChallenges);
+        return await GenerateAndStoreCodeAsync(userId, "TwoFactorLogin", cancellationToken);
     }
 
-    public bool VerifyLoginCode(int userId, string? submittedCode)
+    public async Task<bool> VerifyLoginCodeAsync(int userId, string? submittedCode, CancellationToken cancellationToken = default)
     {
-        return VerifyAndRemoveCode(userId, submittedCode, _loginChallenges);
+        return await VerifyAndRemoveCodeAsync(userId, submittedCode, "TwoFactorLogin", cancellationToken);
     }
 
-    public string GenerateAndStoreSetupCode(int userId)
+    public async Task<string> GenerateAndStoreSetupCodeAsync(int userId, CancellationToken cancellationToken = default)
     {
-        return GenerateAndStoreCode(userId, _setupChallenges);
+        return await GenerateAndStoreCodeAsync(userId, "TwoFactorSetup", cancellationToken);
     }
 
-    public bool VerifySetupCode(int userId, string? submittedCode)
+    public async Task<bool> VerifySetupCodeAsync(int userId, string? submittedCode, CancellationToken cancellationToken = default)
     {
-        return VerifyAndRemoveCode(userId, submittedCode, _setupChallenges);
+        return await VerifyAndRemoveCodeAsync(userId, submittedCode, "TwoFactorSetup", cancellationToken);
     }
 
-    public void RemoveSetupCache(int userId)
+    public async Task RemoveSetupCacheAsync(int userId, CancellationToken cancellationToken = default)
     {
-        _setupChallenges.TryRemove(userId, out _);
+        await _challenges.DeleteChallengeStateAsync(userId, "TwoFactorSetup", cancellationToken);
     }
 
-    private string GenerateAndStoreCode(int userId, ConcurrentDictionary<int, TwoFactorChallengeState> cache)
+    private async Task<string> GenerateAndStoreCodeAsync(int userId, string challengeType, CancellationToken cancellationToken)
     {
-        PruneExpiredChallenges(cache);
         string code = GenerateNumericCode(_options.Digits);
         byte[] hash = ComputeCodeHash(userId, code);
         
         DateTimeOffset now = DateTimeOffset.UtcNow;
         var challenge = new TwoFactorChallengeState(hash, now.AddSeconds(_options.LoginChallengeLifetimeSeconds), 0);
-        cache.AddOrUpdate(userId, challenge, (_, _) => challenge);
+        
+        string stateJson = JsonSerializer.Serialize(challenge);
+        await _challenges.UpsertChallengeStateAsync(
+            userId, 
+            challengeType, 
+            stateJson, 
+            challenge.ExpiresAtUtc.UtcDateTime, 
+            cancellationToken);
 
         return code;
     }
 
-    private static bool VerifyAndRemoveCode(int userId, string? submittedCode, ConcurrentDictionary<int, TwoFactorChallengeState> cache)
+    private async Task<bool> VerifyAndRemoveCodeAsync(int userId, string? submittedCode, string challengeType, CancellationToken cancellationToken)
     {
-        PruneExpiredChallenges(cache);
-        
         DateTimeOffset now = DateTimeOffset.UtcNow;
         string normalizedCode = string.Concat((submittedCode ?? "").Where(char.IsDigit));
 
-        if (!cache.TryGetValue(userId, out TwoFactorChallengeState? challenge) || challenge.ExpiresAtUtc <= now)
+        string? stateStr = await _challenges.GetChallengeStateAsync(userId, challengeType, cancellationToken);
+        if (string.IsNullOrEmpty(stateStr))
         {
-            cache.TryRemove(userId, out _);
+            return false;
+        }
+
+        TwoFactorChallengeState? challenge;
+        try
+        {
+            challenge = JsonSerializer.Deserialize<TwoFactorChallengeState>(stateStr);
+        }
+        catch (JsonException)
+        {
+            await _challenges.DeleteChallengeStateAsync(userId, challengeType, cancellationToken);
+            return false;
+        }
+
+        if (challenge == null || challenge.ExpiresAtUtc <= now)
+        {
+            await _challenges.DeleteChallengeStateAsync(userId, challengeType, cancellationToken);
             return false;
         }
 
         int maxAttempts = 5; // allow 5 attempts
         if (challenge.FailedAttempts >= maxAttempts)
         {
-            cache.TryRemove(userId, out _);
+            await _challenges.DeleteChallengeStateAsync(userId, challengeType, cancellationToken);
             return false;
         }
 
         byte[] expectedHash = challenge.CodeHash;
         byte[] providedHash = ComputeCodeHash(userId, normalizedCode);
-        bool isCodeValid = expectedHash.Length == providedHash.Length &&
-                           CryptographicOperations.FixedTimeEquals(expectedHash, providedHash);
+        
+        bool lengthMatch = expectedHash.Length == providedHash.Length;
+        int maxLen = Math.Max(expectedHash.Length, providedHash.Length);
+        byte[] p1 = new byte[maxLen];
+        byte[] p2 = new byte[maxLen];
+        Array.Copy(expectedHash, p1, expectedHash.Length);
+        Array.Copy(providedHash, p2, providedHash.Length);
+        
+        bool isCodeValid = lengthMatch && CryptographicOperations.FixedTimeEquals(p1, p2);
 
         if (!isCodeValid)
         {
             int nextFailedAttempts = challenge.FailedAttempts + 1;
             if (nextFailedAttempts >= maxAttempts)
             {
-                cache.TryRemove(userId, out _);
+                await _challenges.DeleteChallengeStateAsync(userId, challengeType, cancellationToken);
             }
             else
             {
-                cache[userId] = challenge with { FailedAttempts = nextFailedAttempts };
+                var updatedChallenge = challenge with { FailedAttempts = nextFailedAttempts };
+                string updatedStateJson = JsonSerializer.Serialize(updatedChallenge);
+                await _challenges.UpsertChallengeStateAsync(userId, challengeType, updatedStateJson, updatedChallenge.ExpiresAtUtc.UtcDateTime, cancellationToken);
             }
             return false;
         }
 
-        cache.TryRemove(userId, out _);
+        await _challenges.DeleteChallengeStateAsync(userId, challengeType, cancellationToken);
         return true;
     }
 
-    private static byte[] ComputeCodeHash(int userId, string code)
+    private byte[] ComputeCodeHash(int userId, string code)
     {
         string payload = $"{userId}:{code}";
         using var hmac = new HMACSHA256(_challengeHashKey);
@@ -257,18 +289,6 @@ public sealed class TwoFactorService
         int maxExclusive = (int)Math.Pow(10, safeDigits);
         int value = RandomNumberGenerator.GetInt32(0, maxExclusive);
         return value.ToString($"D{safeDigits}");
-    }
-
-    private static void PruneExpiredChallenges(ConcurrentDictionary<int, TwoFactorChallengeState> cache)
-    {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
-        foreach ((int key, TwoFactorChallengeState value) in cache)
-        {
-            if (value.ExpiresAtUtc <= now)
-            {
-                cache.TryRemove(key, out _);
-            }
-        }
     }
 
     private byte[] ComputeChallengeSignature(byte[] payloadBytes)

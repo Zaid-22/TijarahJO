@@ -110,7 +110,31 @@ public sealed class PostDataAccessAdapter : IPostDataAccess
         {
             post.IsDeleted = true;
 
-            _dbContext.AuditActorUserId = actorUserId > 0 ? actorUserId : (post.UserID > 0 ? post.UserID : null);
+            int effectiveActorId = actorUserId > 0 ? actorUserId : (post.UserID > 0 ? post.UserID : 0);
+            _dbContext.AuditActorUserId = effectiveActorId == 0 ? null : effectiveActorId;
+
+            if (effectiveActorId > 0)
+            {
+                _dbContext.AuditLogs.Add(new AuditLogEntity
+                {
+                    TableName = "PostImages",
+                    Action = "BULK_SOFT_DELETE",
+                    ChangedByUserID = effectiveActorId,
+                    ChangedAt = DateTime.UtcNow,
+                    OldValues = $"{{\"PostID\":{postId.Value},\"IsDeleted\":false}}",
+                    NewValues = $"{{\"PostID\":{postId.Value},\"IsDeleted\":true}}"
+                });
+
+                _dbContext.AuditLogs.Add(new AuditLogEntity
+                {
+                    TableName = "Favorites",
+                    Action = "BULK_SOFT_DELETE",
+                    ChangedByUserID = effectiveActorId,
+                    ChangedAt = DateTime.UtcNow,
+                    OldValues = $"{{\"PostID\":{postId.Value},\"IsDeleted\":false}}",
+                    NewValues = $"{{\"PostID\":{postId.Value},\"IsDeleted\":true}}"
+                });
+            }
             await _dbContext.PostImages
                 .Where(item => item.PostID == postId.Value && !item.IsDeleted)
                 .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.IsDeleted, true), cancellationToken);

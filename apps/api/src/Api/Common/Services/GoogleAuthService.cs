@@ -25,29 +25,21 @@ public sealed record GoogleIdentityResult(
     string? Error
 );
 
-public sealed class GoogleAuthService
+public sealed class GoogleAuthService(
+    HttpClient httpClient,
+    IMemoryCache memoryCache,
+    IOptions<GoogleAuthOptions> configuredOptions,
+    ILogger<GoogleAuthService> logger)
 {
     private const string GoogleAuthorizationEndpoint = "https://accounts.google.com/o/oauth2/v2/auth";
     private const string GoogleTokenEndpoint = "https://oauth2.googleapis.com/token";
     private const string GoogleJwksEndpoint = "https://www.googleapis.com/oauth2/v3/certs";
     private const string GoogleJwksCacheKey = "google-auth-jwks";
 
-    private readonly HttpClient _httpClient;
-    private readonly IMemoryCache _memoryCache;
-    private readonly GoogleAuthOptions _configuredOptions;
-    private readonly ILogger<GoogleAuthService> _logger;
-
-    public GoogleAuthService(
-        HttpClient httpClient,
-        IMemoryCache memoryCache,
-        IOptions<GoogleAuthOptions> configuredOptions,
-        ILogger<GoogleAuthService> logger)
-    {
-        _httpClient = httpClient;
-        _memoryCache = memoryCache;
-        _configuredOptions = configuredOptions.Value;
-        _logger = logger;
-    }
+    private readonly HttpClient _httpClient = httpClient;
+    private readonly IMemoryCache _memoryCache = memoryCache;
+    private readonly GoogleAuthOptions _configuredOptions = configuredOptions.Value;
+    private readonly ILogger<GoogleAuthService> _logger = logger;
 
     public bool IsConfigured
     {
@@ -226,18 +218,16 @@ public sealed class GoogleAuthService
             MapInboundClaims = false
         };
 
-        string[] audiences = options.AllowedAudiences
+        string[] audiences = [.. options.AllowedAudiences
             .Append(options.ClientId)
             .Where(static value => !string.IsNullOrWhiteSpace(value))
             .Select(static value => value.Trim())
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
+            .Distinct(StringComparer.Ordinal)];
 
-        string[] issuers = options.AllowedIssuers
+        string[] issuers = [.. options.AllowedIssuers
             .Where(static value => !string.IsNullOrWhiteSpace(value))
             .Select(static value => value.Trim())
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
+            .Distinct(StringComparer.Ordinal)];
 
         var validationParameters = new TokenValidationParameters
         {
@@ -351,9 +341,9 @@ public sealed class GoogleAuthService
 
         string json = await response.Content.ReadAsStringAsync(cancellationToken);
         var webKeySet = new JsonWebKeySet(json);
-        IReadOnlyCollection<SecurityKey> signingKeys = webKeySet.GetSigningKeys().ToArray();
+        SecurityKey[] signingKeys = [.. webKeySet.GetSigningKeys()];
 
-        if (signingKeys.Count == 0)
+        if (signingKeys.Length == 0)
         {
             throw new InvalidOperationException("Google signing keys are unavailable.");
         }
@@ -370,19 +360,28 @@ public sealed class GoogleAuthService
 
     private static bool FixedTimeEquals(string left, string right)
     {
-        if (string.IsNullOrEmpty(left) || string.IsNullOrEmpty(right))
+        if (left == null || right == null)
         {
             return false;
         }
 
         byte[] leftBytes = System.Text.Encoding.UTF8.GetBytes(left);
         byte[] rightBytes = System.Text.Encoding.UTF8.GetBytes(right);
-        if (leftBytes.Length != rightBytes.Length)
+        
+        int maxLen = Math.Max(leftBytes.Length, rightBytes.Length);
+        if (maxLen == 0)
         {
-            return false;
+            return true;
         }
 
-        return CryptographicOperations.FixedTimeEquals(leftBytes, rightBytes);
+        byte[] paddedLeft = new byte[maxLen];
+        byte[] paddedRight = new byte[maxLen];
+        
+        Array.Copy(leftBytes, paddedLeft, leftBytes.Length);
+        Array.Copy(rightBytes, paddedRight, rightBytes.Length);
+        
+        bool lengthMatch = leftBytes.Length == rightBytes.Length;
+        return CryptographicOperations.FixedTimeEquals(paddedLeft, paddedRight) && lengthMatch;
     }
 
     private static string ReadClaimValue(ClaimsPrincipal principal, string claimType)
@@ -515,11 +514,10 @@ public sealed class GoogleAuthService
 
     private static string[] ParseCsv(string rawValue)
     {
-        return rawValue
+        return [.. rawValue
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Where(static value => !string.IsNullOrWhiteSpace(value))
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
+            .Distinct(StringComparer.Ordinal)];
     }
 
     private sealed record TokenExchangeResult(bool Success, string? IdToken, string? Error);

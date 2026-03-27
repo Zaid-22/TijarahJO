@@ -28,6 +28,7 @@ public sealed class MessageDataAccessAdapter : IMessageDataAccess
         var entity = new MessageEntity
         {
             SenderID = message.SenderId,
+            ReceiverID = message.ReceiverId ?? 0,
             ConversationID = message.ConversationId,
             Content = message.Content,
             CreatedAt = message.Timestamp == default ? DateTime.UtcNow : message.Timestamp,
@@ -99,6 +100,7 @@ Ranked AS
     SELECT
         m.MessageID,
         m.SenderID,
+        m.ReceiverID,
         m.ConversationID,
         m.Content,
         m.CreatedAt,
@@ -116,6 +118,7 @@ Ranked AS
 SELECT
     MessageID,
     SenderID,
+    ReceiverID,
     ConversationID,
     Content,
     CreatedAt,
@@ -171,16 +174,6 @@ ORDER BY CreatedAt DESC, MessageID DESC;";
 
     private static MessageModel ToModel(MessageEntity entity, int? user1Id = null, int? user2Id = null, int? postId = null)
     {
-        int? receiverId = null;
-        if (user1Id.HasValue && user2Id.HasValue)
-        {
-            receiverId = entity.SenderID == user1Id.Value
-                ? user2Id.Value
-                : entity.SenderID == user2Id.Value
-                    ? user1Id.Value
-                    : null;
-        }
-
         return new MessageModel(
             entity.MessageID,
             entity.SenderID,
@@ -188,7 +181,7 @@ ORDER BY CreatedAt DESC, MessageID DESC;";
             entity.Content,
             entity.CreatedAt,
             entity.IsRead,
-            receiverId,
+            entity.ReceiverID,
             postId
         );
     }

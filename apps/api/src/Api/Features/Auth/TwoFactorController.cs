@@ -60,7 +60,7 @@ public class TwoFactorController(
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Two-factor authentication is not enabled for this account.");
         }
 
-        if (!_twoFactorService.VerifyLoginCode(user.UserID!.Value, request?.Code))
+        if (!await _twoFactorService.VerifyLoginCodeAsync(user.UserID!.Value, request?.Code, cancellationToken))
         {
             return Problem(statusCode: StatusCodes.Status401Unauthorized, detail: "Invalid or expired verification code.");
         }
@@ -141,7 +141,7 @@ public class TwoFactorController(
 
         if (user!.TwoFactorEnabled)
         {
-            string disableCode = _twoFactorService.GenerateAndStoreSetupCode(user.UserID!.Value);
+            string disableCode = await _twoFactorService.GenerateAndStoreSetupCodeAsync(user.UserID!.Value, cancellationToken);
 
             EmailTwoFactorSendResult sendResult = await _emailSender.SendTwoFactorCodeAsync(
                 user.Email,
@@ -179,7 +179,7 @@ public class TwoFactorController(
             });
         }
 
-        string code = _twoFactorService.GenerateAndStoreSetupCode(user.UserID!.Value);
+        string code = await _twoFactorService.GenerateAndStoreSetupCodeAsync(user.UserID!.Value, cancellationToken);
 
         EmailTwoFactorSendResult setupSendResult = await _emailSender.SendTwoFactorCodeAsync(
             user.Email,
@@ -249,7 +249,7 @@ public class TwoFactorController(
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "No pending two-factor setup exists.");
         }
 
-        if (!_twoFactorService.VerifySetupCode(user.UserID!.Value, request?.Code))
+        if (!await _twoFactorService.VerifySetupCodeAsync(user.UserID!.Value, request?.Code, cancellationToken))
         {
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid or expired verification code.");
         }
@@ -299,7 +299,7 @@ public class TwoFactorController(
         }
 
         // Require verification to disable
-        if (!_twoFactorService.VerifySetupCode(user.UserID!.Value, request?.Code))
+        if (!await _twoFactorService.VerifySetupCodeAsync(user.UserID!.Value, request?.Code, cancellationToken))
         {
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid or expired verification code.");
         }

@@ -110,3 +110,10 @@ public interface IUserDataAccess
     // Combines email + phone lookup into a single DB query. Returns the first match.
     Task<UserModel?> GetUserByLoginCandidatesAsync(IReadOnlyList<string> candidates, CancellationToken cancellationToken = default);
 }
+
+public interface IVerificationChallengeDataAccess
+{
+    Task<string?> GetChallengeStateAsync(int userId, string challengeType, CancellationToken cancellationToken = default);
+    Task UpsertChallengeStateAsync(int userId, string challengeType, string stateJson, DateTime expiresAt, CancellationToken cancellationToken = default);
+    Task DeleteChallengeStateAsync(int userId, string challengeType, CancellationToken cancellationToken = default);
+}

@@ -39,35 +39,24 @@ public interface IPasswordResetService
     );
 }
 
-public sealed class PasswordResetService : IPasswordResetService
+public sealed class PasswordResetService(
+    IUserDataAccess users,
+    IVerificationChallengeDataAccess challenges,
+    IPasswordResetEmailSender emailSender,
+    IOptions<PasswordResetOptions> options,
+    ILogger<PasswordResetService> logger,
+    ITokenBlacklistService tokenBlacklist,
+    JwtOptions jwtOptions) : IPasswordResetService
 {
     private const int MinimumPasswordLength = 8;
-    private static readonly byte[] _challengeHashKey = RandomNumberGenerator.GetBytes(32);
-    // WARNING: Storing challenges in a static ConcurrentDictionary means that password 
-    // reset flows will fail in a multi-instance deployment unless sticky sessions are 
-    // used. For proper horizontal scaling, move this to a distributed cache (e.g., Redis).
-    private static readonly ConcurrentDictionary<string, PasswordResetChallengeState> _challenges =
-        new(StringComparer.OrdinalIgnoreCase);
-
-    private readonly IUserDataAccess _users;
-    private readonly IPasswordResetEmailSender _emailSender;
-    private readonly PasswordResetOptions _options;
-    private readonly ILogger<PasswordResetService> _logger;
-    private readonly ITokenBlacklistService _tokenBlacklist;
-
-    public PasswordResetService(
-        IUserDataAccess users,
-        IPasswordResetEmailSender emailSender,
-        IOptions<PasswordResetOptions> options,
-        ILogger<PasswordResetService> logger,
-        ITokenBlacklistService tokenBlacklist)
-    {
-        _users = users;
-        _emailSender = emailSender;
-        _options = options.Value;
-        _logger = logger;
-        _tokenBlacklist = tokenBlacklist;
-    }
+    
+    private readonly IUserDataAccess _users = users;
+    private readonly IVerificationChallengeDataAccess _challenges = challenges;
+    private readonly IPasswordResetEmailSender _emailSender = emailSender;
+    private readonly PasswordResetOptions _options = options.Value;
+    private readonly ILogger<PasswordResetService> _logger = logger;
+    private readonly ITokenBlacklistService _tokenBlacklist = tokenBlacklist;
+    private readonly byte[] _hmacKey = Encoding.UTF8.GetBytes(jwtOptions.SigningKey);
 
     public async Task RequestResetAsync(string? email, CancellationToken cancellationToken = default)
     {
@@ -83,16 +72,6 @@ public sealed class PasswordResetService : IPasswordResetService
             return;
         }
 
-        PruneExpiredChallenges();
-
-        DateTimeOffset now = DateTimeOffset.UtcNow;
-        if (_challenges.TryGetValue(normalizedEmail, out PasswordResetChallengeState? existingChallenge) &&
-            existingChallenge.ExpiresAtUtc > now &&
-            now - existingChallenge.SentAtUtc < TimeSpan.FromSeconds(GetRequestCooldownSeconds()))
-        {
-            return;
-        }
-
         UserModel? user = await _users.GetUserByLoginAsync(normalizedEmail, cancellationToken);
         if (user == null ||
             user.UserID == null ||
@@ -102,8 +81,26 @@ public sealed class PasswordResetService : IPasswordResetService
             return;
         }
 
+        string? stateStr = await _challenges.GetChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
+        if (!string.IsNullOrEmpty(stateStr))
+        {
+            try
+            {
+                var existingChallenge = System.Text.Json.JsonSerializer.Deserialize<PasswordResetChallengeState>(stateStr);
+                DateTimeOffset nowDt = DateTimeOffset.UtcNow;
+                if (existingChallenge != null && 
+                    existingChallenge.ExpiresAtUtc > nowDt && 
+                    nowDt - existingChallenge.SentAtUtc < TimeSpan.FromSeconds(GetRequestCooldownSeconds()))
+                {
+                    return; // Cooldown active
+                }
+            }
+            catch (System.Text.Json.JsonException) { /* Override corrupt state */ }
+        }
+
         string code = GenerateNumericCode(GetCodeLength());
         byte[] codeHash = ComputeCodeHash(normalizedEmail, code);
+        DateTimeOffset now = DateTimeOffset.UtcNow;
 
         var challenge = new PasswordResetChallengeState(
             user.UserID.Value,
@@ -113,7 +110,14 @@ public sealed class PasswordResetService : IPasswordResetService
             0
         );
 
-        _challenges.AddOrUpdate(normalizedEmail, challenge, (_, _) => challenge);
+        string stateJson = System.Text.Json.JsonSerializer.Serialize(challenge);
+        await _challenges.UpsertChallengeStateAsync(
+            user.UserID.Value,
+            "PasswordReset",
+            stateJson,
+            challenge.ExpiresAtUtc.UtcDateTime,
+            cancellationToken
+        );
 
         try
         {
@@ -127,7 +131,7 @@ public sealed class PasswordResetService : IPasswordResetService
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _challenges.TryRemove(normalizedEmail, out _);
+            await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
             _logger.LogWarning(
                 ex,
                 "Password reset email failed for {Email}. Challenge was discarded.",
@@ -173,13 +177,42 @@ public sealed class PasswordResetService : IPasswordResetService
             );
         }
 
-        PruneExpiredChallenges();
+        UserModel? user = await _users.GetUserByLoginAsync(normalizedEmail, cancellationToken);
+        if (user == null || user.UserID == null)
+        {
+            return Failure(
+                PasswordResetConfirmationFailureReason.UserUnavailable,
+                "Unable to reset password for this account."
+            );
+        }
+
+        string? stateStr = await _challenges.GetChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
+        if (string.IsNullOrEmpty(stateStr))
+        {
+            return Failure(
+                PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
+                "Invalid or expired verification code."
+            );
+        }
+
+        PasswordResetChallengeState? challenge;
+        try
+        {
+            challenge = System.Text.Json.JsonSerializer.Deserialize<PasswordResetChallengeState>(stateStr);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
+            return Failure(
+                PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
+                "Invalid or expired verification code."
+            );
+        }
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
-        if (!_challenges.TryGetValue(normalizedEmail, out PasswordResetChallengeState? challenge) ||
-            challenge.ExpiresAtUtc <= now)
+        if (challenge == null || challenge.ExpiresAtUtc <= now)
         {
-            _challenges.TryRemove(normalizedEmail, out _);
+            await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
             return Failure(
                 PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
                 "Invalid or expired verification code."
@@ -189,7 +222,7 @@ public sealed class PasswordResetService : IPasswordResetService
         int maxAttempts = GetMaxAttempts();
         if (challenge.FailedAttempts >= maxAttempts)
         {
-            _challenges.TryRemove(normalizedEmail, out _);
+            await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
             return Failure(
                 PasswordResetConfirmationFailureReason.TooManyAttempts,
                 "Too many invalid verification attempts. Please request a new code."
@@ -198,36 +231,47 @@ public sealed class PasswordResetService : IPasswordResetService
 
         byte[] expectedHash = challenge.CodeHash;
         byte[] providedHash = ComputeCodeHash(normalizedEmail, submittedCode);
-        bool isCodeValid = expectedHash.Length == providedHash.Length &&
-                           CryptographicOperations.FixedTimeEquals(expectedHash, providedHash);
+        
+        bool lengthMatch = expectedHash.Length == providedHash.Length;
+        int maxLen = Math.Max(expectedHash.Length, providedHash.Length);
+        byte[] p1 = new byte[maxLen];
+        byte[] p2 = new byte[maxLen];
+        Array.Copy(expectedHash, p1, expectedHash.Length);
+        Array.Copy(providedHash, p2, providedHash.Length);
+        
+        bool isCodeValid = lengthMatch && CryptographicOperations.FixedTimeEquals(p1, p2);
 
         if (!isCodeValid)
         {
             int nextFailedAttempts = challenge.FailedAttempts + 1;
             if (nextFailedAttempts >= maxAttempts)
             {
-                _challenges.TryRemove(normalizedEmail, out _);
+                await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
                 return Failure(
                     PasswordResetConfirmationFailureReason.TooManyAttempts,
                     "Too many invalid verification attempts. Please request a new code."
                 );
             }
 
-            _challenges[normalizedEmail] = challenge with { FailedAttempts = nextFailedAttempts };
+            var updatedChallenge = challenge with { FailedAttempts = nextFailedAttempts };
+            string updatedStateJson = System.Text.Json.JsonSerializer.Serialize(updatedChallenge);
+            await _challenges.UpsertChallengeStateAsync(
+                user.UserID.Value,
+                "PasswordReset",
+                updatedStateJson,
+                updatedChallenge.ExpiresAtUtc.UtcDateTime,
+                cancellationToken
+            );
+
             return Failure(
                 PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
                 "Invalid or expired verification code."
             );
         }
 
-        UserModel? user = await _users.GetUserByIDAsync(challenge.UserId, cancellationToken);
-        if (user == null ||
-            user.UserID == null ||
-            user.IsDeleted ||
-            user.Status != UserStatusPolicy.Active ||
-            !string.Equals(user.Email, normalizedEmail, StringComparison.OrdinalIgnoreCase))
+        if (user.IsDeleted || user.Status != UserStatusPolicy.Active)
         {
-            _challenges.TryRemove(normalizedEmail, out _);
+            await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
             return Failure(
                 PasswordResetConfirmationFailureReason.UserUnavailable,
                 "Unable to reset password for this account."
@@ -245,8 +289,8 @@ public sealed class PasswordResetService : IPasswordResetService
         }
 
         await _tokenBlacklist.InvalidateAllUserSessionsAsync(user.UserID.Value, cancellationToken);
+        await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
 
-        _challenges.TryRemove(normalizedEmail, out _);
         return new PasswordResetConfirmationResult
         {
             Success = true
@@ -260,10 +304,10 @@ public sealed class PasswordResetService : IPasswordResetService
             : email.Trim().ToLowerInvariant();
     }
 
-    private static byte[] ComputeCodeHash(string normalizedEmail, string code)
+    private byte[] ComputeCodeHash(string normalizedEmail, string code)
     {
         string payload = $"{normalizedEmail}:{code}";
-        using var hmac = new HMACSHA256(_challengeHashKey);
+        using var hmac = new HMACSHA256(_hmacKey);
         return hmac.ComputeHash(Encoding.UTF8.GetBytes(payload));
     }
 
@@ -273,18 +317,6 @@ public sealed class PasswordResetService : IPasswordResetService
         int maxExclusive = (int)Math.Pow(10, safeDigits);
         int value = RandomNumberGenerator.GetInt32(0, maxExclusive);
         return value.ToString($"D{safeDigits}");
-    }
-
-    private static void PruneExpiredChallenges()
-    {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
-        foreach ((string key, PasswordResetChallengeState value) in _challenges)
-        {
-            if (value.ExpiresAtUtc <= now)
-            {
-                _challenges.TryRemove(key, out _);
-            }
-        }
     }
 
     private int GetCodeLength() => Math.Clamp(_options.CodeLength, 4, 8);

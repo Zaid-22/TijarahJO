@@ -7,6 +7,6 @@ namespace TijarahJo.Api.Common.Services;
 /// </summary>
 public interface IPostsFeedService
 {
-    NormalizedFeedRequest NormalizeRequest(int? page, int? limit, bool? includeDeleted);
+    NormalizedFeedRequest NormalizeRequest(int? page, int? limit);
     Task<FeedResponse> FetchPostsFeedAsync(NormalizedFeedRequest request, CancellationToken cancellationToken = default);
 }

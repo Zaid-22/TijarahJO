@@ -81,31 +81,26 @@ public sealed class DatabaseTokenBlacklistService : ITokenBlacklistService
 
     public async Task InvalidateAllUserSessionsAsync(int userId, CancellationToken cancellationToken = default)
     {
-        long invalidationTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        string jti = $"user:{userId}:{invalidationTime}";
-        await AddToBlacklistAsync(jti, DateTimeOffset.UtcNow.AddDays(30), cancellationToken);
+        await _dbContext.Users
+            .Where(u => u.UserID == userId)
+            .ExecuteUpdateAsync(s => s.SetProperty(u => u.LastInvalidatedAt, DateTime.UtcNow), cancellationToken);
+            
+        _logger.LogInformation("Invalidated all sessions for user {UserId}", userId);
     }
 
     public async Task<bool> IsUserSessionInvalidatedAsync(int userId, DateTimeOffset tokenIssuedAt, CancellationToken cancellationToken = default)
     {
-        string prefix = $"user:{userId}:";
-        var recentInvalidations = await _dbContext.BlacklistedTokens
-            .AsNoTracking()
-            .Where(t => t.Jti.StartsWith(prefix) && t.ExpiresAt > DateTime.UtcNow)
-            .ToListAsync(cancellationToken);
+        var lastInvalidatedAt = await _dbContext.Users
+            .Where(u => u.UserID == userId)
+            .Select(u => u.LastInvalidatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
 
-        foreach (var entry in recentInvalidations)
+        if (lastInvalidatedAt.HasValue)
         {
-            var parts = entry.Jti.Split(':');
-            if (parts.Length == 3 && long.TryParse(parts[2], out long invalidationTimeUnix))
-            {
-                var invalidationTime = DateTimeOffset.FromUnixTimeSeconds(invalidationTimeUnix);
-                if (invalidationTime > tokenIssuedAt)
-                {
-                    return true;
-                }
-            }
+            // If the token was issued before the last invalidation time, it's invalid
+            return tokenIssuedAt.UtcDateTime < lastInvalidatedAt.Value;
         }
+
         return false;
     }
 }

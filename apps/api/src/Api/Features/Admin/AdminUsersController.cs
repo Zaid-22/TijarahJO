@@ -1,10 +1,8 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using TijarahJo.Application.Abstractions.DataAccess;
 using TijarahJo.Application.Abstractions.Services;
-using TijarahJo.Infrastructure.Persistence;
 using TijarahJo.Api.Common.Authorization;
 
 namespace TijarahJo.Api.Features.Admin;
@@ -16,12 +14,12 @@ namespace TijarahJo.Api.Features.Admin;
 public class AdminUsersController : ControllerBase
 {
     private readonly IAdminQueryHandler _adminQueries;
-    private readonly TijarahJoDbContext _dbContext;
+    private readonly IAdminDataAccess _adminData;
 
-    public AdminUsersController(IAdminQueryHandler adminQueries, TijarahJoDbContext dbContext)
+    public AdminUsersController(IAdminQueryHandler adminQueries, IAdminDataAccess adminData)
     {
         _adminQueries = adminQueries;
-        _dbContext = dbContext;
+        _adminData = adminData;
     }
 
     [HttpGet("{id}/details")]
@@ -72,18 +70,9 @@ public class AdminUsersController : ControllerBase
             .Where(id => id > 0)
             .ToList();
 
-        var users = await _dbContext.Users
-            .Where(u => userIds.Contains(u.UserID) && !u.IsDeleted)
-            .ToListAsync(HttpContext.RequestAborted);
+        int affectedCount = await _adminData.BulkUpdateUserStatusAsync(userIds, newStatusId, HttpContext.RequestAborted);
 
-        foreach (var user in users)
-        {
-            user.Status = newStatusId;
-        }
-
-        await _dbContext.SaveChangesAsync(HttpContext.RequestAborted);
-
-        return Ok(new { Message = $"{users.Count} users updated to {request.Status}.", AffectedCount = users.Count });
+        return Ok(new { Message = $"{affectedCount} users updated to {request.Status}.", AffectedCount = affectedCount });
     }
 }
 

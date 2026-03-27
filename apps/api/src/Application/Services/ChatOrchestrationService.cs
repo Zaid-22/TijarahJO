@@ -373,15 +373,6 @@ public sealed class ChatOrchestrationService : IChatOrchestrationService
         int otherUserId,
         CancellationToken cancellationToken)
     {
-        IReadOnlyList<MessageModel> recentMessages = await _messages.GetRecentChatsAsync(currentUserId, cancellationToken);
-        MessageModel? matchedConversation = recentMessages.FirstOrDefault(message =>
-            message.ConversationId > 0 &&
-            (message.SenderId == otherUserId || message.ReceiverId == otherUserId));
-        if (matchedConversation is not null)
-        {
-            return matchedConversation.ConversationId;
-        }
-
         return await _messages.GetOrCreateConversationIdAsync(currentUserId, otherUserId, null, cancellationToken);
     }
 

@@ -121,7 +121,7 @@ public sealed class SearchReadService : ISearchReadService
                 Phone = string.Empty,
                 Description = row.PostDescription,
                 CreatedAt = row.CreatedAt.ToString("o"),
-                UpdatedAt = row.CreatedAt.ToString("o"),
+                UpdatedAt = row.UpdatedAt.ToString("o"),
                 Views = row.Views,
                 Status = row.ClientStatus
             });

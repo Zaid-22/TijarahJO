@@ -16,6 +16,7 @@ namespace TijarahJo.Domain.Entities
     {
         public int MessageID { get; set; }
         public int SenderID { get; set; }
+        public int ReceiverID { get; set; }
         public int ConversationID { get; set; }
         public string Content { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }

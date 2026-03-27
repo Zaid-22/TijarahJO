@@ -5,24 +5,17 @@ using TijarahJo.Application.Abstractions.Services;
 
 namespace TijarahJo.Api.Common.Services
 {
-    public sealed class PostsFeedService : IPostsFeedService
+    public sealed class PostsFeedService(IPostListingQueryService postListingQueries, IMemoryCache cache) : IPostsFeedService
     {
         private const int MaxFeedPageSize = 200;
-        private readonly IPostListingQueryService _postListingQueries;
-        private readonly IMemoryCache _cache;
+        private readonly IPostListingQueryService _postListingQueries = postListingQueries;
+        private readonly IMemoryCache _cache = cache;
 
-        public PostsFeedService(IPostListingQueryService postListingQueries, IMemoryCache cache)
-        {
-            _postListingQueries = postListingQueries;
-            _cache = cache;
-        }
-
-        public sealed record NormalizedFeedRequest(int Page, int Limit, bool IncludeDeleted);
+        public sealed record NormalizedFeedRequest(int Page, int Limit);
 
         public NormalizedFeedRequest NormalizeRequest(
             int? page,
-            int? limit,
-            bool? includeDeleted
+            int? limit
         )
         {
             int normalizedPage = page.GetValueOrDefault(1);
@@ -41,14 +34,12 @@ namespace TijarahJo.Api.Common.Services
                 normalizedLimit = MaxFeedPageSize;
             }
 
-            // Public feed never exposes deleted listings.
-            bool normalizedIncludeDeleted = false;
-            return new NormalizedFeedRequest(normalizedPage, normalizedLimit, normalizedIncludeDeleted);
+            return new NormalizedFeedRequest(normalizedPage, normalizedLimit);
         }
 
         public async Task<FeedResponse> FetchPostsFeedAsync(NormalizedFeedRequest request, CancellationToken cancellationToken = default)
         {
-            string cacheKey = $"posts-feed|{request.Page}|{request.Limit}|{request.IncludeDeleted}";
+            string cacheKey = $"posts-feed|{request.Page}|{request.Limit}";
             if (_cache.TryGetValue(cacheKey, out FeedResponse? cached) && cached is not null)
             {
                 return cached;
@@ -85,7 +76,7 @@ namespace TijarahJo.Api.Common.Services
                     Phone = string.Empty,
                     Description = row.PostDescription,
                     CreatedAt = row.CreatedAt.ToString("o"),
-                    UpdatedAt = row.CreatedAt.ToString("o"),
+                    UpdatedAt = row.UpdatedAt.ToString("o"),
                     Views = row.Views,
                     Status = row.ClientStatus
                 });
@@ -95,7 +86,7 @@ namespace TijarahJo.Api.Common.Services
                 ? (int)Math.Ceiling(pageResult.TotalPosts / (double)request.Limit)
                 : 0;
 
-            FeedResponse response = new FeedResponse
+            FeedResponse response = new()
             {
                 Success = true,
                 Posts = posts,
@@ -126,7 +117,7 @@ namespace TijarahJo.Api.Common.Services
         public bool Success { get; init; }
 
         [JsonPropertyName("posts")]
-        public IReadOnlyList<FeedPostItem> Posts { get; init; } = Array.Empty<FeedPostItem>();
+        public IReadOnlyList<FeedPostItem> Posts { get; init; } = [];
 
         [JsonPropertyName("pagination")]
         public FeedPagination Pagination { get; init; } = new FeedPagination();
@@ -180,7 +171,7 @@ namespace TijarahJo.Api.Common.Services
         public string Image { get; init; } = string.Empty;
 
         [JsonPropertyName("images")]
-        public IReadOnlyList<string> Images { get; init; } = Array.Empty<string>();
+        public IReadOnlyList<string> Images { get; init; } = [];
 
         [JsonPropertyName("phone")]
         public string Phone { get; init; } = string.Empty;

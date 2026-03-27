@@ -289,6 +289,11 @@ public class MessageConfiguration : IEntityTypeConfiguration<MessageEntity>
             .HasForeignKey(e => e.SenderID)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne<UserEntity>()
+            .WithMany()
+            .HasForeignKey(e => e.ReceiverID)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasOne(e => e.Conversation)
             .WithMany()
             .HasForeignKey(e => e.ConversationID)

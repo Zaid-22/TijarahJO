@@ -127,6 +127,7 @@ BEGIN
         TwoFactorEnabled       BIT           NOT NULL CONSTRAINT DF_Users_TwoFactorEnabled DEFAULT 0,
         TwoFactorSecret        NVARCHAR(512) NULL,
         TwoFactorPendingSecret NVARCHAR(512) NULL,
+        LastInvalidatedAt      DATETIME2     NULL,
         SearchFirstNameNormalized AS CONVERT(NVARCHAR(100), UPPER(LTRIM(RTRIM(ISNULL(FirstName, N''))))) PERSISTED,
         SearchLastNameNormalized  AS CONVERT(NVARCHAR(100), UPPER(LTRIM(RTRIM(ISNULL(LastName, N''))))) PERSISTED,
         SearchFullNameNormalized  AS CONVERT(NVARCHAR(201), UPPER(LTRIM(RTRIM(CONCAT(ISNULL(FirstName, N''), N' ', ISNULL(LastName, N'')))))) PERSISTED,
@@ -337,12 +338,14 @@ BEGIN
     (
         MessageID      INT           IDENTITY(1,1) CONSTRAINT PK_Messages PRIMARY KEY,
         SenderID       INT           NOT NULL,
+        ReceiverID     INT           NOT NULL,
         ConversationID INT           NOT NULL,
         Content        NVARCHAR(MAX) NOT NULL,
         CreatedAt      DATETIME2     NOT NULL CONSTRAINT DF_Messages_CreatedAt DEFAULT SYSUTCDATETIME(),
         IsRead         BIT           NOT NULL CONSTRAINT DF_Messages_IsRead DEFAULT 0,
         IsDeleted      BIT           NOT NULL CONSTRAINT DF_Messages_IsDeleted DEFAULT 0,
         CONSTRAINT FK_Messages_Sender        FOREIGN KEY (SenderID)       REFERENCES dbo.Users(UserID),
+        CONSTRAINT FK_Messages_Receiver      FOREIGN KEY (ReceiverID)     REFERENCES dbo.Users(UserID),
         CONSTRAINT FK_Messages_Conversations FOREIGN KEY (ConversationID) REFERENCES dbo.Conversations(ConversationID)
     );
 END
@@ -610,3 +613,28 @@ BEGIN
     );
 END
 GO
+
+-- ---------------------------------------------------------------------------
+-- Verification Challenges (2FA / Password Reset states)
+-- ---------------------------------------------------------------------------
+IF OBJECT_ID(N'dbo.VerificationChallenges', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.VerificationChallenges
+    (
+        ChallengeId NVARCHAR(128) NOT NULL CONSTRAINT PK_VerificationChallenges PRIMARY KEY,
+        ChallengeType NVARCHAR(50)  NOT NULL,
+        UserId      INT           NOT NULL,
+        StateJson   NVARCHAR(MAX) NOT NULL,
+        ExpiresAt   DATETIME2     NOT NULL,
+        CreatedAt   DATETIME2     NOT NULL CONSTRAINT DF_VerificationChallenges_CreatedAt DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT FK_VerificationChallenges_User FOREIGN KEY (UserId) REFERENCES dbo.Users(UserID) ON DELETE CASCADE
+    );
+
+    CREATE NONCLUSTERED INDEX IX_VerificationChallenges_ExpiresAt
+        ON dbo.VerificationChallenges (ExpiresAt);
+        
+    CREATE NONCLUSTERED INDEX IX_VerificationChallenges_User_Type
+        ON dbo.VerificationChallenges (UserId, ChallengeType);
+END
+GO
+
