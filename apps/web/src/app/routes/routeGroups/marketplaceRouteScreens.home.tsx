@@ -65,6 +65,7 @@ function HomeMarketplaceRouteScreen() {
       goToNextPage={routeState.goToNextPage}
       goToPreviousPage={routeState.goToPreviousPage}
       getCategoryTranslation={routeState.translateCategory}
+      onNavigate={navigate}
     />
   );
 }
