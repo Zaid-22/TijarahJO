@@ -503,7 +503,73 @@ export const adminApi = {
       throw error;
     }
   },
+
+  // ── Hero Banners ──
+
+  getBanners: async (): Promise<any[]> => {
+    try {
+      const response = await apiRequest<any>("/admin/banners", { method: "GET" });
+      if (response.success && response.data?.success) {
+        return toCamelCaseKeys<any[]>(response.data.banners);
+      }
+      return [];
+    } catch (error) {
+      debugError("adminApi.getBanners", error);
+      return [];
+    }
+  },
+
+  createBanner: async (bannerData: any): Promise<boolean> => {
+    try {
+      const response = await apiRequest("/admin/banners", {
+        method: "POST",
+        body: JSON.stringify(bannerData),
+      });
+      return response.success;
+    } catch (error) {
+      debugError("adminApi.createBanner", error);
+      return false;
+    }
+  },
+
+  updateBanner: async (id: number, bannerData: any): Promise<boolean> => {
+    try {
+      const response = await apiRequest(`/admin/banners/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(bannerData),
+      });
+      return response.success;
+    } catch (error) {
+      debugError("adminApi.updateBanner", error);
+      return false;
+    }
+  },
+
+  deleteBanner: async (id: number): Promise<boolean> => {
+    try {
+      const response = await apiRequest(`/admin/banners/${id}`, {
+        method: "DELETE",
+      });
+      return response.success;
+    } catch (error) {
+      debugError("adminApi.deleteBanner", error);
+      return false;
+    }
+  },
+
+  toggleBannerActive: async (id: number): Promise<boolean> => {
+    try {
+      const response = await apiRequest(`/admin/banners/${id}/toggle`, {
+        method: "PATCH",
+      });
+      return response.success;
+    } catch (error) {
+      debugError("adminApi.toggleBannerActive", error);
+      return false;
+    }
+  },
 };
+
 
 // ── Additional Types ──
 

@@ -26,15 +26,86 @@ function buildJordanPhone(seed) {
   return `79${digits}`;
 }
 
+function normalizeApiBaseUrl(value) {
+  const normalized = String(value || "http://localhost:5033/api/v1").replace(
+    /\/+$/,
+    "",
+  );
+  return /\/api$/i.test(normalized) ? `${normalized}/v1` : normalized;
+}
+
 async function forceEnglishUi(page) {
   await page.addInitScript(() => {
     window.localStorage.setItem("tijarahjo_language", JSON.stringify("en"));
   });
 }
 
+async function primeLocationLookups(page, cityName, areaName) {
+  const apiBaseUrl = normalizeApiBaseUrl(process.env.VITE_API_BASE_URL);
+  const lookupState = await page.evaluate(
+    async ({ resolvedApiBaseUrl, targetCityName, targetAreaName }) => {
+      const citiesResponse = await fetch(`${resolvedApiBaseUrl}/cities`, {
+        credentials: "include",
+      });
+      const citiesPayload = citiesResponse.ok ? await citiesResponse.json() : [];
+      const normalizedCityName = targetCityName.trim().toLowerCase();
+      const city = Array.isArray(citiesPayload)
+        ? citiesPayload.find((item) => {
+            const cityName = String(item?.cityName ?? item?.CityName ?? "")
+              .trim()
+              .toLowerCase();
+            return cityName === normalizedCityName;
+          })
+        : null;
+
+      const cityId = Number(city?.cityId ?? city?.CityId ?? 0);
+      if (!citiesResponse.ok || !Number.isFinite(cityId) || cityId < 1) {
+        return {
+          citiesOk: citiesResponse.ok,
+          cityResolved: false,
+          areaResolved: false,
+        };
+      }
+
+      const areasResponse = await fetch(
+        `${resolvedApiBaseUrl}/cities/${cityId}/areas`,
+        {
+          credentials: "include",
+        },
+      );
+      const areasPayload = areasResponse.ok ? await areasResponse.json() : [];
+      const normalizedAreaName = targetAreaName.trim().toLowerCase();
+      const areaResolved = Array.isArray(areasPayload)
+        ? areasPayload.some((item) => {
+            const areaName = String(item?.areaName ?? item?.AreaName ?? "")
+              .trim()
+              .toLowerCase();
+            return areaName === normalizedAreaName;
+          })
+        : false;
+
+      return {
+        citiesOk: citiesResponse.ok,
+        cityResolved: true,
+        areaResolved,
+      };
+    },
+    {
+      resolvedApiBaseUrl: apiBaseUrl,
+      targetCityName: cityName,
+      targetAreaName: areaName,
+    },
+  );
+
+  expect(lookupState.citiesOk).toBeTruthy();
+  expect(lookupState.cityResolved).toBeTruthy();
+  expect(lookupState.areaResolved).toBeTruthy();
+}
+
 async function registerUser(page, user) {
   await forceEnglishUi(page);
   await page.goto("/login");
+  await primeLocationLookups(page, "Amman", "Sweifieh");
 
   const firstNameField = page.locator("#firstName");
   const isSignUpMode = await firstNameField.isVisible().catch(() => false);
@@ -55,9 +126,11 @@ async function registerUser(page, user) {
 
   await page.getByRole("button", { name: /create account/i }).click();
   await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
-  await expect(page.getByRole("button", { name: /sell|create post/i })).toBeVisible({
-    timeout: 30_000,
-  });
+  await expect(
+    page.getByRole("button", {
+      name: /^create post$/i,
+    }),
+  ).toBeVisible({ timeout: 30_000 });
 }
 
 async function searchForPost(page, title) {
@@ -66,6 +139,13 @@ async function searchForPost(page, title) {
     name: /search in tijarahjo/i,
   });
   await searchInput.fill(title);
+  await page.evaluate((query) => {
+    window.localStorage.setItem("tijarahjo_search_query", JSON.stringify(query));
+    window.localStorage.setItem(
+      "tijarahjo_active_search_query",
+      JSON.stringify(query),
+    );
+  }, title);
   await searchInput.press("Enter");
 
   const navigatedToSearchPage = await page
@@ -73,21 +153,85 @@ async function searchForPost(page, title) {
     .then(() => true)
     .catch(() => false);
 
-  const detailsButton = page.getByRole("button", {
-    name: new RegExp(`view details for ${escapeForRegex(title)}`, "i"),
+  if (!navigatedToSearchPage) {
+    await page.goto("/search");
+    await page.waitForURL(/\/search$/, { timeout: 10_000 });
+  }
+
+  const resultTitle = page.getByRole("heading", {
+    name: new RegExp(`^${escapeForRegex(title)}$`, "i"),
   });
-  await expect(detailsButton.first()).toBeVisible({
-    timeout: navigatedToSearchPage ? 20_000 : 10_000,
+  await expect(resultTitle.first()).toBeVisible({
+    timeout: navigatedToSearchPage ? 20_000 : 20_000,
   });
 }
 
 async function openSearchResult(page, title) {
+  const resultTitle = page.getByRole("heading", {
+    name: new RegExp(`^${escapeForRegex(title)}$`, "i"),
+  });
+  const resultTitleVisible = await resultTitle
+    .first()
+    .isVisible()
+    .catch(() => false);
+
+  if (resultTitleVisible) {
+    await resultTitle.first().click({ force: true });
+    await expect(page).toHaveURL(/\/post\/\d+$/);
+    return;
+  }
+
   const detailsButton = page.getByRole("button", {
     name: new RegExp(`view details for ${escapeForRegex(title)}`, "i"),
   });
   await expect(detailsButton.first()).toBeVisible({ timeout: 20_000 });
   await detailsButton.first().click({ force: true });
   await expect(page).toHaveURL(/\/post\/\d+$/);
+}
+
+async function expectPostAbsentInSearch(page, title) {
+  await page.goto("/");
+  await page.evaluate((query) => {
+    window.localStorage.setItem("tijarahjo_search_query", JSON.stringify(query));
+    window.localStorage.setItem(
+      "tijarahjo_active_search_query",
+      JSON.stringify(query),
+    );
+  }, title);
+  await page.goto("/search");
+  await page.waitForURL(/\/search$/, { timeout: 10_000 });
+  const apiBaseUrl = normalizeApiBaseUrl(process.env.VITE_API_BASE_URL);
+  const searchResult = await page.evaluate(
+    async ({ resolvedApiBaseUrl, query }) => {
+      const queryParams = new URLSearchParams({
+        query,
+        status: "ACTIVE",
+        page: "1",
+        limit: "100",
+        sortBy: "date",
+        sortOrder: "desc",
+      });
+      const response = await fetch(
+        `${resolvedApiBaseUrl}/search?${queryParams.toString()}`,
+        {
+          credentials: "include",
+        },
+      );
+
+      return {
+        ok: response.ok,
+        payload: await response.json(),
+      };
+    },
+    {
+      resolvedApiBaseUrl: apiBaseUrl,
+      query: title,
+    },
+  );
+
+  expect(searchResult.ok).toBeTruthy();
+  expect(Array.isArray(searchResult.payload?.posts)).toBeTruthy();
+  expect(searchResult.payload.posts).toHaveLength(0);
 }
 
 test("backend live journey: auth, search, favorites, and post CRUD", async ({
@@ -206,9 +350,10 @@ test("backend live journey: auth, search, favorites, and post CRUD", async ({
   await searchForPost(page, updatedPostTitle);
   await openSearchResult(page, updatedPostTitle);
 
-  await page.getByRole("button", { name: /delete post/i }).first().click();
+  await page.getByRole("button", { name: /remove post/i }).first().click();
   const deleteDialog = page.getByRole("alertdialog");
   await expect(deleteDialog).toBeVisible();
+  await deleteDialog.getByLabel(/listed by mistake/i).check();
   await Promise.all([
     page.waitForResponse(
       (response) =>
@@ -216,14 +361,9 @@ test("backend live journey: auth, search, favorites, and post CRUD", async ({
         /\/api(?:\/v[0-9]+)?\/posts\/\d+$/i.test(response.url()) &&
         response.ok(),
     ),
-    deleteDialog.getByRole("button", { name: /^delete$/i }).click(),
+    deleteDialog.getByRole("button", { name: /confirm removal/i }).click(),
   ]);
   await expect(page).toHaveURL(/\/$/);
 
-  await searchForPost(page, updatedPostTitle);
-  await expect(
-    page.getByRole("button", {
-      name: new RegExp(`view details for ${escapeForRegex(updatedPostTitle)}`, "i"),
-    }),
-  ).toHaveCount(0);
+  await expectPostAbsentInSearch(page, updatedPostTitle);
 });

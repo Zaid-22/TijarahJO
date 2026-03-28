@@ -49,6 +49,11 @@ public interface ISearchQueryHandler
     Task<SearchQueryResult> SearchAsync(SearchRequestQuery request, CancellationToken cancellationToken = default);
 }
 
+public interface ISearchCacheInvalidationService
+{
+    void InvalidateAll();
+}
+
 public sealed class SearchQueryResult
 {
     public bool Success { get; init; }
