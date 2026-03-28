@@ -45,7 +45,7 @@ public sealed class PostStatusWritePathContractTests
     public async Task PostMutationService_CreateAsync_AlwaysCreatesActiveStatus()
     {
         var posts = new FakePostService();
-        var service = new PostMutationService(posts);
+        var service = new PostMutationService(posts, new NullSearchCacheInvalidation());
 
         PostMutationResult result = await service.CreateAsync(new CreatePostCommand
         {
@@ -78,7 +78,7 @@ public sealed class PostStatusWritePathContractTests
         ), Post.ModeType.Update);
 
         var posts = new FakePostService { NextFindPost = existing };
-        var service = new PostMutationService(posts);
+        var service = new PostMutationService(posts, new NullSearchCacheInvalidation());
 
         PostMutationResult result = await service.UpdateAsync(new UpdatePostCommand
         {
@@ -132,9 +132,14 @@ public sealed class PostStatusWritePathContractTests
             => Task.FromResult(true);
 
         public Task<IReadOnlyList<PostModel>> GetPostsByUserIdAsync(int userId, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<PostModel>>(Array.Empty<PostModel>());
+            => Task.FromResult<IReadOnlyList<PostModel>>([]);
 
         public Task<IReadOnlyList<PostModel>> GetPostsByCategoryIdAsync(int categoryId, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<PostModel>>(Array.Empty<PostModel>());
+            => Task.FromResult<IReadOnlyList<PostModel>>([]);
+    }
+
+    private sealed class NullSearchCacheInvalidation : ISearchCacheInvalidationService
+    {
+        public void InvalidateAll() { }
     }
 }

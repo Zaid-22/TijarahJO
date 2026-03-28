@@ -221,7 +221,8 @@ public sealed class PostMutationServiceTests
     private static PostMutationService BuildService(bool findPostReturnsNull = false)
     {
         var posts = new FakePostService(findPostReturnsNull);
-        return new PostMutationService(posts);
+        var cache = new NullSearchCacheInvalidation();
+        return new PostMutationService(posts, cache);
     }
 
     // -------------------------------------------------------------------------
@@ -232,7 +233,7 @@ public sealed class PostMutationServiceTests
     {
         private readonly bool _findReturnsNull;
 
-        private static readonly PostModel DefaultPostModel = new PostModel(
+        private static readonly PostModel DefaultPostModel = new(
             postid: 1,
             userid: 1,
             categoryid: 1,
@@ -247,7 +248,7 @@ public sealed class PostMutationServiceTests
             areaId: null
         );
 
-        public FakePostService(bool findReturnsNull) => _findReturnsNull = findReturnsNull;
+        public FakePostService(bool findReturnsNull = false) => _findReturnsNull = findReturnsNull;
 
         public Task<Post?> FindAsync(int? postId, CancellationToken ct = default)
             => Task.FromResult<Post?>(_findReturnsNull ? null : new Post(DefaultPostModel, Post.ModeType.Update));
@@ -267,9 +268,14 @@ public sealed class PostMutationServiceTests
             => Task.FromResult(true);
 
         public Task<IReadOnlyList<PostModel>> GetPostsByUserIdAsync(int userId, int pageNumber = 1, int pageSize = 50, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<PostModel>>(Array.Empty<PostModel>());
+            => Task.FromResult<IReadOnlyList<PostModel>>([]);
 
         public Task<IReadOnlyList<PostModel>> GetPostsByCategoryIdAsync(int categoryId, int pageNumber = 1, int pageSize = 50, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<PostModel>>(Array.Empty<PostModel>());
+            => Task.FromResult<IReadOnlyList<PostModel>>([]);
+    }
+
+    private sealed class NullSearchCacheInvalidation : ISearchCacheInvalidationService
+    {
+        public void InvalidateAll() { }
     }
 }
