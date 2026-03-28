@@ -3,6 +3,8 @@
 set -uo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:5033}"
+CURL_CONNECT_TIMEOUT_SECONDS="${CURL_CONNECT_TIMEOUT_SECONDS:-5}"
+CURL_MAX_TIME_SECONDS="${CURL_MAX_TIME_SECONDS:-30}"
 TMP_DIR="$(mktemp -d)"
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -40,12 +42,30 @@ call_api() {
   local expected_codes="$4"
   local payload="${5:-}"
   local token="${6:-}"
-  local body_file="$TMP_DIR/body.json"
-  local header_file="$TMP_DIR/headers.txt"
-  local err_file="$TMP_DIR/err.log"
+  local body_file
+  local header_file
+  local err_file
+
+  body_file="$(mktemp "$TMP_DIR/body.XXXXXX")"
+  header_file="$(mktemp "$TMP_DIR/headers.XXXXXX")"
+  err_file="$(mktemp "$TMP_DIR/err.XXXXXX")"
 
   local -a args
-  args=(-sS -D "$header_file" -o "$body_file" -w "%{http_code}" -X "$method" "$BASE_URL$path" -H "Content-Type: application/json")
+  args=(
+    -sS
+    --connect-timeout "$CURL_CONNECT_TIMEOUT_SECONDS"
+    --max-time "$CURL_MAX_TIME_SECONDS"
+    -D "$header_file"
+    -o "$body_file"
+    -w "%{http_code}"
+    -X "$method"
+    "$BASE_URL$path"
+    -H "Content-Type: application/json"
+  )
+
+  LAST_CODE=""
+  LAST_BODY=""
+  LAST_HEADERS=""
 
   if [ -n "$token" ]; then
     args+=(-H "Authorization: Bearer $token")
@@ -120,6 +140,7 @@ require_cmd curl
 require_cmd jq
 
 echo "Running backend integration contract checks against $BASE_URL"
+echo "curl timeouts: connect=${CURL_CONNECT_TIMEOUT_SECONDS}s total=${CURL_MAX_TIME_SECONDS}s"
 
 timestamp="$(date +%s)"
 email_owner="integration_${timestamp}_owner@example.com"

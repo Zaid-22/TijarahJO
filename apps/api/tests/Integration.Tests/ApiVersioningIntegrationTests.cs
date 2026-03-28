@@ -4,23 +4,12 @@ namespace TijarahJo.Api.Integration.Tests;
 
 public sealed class ApiVersioningIntegrationTests
 {
-    private static Uri RequireBaseUri()
-    {
-        var baseUrl = Environment.GetEnvironmentVariable("BASE_URL");
-        if (string.IsNullOrWhiteSpace(baseUrl))
-        {
-            throw new InvalidOperationException("Integration tests require BASE_URL to be set.");
-        }
-
-        return new Uri(baseUrl, UriKind.Absolute);
-    }
-
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task SearchRoute_ReportsSupportedApiVersions()
     {
         using var client = new HttpClient
         {
-            BaseAddress = RequireBaseUri(),
+            BaseAddress = IntegrationTestEnvironment.RequireBaseUri(),
             Timeout = TimeSpan.FromSeconds(8)
         };
 
@@ -34,12 +23,12 @@ public sealed class ApiVersioningIntegrationTests
         Assert.Contains("1.0", string.Join(",", versions!));
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task SearchRoute_WithUnsupportedRouteVersion_ReturnsNotFound()
     {
         using var client = new HttpClient
         {
-            BaseAddress = RequireBaseUri(),
+            BaseAddress = IntegrationTestEnvironment.RequireBaseUri(),
             Timeout = TimeSpan.FromSeconds(8)
         };
 
@@ -48,12 +37,12 @@ public sealed class ApiVersioningIntegrationTests
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task SearchRoute_WithoutVersionSegment_ReturnsNotFound()
     {
         using var client = new HttpClient
         {
-            BaseAddress = RequireBaseUri(),
+            BaseAddress = IntegrationTestEnvironment.RequireBaseUri(),
             Timeout = TimeSpan.FromSeconds(8)
         };
 
@@ -62,12 +51,12 @@ public sealed class ApiVersioningIntegrationTests
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task SearchRoute_IgnoresQueryApiVersion_WhenRouteVersionIsProvided()
     {
         using var client = new HttpClient
         {
-            BaseAddress = RequireBaseUri(),
+            BaseAddress = IntegrationTestEnvironment.RequireBaseUri(),
             Timeout = TimeSpan.FromSeconds(8)
         };
 
@@ -76,12 +65,12 @@ public sealed class ApiVersioningIntegrationTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task SearchRoute_IgnoresHeaderApiVersion_WhenRouteVersionIsProvided()
     {
         using var client = new HttpClient
         {
-            BaseAddress = RequireBaseUri(),
+            BaseAddress = IntegrationTestEnvironment.RequireBaseUri(),
             Timeout = TimeSpan.FromSeconds(8)
         };
 
@@ -93,12 +82,12 @@ public sealed class ApiVersioningIntegrationTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task SearchRoute_V1Alias_ReturnsOk()
     {
         using var client = new HttpClient
         {
-            BaseAddress = RequireBaseUri(),
+            BaseAddress = IntegrationTestEnvironment.RequireBaseUri(),
             Timeout = TimeSpan.FromSeconds(8)
         };
 
@@ -107,12 +96,12 @@ public sealed class ApiVersioningIntegrationTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task TopSellersRoute_V1Alias_ReturnsOk()
     {
         using var client = new HttpClient
         {
-            BaseAddress = RequireBaseUri(),
+            BaseAddress = IntegrationTestEnvironment.RequireBaseUri(),
             Timeout = TimeSpan.FromSeconds(8)
         };
 

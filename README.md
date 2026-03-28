@@ -87,8 +87,12 @@ See [`README-RUN.md`](README-RUN.md) for the full local workflow.
 ./scripts/check_structure.sh   # Verify repo conventions
 ./scripts/run-dev.sh           # Start backend + frontend
 ./scripts/bootstrap_db.sh      # Reset DB, apply migrations, seed, verify
+make backend-live-tests        # Run live .NET HTTP integration tests
+make backend-live-check        # Run the broader live backend verification suite
 make ci-local                  # Full local CI mirror
 ```
+
+`dotnet test ./apps/api/TijarahJo.sln` may skip live HTTP integration tests when `BASE_URL` is unset. Use the live backend make targets above when you want explicit local backend integration coverage against a running backend.
 
 ## Documentation
 
@@ -113,4 +117,4 @@ make ci-local                  # Full local CI mirror
 
 ---
 
-Last Updated: 2026-03-24
+Last Updated: 2026-03-28

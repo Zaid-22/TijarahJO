@@ -12,21 +12,10 @@ public sealed class ApiValidationIntegrationTests
         PropertyNameCaseInsensitive = true
     };
 
-    private static Uri RequireBaseUri()
-    {
-        var baseUrl = Environment.GetEnvironmentVariable("BASE_URL");
-        if (string.IsNullOrWhiteSpace(baseUrl))
-        {
-            throw new InvalidOperationException("Integration tests require BASE_URL to be set.");
-        }
-
-        return new Uri(baseUrl, UriKind.Absolute);
-    }
-
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task Search_WithNegativeMinPrice_ReturnsBadRequestProblemDetails()
     {
-        using var client = CreateClient(RequireBaseUri());
+        using var client = CreateClient(IntegrationTestEnvironment.RequireBaseUri());
         HttpResponseMessage response = await client.GetAsync("/api/v1/search?minPrice=-1");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -39,10 +28,10 @@ public sealed class ApiValidationIntegrationTests
         Assert.True(hasMinPriceError, "Expected validation errors for the MinPrice field.");
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task Signup_WithStaleJwtCookie_ReturnsValidationBadRequest_NotCsrfForbidden()
     {
-        using var client = CreateClient(RequireBaseUri());
+        using var client = CreateClient(IntegrationTestEnvironment.RequireBaseUri());
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/signup");
         request.Headers.Add("Cookie", "jwt=stale-jwt-token");
         request.Content = JsonContent.Create(new { });
@@ -54,10 +43,10 @@ public sealed class ApiValidationIntegrationTests
         Assert.Equal("Request validation failed.", json.RootElement.GetProperty("title").GetString());
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task Login_WithStaleJwtCookie_ReturnsValidationBadRequest_NotCsrfForbidden()
     {
-        using var client = CreateClient(RequireBaseUri());
+        using var client = CreateClient(IntegrationTestEnvironment.RequireBaseUri());
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login");
         request.Headers.Add("Cookie", "jwt=stale-jwt-token");
         request.Content = JsonContent.Create(new { });
@@ -69,10 +58,10 @@ public sealed class ApiValidationIntegrationTests
         Assert.Equal("Request validation failed.", json.RootElement.GetProperty("title").GetString());
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task ProtectedPostCreate_WithJwtCookieOnly_WithoutCsrf_ReturnsForbidden()
     {
-        using var client = CreateClient(RequireBaseUri());
+        using var client = CreateClient(IntegrationTestEnvironment.RequireBaseUri());
         string token = await SignUpAndGetTokenAsync(client);
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/posts");
@@ -86,10 +75,10 @@ public sealed class ApiValidationIntegrationTests
         Assert.Equal("CSRF validation failed.", json.RootElement.GetProperty("detail").GetString());
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task ProtectedPostCreate_WithBearerHeader_DoesNotFailCsrfEvenWithJwtCookie()
     {
-        using var client = CreateClient(RequireBaseUri());
+        using var client = CreateClient(IntegrationTestEnvironment.RequireBaseUri());
         string token = await SignUpAndGetTokenAsync(client);
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/posts");
@@ -103,10 +92,10 @@ public sealed class ApiValidationIntegrationTests
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task Search_WithMinPriceGreaterThanMaxPrice_ReturnsBadRequestProblemDetails()
     {
-        using var client = CreateClient(RequireBaseUri());
+        using var client = CreateClient(IntegrationTestEnvironment.RequireBaseUri());
         HttpResponseMessage response = await client.GetAsync("/api/v1/search?minPrice=250&maxPrice=100");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -114,10 +103,10 @@ public sealed class ApiValidationIntegrationTests
         Assert.Equal("MinPrice cannot be greater than MaxPrice.", json.RootElement.GetProperty("detail").GetString());
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task Search_WithInvalidStatus_ReturnsBadRequestProblemDetails()
     {
-        using var client = CreateClient(RequireBaseUri());
+        using var client = CreateClient(IntegrationTestEnvironment.RequireBaseUri());
         HttpResponseMessage response = await client.GetAsync("/api/v1/search?status=INVALID");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -130,10 +119,10 @@ public sealed class ApiValidationIntegrationTests
         Assert.True(hasStatusError, "Expected validation errors for the Status field.");
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task Search_WithInvalidSortBy_ReturnsBadRequestProblemDetails()
     {
-        using var client = CreateClient(RequireBaseUri());
+        using var client = CreateClient(IntegrationTestEnvironment.RequireBaseUri());
         HttpResponseMessage response = await client.GetAsync("/api/v1/search?sortBy=unknown");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -146,10 +135,10 @@ public sealed class ApiValidationIntegrationTests
         Assert.True(hasSortByError, "Expected validation errors for the SortBy field.");
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task Search_WithInvalidSortOrder_ReturnsBadRequestProblemDetails()
     {
-        using var client = CreateClient(RequireBaseUri());
+        using var client = CreateClient(IntegrationTestEnvironment.RequireBaseUri());
         HttpResponseMessage response = await client.GetAsync("/api/v1/search?sortOrder=up");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -162,10 +151,10 @@ public sealed class ApiValidationIntegrationTests
         Assert.True(hasSortOrderError, "Expected validation errors for the SortOrder field.");
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task UpdatePostStatus_WithInvalidStatus_ReturnsValidationProblemDetails()
     {
-        using var client = CreateClient(RequireBaseUri());
+        using var client = CreateClient(IntegrationTestEnvironment.RequireBaseUri());
         string token = await SignUpAndGetTokenAsync(client);
         int categoryId = await GetFirstCategoryIdAsync(client);
         int postId = await CreatePostAsync(client, token, categoryId);
@@ -186,10 +175,10 @@ public sealed class ApiValidationIntegrationTests
         Assert.True(hasStatusError, "Expected validation errors for the Status field.");
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task SellerProfile_WithInvalidSellerId_ReturnsBadRequestProblemDetails()
     {
-        using var client = CreateClient(RequireBaseUri());
+        using var client = CreateClient(IntegrationTestEnvironment.RequireBaseUri());
         HttpResponseMessage response = await client.GetAsync("/api/v1/sellers/not-a-number");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -198,10 +187,10 @@ public sealed class ApiValidationIntegrationTests
         Assert.Contains("Invalid seller ID", detail ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task UserById_WithZeroId_ReturnsBadRequestProblemDetails()
     {
-        using var client = CreateClient(RequireBaseUri());
+        using var client = CreateClient(IntegrationTestEnvironment.RequireBaseUri());
         HttpResponseMessage response = await client.GetAsync("/api/v1/users/0");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -210,10 +199,10 @@ public sealed class ApiValidationIntegrationTests
         Assert.Contains("Invalid user ID", detail ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task TopSellers_WithOutOfRangeTake_ReturnsBadRequestProblemDetails()
     {
-        using var client = CreateClient(RequireBaseUri());
+        using var client = CreateClient(IntegrationTestEnvironment.RequireBaseUri());
         HttpResponseMessage response = await client.GetAsync("/api/v1/sellers/top?take=500");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -226,10 +215,10 @@ public sealed class ApiValidationIntegrationTests
         Assert.True(hasTakeError, "Expected validation errors for the Take field.");
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task Favorites_Add_WithInvalidPostId_ReturnsBadRequestProblemDetails()
     {
-        using var client = CreateClient(RequireBaseUri());
+        using var client = CreateClient(IntegrationTestEnvironment.RequireBaseUri());
         string token = await SignUpAndGetTokenAsync(client);
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/favorites");
@@ -244,10 +233,10 @@ public sealed class ApiValidationIntegrationTests
         Assert.Contains("Invalid post ID", detail ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task Notifications_MarkAsRead_WithInvalidId_ReturnsBadRequestProblemDetails()
     {
-        using var client = CreateClient(RequireBaseUri());
+        using var client = CreateClient(IntegrationTestEnvironment.RequireBaseUri());
         string token = await SignUpAndGetTokenAsync(client);
 
         using var request = new HttpRequestMessage(HttpMethod.Put, "/api/v1/notifications/0/read");

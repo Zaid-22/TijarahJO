@@ -357,13 +357,11 @@ if [[ "$KEEP_BACKEND_RUNNING" -eq 1 ]]; then
   BACKEND_DLL_PATH="$BACKEND_DIR/bin/$CONFIGURATION/net8.0/TijarahJo.Api.dll"
   (
     cd "$BACKEND_DIR"
-    # Build once, then run the compiled app directly so PID tracking stays stable.
+    # Rebuild before launching the compiled app so keep-backend mode never runs stale binaries.
+    dotnet build -c "$CONFIGURATION" --nologo >/dev/null
     if [[ ! -f "$BACKEND_DLL_PATH" ]]; then
-      dotnet build -c "$CONFIGURATION" --nologo >/dev/null
-      if [[ ! -f "$BACKEND_DLL_PATH" ]]; then
-        echo "Error: backend build output not found at $BACKEND_DLL_PATH" >&2
-        exit 1
-      fi
+      echo "Error: backend build output not found at $BACKEND_DLL_PATH" >&2
+      exit 1
     fi
 
     nohup env \

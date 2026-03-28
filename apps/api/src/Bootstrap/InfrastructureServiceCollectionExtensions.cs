@@ -98,6 +98,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IMessageDataAccess, MessageDataAccessAdapter>();
         services.AddScoped<IConversationDataAccess, ConversationDataAccessAdapter>();
         services.AddScoped<IReviewDataAccess, ReviewDataAccessAdapter>();
+        services.AddScoped<IVerificationChallengeDataAccess, VerificationChallengeDataAccessAdapter>();
         services.AddScoped<IAdminDataAccess, AdminDataAccessAdapter>();
 
         // Register the resolved connection string so raw-SQL services can inject it.

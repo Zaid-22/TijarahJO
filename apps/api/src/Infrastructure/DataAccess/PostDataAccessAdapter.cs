@@ -118,7 +118,7 @@ public sealed class PostDataAccessAdapter : IPostDataAccess
                 _dbContext.AuditLogs.Add(new AuditLogEntity
                 {
                     TableName = "PostImages",
-                    Action = "BULK_SOFT_DELETE",
+                    Action = "UPDATE",
                     ChangedByUserID = effectiveActorId,
                     ChangedAt = DateTime.UtcNow,
                     OldValues = $"{{\"PostID\":{postId.Value},\"IsDeleted\":false}}",
@@ -128,7 +128,7 @@ public sealed class PostDataAccessAdapter : IPostDataAccess
                 _dbContext.AuditLogs.Add(new AuditLogEntity
                 {
                     TableName = "Favorites",
-                    Action = "BULK_SOFT_DELETE",
+                    Action = "UPDATE",
                     ChangedByUserID = effectiveActorId,
                     ChangedAt = DateTime.UtcNow,
                     OldValues = $"{{\"PostID\":{postId.Value},\"IsDeleted\":false}}",
