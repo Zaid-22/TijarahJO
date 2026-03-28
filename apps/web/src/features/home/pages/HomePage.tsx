@@ -8,6 +8,7 @@ import { APP_CONFIG } from "../../../constants/appConfig";
 import { HomeHeroSection } from "../components/HomeHeroSection";
 import { HomeCategoriesSection } from "../components/HomeCategoriesSection";
 import { PostCarousel } from "../components/PostCarousel";
+import { PostCarouselSkeleton } from "../components/PostCarouselSkeleton";
 import { HomePromotionalBanner } from "../components/HomePromotionalBanner";
 import { MarketplaceDiscoveryControls } from "../../marketplace/components/MarketplaceDiscoveryControls";
 import { usePrefersReducedMotion } from "../../../shared/hooks/usePrefersReducedMotion";
@@ -138,7 +139,9 @@ export function HomePage({
       />
 
       {/* 3. Featured Items Carousel */}
-      {!isLoadingPosts && featuredPosts.length > 0 && (
+      {isLoadingPosts ? (
+        <PostCarouselSkeleton hasSubtitle />
+      ) : featuredPosts.length > 0 ? (
         <PostCarousel
           title={language === "ar" ? "المنتجات المميزة" : "Featured Items"}
           subtitle={
@@ -158,12 +161,14 @@ export function HomePage({
           viewAllLabel={language === "ar" ? "عرض الكل" : "View All"}
           onRequireAuth={() => setShowLoginPrompt(true)}
         />
-      )}
+      ) : null}
 
 
 
       {/* 5. Recent Items Carousel */}
-      {!isLoadingPosts && recentPosts.length > 0 && (
+      {isLoadingPosts ? (
+        <PostCarouselSkeleton hasSubtitle />
+      ) : recentPosts.length > 0 ? (
         <PostCarousel
           title={language === "ar" ? "أحدث الإعلانات" : "Recently Added"}
           subtitle={
@@ -183,7 +188,7 @@ export function HomePage({
           viewAllLabel={language === "ar" ? "عرض الكل" : "View All"}
           onRequireAuth={() => setShowLoginPrompt(true)}
         />
-      )}
+      ) : null}
 
       {/* 6. Bottom Promotional Banner */}
       <HomePromotionalBanner

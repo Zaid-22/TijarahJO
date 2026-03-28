@@ -23,6 +23,7 @@ export function HomeHeroSection({
   onNavigate,
 }: HomeHeroSectionProps) {
   const [banners, setBanners] = useState<HeroBanner[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
     import("../../../services/api/banners").then(({ bannersApi }) => {
@@ -50,6 +51,7 @@ export function HomeHeroSection({
           // Fallback
           setBanners(getHeroBanners());
         }
+        setIsLoading(false);
       });
     });
   }, []);
@@ -95,6 +97,16 @@ export function HomeHeroSection({
       onNavigate(banner.linkUrl);
     }
   };
+
+  if (isLoading) {
+    return (
+      <section className="relative w-full overflow-hidden bg-gradient-to-b from-muted/30 to-background py-4 sm:py-6">
+        <div className="relative w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl bg-muted animate-pulse h-[450px] sm:h-[350px] md:h-auto md:aspect-[21/8] w-full" />
+        </div>
+      </section>
+    );
+  }
 
   if (totalSlides === 0) return null;
 
