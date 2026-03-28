@@ -54,6 +54,7 @@ interface HomePageProps {
 
   // Helpers
   getCategoryTranslation: (name: string) => string;
+  onNavigate?: (path: string) => void;
 }
 
 export function HomePage({
@@ -83,6 +84,7 @@ export function HomePage({
   goToNextPage,
   goToPreviousPage,
   getCategoryTranslation,
+  onNavigate,
 }: HomePageProps) {
   const backendUrlHint = APP_CONFIG.backendHostUrl;
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -123,6 +125,7 @@ export function HomePage({
         setShowLoginPrompt={setShowLoginPrompt}
         setShowSellItem={setShowSellItem}
         onBrowseItems={scrollToTop}
+        onNavigate={onNavigate}
       />
 
       {/* 2. Categories - Circular icons */}
