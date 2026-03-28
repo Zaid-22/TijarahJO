@@ -39,6 +39,7 @@ public static class MiddlewareExtensions
 
                 context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                 context.Response.ContentType = "application/problem+json";
+                
                 var problem = new ProblemDetails
                 {
                     Status = StatusCodes.Status500InternalServerError,
@@ -47,6 +48,17 @@ public static class MiddlewareExtensions
                     Type = "https://httpstatuses.com/500",
                     Instance = exceptionFeature?.Path ?? context.Request.Path
                 };
+
+                // Catch Database Connectivity Issues
+                if (exceptionFeature?.Error is Microsoft.Data.SqlClient.SqlException or System.Data.Common.DbException)
+                {
+                    context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                    problem.Status = StatusCodes.Status503ServiceUnavailable;
+                    problem.Title = "Service Unavailable";
+                    problem.Extensions["code"] = "DATABASE_UNAVAILABLE";
+                    problem.Detail = isDevelopment ? exceptionFeature?.Error?.Message : "The database is currently unreachable. Please try again later.";
+                }
+
                 problem.Extensions["traceId"] = context.TraceIdentifier;
 
                 await WriteProblemDetailsAsync(context.Response, problem, context.RequestAborted);

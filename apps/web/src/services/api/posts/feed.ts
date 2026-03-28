@@ -13,11 +13,15 @@ const FEED_PAGE_SIZE = 500;
 
 type FeedApiOptions = Pick<ApiRequestOptions, "signal" | "throwOnAbort">;
 
+type FeedPageResult = 
+  | { posts: PostsListResponse["posts"]; pagination: NonNullable<PostsListResponse["pagination"]> }
+  | { error: { code?: string; message?: string } };
+
 async function fetchFeedPage(
   page: number,
   limit: number,
   options: FeedApiOptions = {},
-) {
+): Promise<FeedPageResult> {
   const response = await apiRequest<unknown>(
     `/posts/feed?page=${page}&limit=${limit}&includeDeleted=false`,
     {
@@ -28,12 +32,12 @@ async function fetchFeedPage(
   );
 
   if (!response.success) {
-    return null;
+    return { error: response.error };
   }
 
   const parsedPayload = parsePostsEnvelope(response.data);
   if (!parsedPayload) {
-    return null;
+    return { error: { code: "PARSE_ERROR" } };
   }
 
   const posts = parsedPayload.posts.map((post, index) =>
@@ -69,7 +73,8 @@ export async function getPostsFromFeed(
       : 20;
 
   const pagedFeed = await fetchFeedPage(pageNumber, rowsPerPage, options);
-  if (!pagedFeed) {
+  if (!pagedFeed || !('posts' in pagedFeed)) {
+    const errorCode = (pagedFeed as { error?: { code?: string } })?.error?.code;
     return {
       success: false,
       posts: [],
@@ -80,8 +85,12 @@ export async function getPostsFromFeed(
         postsPerPage: rowsPerPage,
       },
       error: {
-        message: "Failed to fetch posts feed page.",
-        code: "FEED_PAGE_FAILED",
+        message: errorCode === "DATABASE_UNAVAILABLE" 
+            ? "TijarahJo is currently undergoing maintenance (database unreachable). Please try again later."
+            : "Failed to fetch posts feed page.",
+        code: errorCode === "DATABASE_UNAVAILABLE" 
+            ? "DATABASE_UNAVAILABLE" 
+            : "FEED_PAGE_FAILED",
       },
     };
   }
