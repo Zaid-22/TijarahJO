@@ -72,8 +72,16 @@ const DEFAULT_BANNERS: HeroBanner[] = [
   },
 ];
 
+// v2: bumped to bust stale localStorage cache that contained broken linkUrls
 const BANNERS_STORAGE_KEY =
-  STORAGE_KEYS.SETTINGS_PREFERENCES.replace("settings", "hero-banners");
+  STORAGE_KEYS.SETTINGS_PREFERENCES.replace("settings", "hero-banners-v2");
+
+const VALID_LINK_PREFIXES = ["/posts", "/search", "/category/", "/post/", "/sell", "/favorites", "/faq", "/help", "/terms", "/privacy"];
+
+function isValidBannerLink(url: string | undefined): boolean {
+  if (!url) return true; // no link is fine
+  return VALID_LINK_PREFIXES.some((prefix) => url.startsWith(prefix));
+}
 
 export function getHeroBanners(): HeroBanner[] {
   try {
@@ -82,7 +90,7 @@ export function getHeroBanners(): HeroBanner[] {
       const parsed = JSON.parse(stored) as HeroBanner[];
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed
-          .filter((b) => b.isActive)
+          .filter((b) => b.isActive && isValidBannerLink(b.linkUrl))
           .sort((a, b) => a.order - b.order);
       }
     }
