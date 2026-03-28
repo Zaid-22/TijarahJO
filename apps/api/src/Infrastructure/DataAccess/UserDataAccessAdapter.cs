@@ -135,7 +135,7 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
             _dbContext.AuditLogs.Add(new AuditLogEntity
             {
                 TableName = "Posts",
-                Action = "BULK_SOFT_DELETE",
+                Action = "UPDATE",
                 ChangedByUserID = actorUserId,
                 ChangedAt = DateTime.UtcNow,
                 OldValues = $"{{\"UserID\":{userId.Value},\"IsDeleted\":false}}",
@@ -152,7 +152,7 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
             _dbContext.AuditLogs.Add(new AuditLogEntity
             {
                 TableName = "Favorites",
-                Action = "BULK_SOFT_DELETE",
+                Action = "UPDATE",
                 ChangedByUserID = actorUserId,
                 ChangedAt = DateTime.UtcNow,
                 OldValues = $"{{\"UserID\":{userId.Value},\"IsDeleted\":false}}",

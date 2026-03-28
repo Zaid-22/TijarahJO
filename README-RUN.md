@@ -54,6 +54,8 @@ make bootstrap
 make sql-bundles
 make sql-audit
 make smoke
+make backend-live-tests
+make backend-live-check
 make backend-integration
 make frontend-contract
 make contracts-check
@@ -196,6 +198,16 @@ Run the full API suite:
 ./scripts/verify_all_apis.sh
 ```
 
+Run the .NET live HTTP integration test project:
+```bash
+make backend-live-tests
+```
+
+Run the broader live backend verification suite (smoke + .NET live HTTP tests + contract checks + full API verification):
+```bash
+make backend-live-check
+```
+
 Run a quick backend smoke suite (fast sanity checks):
 ```bash
 ./apps/api/tests/contracts/backend_smoke.sh
@@ -215,3 +227,8 @@ Run focused post-delete/chat regression:
 ```bash
 ./scripts/test_delete_post_with_chat.sh
 ```
+
+Notes:
+- Plain `dotnet test ./apps/api/TijarahJo.sln` can report success while live HTTP integration tests are skipped if `BASE_URL` is unset.
+- Use `make backend-live-tests` or `make backend-live-check` when you want explicit local backend integration coverage against a running backend.
+- CI still runs the live HTTP integration project with `BASE_URL=http://localhost:5033` in `.github/workflows/backend-api-checks.yml`.

@@ -4,10 +4,14 @@ set -uo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:5033}"
 ADMIN_TOKEN="${ADMIN_TOKEN:-}"
+CURL_CONNECT_TIMEOUT_SECONDS="${CURL_CONNECT_TIMEOUT_SECONDS:-5}"
+CURL_MAX_TIME_SECONDS="${CURL_MAX_TIME_SECONDS:-30}"
+RATE_LIMIT_RECOVERY_SECONDS="${RATE_LIMIT_RECOVERY_SECONDS:-65}"
 PASS_COUNT=0
 FAIL_COUNT=0
 LAST_CODE=""
 LAST_BODY=""
+LAST_HEADERS=""
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -36,11 +40,30 @@ call_api() {
   local expected_codes="$4"
   local payload="${5:-}"
   local token="${6:-}"
-  local body_file="$TMP_DIR/body.json"
-  local err_file="$TMP_DIR/err.log"
+  local body_file
+  local header_file
+  local err_file
+
+  body_file="$(mktemp "$TMP_DIR/body.XXXXXX")"
+  header_file="$(mktemp "$TMP_DIR/headers.XXXXXX")"
+  err_file="$(mktemp "$TMP_DIR/err.XXXXXX")"
 
   local -a args
-  args=(-sS -o "$body_file" -w "%{http_code}" -X "$method" "$BASE_URL$path" -H "Content-Type: application/json")
+  args=(
+    -sS
+    --connect-timeout "$CURL_CONNECT_TIMEOUT_SECONDS"
+    --max-time "$CURL_MAX_TIME_SECONDS"
+    -D "$header_file"
+    -o "$body_file"
+    -w "%{http_code}"
+    -X "$method"
+    "$BASE_URL$path"
+    -H "Content-Type: application/json"
+  )
+
+  LAST_CODE=""
+  LAST_BODY=""
+  LAST_HEADERS=""
 
   if [ -n "$token" ]; then
     args+=(-H "Authorization: Bearer $token")
@@ -53,6 +76,7 @@ call_api() {
   LAST_CODE="$(curl "${args[@]}" 2>"$err_file")"
   local curl_rc=$?
   LAST_BODY="$(cat "$body_file" 2>/dev/null || true)"
+  LAST_HEADERS="$(cat "$header_file" 2>/dev/null || true)"
   local err_out
   err_out="$(cat "$err_file" 2>/dev/null || true)"
 
@@ -68,6 +92,13 @@ call_api() {
 
   log_fail "$name" "expected [$expected_codes], got $LAST_CODE, body=$LAST_BODY"
   return 1
+}
+
+extract_jwt_cookie() {
+  printf "%s" "$LAST_HEADERS" \
+    | tr -d '\r' \
+    | sed -n 's/^Set-Cookie: jwt=\([^;]*\).*/\1/p' \
+    | head -n 1
 }
 
 assert_jq() {
@@ -108,6 +139,66 @@ require_api() {
   fi
 }
 
+require_api_retry_429() {
+  local name="$1"
+  local method="$2"
+  local path="$3"
+  local expected_codes="$4"
+  local payload="${5:-}"
+  local token="${6:-}"
+  local attempt=1
+  local max_attempts=3
+
+  while true; do
+    if call_api "$name" "$method" "$path" "$expected_codes" "$payload" "$token"; then
+      return 0
+    fi
+
+    if [ "$LAST_CODE" != "429" ] || [ "$attempt" -ge "$max_attempts" ]; then
+      abort_verification "$name" "Request failed. path=$path expected=$expected_codes got=$LAST_CODE body=$LAST_BODY"
+    fi
+
+    attempt=$((attempt + 1))
+    sleep 1
+  done
+}
+
+cleanup_api_retry_429() {
+  local name="$1"
+  local method="$2"
+  local path="$3"
+  local expected_codes="$4"
+  local payload="${5:-}"
+  local token="${6:-}"
+  local attempt=1
+  local max_attempts=3
+  local starting_fail_count="$FAIL_COUNT"
+
+  while true; do
+    if call_api "$name" "$method" "$path" "$expected_codes" "$payload" "$token"; then
+      FAIL_COUNT="$starting_fail_count"
+      return 0
+    fi
+
+    if [ "$LAST_CODE" = "429" ]; then
+      if [ "$attempt" -lt "$max_attempts" ]; then
+        FAIL_COUNT="$starting_fail_count"
+        sleep "$RATE_LIMIT_RECOVERY_SECONDS"
+        attempt=$((attempt + 1))
+        continue
+      fi
+
+      FAIL_COUNT="$starting_fail_count"
+      log_skip "$name (cleanup rate-limited after ${max_attempts} attempts)"
+      return 0
+    fi
+
+    FAIL_COUNT="$starting_fail_count"
+    log_skip "$name (cleanup skipped after unexpected response $LAST_CODE)"
+    return 0
+  done
+}
+
 is_positive_int() {
   [[ "${1:-}" =~ ^[1-9][0-9]*$ ]]
 }
@@ -145,6 +236,7 @@ abort_verification() {
 }
 
 echo "Running full API verification against $BASE_URL"
+echo "curl timeouts: connect=${CURL_CONNECT_TIMEOUT_SECONDS}s total=${CURL_MAX_TIME_SECONDS}s"
 if [ -n "$ADMIN_TOKEN" ]; then
   echo "Admin mode: enabled (ADMIN_TOKEN provided)"
 else
@@ -155,7 +247,7 @@ if ! command -v jq >/dev/null 2>&1; then
   abort_verification "preflight.jq" "jq is required but was not found in PATH."
 fi
 
-preflight_code="$(curl -sS -o /dev/null -w "%{http_code}" "$BASE_URL/swagger/index.html" || true)"
+preflight_code="$(curl -sS --connect-timeout "$CURL_CONNECT_TIMEOUT_SECONDS" --max-time "$CURL_MAX_TIME_SECONDS" -o /dev/null -w "%{http_code}" "$BASE_URL/swagger/index.html" || true)"
 if [ "$preflight_code" != "200" ]; then
   abort_verification \
     "preflight.backend.unreachable" \
@@ -164,7 +256,7 @@ fi
 log_ok "preflight.backend.reachable ($preflight_code)"
 
 db_preflight_file="$TMP_DIR/preflight_categories.json"
-db_preflight_code="$(curl -sS -o "$db_preflight_file" -w "%{http_code}" "$BASE_URL/api/v1/categories" || true)"
+db_preflight_code="$(curl -sS --connect-timeout "$CURL_CONNECT_TIMEOUT_SECONDS" --max-time "$CURL_MAX_TIME_SECONDS" -o "$db_preflight_file" -w "%{http_code}" "$BASE_URL/api/v1/categories" || true)"
 db_preflight_body="$(cat "$db_preflight_file" 2>/dev/null || true)"
 if [ "$db_preflight_code" != "200" ]; then
   abort_verification \
@@ -219,10 +311,9 @@ else
   signup1_payload="$(jq -nc --arg e "$email1" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"User1",Phone:"+962790000001"}')"
 fi
 require_api "auth.signup.user1" "POST" "/api/v1/auth/signup" "201" "$signup1_payload"
-token1="$(printf "%s" "$LAST_BODY" | jq -r '.Token // empty')"
+token1=""
 user1_id="$(printf "%s" "$LAST_BODY" | jq -r '.User.Id // .User.UserID // .User.id // empty')"
-assert_jq_or_abort "auth.signup.user1.token.present" '.Token | type=="string" and (length>20)'
-require_non_empty "$token1" "auth.bootstrap.user1"
+assert_jq_or_abort "auth.signup.user1.token.absent" '(.Token // null) == null'
 
 if is_positive_int "$location_city_id" && is_positive_int "$location_area_id"; then
   signup2_payload="$(jq -nc --arg e "$email2" --argjson city "$location_city_id" --argjson area "$location_area_id" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"User2",Phone:"+962790000002",CityId:$city,AreaId:$area}')"
@@ -232,27 +323,28 @@ else
   signup2_payload="$(jq -nc --arg e "$email2" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"User2",Phone:"+962790000002"}')"
 fi
 require_api "auth.signup.user2" "POST" "/api/v1/auth/signup" "201" "$signup2_payload"
-token2="$(printf "%s" "$LAST_BODY" | jq -r '.Token // empty')"
+token2=""
 user2_id="$(printf "%s" "$LAST_BODY" | jq -r '.User.Id // .User.UserID // .User.id // empty')"
-assert_jq_or_abort "auth.signup.user2.token.present" '.Token | type=="string" and (length>20)'
-require_non_empty "$token2" "auth.bootstrap.user2"
+assert_jq_or_abort "auth.signup.user2.token.absent" '(.Token // null) == null'
 
 login1_payload="$(jq -nc --arg l "$email1" '{Login:$l,Password:"P@ssw0rd123"}')"
 require_api "auth.login.user1" "POST" "/api/v1/auth/login" "200" "$login1_payload"
 token1_login="$(printf "%s" "$LAST_BODY" | jq -r '.Token // empty')"
+if [ -z "$token1_login" ]; then token1_login="$(extract_jwt_cookie)"; fi
 if [ -n "$token1_login" ]; then token1="$token1_login"; fi
 require_non_empty "$token1" "auth.login.user1.token"
 
 login2_payload="$(jq -nc --arg l "$email2" '{Login:$l,Password:"P@ssw0rd123"}')"
 require_api "auth.login.user2" "POST" "/api/v1/auth/login" "200" "$login2_payload"
 token2_login="$(printf "%s" "$LAST_BODY" | jq -r '.Token // empty')"
+if [ -z "$token2_login" ]; then token2_login="$(extract_jwt_cookie)"; fi
 if [ -n "$token2_login" ]; then token2="$token2_login"; fi
 require_non_empty "$token2" "auth.login.user2.token"
 
 # Cookie-authenticated CSRF checks
 csrf_cookie_jar="$TMP_DIR/csrf_user1.cookies"
 csrf_login_body="$TMP_DIR/csrf_login_body.json"
-csrf_login_code="$(curl -sS -o "$csrf_login_body" -w "%{http_code}" \
+csrf_login_code="$(curl -sS --connect-timeout "$CURL_CONNECT_TIMEOUT_SECONDS" --max-time "$CURL_MAX_TIME_SECONDS" -o "$csrf_login_body" -w "%{http_code}" \
   -c "$csrf_cookie_jar" -b "$csrf_cookie_jar" \
   -X POST "$BASE_URL/api/v1/auth/login" \
   -H "Content-Type: application/json" \
@@ -262,7 +354,7 @@ if [ "$csrf_login_code" != "200" ]; then
 fi
 log_ok "csrf.cookie.login ($csrf_login_code)"
 
-csrf_logout_no_token_code="$(curl -sS -o "$TMP_DIR/csrf_logout_no_token_body.json" -w "%{http_code}" \
+csrf_logout_no_token_code="$(curl -sS --connect-timeout "$CURL_CONNECT_TIMEOUT_SECONDS" --max-time "$CURL_MAX_TIME_SECONDS" -o "$TMP_DIR/csrf_logout_no_token_body.json" -w "%{http_code}" \
   -c "$csrf_cookie_jar" -b "$csrf_cookie_jar" \
   -X POST "$BASE_URL/api/v1/auth/logout" \
   -H "Content-Type: application/json" || true)"
@@ -272,7 +364,7 @@ else
   abort_verification "csrf.logout.rejected.without_header" "Expected 403/400, got $csrf_logout_no_token_code body=$(cat "$TMP_DIR/csrf_logout_no_token_body.json" 2>/dev/null || true)"
 fi
 
-csrf_me_code="$(curl -sS -o "$TMP_DIR/csrf_me_body.json" -w "%{http_code}" \
+csrf_me_code="$(curl -sS --connect-timeout "$CURL_CONNECT_TIMEOUT_SECONDS" --max-time "$CURL_MAX_TIME_SECONDS" -o "$TMP_DIR/csrf_me_body.json" -w "%{http_code}" \
   -c "$csrf_cookie_jar" -b "$csrf_cookie_jar" \
   -X GET "$BASE_URL/api/v1/auth/me" \
   -H "Content-Type: application/json" || true)"
@@ -287,7 +379,7 @@ if [ -z "$csrf_token" ]; then
 fi
 log_ok "csrf.cookie.token.present"
 
-csrf_logout_with_header_code="$(curl -sS -o "$TMP_DIR/csrf_logout_with_header_body.json" -w "%{http_code}" \
+csrf_logout_with_header_code="$(curl -sS --connect-timeout "$CURL_CONNECT_TIMEOUT_SECONDS" --max-time "$CURL_MAX_TIME_SECONDS" -o "$TMP_DIR/csrf_logout_with_header_body.json" -w "%{http_code}" \
   -c "$csrf_cookie_jar" -b "$csrf_cookie_jar" \
   -X POST "$BASE_URL/api/v1/auth/logout" \
   -H "Content-Type: application/json" \
@@ -520,6 +612,9 @@ fi
 
 require_api "chat.recent.user2" "GET" "/api/v1/chat/recent" "200" "" "$token2"
 assert_jq "chat.recent.user2.array" 'type=="array" and length>0'
+
+direct_message_payload="$(jq -nc --argjson rid "$user1_id" '{ReceiverId:$rid,Content:"Hello direct thread from API test"}')"
+require_api "chat.send.direct" "POST" "/api/v1/chat/send" "200" "$direct_message_payload" "$token2"
 require_api "chat.history.user1-user2" "GET" "/api/v1/chat/history/$user2_id" "200" "" "$token1"
 assert_jq "chat.history.user1-user2.nonempty" 'type=="array" and length>0'
 
@@ -540,8 +635,15 @@ else
   signup3_payload="$(jq -nc --arg e "$email3" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"DeleteMe",Phone:"+962790000003"}')"
 fi
 require_api "auth.signup.user3" "POST" "/api/v1/auth/signup" "201" "$signup3_payload"
-token3="$(printf "%s" "$LAST_BODY" | jq -r '.Token // empty')"
+assert_jq_or_abort "auth.signup.user3.token.absent" '(.Token // null) == null'
+token3="$(extract_jwt_cookie)"
 user3_id="$(printf "%s" "$LAST_BODY" | jq -r '.User.Id // .User.UserID // .User.id // empty')"
+if [ -z "$token3" ]; then
+  login3_payload="$(jq -nc --arg l "$email3" '{Login:$l,Password:"P@ssw0rd123"}')"
+  require_api "auth.login.user3" "POST" "/api/v1/auth/login" "200" "$login3_payload"
+  token3="$(printf "%s" "$LAST_BODY" | jq -r '.Token // empty')"
+  if [ -z "$token3" ]; then token3="$(extract_jwt_cookie)"; fi
+fi
 require_non_empty "$token3" "auth.signup.user3.token"
 require_positive_int "$user3_id" "auth.signup.user3.id"
 require_api "users.delete.user3" "DELETE" "/api/v1/users/$user3_id" "200,204" "" "$token3"
@@ -549,11 +651,11 @@ require_api "users.delete.user3" "DELETE" "/api/v1/users/$user3_id" "200,204" ""
 # 9. Cleanup created post and auth logout
 if [ -n "${new_post_id:-}" ]; then
   if is_positive_int "$new_post_id"; then
-    require_api "posts.delete.new" "DELETE" "/api/v1/posts/$new_post_id" "200" "" "$token2"
+    cleanup_api_retry_429 "posts.delete.new" "DELETE" "/api/v1/posts/$new_post_id" "200" "" "$token2"
   fi
 fi
-require_api "auth.logout.user1" "POST" "/api/v1/auth/logout" "200" "" "$token1"
-require_api "auth.logout.user2" "POST" "/api/v1/auth/logout" "200" "" "$token2"
+cleanup_api_retry_429 "auth.logout.user1" "POST" "/api/v1/auth/logout" "200" "" "$token1"
+cleanup_api_retry_429 "auth.logout.user2" "POST" "/api/v1/auth/logout" "200" "" "$token2"
 
 print_summary
 

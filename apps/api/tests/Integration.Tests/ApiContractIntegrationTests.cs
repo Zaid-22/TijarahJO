@@ -5,23 +5,12 @@ namespace TijarahJo.Api.Integration.Tests;
 
 public sealed class ApiContractIntegrationTests
 {
-    private static Uri RequireBaseUri()
-    {
-        var baseUrl = Environment.GetEnvironmentVariable("BASE_URL");
-        if (string.IsNullOrWhiteSpace(baseUrl))
-        {
-            throw new InvalidOperationException("Integration tests require BASE_URL to be set.");
-        }
-
-        return new Uri(baseUrl, UriKind.Absolute);
-    }
-
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task SwaggerContract_ExposesVersionedRoutes()
     {
         using var client = new HttpClient
         {
-            BaseAddress = RequireBaseUri(),
+            BaseAddress = IntegrationTestEnvironment.RequireBaseUri(),
             Timeout = TimeSpan.FromSeconds(8)
         };
 

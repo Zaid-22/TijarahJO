@@ -4,23 +4,12 @@ namespace TijarahJo.Api.Integration.Tests;
 
 public sealed class ApiSmokeIntegrationTests
 {
-    private static Uri RequireBaseUri()
-    {
-        var baseUrl = Environment.GetEnvironmentVariable("BASE_URL");
-        if (string.IsNullOrWhiteSpace(baseUrl))
-        {
-            throw new InvalidOperationException("Integration tests require BASE_URL to be set.");
-        }
-
-        return new Uri(baseUrl, UriKind.Absolute);
-    }
-
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task LegacyPostsAllEndpoint_ReturnsNotFound_WhenBackendIsAvailable()
     {
         using var client = new HttpClient
         {
-            BaseAddress = RequireBaseUri(),
+            BaseAddress = IntegrationTestEnvironment.RequireBaseUri(),
             Timeout = TimeSpan.FromSeconds(5)
         };
 
@@ -29,12 +18,12 @@ public sealed class ApiSmokeIntegrationTests
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    [Fact]
+    [RequiresBaseUrlFact]
     public async Task LegacyPostsPaginationEndpoint_ReturnsNotFound_WhenBackendIsAvailable()
     {
         using var client = new HttpClient
         {
-            BaseAddress = RequireBaseUri(),
+            BaseAddress = IntegrationTestEnvironment.RequireBaseUri(),
             Timeout = TimeSpan.FromSeconds(5)
         };
 

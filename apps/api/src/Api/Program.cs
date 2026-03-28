@@ -236,7 +236,7 @@ builder.Services.AddScoped<IPostsFeedService, PostsFeedService>();
 builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
 builder.Services.AddScoped<IPasswordResetEmailSender, PasswordResetEmailSender>();
 builder.Services.AddScoped<IEmailTwoFactorSender, EmailTwoFactorSender>();
-builder.Services.AddSingleton<TwoFactorService>();
+builder.Services.AddScoped<TwoFactorService>();
 builder.Services.AddSingleton<IPostImageFileStorageService, LocalPostImageFileStorageService>();
 builder.Services.AddSingleton<IImageModerationService, ImageModerationService>();
 builder.Services.AddSingleton<InMemoryChatPresenceService>();
