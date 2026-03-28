@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Image,
   Plus,
@@ -6,7 +6,6 @@ import {
   GripVertical,
   Eye,
   EyeOff,
-  RotateCcw,
   Upload,
   Link,
 } from "lucide-react";
@@ -20,18 +19,14 @@ import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
 import { Label } from "../../../shared/ui/label";
 import { Badge } from "../../../shared/ui/badge";
-import {
-  type HeroBanner,
-  getAllHeroBanners,
-  saveHeroBanners,
-  resetHeroBannersToDefaults,
-} from "../../home/components/heroBannerData";
 import { toast } from "sonner";
+import { adminApi } from "../../../services/api/admin";
+import { type BannerModel } from "../../../services/api/banners";
+import { LoadingState } from "../../../shared/ui/loading-state";
 
 export function AdminBannersManagement() {
-  const [banners, setBanners] = useState<HeroBanner[]>(() =>
-    getAllHeroBanners(),
-  );
+  const [banners, setBanners] = useState<BannerModel[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -42,33 +37,50 @@ export function AdminBannersManagement() {
   const [newAltTextAr, setNewAltTextAr] = useState("");
   const [newLinkUrl, setNewLinkUrl] = useState("");
 
-  const persist = useCallback((updated: HeroBanner[]) => {
-    setBanners(updated);
-    saveHeroBanners(updated);
+  const loadBanners = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await adminApi.getBanners();
+      setBanners(data || []);
+    } catch {
+      toast.error("Failed to load banners");
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const toggleActive = (id: string) => {
-    const updated = banners.map((b) =>
-      b.id === id ? { ...b, isActive: !b.isActive } : b,
-    );
-    persist(updated);
-    toast.success("Banner visibility updated");
+  useEffect(() => {
+    loadBanners();
+  }, [loadBanners]);
+
+  const toggleActive = async (id: number) => {
+    const success = await adminApi.toggleBannerActive(id);
+    if (success) {
+      toast.success("Banner visibility updated");
+      loadBanners();
+    } else {
+      toast.error("Failed to update visibility");
+    }
   };
 
-  const removeBanner = (id: string) => {
-    const updated = banners.filter((b) => b.id !== id);
-    persist(updated);
-    toast.success("Banner removed");
+  const removeBanner = async (id: number) => {
+    // Relying on backend deletion; advanced prompt could be added later
+    const success = await adminApi.deleteBanner(id);
+    if (success) {
+      toast.success("Banner removed");
+      loadBanners();
+    } else {
+      toast.error("Failed to remove banner");
+    }
   };
 
-  const addBanner = () => {
+  const addBanner = async () => {
     if (!newImageUrl.trim()) {
       toast.error("Image URL is required");
       return;
     }
 
-    const newBanner: HeroBanner = {
-      id: `banner-custom-${Date.now()}`,
+    const newBanner = {
       title: "",
       titleAr: "",
       subtitle: "",
@@ -82,17 +94,21 @@ export function AdminBannersManagement() {
       altTextAr: newAltTextAr.trim() || "إعلان",
       linkUrl: newLinkUrl.trim() || undefined,
       isActive: true,
-      order: banners.length,
+      displayOrder: banners.length,
     };
 
-    const updated = [...banners, newBanner];
-    persist(updated);
-    setNewImageUrl("");
-    setNewAltText("");
-    setNewAltTextAr("");
-    setNewLinkUrl("");
-    setShowAddForm(false);
-    toast.success("Banner added successfully");
+    const success = await adminApi.createBanner(newBanner);
+    if (success) {
+      setNewImageUrl("");
+      setNewAltText("");
+      setNewAltTextAr("");
+      setNewLinkUrl("");
+      setShowAddForm(false);
+      toast.success("Banner added successfully");
+      loadBanners();
+    } else {
+      toast.error("Failed to add banner");
+    }
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,12 +132,6 @@ export function AdminBannersManagement() {
     reader.readAsDataURL(file);
   };
 
-  const handleReset = () => {
-    resetHeroBannersToDefaults();
-    setBanners(getAllHeroBanners());
-    toast.success("Banners reset to defaults");
-  };
-
   // Drag and drop reordering
   const handleDragStart = (index: number) => {
     setDragIndex(index);
@@ -135,17 +145,30 @@ export function AdminBannersManagement() {
     const [dragged] = updated.splice(dragIndex, 1);
     updated.splice(index, 0, dragged);
     updated.forEach((b, idx) => {
-      b.order = idx;
+      b.displayOrder = idx;
     });
     setBanners(updated);
     setDragIndex(index);
   };
 
-  const handleDragEnd = () => {
+  const handleDragEnd = async () => {
     setDragIndex(null);
-    saveHeroBanners(banners);
-    toast.success("Banner order updated");
+    let allSuccess = true;
+    for (const b of banners) {
+      const success = await adminApi.updateBanner(b.bannerID, b);
+      if (!success) allSuccess = false;
+    }
+    if (allSuccess) {
+      toast.success("Banner order updated");
+    } else {
+      toast.error("Failed to update some banner orders");
+    }
+    loadBanners();
   };
+
+  if (isLoading) {
+    return <LoadingState label="Loading Banners..." minHeightClassName="min-h-[400px]" />;
+  }
 
   const activeCount = banners.filter((b) => b.isActive).length;
 
@@ -165,15 +188,6 @@ export function AdminBannersManagement() {
           <Badge variant="outline" className="text-sm px-3 py-1">
             {activeCount} active / {banners.length} total
           </Badge>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleReset}
-            className="gap-2"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Reset to Defaults
-          </Button>
           <Button
             size="sm"
             onClick={() => setShowAddForm(!showAddForm)}
@@ -283,7 +297,7 @@ export function AdminBannersManagement() {
       <div className="space-y-3">
         {banners.map((banner, index) => (
           <Card
-            key={banner.id}
+            key={banner.bannerID}
             draggable
             onDragStart={() => handleDragStart(index)}
             onDragOver={(e) => handleDragOver(e, index)}
@@ -344,7 +358,7 @@ export function AdminBannersManagement() {
 
                 {/* Order */}
                 <div className="text-xs text-muted-foreground font-mono w-8 text-center flex-shrink-0">
-                  #{index + 1}
+                   #{banner.displayOrder} ({index + 1})
                 </div>
 
                 {/* Actions */}
@@ -352,7 +366,7 @@ export function AdminBannersManagement() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={toggleActive.bind(null, banner.id)}
+                    onClick={toggleActive.bind(null, banner.bannerID)}
                     title={banner.isActive ? "Hide banner" : "Show banner"}
                     aria-label={banner.isActive ? "Hide banner" : "Show banner"}
                     className="h-8 w-8"
@@ -366,7 +380,7 @@ export function AdminBannersManagement() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={removeBanner.bind(null, banner.id)}
+                    onClick={removeBanner.bind(null, banner.bannerID)}
                     title="Remove banner"
                     aria-label="Remove banner"
                     className="h-8 w-8 text-destructive hover:text-destructive"

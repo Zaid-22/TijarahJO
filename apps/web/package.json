@@ -23,7 +23,7 @@
     "test:integration": "npm run test:prep && node --test tests/integration/*.test.cjs",
     "test:policy:e2e": "npm run test:prep && node --test tests/e2e/*.test.cjs",
     "test:e2e:browser": "node tools/run-playwright-e2e.mjs",
-    "test:e2e:backend-live": "E2E_BACKEND_LIVE=1 PW_BYPASS_CSP=0 npx playwright test --config=playwright.config.cjs --project=chromium tests/browser-e2e/backend-live.spec.cjs",
+    "test:e2e:backend-live": "VITE_API_BASE_URL=http://localhost:5033/api E2E_FRONTEND_HOST=localhost E2E_FRONTEND_BASE_URL=http://localhost:4173 E2E_BACKEND_LIVE=1 PW_BYPASS_CSP=0 npx playwright test --config=playwright.config.cjs --project=chromium tests/browser-e2e/backend-live.spec.cjs",
     "test:e2e": "npm run test:e2e:browser",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:policy:e2e",
     "test:release": "npm run test:all && npm run test:e2e:browser"

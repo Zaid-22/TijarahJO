@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Language } from "../../../types";
 import { getHeroBanners, type HeroBanner } from "./heroBannerData";
@@ -22,7 +22,37 @@ export function HomeHeroSection({
   isRTL,
   onNavigate,
 }: HomeHeroSectionProps) {
-  const banners = useMemo(() => getHeroBanners(), []);
+  const [banners, setBanners] = useState<HeroBanner[]>([]);
+  
+  useEffect(() => {
+    import("../../../services/api/banners").then(({ bannersApi }) => {
+      bannersApi.getActiveBanners().then((apiBanners) => {
+        if (apiBanners && apiBanners.length > 0) {
+          // Map API models to HeroBanner frontend models
+          setBanners(apiBanners.map((b) => ({
+            id: `api-banner-${b.bannerID}`,
+            title: b.title,
+            titleAr: b.titleAr,
+            subtitle: b.subtitle,
+            subtitleAr: b.subtitleAr,
+            buttonText: b.buttonText,
+            buttonTextAr: b.buttonTextAr,
+            imageUrl: b.imageUrl,
+            bgClass: b.bgClass,
+            textClass: b.textClass,
+            altText: b.altText,
+            altTextAr: b.altTextAr,
+            linkUrl: b.linkUrl || undefined,
+            isActive: b.isActive,
+            order: b.displayOrder,
+          })));
+        } else {
+          // Fallback
+          setBanners(getHeroBanners());
+        }
+      });
+    });
+  }, []);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -79,8 +109,8 @@ export function HomeHeroSection({
       {/* Slides Container */}
       <div className="relative w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 pt-4 sm:pt-6 pb-2">
         <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl">
-          {/* Aspect ratio wrapper — responsive shorter banner */}
-          <div className="relative w-full aspect-[21/8]">
+          {/* Aspect ratio wrapper — responsive for mobile, taller or aspect based */}
+          <div className="relative w-full min-h-[450px] sm:min-h-[350px] md:min-h-0 md:aspect-[21/8]">
             {banners.map((banner, index) => (
               <button
                 key={banner.id}
@@ -100,22 +130,22 @@ export function HomeHeroSection({
                 aria-hidden={index !== currentIndex}
                 tabIndex={index === currentIndex ? 0 : -1}
               >
-                <div className={`relative w-full h-full flex flex-col md:flex-row items-center justify-between px-6 sm:px-12 lg:px-24 pb-12 sm:pb-0 ${isRTL ? 'md:flex-row-reverse' : ''}`}>
+                <div className={`relative w-full h-full flex flex-col md:flex-row items-center justify-center md:justify-between px-6 sm:px-12 lg:px-24 py-6 md:py-0 gap-4 md:gap-0 ${isRTL ? 'md:flex-row-reverse' : ''}`}>
                   {/* Text Content Area */}
-                  <div className={`flex flex-col items-center md:items-start text-center md:text-start space-y-4 max-w-lg z-10 mt-8 md:mt-0 ${isRTL ? 'md:items-end md:text-end' : ''}`}>
-                    <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight leading-tight">
+                  <div className={`flex flex-col items-center md:items-start text-center md:text-start space-y-3 sm:space-y-4 max-w-lg z-10 ${isRTL ? 'md:items-end md:text-end' : ''}`}>
+                    <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold tracking-tight leading-tight">
                       {language === "ar" ? banner.titleAr : banner.title}
                     </h2>
-                    <p className="text-sm sm:text-base lg:text-lg opacity-90 font-medium">
+                    <p className="text-sm sm:text-base lg:text-lg opacity-90 font-medium max-w-[280px] sm:max-w-none">
                       {language === "ar" ? banner.subtitleAr : banner.subtitle}
                     </p>
-                    <div className={`px-6 py-2.5 sm:py-3 mt-2 font-semibold text-sm sm:text-base rounded-full shadow-lg transition-transform hover:scale-105 ${banner.bgClass.includes('slate') || banner.bgClass.includes('0f172a') ? 'bg-primary text-primary-foreground' : 'bg-slate-900 text-white dark:bg-primary dark:text-primary-foreground'}`}>
+                    <div className={`px-6 py-2.5 sm:py-3 mt-2 sm:mt-4 font-semibold text-sm sm:text-base rounded-full shadow-lg transition-transform hover:scale-105 ${banner.bgClass.includes('slate') || banner.bgClass.includes('0f172a') ? 'bg-primary text-primary-foreground' : 'bg-slate-900 text-white dark:bg-primary dark:text-primary-foreground'}`}>
                       {language === "ar" ? banner.buttonTextAr : banner.buttonText}
                     </div>
                   </div>
                   
                   {/* Image Area - Square Asset */}
-                  <div className="relative w-[200px] h-[200px] sm:w-[280px] sm:h-[280px] lg:w-[350px] lg:h-[350px] flex-shrink-0 z-0">
+                  <div className="relative w-[180px] h-[180px] sm:w-[220px] sm:h-[220px] md:w-[280px] md:h-[280px] lg:w-[350px] lg:h-[350px] flex-shrink-0 z-0">
                     <img
                       src={banner.imageUrl}
                       alt={language === "ar" ? banner.altTextAr : banner.altText}
@@ -179,7 +209,7 @@ export function HomeHeroSection({
                 aria-selected={index === currentIndex}
                 aria-label={`${language === "ar" ? "الشريحة" : "Slide"} ${index + 1}`}
                 onClick={() => goToSlide(index)}
-                className={`rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                className={`rounded-full flex-shrink-0 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
                   index === currentIndex
                     ? "w-8 h-2.5 bg-primary shadow-md"
                     : "w-2.5 h-2.5 bg-muted-foreground/30 hover:bg-muted-foreground/50"

@@ -1,9 +1,13 @@
+import { useMemo } from "react";
 import { PostResultsGrid } from "../components/PostResultsGrid";
+import { PostResultsGridSkeleton } from "../components/PostResultsGridSkeleton";
 import { SubpageHeader } from "../../../shared/ui/subpage-header";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { translations, Language } from "../../../translations";
 import { Post } from "../../../types";
 import { Heart } from "lucide-react";
+import { api } from "../../../services/api";
+import { useServerQuery } from "../../../shared/hooks/useServerQuery";
 
 interface FavoritesPageProps {
   onBackToMarketplace: () => void;
@@ -30,8 +34,64 @@ export function FavoritesPage({
 }: FavoritesPageProps) {
   const t = translations[language];
   const isRTL = language === "ar";
+  const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
 
-  const favoritePosts = posts.filter((p) => favoriteIds.includes(p.id));
+  const feedFavoritePosts = useMemo(
+    () => posts.filter((post) => favoriteIdSet.has(post.id)),
+    [favoriteIdSet, posts],
+  );
+  const hydratedFavoriteIds = useMemo(
+    () => new Set(feedFavoritePosts.map((post) => post.id)),
+    [feedFavoritePosts],
+  );
+  const missingFavoriteIds = useMemo(
+    () => favoriteIds.filter((favoriteId) => !hydratedFavoriteIds.has(favoriteId)),
+    [favoriteIds, hydratedFavoriteIds],
+  );
+  const favoritesPostsCacheKey = useMemo(
+    () => `favorites:posts:${missingFavoriteIds.slice().sort().join(",")}`,
+    [missingFavoriteIds],
+  );
+
+  const {
+    data: missingFavoritePosts,
+    isLoading: isLoadingMissingFavoritePosts,
+    isFetching: isFetchingMissingFavoritePosts,
+  } = useServerQuery<Post[]>({
+    key: favoritesPostsCacheKey,
+    tags: ["favorites", "posts"],
+    enabled: missingFavoriteIds.length > 0,
+    staleTimeMs: 30_000,
+    retryCount: 1,
+    retryDelayMs: 600,
+    queryFn: async () => {
+      const resolvedPosts = await Promise.all(
+        missingFavoriteIds.map((favoriteId) => api.posts.getPost(favoriteId)),
+      );
+      return resolvedPosts.filter((post): post is Post => post !== null);
+    },
+  });
+
+  const favoritePosts = useMemo(() => {
+    const mergedPosts = [...feedFavoritePosts];
+    const mergedIds = new Set(mergedPosts.map((post) => post.id));
+
+    for (const post of missingFavoritePosts || []) {
+      if (!favoriteIdSet.has(post.id) || mergedIds.has(post.id)) {
+        continue;
+      }
+
+      mergedPosts.push(post);
+      mergedIds.add(post.id);
+    }
+
+    return mergedPosts;
+  }, [favoriteIdSet, feedFavoritePosts, missingFavoritePosts]);
+
+  const isResolvingFavoritePosts =
+    favoriteIds.length > 0 &&
+    favoritePosts.length === 0 &&
+    (isLoadingMissingFavoritePosts || isFetchingMissingFavoritePosts);
 
   return (
     <PageShell tone="account">
@@ -59,23 +119,30 @@ export function FavoritesPage({
           </div>
         </div>
 
-        <PostResultsGrid
-          posts={favoritePosts}
-          viewMode="list"
-          onPostClick={onPostClick}
-          favoriteIds={favoriteIds}
-          onFavoriteToggle={onRemoveFavorite}
-          isAuthenticated={isAuthenticated}
-          currentUserId={isAuthenticated ? currentUserId : undefined}
-          language={language}
-          onRequireAuth={onRequireAuth}
-          emptyState={{
-            title: t.noFavorites,
-            description: t.noFavoritesDescription,
-            actionLabel: t.browseListing,
-            onAction: onBackToMarketplace,
-          }}
-        />
+        {isResolvingFavoritePosts ? (
+          <PostResultsGridSkeleton
+            viewMode="list"
+            count={Math.min(Math.max(favoriteIds.length, 1), 3)}
+          />
+        ) : (
+          <PostResultsGrid
+            posts={favoritePosts}
+            viewMode="list"
+            onPostClick={onPostClick}
+            favoriteIds={favoriteIds}
+            onFavoriteToggle={onRemoveFavorite}
+            isAuthenticated={isAuthenticated}
+            currentUserId={isAuthenticated ? currentUserId : undefined}
+            language={language}
+            onRequireAuth={onRequireAuth}
+            emptyState={{
+              title: t.noFavorites,
+              description: t.noFavoritesDescription,
+              actionLabel: t.browseListing,
+              onAction: onBackToMarketplace,
+            }}
+          />
+        )}
       </div>
 
     </PageShell>

@@ -8,10 +8,14 @@ namespace TijarahJo.Application.Services;
 public sealed class PostStatusTransitionService : IPostStatusTransitionService
 {
     private readonly IPostService _posts;
+    private readonly ISearchCacheInvalidationService _searchCacheInvalidation;
 
-    public PostStatusTransitionService(IPostService posts)
+    public PostStatusTransitionService(
+        IPostService posts,
+        ISearchCacheInvalidationService searchCacheInvalidation)
     {
         _posts = posts;
+        _searchCacheInvalidation = searchCacheInvalidation;
     }
 
     public async Task<PostStatusUpdateResult> UpdateStatusAsync(
@@ -106,6 +110,8 @@ public sealed class PostStatusTransitionService : IPostStatusTransitionService
                 Message = "Error updating post status."
             };
         }
+
+        _searchCacheInvalidation.InvalidateAll();
 
         return new PostStatusUpdateResult
         {

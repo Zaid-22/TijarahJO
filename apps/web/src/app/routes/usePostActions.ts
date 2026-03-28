@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { api } from "../../services/api";
 import { UserProfile } from "../../types";
 import type { PostImageInput } from "../../types/api";
+import { invalidateServerQueryTag } from "../../shared/hooks/useServerQuery";
 import { buildCreatePostPayload, CreatePostInput } from "./appRoutesUtils";
 
 export interface UpdatePostInput {
@@ -39,6 +40,9 @@ export function usePostActions({
         throw new Error(result.message || "Failed to create post");
       }
 
+      invalidateServerQueryTag("marketplace-search", {
+        cancelInFlight: true,
+      });
       await fetchPostsFromBackend();
       return result;
     },
@@ -63,6 +67,9 @@ export function usePostActions({
         throw new Error(response.message || "Failed to update post");
       }
 
+      invalidateServerQueryTag("marketplace-search", {
+        cancelInFlight: true,
+      });
       await fetchPostsFromBackend();
     },
     [fetchPostsFromBackend],
@@ -79,6 +86,9 @@ export function usePostActions({
         throw new Error(response.message || "Failed to update post status");
       }
 
+      invalidateServerQueryTag("marketplace-search", {
+        cancelInFlight: true,
+      });
       await fetchPostsFromBackend();
     },
     [fetchPostsFromBackend],
@@ -91,6 +101,9 @@ export function usePostActions({
         throw new Error(response.error || "Failed to delete post");
       }
 
+      invalidateServerQueryTag("marketplace-search", {
+        cancelInFlight: true,
+      });
       await fetchPostsFromBackend();
     },
     [fetchPostsFromBackend],

@@ -1,12 +1,14 @@
 using System.Globalization;
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Caching.Memory;
 using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Application.Common;
 
 namespace TijarahJo.Infrastructure.Queries;
 
-public sealed class SearchReadService : ISearchReadService
+public sealed class SearchReadService : ISearchReadService, ISearchCacheInvalidationService
 {
+    private static readonly ConcurrentDictionary<string, byte> CacheKeys = new(StringComparer.Ordinal);
     private readonly IPostListingQueryService _postListingQueries;
     private readonly IMemoryCache _cache;
 
@@ -148,8 +150,19 @@ public sealed class SearchReadService : ISearchReadService
             {
                 AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30)
             });
+        CacheKeys[cacheKey] = 0;
 
         return result;
+    }
+
+    public void InvalidateAll()
+    {
+        foreach ((string cacheKey, _) in CacheKeys)
+        {
+            _cache.Remove(cacheKey);
+        }
+
+        CacheKeys.Clear();
     }
 
     private static string BuildCacheKey(

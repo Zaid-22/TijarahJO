@@ -105,10 +105,13 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton(new DatabaseConnectionString(connectionString));
 
         services.AddScoped<IPostListingQueryService, PostListingQueryService>();
-        services.AddScoped<ISearchReadService, SearchReadService>();
+        services.AddScoped<SearchReadService>();
+        services.AddScoped<ISearchReadService>(sp => sp.GetRequiredService<SearchReadService>());
+        services.AddScoped<ISearchCacheInvalidationService>(sp => sp.GetRequiredService<SearchReadService>());
         services.AddScoped<ISellerReadService, SellerReadService>();
         services.AddScoped<ILocationReadService, LocationReadService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IHeroBannerService, HeroBannerService>();
         services.AddSingleton<ICacheService, HybridCacheService>();
 
         services.AddSingleton<TijarahJo.Infrastructure.Jobs.ChannelBackgroundJobService>();

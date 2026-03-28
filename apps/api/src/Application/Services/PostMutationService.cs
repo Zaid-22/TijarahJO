@@ -7,10 +7,14 @@ namespace TijarahJo.Application.Services;
 public sealed class PostMutationService : IPostMutationService
 {
     private readonly IPostService _posts;
+    private readonly ISearchCacheInvalidationService _searchCacheInvalidation;
 
-    public PostMutationService(IPostService posts)
+    public PostMutationService(
+        IPostService posts,
+        ISearchCacheInvalidationService searchCacheInvalidation)
     {
         _posts = posts;
+        _searchCacheInvalidation = searchCacheInvalidation;
     }
 
     public async Task<PostMutationResult> CreateAsync(CreatePostCommand command, CancellationToken cancellationToken = default)
@@ -40,6 +44,8 @@ public sealed class PostMutationService : IPostMutationService
         {
             return Failure(PostMutationFailureReason.PersistenceFailed, "Error adding post.");
         }
+
+        _searchCacheInvalidation.InvalidateAll();
 
         return new PostMutationResult
         {
@@ -79,6 +85,8 @@ public sealed class PostMutationService : IPostMutationService
             return Failure(PostMutationFailureReason.PersistenceFailed, "Error updating post.");
         }
 
+        _searchCacheInvalidation.InvalidateAll();
+
         return new PostMutationResult
         {
             Success = true,
@@ -109,6 +117,8 @@ public sealed class PostMutationService : IPostMutationService
         {
             return Failure(PostMutationFailureReason.PersistenceFailed, "Failed to delete post.");
         }
+
+        _searchCacheInvalidation.InvalidateAll();
 
         return new PostMutationResult
         {
