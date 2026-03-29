@@ -302,6 +302,7 @@ if (featureFlags.EnableRateLimiting)
 
 app.UseAuthentication();
 app.UseTijarahJoTokenBlacklist();
+app.UseTijarahJoMaintenanceMode();
 
 app.UseTijarahJoCsrfMiddleware();
 app.UseAuthorization();
