@@ -17,6 +17,18 @@ type HomeHeroSectionProps = {
 
 const AUTO_PLAY_INTERVAL = 5000;
 
+function resolveLocalizedBannerCopy(
+  language: Language,
+  primaryValue: string,
+  fallbackValue: string,
+): string {
+  if (language === "ar") {
+    return primaryValue.trim() || fallbackValue.trim();
+  }
+
+  return primaryValue.trim() || fallbackValue.trim();
+}
+
 export function HomeHeroSection({
   language,
   isRTL,
@@ -137,7 +149,11 @@ export function HomeHeroSection({
                 } ${banner.bgClass} ${banner.textClass}`}
                 aria-roledescription="slide"
                 aria-label={
-                  language === "ar" ? banner.altTextAr : banner.altText
+                  resolveLocalizedBannerCopy(
+                    language,
+                    banner.altTextAr,
+                    banner.altText,
+                  )
                 }
                 aria-hidden={index !== currentIndex}
                 tabIndex={index === currentIndex ? 0 : -1}
@@ -146,13 +162,25 @@ export function HomeHeroSection({
                   {/* Text Content Area */}
                   <div className={`flex flex-col items-center md:items-start text-center md:text-start space-y-3 sm:space-y-4 max-w-lg z-10 ${isRTL ? 'md:items-end md:text-end' : ''}`}>
                     <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold tracking-tight leading-tight">
-                      {language === "ar" ? banner.titleAr : banner.title}
+                      {resolveLocalizedBannerCopy(
+                        language,
+                        banner.titleAr,
+                        banner.title,
+                      )}
                     </h2>
                     <p className="text-sm sm:text-base lg:text-lg opacity-90 font-medium max-w-[280px] sm:max-w-none">
-                      {language === "ar" ? banner.subtitleAr : banner.subtitle}
+                      {resolveLocalizedBannerCopy(
+                        language,
+                        banner.subtitleAr,
+                        banner.subtitle,
+                      )}
                     </p>
                     <div className={`px-6 py-2.5 sm:py-3 mt-2 sm:mt-4 font-semibold text-sm sm:text-base rounded-full shadow-lg transition-transform hover:scale-105 ${banner.bgClass.includes('slate') || banner.bgClass.includes('0f172a') ? 'bg-primary text-primary-foreground' : 'bg-slate-900 text-white dark:bg-primary dark:text-primary-foreground'}`}>
-                      {language === "ar" ? banner.buttonTextAr : banner.buttonText}
+                      {resolveLocalizedBannerCopy(
+                        language,
+                        banner.buttonTextAr,
+                        banner.buttonText,
+                      )}
                     </div>
                   </div>
                   
@@ -160,7 +188,11 @@ export function HomeHeroSection({
                   <div className="relative w-[180px] h-[180px] sm:w-[220px] sm:h-[220px] md:w-[280px] md:h-[280px] lg:w-[350px] lg:h-[350px] flex-shrink-0 z-0">
                     <img
                       src={banner.imageUrl}
-                      alt={language === "ar" ? banner.altTextAr : banner.altText}
+                      alt={resolveLocalizedBannerCopy(
+                        language,
+                        banner.altTextAr,
+                        banner.altText,
+                      )}
                       className="absolute inset-0 w-full h-full object-contain filter drop-shadow-2xl"
                       loading={index === 0 ? "eager" : "lazy"}
                       draggable={false}

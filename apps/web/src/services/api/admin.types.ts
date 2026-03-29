@@ -161,6 +161,7 @@ export type AdminReportItem = {
   reportID: number;
   reportType: string;
   targetID: number;
+  targetLabel: string | null;
   reason: string;
   description: string | null;
   reporterUserID: number;

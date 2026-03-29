@@ -63,6 +63,26 @@ const REPORT_TYPE_COLORS: Record<string, string> = {
   CHAT: "bg-emerald-100 text-emerald-800",
 };
 
+function formatReportTargetLabel(report: AdminReportItem): string {
+  const normalizedLabel = report.targetLabel?.trim();
+  if (normalizedLabel) {
+    return normalizedLabel;
+  }
+
+  switch (report.reportType) {
+    case "LISTING":
+      return `Listing #${report.targetID}`;
+    case "USER":
+      return `User #${report.targetID}`;
+    case "REVIEW":
+      return `Review #${report.targetID}`;
+    case "CHAT":
+      return `Conversation #${report.targetID}`;
+    default:
+      return `Target #${report.targetID}`;
+  }
+}
+
 export function ReportsQueue() {
   const [reports, setReports] = useState<AdminReportItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -251,8 +271,10 @@ export function ReportsQueue() {
                       <span className="font-medium">{report.reason}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Target ID:</span>{" "}
-                      <span className="font-medium">{report.targetID}</span>
+                      <span className="text-muted-foreground">Target:</span>{" "}
+                      <span className="font-medium">
+                        {formatReportTargetLabel(report)}
+                      </span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Reporter:</span>{" "}
@@ -320,8 +342,10 @@ export function ReportsQueue() {
                   </span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Target ID:</span>{" "}
-                  <span className="font-medium">{selectedReport.targetID}</span>
+                  <span className="text-muted-foreground">Target:</span>{" "}
+                  <span className="font-medium">
+                    {formatReportTargetLabel(selectedReport)}
+                  </span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Reason:</span>{" "}

@@ -9,7 +9,7 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/settings")]
-[Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+[Authorize(Policy = AuthorizationPolicies.SettingsManage)]
 public class AdminSettingsController : ControllerBase
 {
     private readonly IAdminQueryHandler _adminQueries;

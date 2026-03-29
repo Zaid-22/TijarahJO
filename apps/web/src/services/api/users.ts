@@ -1,5 +1,6 @@
 import { toPositiveIntegerId } from "../../utils/idValidation";
 import { apiRequest, debugError, debugLog } from "./client";
+import { locationsApi } from "./locations";
 import { readString, toIntegerOrDefault, toRecord } from "./normalizers";
 import { parseUserSchema, parseUsersCollection } from "./schemas/userSchema";
 import { resolveCityId, resolveAreaId } from "./posts/lookups";
@@ -222,7 +223,6 @@ export const usersApi = {
       
       if (typeof cityId === 'number' && typeof rawUser.City !== 'string') {
         try {
-          const { locationsApi } = await import('./locations');
           const cities = await locationsApi.getCities();
           const city = cities.find((c) => c.cityId === cityId);
           if (city) {

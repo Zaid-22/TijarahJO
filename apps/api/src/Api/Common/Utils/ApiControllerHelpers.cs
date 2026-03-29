@@ -22,6 +22,11 @@ public static class ApiControllerHelpers
 
     public static bool IsAdminUser(ClaimsPrincipal user)
     {
+        if (user.HasClaim(PermissionClaimTypes.AdminAccess, "true"))
+        {
+            return true;
+        }
+
         string? roleClaim = user.FindFirst(ClaimTypes.Role)?.Value;
         return AppRoles.IsAdminRoleName(roleClaim);
     }

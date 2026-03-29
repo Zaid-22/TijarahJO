@@ -9,7 +9,7 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/locations")]
-[Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+[Authorize(Policy = AuthorizationPolicies.LocationsManage)]
 public class AdminLocationsController : ControllerBase
 {
     private readonly IAdminDataAccess _adminDataAccess;

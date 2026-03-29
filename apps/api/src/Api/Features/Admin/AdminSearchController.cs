@@ -10,7 +10,7 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/search")]
-[Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+[Authorize(Policy = AuthorizationPolicies.AdminAccess)]
 public class AdminSearchController : ControllerBase
 {
     private readonly TijarahJoDbContext _dbContext;

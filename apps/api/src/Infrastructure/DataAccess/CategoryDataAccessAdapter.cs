@@ -86,7 +86,8 @@ public sealed class CategoryDataAccessAdapter : ICategoryDataAccess
         entity.IsDeleted = category.IsDeleted;
 
         _dbContext.AuditActorUserId = null;
-        return await _dbContext.SaveChangesAsync(cancellationToken) > 0;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async Task<bool> DeleteCategoryAsync(int? categoryId, CancellationToken cancellationToken = default)

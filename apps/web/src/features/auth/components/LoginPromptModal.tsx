@@ -1,6 +1,12 @@
+import { lazy, Suspense } from "react";
 import { Dialog, DialogContent } from "../../../shared/ui/dialog";
 import type { Language } from "../../../types";
-import { LoginPage } from "../pages/LoginPage";
+
+const LoginPage = lazy(() =>
+  import("../pages/LoginPage").then((module) => ({
+    default: module.LoginPage,
+  })),
+);
 
 interface LoginPromptModalProps {
   isOpen: boolean;
@@ -45,13 +51,19 @@ export function LoginPromptModal({
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
 
-          <LoginPage
-            isModal
-            language={language}
-            onLogin={onLogin}
-            onContinueAsGuest={onContinueAsGuest}
-            onSuccess={onClose}
-          />
+          <Suspense
+            fallback={
+              <div className="min-h-[24rem] animate-pulse rounded-2xl bg-card" />
+            }
+          >
+            <LoginPage
+              isModal
+              language={language}
+              onLogin={onLogin}
+              onContinueAsGuest={onContinueAsGuest}
+              onSuccess={onClose}
+            />
+          </Suspense>
         </div>
       </DialogContent>
     </Dialog>

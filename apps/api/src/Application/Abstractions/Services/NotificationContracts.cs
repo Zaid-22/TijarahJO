@@ -28,6 +28,7 @@ public interface INotificationService
         int conversationId,
         int messageId,
         string messagePreview,
+        string? senderDisplayName = null,
         CancellationToken cancellationToken = default
     );
 

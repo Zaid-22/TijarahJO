@@ -550,16 +550,30 @@ export const adminApi = {
     }
   },
 
-  updateBanner: async (id: number, bannerData: any): Promise<boolean> => {
+  updateBanner: async (
+    id: number,
+    bannerData: any,
+  ): Promise<BannerMutationResult> => {
     try {
       const response = await apiRequest(`/admin/banners/${id}`, {
         method: "PUT",
         body: JSON.stringify(bannerData),
       });
-      return response.success;
+      if (response.success) {
+        return { success: true };
+      }
+
+      return {
+        success: false,
+        message: response.error?.message || "Failed to update banner",
+      };
     } catch (error) {
       debugError("adminApi.updateBanner", error);
-      return false;
+      return {
+        success: false,
+        message:
+          error instanceof Error ? error.message : "Failed to update banner",
+      };
     }
   },
 

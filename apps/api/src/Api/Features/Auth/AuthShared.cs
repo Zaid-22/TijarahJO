@@ -3,6 +3,7 @@ using System.Text;
 using TijarahJo.Domain.Models;
 using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Application.Common;
+using TijarahJo.Api.Common.Authorization;
 using TijarahJo.Api.Common.Services;
 using TijarahJo.Api.Common.Utils;
 using TijarahJo.Api.Contracts.Responses;
@@ -39,15 +40,25 @@ internal static class AuthShared
         ITokenService tokenService,
         HttpResponse httpResponse,
         UserModel user,
-        string roleName)
+        string roleName,
+        UserPermissionSnapshot? permissionSnapshot = null)
     {
         string token = tokenService.GenerateToken(user.UserID!.Value, user.Email, roleName);
         SetTokenCookie(httpResponse, token);
 
+        bool hasAdminAccess = permissionSnapshot?.HasAdminAccess
+            ?? AppRoles.IsAdminRoleName(roleName);
+        IReadOnlyList<string> adminPermissions = permissionSnapshot?.PermissionKeys ?? [];
+
         return new AuthResponse
         {
             Success = true,
-            User = DTOMapper.ToUserResponseDTO(user, roleName, httpResponse.HttpContext.Request)
+            User = DTOMapper.ToUserResponseDTO(
+                user,
+                roleName,
+                httpResponse.HttpContext.Request,
+                hasAdminAccess,
+                adminPermissions)
         };
     }
 

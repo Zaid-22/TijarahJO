@@ -1,5 +1,6 @@
 import {
   asRecord,
+  readStringArray,
   readString,
   toBoolean,
   toIntegerOrDefault,
@@ -20,6 +21,8 @@ export type ParsedAuthUser = {
   roleID: number;
   isDeleted: boolean;
   RoleName?: string;
+  HasAdminAccess: boolean;
+  AdminPermissions: string[];
 };
 
 type ParsedAuthEnvelope = {
@@ -54,6 +57,16 @@ function parseAuthUser(value: unknown): ParsedAuthUser | null {
     roleID: toIntegerOrDefault(userRecord.RoleID ?? userRecord.roleID, 2, 1),
     isDeleted: toBoolean(userRecord.IsDeleted ?? userRecord.isDeleted, false),
     RoleName: readString(userRecord.RoleName ?? userRecord.roleName),
+    HasAdminAccess: toBoolean(
+      userRecord.HasAdminAccess ?? userRecord.hasAdminAccess,
+      false,
+    ),
+    AdminPermissions: readStringArray(
+      userRecord.AdminPermissions ??
+        userRecord.adminPermissions ??
+        userRecord.Permissions ??
+        userRecord.permissions,
+    ),
   };
 }
 

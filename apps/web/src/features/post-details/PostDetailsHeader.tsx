@@ -1,4 +1,4 @@
-import { Heart, Share2 } from "lucide-react";
+import { Flag, Heart, Share2 } from "lucide-react";
 import { Button } from "../../shared/ui/button";
 import { SubpageHeader } from "../../shared/ui/subpage-header";
 import type { Language, Post } from "../../types";
@@ -13,6 +13,7 @@ interface PostDetailsHeaderProps {
   onBack: () => void;
   onFavoriteToggle?: (postId: string) => void;
   onShare?: () => void;
+  onReport?: () => void;
   backToListingsLabel: string;
 }
 
@@ -26,10 +27,11 @@ export function PostDetailsHeader({
   onBack,
   onFavoriteToggle,
   onShare,
+  onReport,
   backToListingsLabel,
 }: PostDetailsHeaderProps) {
   const actionButtons = (
-    <div className="flex items-center gap-1 rounded-xl border border-border bg-muted/70 p-1 sm:gap-2">
+    <div className="flex items-center gap-1 sm:gap-2">
       <Button
         variant="ghost"
         size="sm"
@@ -42,6 +44,21 @@ export function PostDetailsHeader({
       >
         <Share2 className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
       </Button>
+
+      {isAuthenticated && !isOwnPost && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-9 w-9 rounded-lg p-0 transition-all duration-200 hover:scale-110 hover:bg-background hover:shadow-sm sm:h-10 sm:w-10"
+          onClick={onReport}
+          title={language === "ar" ? "الإبلاغ عن الإعلان" : "Report listing"}
+          aria-label={
+            language === "ar" ? "الإبلاغ عن هذا الإعلان" : "Report this listing"
+          }
+        >
+          <Flag className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" />
+        </Button>
+      )}
 
       {isAuthenticated && !isOwnPost && (
         <Button

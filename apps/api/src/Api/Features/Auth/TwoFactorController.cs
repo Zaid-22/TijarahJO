@@ -20,6 +20,7 @@ public class TwoFactorController(
     IUserDataAccess users,
     ITokenService tokenService,
     IRoleService roles,
+    IUserPermissionService userPermissionService,
     IEmailTwoFactorSender emailSender,
     ILogger<TwoFactorController> logger) : ControllerBase
 {
@@ -27,6 +28,7 @@ public class TwoFactorController(
     private readonly IUserDataAccess _users = users;
     private readonly ITokenService _tokenService = tokenService;
     private readonly IRoleService _roles = roles;
+    private readonly IUserPermissionService _userPermissionService = userPermissionService;
     private readonly IEmailTwoFactorSender _emailSender = emailSender;
     private readonly ILogger<TwoFactorController> _logger = logger;
 
@@ -71,7 +73,16 @@ public class TwoFactorController(
             return Problem(statusCode: StatusCodes.Status500InternalServerError, detail: "Unable to resolve user role for authentication.");
         }
 
-        return Ok(AuthShared.CreateAuthenticatedResponse(_tokenService, Response, user, roleName));
+        UserPermissionSnapshot permissionSnapshot = await _userPermissionService.GetUserPermissionSnapshotAsync(
+            user.UserID!.Value,
+            cancellationToken);
+
+        return Ok(AuthShared.CreateAuthenticatedResponse(
+            _tokenService,
+            Response,
+            user,
+            roleName,
+            permissionSnapshot));
     }
 
     [HttpGet("challenge")]

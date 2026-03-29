@@ -5,14 +5,8 @@ using Microsoft.Extensions.Configuration;
 
 namespace TijarahJo.Api.Common.Health;
 
-public sealed class DatabaseConnectivityHealthCheck : IHealthCheck
+public sealed class DatabaseConnectivityHealthCheck(IConfiguration configuration) : IHealthCheck
 {
-    private readonly IConfiguration _configuration;
-
-    public DatabaseConnectivityHealthCheck(IConfiguration configuration)
-    {
-        _configuration = configuration;
-    }
 
     public async Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
@@ -37,8 +31,8 @@ public sealed class DatabaseConnectivityHealthCheck : IHealthCheck
     private string GetConnectionString()
     {
         string? connectionString =
-            _configuration["DATABASE_CONNECTION_STRING"] ??
-            _configuration.GetConnectionString("DefaultConnection") ??
+            configuration["DATABASE_CONNECTION_STRING"] ??
+            configuration.GetConnectionString("DefaultConnection") ??
             Environment.GetEnvironmentVariable("DATABASE_CONNECTION_STRING") ??
             Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
 
@@ -47,22 +41,20 @@ public sealed class DatabaseConnectivityHealthCheck : IHealthCheck
             return connectionString;
         }
 
-        string dataSource = _configuration["DB_HOST"] ?? Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
-        string database = _configuration["DB_NAME"] ?? Environment.GetEnvironmentVariable("DB_NAME") ?? "TijarahJoDB";
-        string? userId = _configuration["DB_USER"] ?? Environment.GetEnvironmentVariable("DB_USER");
-        string? password = _configuration["DB_PASSWORD"] ?? Environment.GetEnvironmentVariable("DB_PASSWORD");
-        string environment = _configuration["ASPNETCORE_ENVIRONMENT"] ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+        string dataSource = configuration["DB_HOST"] ?? Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
+        string database = configuration["DB_NAME"] ?? Environment.GetEnvironmentVariable("DB_NAME") ?? "TijarahJoDB";
+        string? userId = configuration["DB_USER"] ?? Environment.GetEnvironmentVariable("DB_USER");
+        string? password = configuration["DB_PASSWORD"] ?? Environment.GetEnvironmentVariable("DB_PASSWORD");
+        string environment = configuration["ASPNETCORE_ENVIRONMENT"] ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
 
         bool defaultTrustServerCertificate = string.Equals(environment, "Development", StringComparison.OrdinalIgnoreCase);
-        string? trustServerCertificateValue = _configuration["DB_TRUST_SERVER_CERTIFICATE"] ?? Environment.GetEnvironmentVariable("DB_TRUST_SERVER_CERTIFICATE");
+        string? trustServerCertificateValue = configuration["DB_TRUST_SERVER_CERTIFICATE"] ?? Environment.GetEnvironmentVariable("DB_TRUST_SERVER_CERTIFICATE");
         bool trustServerCertificate = string.IsNullOrWhiteSpace(trustServerCertificateValue)
             ? defaultTrustServerCertificate
             : bool.TryParse(trustServerCertificateValue, out bool parsedTrustServerCertificate) && parsedTrustServerCertificate;
 
-        string? encryptValue = _configuration["DB_ENCRYPT"] ?? Environment.GetEnvironmentVariable("DB_ENCRYPT");
-        bool encrypt = string.IsNullOrWhiteSpace(encryptValue)
-            ? true
-            : bool.TryParse(encryptValue, out bool parsedEncrypt) && parsedEncrypt;
+        string? encryptValue = configuration["DB_ENCRYPT"] ?? Environment.GetEnvironmentVariable("DB_ENCRYPT");
+        bool encrypt = string.IsNullOrWhiteSpace(encryptValue) || (bool.TryParse(encryptValue, out bool parsedEncrypt) && parsedEncrypt);
 
         if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(password))
         {

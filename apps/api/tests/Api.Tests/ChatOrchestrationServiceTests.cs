@@ -260,6 +260,7 @@ public sealed class ChatOrchestrationServiceTests
             int conversationId,
             int messageId,
             string messagePreview,
+            string? senderDisplayName = null,
             CancellationToken cancellationToken = default)
             => Task.FromResult<NotificationEnvelope?>(null);
 

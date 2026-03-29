@@ -8,6 +8,8 @@ import {
   parsePostsEnvelope,
 } from "../schemas/postSchema";
 import { transformPostModelToPost } from "./mappers";
+import { getPostImagesByPostId } from "./lookups";
+import { RawPost } from "./types";
 
 const FEED_PAGE_SIZE = 500;
 
@@ -16,6 +18,33 @@ type FeedApiOptions = Pick<ApiRequestOptions, "signal" | "throwOnAbort">;
 type FeedPageResult = 
   | { posts: PostsListResponse["posts"]; pagination: NonNullable<PostsListResponse["pagination"]> }
   | { error: { code?: string; message?: string } };
+
+function getPostId(post: RawPost): string {
+  return String(post?.PostID ?? post?.postID ?? post?.id ?? "").trim();
+}
+
+function postHasEmbeddedImages(post: RawPost): boolean {
+  const imageCandidates = Array.isArray(post?.Images)
+    ? post.Images
+    : Array.isArray(post?.images)
+      ? post.images
+      : [];
+  const hasImageArrayEntry = imageCandidates.some(
+    (value) => typeof value === "string" && value.trim().length > 0,
+  );
+
+  if (hasImageArrayEntry) {
+    return true;
+  }
+
+  const singleImageCandidate =
+    typeof post?.PostImageURL === "string"
+      ? post.PostImageURL
+      : typeof post?.postImageURL === "string"
+        ? post.postImageURL
+        : "";
+  return singleImageCandidate.trim().length > 0;
+}
 
 async function fetchFeedPage(
   page: number,
@@ -40,10 +69,31 @@ async function fetchFeedPage(
     return { error: { code: "PARSE_ERROR" } };
   }
 
+  const missingImagePostIds = Array.from(
+    new Set(
+      parsedPayload.posts
+        .filter((post) => !postHasEmbeddedImages(post))
+        .map((post) => getPostId(post))
+        .filter((postId) => postId.length > 0),
+    ),
+  );
+  const imageEntries = await Promise.all(
+    missingImagePostIds.map(async (postId) => {
+      const images = await getPostImagesByPostId(postId);
+      return [postId, images] as const;
+    }),
+  );
+  const imagesByPostId = Object.fromEntries(imageEntries);
+
   const posts = parsedPayload.posts.map((post, index) =>
     transformPostModelToPost(
       post,
-      Array.isArray(post?.images) ? post.images : [],
+      imagesByPostId[getPostId(post)] ||
+        (Array.isArray(post?.Images)
+          ? post.Images
+          : Array.isArray(post?.images)
+            ? post.images
+            : []),
       index,
     ),
   );

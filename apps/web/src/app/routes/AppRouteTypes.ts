@@ -19,6 +19,7 @@ export interface BaseAppRouteProps {
 
 export interface MarketplaceRouteState {
   availablePosts: Post[];
+  filteredPosts: Post[];
   isLoadingPostsFromRouteData: boolean;
   postsError: string | null;
   displayedPosts: Post[];

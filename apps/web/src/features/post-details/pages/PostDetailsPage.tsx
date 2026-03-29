@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { Flag } from "lucide-react";
 import { PostActionDialogs } from "../PostActionDialogs";
 import { PostDetailsHeader } from "../PostDetailsHeader";
 import { PostImageGallery } from "../PostImageGallery";
@@ -246,6 +245,7 @@ export function PostDetailsPage({
         onBack={onBack}
         onFavoriteToggle={onFavoriteToggle}
         onShare={() => setActiveDialog("share")}
+        onReport={() => setActiveDialog("report")}
         backToListingsLabel={t.backToListings}
       />
 
@@ -351,22 +351,6 @@ export function PostDetailsPage({
           postTitle={post.name}
           language={language}
         />
-      )}
-
-      {/* Report button */}
-      {!isOwnPost && isAuthenticated && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => setActiveDialog("report")}
-            className="text-sm text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1.5"
-          >
-            <Flag className="h-4 w-4" />
-            {language === "ar"
-              ? "الإبلاغ عن هذا الإعلان"
-              : "Report this listing"}
-          </button>
-        </div>
       )}
 
       {/* Share Dialog */}

@@ -7,12 +7,18 @@ import { AuthProvider } from "../contexts/AuthContext";
 import { serverQueryClient } from "../shared/query/queryClient";
 import { ErrorBoundary } from "../shared/ui/error-boundary";
 import { LoadingState } from "../shared/ui/loading-state";
+import { ADMIN_PERMISSIONS } from "../features/admin/adminPermissions";
 import App from "./App";
 import "../styles/globals.css";
 
 const AdminRoute = lazy(() =>
   import("../features/admin/components/AdminRoute").then((m) => ({
     default: m.AdminRoute,
+  })),
+);
+const AdminPermissionRoute = lazy(() =>
+  import("../features/admin/components/AdminPermissionRoute").then((m) => ({
+    default: m.AdminPermissionRoute,
   })),
 );
 const AdminLayout = lazy(() =>
@@ -122,19 +128,136 @@ ReactDOM.createRoot(rootElement).render(
                 }
               >
                 <Route index element={<AdminDashboard />} />
-                <Route path="users" element={<UsersManagement />} />
-                <Route path="users/:id" element={<UserDetailAdminPage />} />
-                <Route path="listings" element={<ListingsManagement />} />
-                <Route path="reviews" element={<ReviewsModeration />} />
-                <Route path="categories" element={<CategoriesManagement />} />
-                <Route path="roles" element={<RolesManagement />} />
-                <Route path="audit-log" element={<AuditLogViewer />} />
-                <Route path="settings" element={<SystemSettingsPanel />} />
-                <Route path="chats" element={<ChatInspection />} />
-                <Route path="locations" element={<LocationsManagement />} />
-                <Route path="reports" element={<ReportsQueue />} />
-                <Route path="fraud" element={<FraudDetectionPanel />} />
-                <Route path="banners" element={<AdminBannersManagement />} />
+                <Route
+                  path="users"
+                  element={
+                    <AdminPermissionRoute
+                      requiredPermission={ADMIN_PERMISSIONS.usersView}
+                    >
+                      <UsersManagement />
+                    </AdminPermissionRoute>
+                  }
+                />
+                <Route
+                  path="users/:id"
+                  element={
+                    <AdminPermissionRoute
+                      requiredPermission={ADMIN_PERMISSIONS.usersView}
+                    >
+                      <UserDetailAdminPage />
+                    </AdminPermissionRoute>
+                  }
+                />
+                <Route
+                  path="listings"
+                  element={
+                    <AdminPermissionRoute
+                      requiredPermission={ADMIN_PERMISSIONS.postsView}
+                    >
+                      <ListingsManagement />
+                    </AdminPermissionRoute>
+                  }
+                />
+                <Route
+                  path="reviews"
+                  element={
+                    <AdminPermissionRoute
+                      requiredPermission={ADMIN_PERMISSIONS.reviewsView}
+                    >
+                      <ReviewsModeration />
+                    </AdminPermissionRoute>
+                  }
+                />
+                <Route
+                  path="categories"
+                  element={
+                    <AdminPermissionRoute
+                      requiredPermission={ADMIN_PERMISSIONS.categoriesManage}
+                    >
+                      <CategoriesManagement />
+                    </AdminPermissionRoute>
+                  }
+                />
+                <Route
+                  path="roles"
+                  element={
+                    <AdminPermissionRoute
+                      requiredPermission={ADMIN_PERMISSIONS.rolesManage}
+                    >
+                      <RolesManagement />
+                    </AdminPermissionRoute>
+                  }
+                />
+                <Route
+                  path="audit-log"
+                  element={
+                    <AdminPermissionRoute
+                      requiredPermission={ADMIN_PERMISSIONS.auditView}
+                    >
+                      <AuditLogViewer />
+                    </AdminPermissionRoute>
+                  }
+                />
+                <Route
+                  path="settings"
+                  element={
+                    <AdminPermissionRoute
+                      requiredPermission={ADMIN_PERMISSIONS.settingsManage}
+                    >
+                      <SystemSettingsPanel />
+                    </AdminPermissionRoute>
+                  }
+                />
+                <Route
+                  path="chats"
+                  element={
+                    <AdminPermissionRoute
+                      requiredPermission={ADMIN_PERMISSIONS.chatView}
+                    >
+                      <ChatInspection />
+                    </AdminPermissionRoute>
+                  }
+                />
+                <Route
+                  path="locations"
+                  element={
+                    <AdminPermissionRoute
+                      requiredPermission={ADMIN_PERMISSIONS.locationsManage}
+                    >
+                      <LocationsManagement />
+                    </AdminPermissionRoute>
+                  }
+                />
+                <Route
+                  path="reports"
+                  element={
+                    <AdminPermissionRoute
+                      requiredPermission={ADMIN_PERMISSIONS.reportsView}
+                    >
+                      <ReportsQueue />
+                    </AdminPermissionRoute>
+                  }
+                />
+                <Route
+                  path="fraud"
+                  element={
+                    <AdminPermissionRoute
+                      requiredPermission={ADMIN_PERMISSIONS.fraudView}
+                    >
+                      <FraudDetectionPanel />
+                    </AdminPermissionRoute>
+                  }
+                />
+                <Route
+                  path="banners"
+                  element={
+                    <AdminPermissionRoute
+                      requiredPermission={ADMIN_PERMISSIONS.bannersManage}
+                    >
+                      <AdminBannersManagement />
+                    </AdminPermissionRoute>
+                  }
+                />
               </Route>
             </Route>
             <Route path="/*" element={<App />} />

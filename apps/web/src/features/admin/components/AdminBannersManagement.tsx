@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Image,
   Plus,
+  Pencil,
   Trash2,
   GripVertical,
   Eye,
@@ -25,18 +26,79 @@ import { type BannerModel } from "../../../services/api/banners";
 import { LoadingState } from "../../../shared/ui/loading-state";
 import { getAllHeroBanners } from "../../home/components/heroBannerData";
 
+type BannerFormState = {
+  title: string;
+  titleAr: string;
+  subtitle: string;
+  subtitleAr: string;
+  buttonText: string;
+  buttonTextAr: string;
+  imageUrl: string;
+  bgClass: string;
+  textClass: string;
+  altText: string;
+  altTextAr: string;
+  linkUrl: string;
+  isActive: boolean;
+  displayOrder: number;
+};
+
+const DEFAULT_BANNER_FORM_STATE: BannerFormState = {
+  title: "",
+  titleAr: "",
+  subtitle: "",
+  subtitleAr: "",
+  buttonText: "Learn More",
+  buttonTextAr: "اعرف المزيد",
+  imageUrl: "",
+  bgClass: "bg-background",
+  textClass: "text-foreground",
+  altText: "",
+  altTextAr: "",
+  linkUrl: "",
+  isActive: true,
+  displayOrder: 0,
+};
+
+function toBannerFormState(
+  banner?: BannerModel,
+  displayOrder = 0,
+): BannerFormState {
+  if (!banner) {
+    return {
+      ...DEFAULT_BANNER_FORM_STATE,
+      displayOrder,
+    };
+  }
+
+  return {
+    title: banner.title || "",
+    titleAr: banner.titleAr || "",
+    subtitle: banner.subtitle || "",
+    subtitleAr: banner.subtitleAr || "",
+    buttonText: banner.buttonText || "Learn More",
+    buttonTextAr: banner.buttonTextAr || "اعرف المزيد",
+    imageUrl: banner.imageUrl || "",
+    bgClass: banner.bgClass || "bg-background",
+    textClass: banner.textClass || "text-foreground",
+    altText: banner.altText || "",
+    altTextAr: banner.altTextAr || "",
+    linkUrl: banner.linkUrl || "",
+    isActive: banner.isActive,
+    displayOrder: banner.displayOrder,
+  };
+}
+
 export function AdminBannersManagement() {
   const [banners, setBanners] = useState<BannerModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showBannerForm, setShowBannerForm] = useState(false);
+  const [editingBannerId, setEditingBannerId] = useState<number | null>(null);
+  const [bannerForm, setBannerForm] = useState<BannerFormState>(
+    DEFAULT_BANNER_FORM_STATE,
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // New banner form state
-  const [newImageUrl, setNewImageUrl] = useState("");
-  const [newAltText, setNewAltText] = useState("");
-  const [newAltTextAr, setNewAltTextAr] = useState("");
-  const [newLinkUrl, setNewLinkUrl] = useState("");
 
   const loadBanners = useCallback(async () => {
     setIsLoading(true);
@@ -53,6 +115,23 @@ export function AdminBannersManagement() {
   useEffect(() => {
     loadBanners();
   }, [loadBanners]);
+
+  const resetBannerForm = useCallback(() => {
+    setEditingBannerId(null);
+    setBannerForm(toBannerFormState(undefined, banners.length));
+  }, [banners.length]);
+
+  const openCreateForm = () => {
+    setEditingBannerId(null);
+    setBannerForm(toBannerFormState(undefined, banners.length));
+    setShowBannerForm(true);
+  };
+
+  const openEditForm = (banner: BannerModel) => {
+    setEditingBannerId(banner.bannerID);
+    setBannerForm(toBannerFormState(banner, banner.displayOrder));
+    setShowBannerForm(true);
+  };
 
   const toggleActive = async (id: number) => {
     const success = await adminApi.toggleBannerActive(id);
@@ -75,40 +154,69 @@ export function AdminBannersManagement() {
     }
   };
 
-  const addBanner = async () => {
-    if (!newImageUrl.trim()) {
+  const saveBanner = async () => {
+    if (!bannerForm.imageUrl.trim()) {
       toast.error("Image URL is required");
       return;
     }
 
-    const newBanner = {
-      title: "",
-      titleAr: "",
-      subtitle: "",
-      subtitleAr: "",
-      buttonText: "Learn More",
-      buttonTextAr: "اعرف المزيد",
-      bgClass: "bg-background",
-      textClass: "text-foreground",
-      imageUrl: newImageUrl.trim(),
-      altText: newAltText.trim() || "Banner ad",
-      altTextAr: newAltTextAr.trim() || "إعلان",
-      linkUrl: newLinkUrl.trim() || undefined,
-      isActive: true,
-      displayOrder: banners.length,
+    if (!bannerForm.title.trim() && !bannerForm.titleAr.trim()) {
+      toast.error("Banner title is required");
+      return;
+    }
+
+    const payload = {
+      title: bannerForm.title.trim() || bannerForm.titleAr.trim(),
+      titleAr: bannerForm.titleAr.trim() || bannerForm.title.trim(),
+      subtitle: bannerForm.subtitle.trim() || bannerForm.subtitleAr.trim(),
+      subtitleAr: bannerForm.subtitleAr.trim() || bannerForm.subtitle.trim(),
+      buttonText:
+        bannerForm.buttonText.trim() || DEFAULT_BANNER_FORM_STATE.buttonText,
+      buttonTextAr:
+        bannerForm.buttonTextAr.trim() ||
+        bannerForm.buttonText.trim() ||
+        DEFAULT_BANNER_FORM_STATE.buttonTextAr,
+      bgClass: bannerForm.bgClass.trim() || DEFAULT_BANNER_FORM_STATE.bgClass,
+      textClass:
+        bannerForm.textClass.trim() || DEFAULT_BANNER_FORM_STATE.textClass,
+      imageUrl: bannerForm.imageUrl.trim(),
+      altText:
+        bannerForm.altText.trim() ||
+        bannerForm.title.trim() ||
+        bannerForm.titleAr.trim() ||
+        "Banner ad",
+      altTextAr:
+        bannerForm.altTextAr.trim() ||
+        bannerForm.titleAr.trim() ||
+        bannerForm.title.trim() ||
+        "إعلان",
+      linkUrl: bannerForm.linkUrl.trim() || undefined,
+      isActive: bannerForm.isActive,
+      displayOrder:
+        editingBannerId === null ? banners.length : bannerForm.displayOrder,
     };
 
-    const result = await adminApi.createBanner(newBanner);
+    const result =
+      editingBannerId === null
+        ? await adminApi.createBanner(payload)
+        : await adminApi.updateBanner(editingBannerId, payload);
+
     if (result.success) {
-      setNewImageUrl("");
-      setNewAltText("");
-      setNewAltTextAr("");
-      setNewLinkUrl("");
-      setShowAddForm(false);
-      toast.success("Banner added successfully");
+      setShowBannerForm(false);
+      resetBannerForm();
+      toast.success(
+        editingBannerId === null
+          ? "Banner added successfully"
+          : "Banner updated successfully",
+      );
       loadBanners();
     } else {
-      toast.error(result.message || "Failed to add banner");
+      toast.error(
+        result.message ||
+          (editingBannerId === null
+            ? "Failed to add banner"
+            : "Failed to update banner"),
+      );
     }
   };
 
@@ -163,7 +271,10 @@ export function AdminBannersManagement() {
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      setNewImageUrl(String(reader.result || ""));
+      setBannerForm((prev) => ({
+        ...prev,
+        imageUrl: String(reader.result || ""),
+      }));
     };
     reader.readAsDataURL(file);
   };
@@ -191,8 +302,8 @@ export function AdminBannersManagement() {
     setDragIndex(null);
     let allSuccess = true;
     for (const b of banners) {
-      const success = await adminApi.updateBanner(b.bannerID, b);
-      if (!success) allSuccess = false;
+      const result = await adminApi.updateBanner(b.bannerID, b);
+      if (!result.success) allSuccess = false;
     }
     if (allSuccess) {
       toast.success("Banner order updated");
@@ -228,7 +339,15 @@ export function AdminBannersManagement() {
           </Badge>
           <Button
             size="sm"
-            onClick={() => setShowAddForm(!showAddForm)}
+            onClick={() => {
+              if (showBannerForm && editingBannerId === null) {
+                setShowBannerForm(false);
+                resetBannerForm();
+                return;
+              }
+
+              openCreateForm();
+            }}
             className="gap-2"
           >
             <Plus className="w-4 h-4" />
@@ -238,13 +357,102 @@ export function AdminBannersManagement() {
       </div>
 
       {/* Add Banner Form */}
-      {showAddForm && (
+      {showBannerForm && (
         <Card className="border-primary/30 shadow-md">
           <CardHeader>
-            <CardTitle className="text-lg">Add New Banner</CardTitle>
+            <CardTitle className="text-lg">
+              {editingBannerId === null ? "Add New Banner" : "Edit Banner"}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="banner-title">Title (English)</Label>
+                <Input
+                  id="banner-title"
+                  placeholder="Buy and Sell Easily"
+                  value={bannerForm.title}
+                  onChange={(e) =>
+                    setBannerForm((prev) => ({
+                      ...prev,
+                      title: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="banner-title-ar">Title (Arabic)</Label>
+                <Input
+                  id="banner-title-ar"
+                  placeholder="اشتري وبيع بسهولة"
+                  value={bannerForm.titleAr}
+                  onChange={(e) =>
+                    setBannerForm((prev) => ({
+                      ...prev,
+                      titleAr: e.target.value,
+                    }))
+                  }
+                  dir="rtl"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="banner-subtitle">Subtitle (English)</Label>
+                <Input
+                  id="banner-subtitle"
+                  placeholder="Join Jordan's largest marketplace today."
+                  value={bannerForm.subtitle}
+                  onChange={(e) =>
+                    setBannerForm((prev) => ({
+                      ...prev,
+                      subtitle: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="banner-subtitle-ar">Subtitle (Arabic)</Label>
+                <Input
+                  id="banner-subtitle-ar"
+                  placeholder="انضم إلى أكبر سوق إلكتروني في الأردن اليوم."
+                  value={bannerForm.subtitleAr}
+                  onChange={(e) =>
+                    setBannerForm((prev) => ({
+                      ...prev,
+                      subtitleAr: e.target.value,
+                    }))
+                  }
+                  dir="rtl"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="banner-button">Button Text (English)</Label>
+                <Input
+                  id="banner-button"
+                  placeholder="Start Now"
+                  value={bannerForm.buttonText}
+                  onChange={(e) =>
+                    setBannerForm((prev) => ({
+                      ...prev,
+                      buttonText: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="banner-button-ar">Button Text (Arabic)</Label>
+                <Input
+                  id="banner-button-ar"
+                  placeholder="ابدأ الآن"
+                  value={bannerForm.buttonTextAr}
+                  onChange={(e) =>
+                    setBannerForm((prev) => ({
+                      ...prev,
+                      buttonTextAr: e.target.value,
+                    }))
+                  }
+                  dir="rtl"
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="banner-upload">Image Upload</Label>
                 <div className="flex gap-2">
@@ -256,7 +464,7 @@ export function AdminBannersManagement() {
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Upload className="w-4 h-4 mr-2" />
-                    {newImageUrl ? "Change Image" : "Upload Image"}
+                    {bannerForm.imageUrl ? "Change Image" : "Upload Image"}
                   </Button>
                   <input
                     ref={fileInputRef}
@@ -274,8 +482,13 @@ export function AdminBannersManagement() {
                   <Input
                     id="banner-link"
                     placeholder="/posts or /category/Electronics"
-                    value={newLinkUrl}
-                    onChange={(e) => setNewLinkUrl(e.target.value)}
+                    value={bannerForm.linkUrl}
+                    onChange={(e) =>
+                      setBannerForm((prev) => ({
+                        ...prev,
+                        linkUrl: e.target.value,
+                      }))
+                    }
                     className="pl-9"
                   />
                 </div>
@@ -285,8 +498,13 @@ export function AdminBannersManagement() {
                 <Input
                   id="banner-alt-en"
                   placeholder="Summer Sale Banner"
-                  value={newAltText}
-                  onChange={(e) => setNewAltText(e.target.value)}
+                  value={bannerForm.altText}
+                  onChange={(e) =>
+                    setBannerForm((prev) => ({
+                      ...prev,
+                      altText: e.target.value,
+                    }))
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -294,18 +512,23 @@ export function AdminBannersManagement() {
                 <Input
                   id="banner-alt-ar"
                   placeholder="إعلان التخفيضات الصيفية"
-                  value={newAltTextAr}
-                  onChange={(e) => setNewAltTextAr(e.target.value)}
+                  value={bannerForm.altTextAr}
+                  onChange={(e) =>
+                    setBannerForm((prev) => ({
+                      ...prev,
+                      altTextAr: e.target.value,
+                    }))
+                  }
                   dir="rtl"
                 />
               </div>
             </div>
 
             {/* Preview */}
-            {newImageUrl && (
+            {bannerForm.imageUrl && (
               <div className="rounded-xl overflow-hidden border border-border bg-muted/30">
                 <img
-                  src={newImageUrl}
+                  src={bannerForm.imageUrl}
                   alt="Banner preview"
                   className="w-full h-40 object-cover"
                   onError={(e) => {
@@ -318,13 +541,25 @@ export function AdminBannersManagement() {
             <div className="flex gap-3 justify-end">
               <Button
                 variant="outline"
-                onClick={() => setShowAddForm(false)}
+                onClick={() => {
+                  setShowBannerForm(false);
+                  resetBannerForm();
+                }}
               >
                 Cancel
               </Button>
-              <Button onClick={addBanner}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Banner
+              <Button onClick={saveBanner}>
+                {editingBannerId === null ? (
+                  <>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Banner
+                  </>
+                ) : (
+                  <>
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
               </Button>
             </div>
           </CardContent>
@@ -372,7 +607,7 @@ export function AdminBannersManagement() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="font-medium text-sm text-foreground truncate">
-                      {banner.altText}
+                      {banner.title || banner.titleAr || banner.altText || "Untitled banner"}
                     </p>
                     <Badge
                       variant={banner.isActive ? "default" : "outline"}
@@ -385,8 +620,13 @@ export function AdminBannersManagement() {
                     className="text-xs text-muted-foreground truncate"
                     dir="rtl"
                   >
-                    {banner.altTextAr}
+                    {banner.titleAr || banner.altTextAr}
                   </p>
+                  {!!(banner.subtitle || banner.subtitleAr) && (
+                    <p className="text-xs text-muted-foreground truncate mt-1">
+                      {banner.subtitle || banner.subtitleAr}
+                    </p>
+                  )}
                   {banner.linkUrl && (
                     <p className="text-xs text-primary mt-1 truncate">
                       → {banner.linkUrl}
@@ -401,6 +641,16 @@ export function AdminBannersManagement() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 flex-shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => openEditForm(banner)}
+                    title="Edit banner"
+                    aria-label="Edit banner"
+                    className="h-8 w-8"
+                  >
+                    <Pencil className="w-4 h-4 text-primary" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"

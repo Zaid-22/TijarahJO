@@ -22,10 +22,12 @@ import {
 } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
 import { useAuth } from "../../../contexts/AuthContext";
+import { userHasAdminPermission } from "../../../contexts/authUtils";
 import { AdminGlobalSearch } from "./AdminGlobalSearch";
 import { AdminNotificationsBell } from "./AdminNotificationsBell";
 import { useSessionTimeout } from "../hooks/useSessionTimeout";
 import { DensityProvider, useDensity } from "../hooks/useDensity";
+import { ADMIN_PERMISSIONS } from "../adminPermissions";
 
 export function AdminLayout() {
   return (
@@ -37,7 +39,7 @@ export function AdminLayout() {
 
 function AdminLayoutInner() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { showWarning, minutesLeft, resetTimer } = useSessionTimeout();
@@ -45,19 +47,24 @@ function AdminLayoutInner() {
 
   const navItems = [
     { label: "Dashboard", path: "/admin", icon: LayoutDashboard },
-    { label: "Users", path: "/admin/users", icon: Users },
-    { label: "Listings", path: "/admin/listings", icon: ShoppingBag },
-    { label: "Reviews", path: "/admin/reviews", icon: MessageSquare },
-    { label: "Chats", path: "/admin/chats", icon: MessageCircle },
-    { label: "Categories", path: "/admin/categories", icon: Tags },
-    { label: "Roles", path: "/admin/roles", icon: Shield },
-    { label: "Locations", path: "/admin/locations", icon: MapPin },
-    { label: "Reports", path: "/admin/reports", icon: Flag },
-    { label: "Fraud Detection", path: "/admin/fraud", icon: AlertTriangle },
-    { label: "Banners", path: "/admin/banners", icon: Image },
-    { label: "Audit Log", path: "/admin/audit-log", icon: FileText },
-    { label: "Settings", path: "/admin/settings", icon: Settings2 },
+    { label: "Users", path: "/admin/users", icon: Users, permission: ADMIN_PERMISSIONS.usersView },
+    { label: "Listings", path: "/admin/listings", icon: ShoppingBag, permission: ADMIN_PERMISSIONS.postsView },
+    { label: "Reviews", path: "/admin/reviews", icon: MessageSquare, permission: ADMIN_PERMISSIONS.reviewsView },
+    { label: "Chats", path: "/admin/chats", icon: MessageCircle, permission: ADMIN_PERMISSIONS.chatView },
+    { label: "Categories", path: "/admin/categories", icon: Tags, permission: ADMIN_PERMISSIONS.categoriesManage },
+    { label: "Roles", path: "/admin/roles", icon: Shield, permission: ADMIN_PERMISSIONS.rolesManage },
+    { label: "Locations", path: "/admin/locations", icon: MapPin, permission: ADMIN_PERMISSIONS.locationsManage },
+    { label: "Reports", path: "/admin/reports", icon: Flag, permission: ADMIN_PERMISSIONS.reportsView },
+    { label: "Fraud Detection", path: "/admin/fraud", icon: AlertTriangle, permission: ADMIN_PERMISSIONS.fraudView },
+    { label: "Banners", path: "/admin/banners", icon: Image, permission: ADMIN_PERMISSIONS.bannersManage },
+    { label: "Audit Log", path: "/admin/audit-log", icon: FileText, permission: ADMIN_PERMISSIONS.auditView },
+    { label: "Settings", path: "/admin/settings", icon: Settings2, permission: ADMIN_PERMISSIONS.settingsManage },
   ];
+
+  const visibleNavItems = navItems.filter(
+    (item) =>
+      !item.permission || userHasAdminPermission(user, item.permission),
+  );
 
   const handleLogout = async () => {
     await logout();
@@ -91,7 +98,7 @@ function AdminLayoutInner() {
 
           {/* Nav Items */}
           <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
                 <Button

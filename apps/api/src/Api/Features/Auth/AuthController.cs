@@ -23,6 +23,7 @@ public class AuthController(
     IAuthCommandService authCommands,
     IUserQueryHandler userQueries,
     IRoleService roles,
+    IUserPermissionService userPermissionService,
     TwoFactorService twoFactorService,
     IEmailTwoFactorSender emailSender,
     ITokenBlacklistService tokenBlacklistService,
@@ -32,6 +33,7 @@ public class AuthController(
     private readonly IAuthCommandService _authCommands = authCommands;
     private readonly IUserQueryHandler _userQueries = userQueries;
     private readonly IRoleService _roles = roles;
+    private readonly IUserPermissionService _userPermissionService = userPermissionService;
     private readonly TwoFactorService _twoFactorService = twoFactorService;
     private readonly IEmailTwoFactorSender _emailSender = emailSender;
     private readonly ITokenBlacklistService _tokenBlacklistService = tokenBlacklistService;
@@ -107,7 +109,16 @@ public class AuthController(
             ));
         }
 
-        return Ok(AuthShared.CreateAuthenticatedResponse(_tokenService, Response, result.User, result.RoleName));
+        UserPermissionSnapshot permissionSnapshot = await _userPermissionService.GetUserPermissionSnapshotAsync(
+            result.User.UserID.Value,
+            cancellationToken);
+
+        return Ok(AuthShared.CreateAuthenticatedResponse(
+            _tokenService,
+            Response,
+            result.User,
+            result.RoleName,
+            permissionSnapshot));
     }
 
     [HttpPost("signup")]
@@ -145,10 +156,19 @@ public class AuthController(
         string token = _tokenService.GenerateToken(result.User.UserID.Value, result.User.Email, result.RoleName);
         AuthShared.SetTokenCookie(Response, token);
 
+        UserPermissionSnapshot permissionSnapshot = await _userPermissionService.GetUserPermissionSnapshotAsync(
+            result.User.UserID.Value,
+            cancellationToken);
+
         return StatusCode(StatusCodes.Status201Created, new AuthResponse
         {
             Success = true,
-            User = DTOMapper.ToUserResponseDTO(result.User, result.RoleName, Request)
+            User = DTOMapper.ToUserResponseDTO(
+                result.User,
+                result.RoleName,
+                Request,
+                permissionSnapshot.HasAdminAccess,
+                permissionSnapshot.PermissionKeys)
         });
     }
 
@@ -182,8 +202,16 @@ public class AuthController(
             return Problem(statusCode: StatusCodes.Status401Unauthorized, detail: "User account is banned or inactive.");
         }
 
-        string? roleName = await AuthShared.ResolveRoleNameForTokenAsync(_roles, user.RoleID, cancellationToken);
-        return Ok(DTOMapper.ToUserResponseDTO(user, roleName ?? "User", Request));
+        string roleName = await AuthShared.ResolveRoleNameForTokenAsync(_roles, user.RoleID, cancellationToken) ?? "User";
+        UserPermissionSnapshot currentUserPermissions = await _userPermissionService.GetUserPermissionSnapshotAsync(
+            userId,
+            cancellationToken);
+        return Ok(DTOMapper.ToUserResponseDTO(
+            user,
+            roleName,
+            Request,
+            currentUserPermissions.HasAdminAccess,
+            currentUserPermissions.PermissionKeys));
     }
 
     [HttpPost("refresh")]
@@ -222,7 +250,16 @@ public class AuthController(
             return Problem(statusCode: StatusCodes.Status500InternalServerError, detail: "Unable to resolve user role.");
         }
 
-        return Ok(AuthShared.CreateAuthenticatedResponse(_tokenService, Response, user, roleName));
+        UserPermissionSnapshot refreshPermissions = await _userPermissionService.GetUserPermissionSnapshotAsync(
+            user.UserID!.Value,
+            cancellationToken);
+
+        return Ok(AuthShared.CreateAuthenticatedResponse(
+            _tokenService,
+            Response,
+            user,
+            roleName,
+            refreshPermissions));
     }
 
     [HttpPost("logout")]

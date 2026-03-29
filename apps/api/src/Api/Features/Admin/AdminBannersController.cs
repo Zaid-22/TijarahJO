@@ -11,7 +11,7 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/banners")]
-[Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+[Authorize(Policy = AuthorizationPolicies.BannersManage)]
 public sealed class AdminBannersController(IHeroBannerService heroBannerService) : ControllerBase
 {
     private readonly IHeroBannerService _heroBannerService = heroBannerService;

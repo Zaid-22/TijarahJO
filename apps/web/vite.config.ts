@@ -20,6 +20,24 @@ function isLocalhostHost(hostname: string): boolean {
   );
 }
 
+function addLoopbackOriginAliases(target: Set<string>, origin: string): void {
+  try {
+    const parsed = new URL(origin);
+    if (!isLocalhostHost(parsed.hostname)) {
+      return;
+    }
+
+    const portSuffix = parsed.port ? `:${parsed.port}` : "";
+    // CSP host-source syntax does not accept bracketed IPv6 loopback literals,
+    // so keep development aliases to the loopback forms browsers parse here.
+    for (const hostname of ["localhost", "127.0.0.1"]) {
+      target.add(`${parsed.protocol}//${hostname}${portSuffix}`);
+    }
+  } catch {
+    // Ignore malformed origins so CSP generation never breaks the build.
+  }
+}
+
 function normalizeOriginSource(value: string): string | null {
   const trimmedValue = value.trim();
   if (!trimmedValue) {
@@ -88,25 +106,11 @@ function buildConnectSources(isProduction: boolean): string {
   }
   if (apiOrigin) {
     connectSources.add(apiOrigin);
+    addLoopbackOriginAliases(connectSources, apiOrigin);
     const socketOrigin = toSocketOrigin(apiOrigin, isProduction);
     if (socketOrigin) {
       connectSources.add(socketOrigin);
-    }
-
-    try {
-      const parsed = new URL(apiOrigin);
-      if (!isProduction) {
-        if (parsed.hostname === "localhost") {
-          connectSources.add(`http://127.0.0.1:${parsed.port}`);
-          connectSources.add(`ws://127.0.0.1:${parsed.port}`);
-        }
-        if (parsed.hostname === "127.0.0.1") {
-          connectSources.add(`http://localhost:${parsed.port}`);
-          connectSources.add(`ws://localhost:${parsed.port}`);
-        }
-      }
-    } catch {
-      // Keep the CSP builder resilient if the origin cannot be parsed.
+      addLoopbackOriginAliases(connectSources, socketOrigin);
     }
   }
   if (isProduction && !shouldApplyProdExtras) {
@@ -129,7 +133,7 @@ function buildStyleSrcDirective(isProduction: boolean): string {
 }
 
 function buildImgSrcDirective(isProduction: boolean): string {
-  const imgSources = ["'self'", "data:", "blob:", "https:"];
+  const imgSources = new Set<string>(["'self'", "data:", "blob:", "https:"]);
 
   // In development, also allow the backend origin for serving uploaded images
   if (!isProduction) {
@@ -138,11 +142,12 @@ function buildImgSrcDirective(isProduction: boolean): string {
       process.env.VITE_API_BASE_URL?.trim() || defaultApiBaseUrl;
     const apiOrigin = parseApiOrigin(configuredApiBaseUrl);
     if (apiOrigin) {
-      imgSources.push(apiOrigin);
+      imgSources.add(apiOrigin);
+      addLoopbackOriginAliases(imgSources, apiOrigin);
     }
   }
 
-  return `img-src ${imgSources.join(" ")}`;
+  return `img-src ${Array.from(imgSources).join(" ")}`;
 }
 
 function buildCspPolicy(isProduction: boolean): string {

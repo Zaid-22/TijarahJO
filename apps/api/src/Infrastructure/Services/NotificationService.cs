@@ -28,6 +28,7 @@ public sealed class NotificationService : INotificationService
         int conversationId,
         int messageId,
         string messagePreview,
+        string? senderDisplayName = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -59,7 +60,9 @@ public sealed class NotificationService : INotificationService
             ConversationID = conversationId,
             MessageID = messageId,
             NotificationType = ChatMessageType,
-            Title = "New message",
+            Title = string.IsNullOrWhiteSpace(senderDisplayName)
+                ? "New message"
+                : $"New message from {senderDisplayName.Trim()}",
             Body = trimmedPreview,
             RouteUrl = $"/chat/{senderUserId}?conversationId={conversationId}",
             IsRead = false,

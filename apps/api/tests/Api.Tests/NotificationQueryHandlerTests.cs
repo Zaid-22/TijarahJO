@@ -93,6 +93,7 @@ public sealed class NotificationQueryHandlerTests
             int conversationId,
             int messageId,
             string messagePreview,
+            string? senderDisplayName = null,
             CancellationToken cancellationToken = default)
             => Task.FromResult<NotificationEnvelope?>(null);
 

@@ -1,10 +1,12 @@
 import type { Language } from "../../../types";
+import type { Category } from "../../../types/api";
 import { resolveCategoryIcon } from "../../../shared/lib/categoryVisuals";
-import { useCatalogCategories } from "../../../shared/hooks/useCatalogCategories";
 
 type HomeCategoriesSectionProps = {
   language: Language;
   t: Record<string, string>;
+  categories: Category[];
+  isLoading: boolean;
   getCategoryTranslation: (name: string) => string;
   setSelectedCategoryForPage: (category: string) => void;
   setShowAllPosts: (show: boolean) => void;
@@ -13,11 +15,11 @@ type HomeCategoriesSectionProps = {
 export function HomeCategoriesSection({
   language,
   t,
+  categories,
+  isLoading,
   getCategoryTranslation,
   setSelectedCategoryForPage,
 }: HomeCategoriesSectionProps) {
-  const { categories, isLoading } = useCatalogCategories();
-
   return (
     <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
       {/* Section Header */}

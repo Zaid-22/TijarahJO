@@ -16,14 +16,19 @@ public class UsersController : ControllerBase
 {
     private readonly IUserQueryHandler _userQueries;
     private readonly IUserCommandService _userCommands;
+    private readonly IAuthorizationService _authorizationService;
 
-    public UsersController(IUserQueryHandler userQueries, IUserCommandService userCommands)
+    public UsersController(
+        IUserQueryHandler userQueries,
+        IUserCommandService userCommands,
+        IAuthorizationService authorizationService)
     {
         _userQueries = userQueries;
         _userCommands = userCommands;
+        _authorizationService = authorizationService;
     }
 
-    [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+    [Authorize(Policy = AuthorizationPolicies.UsersView)]
     [HttpGet("")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -55,11 +60,16 @@ public class UsersController : ControllerBase
     public async Task<ActionResult<UserResponseDTO>> GetUserById(int id)
     {
         bool hasCurrentUserId = ApiControllerHelpers.TryGetCurrentUserId(User, out int currentUserId);
+        bool requesterHasUsersViewAccess = hasCurrentUserId
+            && (await _authorizationService.AuthorizeAsync(
+                User,
+                resource: null,
+                AuthorizationPolicies.UsersView)).Succeeded;
         UserByIdQueryResult result = await _userQueries.GetByIdAsync(new UserByIdQuery
         {
             TargetUserId = id,
             RequesterUserId = hasCurrentUserId ? currentUserId : null,
-            RequesterIsAdmin = ApiControllerHelpers.IsAdminUser(User)
+            RequesterIsAdmin = requesterHasUsersViewAccess
         }, HttpContext.RequestAborted);
         if (!result.Success || result.User == null)
         {
@@ -69,7 +79,7 @@ public class UsersController : ControllerBase
         return Ok(DTOMapper.ToUserResponseDTO(result.User, request: Request));
     }
 
-    [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+    [Authorize(Policy = AuthorizationPolicies.UsersManage)]
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -118,10 +128,15 @@ public class UsersController : ControllerBase
             return failureResult!;
         }
 
+        bool hasUsersManageAccess = (await _authorizationService.AuthorizeAsync(
+            User,
+            resource: null,
+            AuthorizationPolicies.UsersManage)).Succeeded;
+
         UserCommandResult result = await _userCommands.UpdateAsync(new UpdateUserCommand
         {
             ActorUserId = currentUserId,
-            ActorIsAdmin = ApiControllerHelpers.IsAdminUser(User),
+            ActorIsAdmin = hasUsersManageAccess,
             TargetUserId = id,
             Password = updatedUser.Password,
             Email = updatedUser.Email,
@@ -159,10 +174,15 @@ public class UsersController : ControllerBase
             return failureResult!;
         }
 
+        bool hasUsersManageAccess = (await _authorizationService.AuthorizeAsync(
+            User,
+            resource: null,
+            AuthorizationPolicies.UsersManage)).Succeeded;
+
         UserCommandResult result = await _userCommands.DeleteAsync(new DeleteUserCommand
         {
             ActorUserId = currentUserId,
-            ActorIsAdmin = ApiControllerHelpers.IsAdminUser(User),
+            ActorIsAdmin = hasUsersManageAccess,
             TargetUserId = id
         }, cancellationToken);
         if (!result.Success)

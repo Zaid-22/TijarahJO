@@ -15,11 +15,11 @@ public sealed class FileStorageOptions
     public long MaxPostImageBytes { get; set; } = 5 * 1024 * 1024;
 
     public string[] AllowedImageExtensions { get; set; } =
-    {
+    [
         ".jpg",
         ".jpeg",
         ".png",
         ".webp",
         ".gif"
-    };
+    ];
 }

@@ -53,17 +53,13 @@ function HomeMarketplaceRouteScreen() {
       isLoadingPosts={routeState.isLoadingPostsFromRouteData}
       postsError={routeState.postsError}
       displayedPosts={routeState.displayedPosts}
-      viewMode={routeState.viewMode}
+      availablePosts={routeState.availablePosts}
+      filteredPosts={routeState.filteredPosts}
       onPostClick={(id: string) => navigateToPost(id, "/")}
       favoriteIds={routeState.favoriteIds}
       toggleFavorite={routeState.toggleFavorite}
       currentUserId={sharedUserRouteProps.currentUserId}
       currentUserDisplayName={sharedUserRouteProps.currentUserDisplayName}
-      currentPage={routeState.currentPage}
-      totalPages={routeState.totalPages}
-      isLoading={routeState.isLoading}
-      goToNextPage={routeState.goToNextPage}
-      goToPreviousPage={routeState.goToPreviousPage}
       getCategoryTranslation={routeState.translateCategory}
       onNavigate={navigate}
     />

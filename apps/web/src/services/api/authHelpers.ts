@@ -17,6 +17,10 @@ export type AuthApiUser = ApiUser & {
   isDeleted?: boolean;
   RoleName?: string;
   roleName?: string;
+  HasAdminAccess?: boolean;
+  hasAdminAccess?: boolean;
+  AdminPermissions?: string[];
+  adminPermissions?: string[];
 };
 
 export type AuthApiResponse = {
@@ -85,6 +89,8 @@ function mapParsedAuthUser(userPayload: ParsedAuthUser): AuthApiUser {
     roleID: userPayload.roleID,
     isDeleted: userPayload.isDeleted,
     RoleName: userPayload.RoleName,
+    HasAdminAccess: userPayload.HasAdminAccess,
+    AdminPermissions: userPayload.AdminPermissions,
   };
 }
 
