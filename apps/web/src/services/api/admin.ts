@@ -16,6 +16,11 @@ import type {
 // Re-export all types so existing consumers don't break
 export type * from "./admin.types";
 
+export type BannerMutationResult = {
+  success: boolean;
+  message?: string;
+};
+
 /**
  * Recursively converts all object keys from PascalCase to camelCase.
  * The backend uses `PropertyNamingPolicy = null` which preserves PascalCase,
@@ -509,8 +514,11 @@ export const adminApi = {
   getBanners: async (): Promise<any[]> => {
     try {
       const response = await apiRequest<any>("/admin/banners", { method: "GET" });
-      if (response.success && response.data?.success) {
-        return toCamelCaseKeys<any[]>(response.data.banners);
+      if (response.success && response.data) {
+        const data = toCamelCaseKeys<any>(response.data);
+        if (data.success) {
+          return data.banners || [];
+        }
       }
       return [];
     } catch (error) {
@@ -519,16 +527,26 @@ export const adminApi = {
     }
   },
 
-  createBanner: async (bannerData: any): Promise<boolean> => {
+  createBanner: async (bannerData: any): Promise<BannerMutationResult> => {
     try {
       const response = await apiRequest("/admin/banners", {
         method: "POST",
         body: JSON.stringify(bannerData),
       });
-      return response.success;
+      if (response.success) {
+        return { success: true };
+      }
+
+      return {
+        success: false,
+        message: response.error?.message || "Failed to add banner",
+      };
     } catch (error) {
       debugError("adminApi.createBanner", error);
-      return false;
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to add banner",
+      };
     }
   },
 

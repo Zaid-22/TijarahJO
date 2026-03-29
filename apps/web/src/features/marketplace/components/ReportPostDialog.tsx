@@ -12,6 +12,7 @@ import {
 import { Textarea } from "../../../shared/ui/textarea";
 import { toast } from "sonner";
 import type { Language } from "../../../types";
+import { api } from "../../../services/api";
 
 interface ReportPostDialogProps {
   open: boolean;
@@ -21,36 +22,49 @@ interface ReportPostDialogProps {
   language: Language;
 }
 
-const REPORT_REASONS_EN = [
-  "Spam or misleading",
-  "Scam or fraud",
-  "Inappropriate content",
-  "Wrong category",
-  "Duplicate listing",
-  "Other",
-];
-
-const REPORT_REASONS_AR = [
-  "محتوى مضلل أو غير مرغوب فيه",
-  "احتيال أو نصب",
-  "محتوى غير لائق",
-  "فئة خاطئة",
-  "إعلان مكرر",
-  "أخرى",
-];
+const REPORT_REASONS = [
+  {
+    code: "SPAM",
+    en: "Spam or misleading",
+    ar: "محتوى مضلل أو غير مرغوب فيه",
+  },
+  {
+    code: "SCAM",
+    en: "Scam or fraud",
+    ar: "احتيال أو نصب",
+  },
+  {
+    code: "OFFENSIVE",
+    en: "Inappropriate content",
+    ar: "محتوى غير لائق",
+  },
+  {
+    code: "WRONG_CATEGORY",
+    en: "Wrong category",
+    ar: "فئة خاطئة",
+  },
+  {
+    code: "DUPLICATE",
+    en: "Duplicate listing",
+    ar: "إعلان مكرر",
+  },
+  {
+    code: "OTHER",
+    en: "Other",
+    ar: "أخرى",
+  },
+] as const;
 
 export function ReportPostDialog({
   open,
   onOpenChange,
-  postId: _postId,
+  postId,
   postTitle,
   language,
 }: ReportPostDialogProps) {
   const [selectedReason, setSelectedReason] = useState<string>("");
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const reasons = language === "ar" ? REPORT_REASONS_AR : REPORT_REASONS_EN;
 
   const labels = {
     title: language === "ar" ? "الإبلاغ عن هذا الإعلان" : "Report This Listing",
@@ -79,6 +93,14 @@ export function ReportPostDialog({
       language === "ar"
         ? "يرجى اختيار سبب الإبلاغ"
         : "Please select a reason for the report",
+    authError:
+      language === "ar"
+        ? "يجب تسجيل الدخول قبل إرسال البلاغ."
+        : "You need to sign in before submitting a report.",
+    submitError:
+      language === "ar"
+        ? "تعذر إرسال البلاغ حالياً."
+        : "Could not submit the report right now.",
   };
 
   const handleSubmit = async () => {
@@ -88,13 +110,31 @@ export function ReportPostDialog({
     }
 
     setIsSubmitting(true);
-    // Simulate API call — backend endpoint to be implemented
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    toast.success(labels.success);
-    setIsSubmitting(false);
-    setSelectedReason("");
-    setDescription("");
-    onOpenChange(false);
+    try {
+      const result = await api.reports.submitReport({
+        reportType: "LISTING",
+        targetId: postId,
+        reason: selectedReason,
+        description,
+      });
+
+      if (!result.success) {
+        const message = result.message || labels.submitError;
+        if (/unauthorized|authentication|sign in|log in/i.test(message)) {
+          toast.error(labels.authError);
+        } else {
+          toast.error(message);
+        }
+        return;
+      }
+
+      toast.success(labels.success);
+      setSelectedReason("");
+      setDescription("");
+      onOpenChange(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -113,18 +153,18 @@ export function ReportPostDialog({
             {labels.selectReason}
           </p>
           <div className="grid gap-2">
-            {reasons.map((reason) => (
+            {REPORT_REASONS.map((reason) => (
               <button
-                key={reason}
+                key={reason.code}
                 type="button"
-                onClick={() => setSelectedReason(reason)}
+                onClick={() => setSelectedReason(reason.code)}
                 className={`w-full text-left px-4 py-2.5 rounded-lg border text-sm transition-all ${
-                  selectedReason === reason
+                  selectedReason === reason.code
                     ? "border-primary bg-primary/10 text-primary font-medium"
                     : "border-border bg-card text-foreground hover:border-primary/30 hover:bg-muted/50"
                 }`}
               >
-                {reason}
+                {language === "ar" ? reason.ar : reason.en}
               </button>
             ))}
           </div>
