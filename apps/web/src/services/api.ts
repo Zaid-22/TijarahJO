@@ -12,6 +12,7 @@ import { locationsApi } from "./api/locations";
 import { notificationsApi } from "./api/notifications";
 import { postsApi } from "./api/posts";
 import { reviewsApi } from "./api/reviews";
+import { reportsApi } from "./api/reports";
 import { rolesApi } from "./api/roles";
 import { searchApi } from "./api/search";
 import { sellersApi } from "./api/sellers";
@@ -28,6 +29,7 @@ export const api = {
   users: usersApi,
   locations: locationsApi,
   reviews: reviewsApi,
+  reports: reportsApi,
   chat: chatApi,
   notifications: notificationsApi,
   search: searchApi,

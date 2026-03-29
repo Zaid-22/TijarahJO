@@ -28,7 +28,7 @@ public sealed class HeroBannerEntity
     [MaxLength(100)]
     public string ButtonTextAr { get; set; } = string.Empty;
 
-    [MaxLength(500)]
+    [Column(TypeName = "nvarchar(max)")]
     public string ImageUrl { get; set; } = string.Empty;
 
     [MaxLength(200)]

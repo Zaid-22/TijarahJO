@@ -85,6 +85,16 @@ public sealed class HeroBannerService(TijarahJoDbContext dbContext) : IHeroBanne
 
     public async Task<HeroBannerMutationResult> CreateBannerAsync(CreateHeroBannerCommand command, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(command.ImageUrl))
+        {
+            return new HeroBannerMutationResult
+            {
+                Success = false,
+                StatusCode = 400,
+                Message = "Image URL is required."
+            };
+        }
+
         var entity = new HeroBannerEntity
         {
             Title = command.Title ?? "",
@@ -103,8 +113,20 @@ public sealed class HeroBannerService(TijarahJoDbContext dbContext) : IHeroBanne
             DisplayOrder = command.DisplayOrder
         };
 
-        _dbContext.HeroBanners.Add(entity);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            _dbContext.HeroBanners.Add(entity);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            return new HeroBannerMutationResult
+            {
+                Success = false,
+                StatusCode = 400,
+                Message = "Banner image is too large for the current database schema. Apply the latest database migrations and try again."
+            };
+        }
 
         return new HeroBannerMutationResult
         {
@@ -119,6 +141,16 @@ public sealed class HeroBannerService(TijarahJoDbContext dbContext) : IHeroBanne
         var entity = await _dbContext.HeroBanners.FirstOrDefaultAsync(b => b.BannerID == bannerId, cancellationToken);
         if (entity == null)
             return new HeroBannerMutationResult { Success = false, StatusCode = 404, Message = "Banner not found" };
+
+        if (string.IsNullOrWhiteSpace(command.ImageUrl))
+        {
+            return new HeroBannerMutationResult
+            {
+                Success = false,
+                StatusCode = 400,
+                Message = "Image URL is required."
+            };
+        }
 
         entity.Title = command.Title ?? "";
         entity.TitleAr = command.TitleAr ?? "";
@@ -136,7 +168,19 @@ public sealed class HeroBannerService(TijarahJoDbContext dbContext) : IHeroBanne
         entity.DisplayOrder = command.DisplayOrder;
         entity.UpdatedAt = System.DateTime.UtcNow;
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            return new HeroBannerMutationResult
+            {
+                Success = false,
+                StatusCode = 400,
+                Message = "Banner image is too large for the current database schema. Apply the latest database migrations and try again."
+            };
+        }
 
         return new HeroBannerMutationResult { Success = true, StatusCode = 200 };
     }
