@@ -78,7 +78,8 @@ public sealed class RoleDataAccessAdapter : IRoleDataAccess
         entity.IsDeleted = role.IsDeleted;
 
         _dbContext.AuditActorUserId = null;
-        return await _dbContext.SaveChangesAsync(cancellationToken) > 0;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async Task<bool> DeleteRoleAsync(int? roleId, CancellationToken cancellationToken = default)

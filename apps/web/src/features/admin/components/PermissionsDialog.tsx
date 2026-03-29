@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Shield } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
 import {
@@ -32,11 +32,24 @@ export function PermissionsDialog({
     new Set(),
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Load data when dialog opens
-  const handleOpen = async () => {
-    if (loaded) return;
+  const resetDialogState = useCallback(() => {
+    setAllPermissions([]);
+    setSelectedPermIds(new Set());
+    setLoaded(false);
+    setIsLoading(false);
+    setLoadError(null);
+  }, []);
+
+  const loadPermissions = useCallback(async () => {
+    if (loaded || isLoading) return;
+
+    setIsLoading(true);
+    setLoadError(null);
+
     try {
       const [perms, rolePerms] = await Promise.all([
         api.admin.getPermissions(),
@@ -47,16 +60,25 @@ export function PermissionsDialog({
       setLoaded(true);
     } catch (error) {
       logger.warn("[PermissionsDialog] Failed to load", error);
+      setLoadError("Failed to load permissions. Please try again.");
       toast.error("Failed to load permissions");
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [isLoading, loaded, roleId]);
 
-  // Reset on close, load on open
+  useEffect(() => {
+    if (!open) {
+      resetDialogState();
+      return;
+    }
+
+    void loadPermissions();
+  }, [loadPermissions, open, resetDialogState]);
+
   const handleOpenChange = (val: boolean) => {
-    if (val) {
-      void handleOpen();
-    } else {
-      setLoaded(false);
+    if (!val) {
+      resetDialogState();
     }
     onOpenChange(val);
   };
@@ -151,9 +173,17 @@ export function PermissionsDialog({
               </div>
             </div>
           ))}
-          {!loaded && (
+          {isLoading && (
             <div className="flex justify-center py-8">
               <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            </div>
+          )}
+          {!isLoading && loadError && (
+            <div className="space-y-3 py-4 text-center">
+              <p className="text-sm text-destructive">{loadError}</p>
+              <Button variant="outline" onClick={() => void loadPermissions()}>
+                Retry
+              </Button>
             </div>
           )}
           {loaded && allPermissions.length === 0 && (
@@ -167,7 +197,7 @@ export function PermissionsDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={isSaving}>
+          <Button onClick={handleSave} disabled={isSaving || isLoading || !loaded}>
             {isSaving ? "Saving..." : "Save Permissions"}
           </Button>
         </DialogFooter>

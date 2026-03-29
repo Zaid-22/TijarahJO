@@ -23,6 +23,7 @@ public class OAuthController : ControllerBase
     private readonly IAuthCommandService _authCommands;
     private readonly TwoFactorService _twoFactorService;
     private readonly ITokenService _tokenService;
+    private readonly IUserPermissionService _userPermissionService;
     private readonly ILogger<OAuthController> _logger;
 
     public OAuthController(
@@ -30,12 +31,14 @@ public class OAuthController : ControllerBase
         IAuthCommandService authCommands,
         TwoFactorService twoFactorService,
         ITokenService tokenService,
+        IUserPermissionService userPermissionService,
         ILogger<OAuthController> logger)
     {
         _googleAuthService = googleAuthService;
         _authCommands = authCommands;
         _twoFactorService = twoFactorService;
         _tokenService = tokenService;
+        _userPermissionService = userPermissionService;
         _logger = logger;
     }
 
@@ -160,7 +163,15 @@ public class OAuthController : ControllerBase
             return Redirect(challengeRedirect);
         }
 
-        _ = AuthShared.CreateAuthenticatedResponse(_tokenService, Response, result.User, result.RoleName);
+        UserPermissionSnapshot permissionSnapshot = await _userPermissionService.GetUserPermissionSnapshotAsync(
+            result.User.UserID.Value,
+            cancellationToken);
+        _ = AuthShared.CreateAuthenticatedResponse(
+            _tokenService,
+            Response,
+            result.User,
+            result.RoleName,
+            permissionSnapshot);
         return Redirect(_googleAuthService.GetFrontendSuccessUrl());
     }
 

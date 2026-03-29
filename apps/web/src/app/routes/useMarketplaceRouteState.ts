@@ -66,6 +66,7 @@ export function useMarketplaceRouteState({
     shouldLoadPostsData,
     shouldLoadFavoritesData,
     availablePosts,
+    filteredPosts,
     isLoadingPostsFromRouteData,
     postsError,
     displayedPosts,

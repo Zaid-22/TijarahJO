@@ -223,6 +223,7 @@ public sealed class AdminReportItem
     public int ReportID { get; init; }
     public string ReportType { get; init; } = string.Empty;
     public int TargetID { get; init; }
+    public string? TargetLabel { get; init; }
     public string Reason { get; init; } = string.Empty;
     public string? Description { get; init; }
     public int ReporterUserID { get; init; }

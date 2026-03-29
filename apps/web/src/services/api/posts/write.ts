@@ -99,6 +99,35 @@ export async function createPost(
       (entry): entry is string => typeof entry === "string",
     );
     const savedImageUrls = await createPostImages(postId, sanitizedImageInputs);
+    const expectedImageCount = sanitizedImageInputs.length;
+    const savedImageCount = savedImageUrls.length;
+
+    if (expectedImageCount > 0 && savedImageCount !== expectedImageCount) {
+      if (savedImageCount > 0) {
+        await replacePostImages(postId, []);
+      }
+
+      const rollbackResponse = await apiRequest(`/posts/${postId}`, {
+        method: "DELETE",
+      });
+      if (!rollbackResponse.success) {
+        debugError(
+          "[createPost] Image upload failed and rollback could not delete post:",
+          rollbackResponse.error?.message || "Unknown error",
+        );
+        return {
+          success: false,
+          message:
+            "Image upload failed and the incomplete listing could not be rolled back automatically. Please delete the listing and try again.",
+        };
+      }
+
+      return {
+        success: false,
+        message:
+          "Image upload failed, so the listing was not saved. Please try again.",
+      };
+    }
 
     const enrichedPost = await enrichPostsWithCategoryAndSeller([createdPost]);
     const enrichedPostData = enrichedPost[0] || createdPost;

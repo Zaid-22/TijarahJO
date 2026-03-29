@@ -34,7 +34,12 @@ public static class DTOMapper
             : $"{baseUrl}/{trimmed}";
     }
 
-    public static UserResponseDTO ToUserResponseDTO(UserModel userModel, string roleName = "", HttpRequest? request = null)
+    public static UserResponseDTO ToUserResponseDTO(
+        UserModel userModel,
+        string roleName = "",
+        HttpRequest? request = null,
+        bool hasAdminAccess = false,
+        IReadOnlyList<string>? adminPermissions = null)
     {
         return new UserResponseDTO
         {
@@ -49,7 +54,9 @@ public static class DTOMapper
             Avatar = ResolveAssetUrl(request, userModel.Avatar),
             JoinedDate = userModel.JoinDate,
             Status = userModel.Status,
-            RoleName = roleName
+            RoleName = roleName,
+            HasAdminAccess = hasAdminAccess,
+            AdminPermissions = adminPermissions ?? []
         };
     }
 

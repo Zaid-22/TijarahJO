@@ -12,7 +12,6 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/posts")]
-[Authorize(Policy = AuthorizationPolicies.AdminOnly)]
 public class AdminPostsController : ControllerBase
 {
     private readonly IAdminQueryHandler _adminQueries;
@@ -27,6 +26,7 @@ public class AdminPostsController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = AuthorizationPolicies.PostsView)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -59,6 +59,7 @@ public class AdminPostsController : ControllerBase
     }
 
     [HttpPatch("{id}/status")]
+    [Authorize(Policy = AuthorizationPolicies.PostsModerate)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

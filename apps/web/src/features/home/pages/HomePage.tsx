@@ -1,8 +1,5 @@
 import { useMemo } from "react";
 import { Globe } from "lucide-react";
-import { PostResultsGrid } from "../../marketplace/components/PostResultsGrid";
-import { PostResultsGridSkeleton } from "../../marketplace/components/PostResultsGridSkeleton";
-import { MarketplaceResultsPagination } from "../../marketplace/components/MarketplaceResultsPagination";
 import { Language, Post, ViewMode } from "../../../types";
 import { APP_CONFIG } from "../../../constants/appConfig";
 import { HomeHeroSection } from "../components/HomeHeroSection";
@@ -10,9 +7,12 @@ import { HomeCategoriesSection } from "../components/HomeCategoriesSection";
 import { PostCarousel } from "../components/PostCarousel";
 import { PostCarouselSkeleton } from "../components/PostCarouselSkeleton";
 import { HomePromotionalBanner } from "../components/HomePromotionalBanner";
-import { MarketplaceDiscoveryControls } from "../../marketplace/components/MarketplaceDiscoveryControls";
 import { usePrefersReducedMotion } from "../../../shared/hooks/usePrefersReducedMotion";
 import { PageShell } from "../../../shared/ui/page-shell";
+import { useCatalogCategories } from "../../../shared/hooks/useCatalogCategories";
+import { resolveCategoryName } from "../../../shared/lib/categoryVisuals";
+import { isActivePost } from "../../../lib/searchRanking";
+import { MarketplaceEmptyState } from "../../marketplace/components/MarketplaceEmptyState";
 
 interface HomePageProps {
   language: Language;
@@ -35,9 +35,11 @@ interface HomePageProps {
   isLoadingPosts: boolean;
   postsError: string | null;
   displayedPosts: Post[];
+  availablePosts: Post[];
+  filteredPosts: Post[];
 
   // View Control
-  viewMode: ViewMode;
+  viewMode?: ViewMode;
 
   // Post Actions
   onPostClick: (id: string, origin?: string) => void;
@@ -47,11 +49,11 @@ interface HomePageProps {
   currentUserId?: string;
 
   // Pagination
-  currentPage: number;
-  totalPages: number;
-  isLoading: boolean;
-  goToNextPage: () => void;
-  goToPreviousPage: () => void;
+  currentPage?: number;
+  totalPages?: number;
+  isLoading?: boolean;
+  goToNextPage?: () => void;
+  goToPreviousPage?: () => void;
 
   // Helpers
   getCategoryTranslation: (name: string) => string;
@@ -73,22 +75,25 @@ export function HomePage({
   isLoadingPosts,
   postsError,
   displayedPosts,
-  viewMode,
+  availablePosts,
+  filteredPosts,
+  viewMode: _viewMode,
   onPostClick,
   favoriteIds,
   toggleFavorite,
   currentUserDisplayName,
   currentUserId,
-  currentPage,
-  totalPages,
-  isLoading,
-  goToNextPage,
-  goToPreviousPage,
+  currentPage: _currentPage,
+  totalPages: _totalPages,
+  isLoading: _isLoading,
+  goToNextPage: _goToNextPage,
+  goToPreviousPage: _goToPreviousPage,
   getCategoryTranslation,
   onNavigate,
 }: HomePageProps) {
   const backendUrlHint = APP_CONFIG.backendHostUrl;
   const prefersReducedMotion = usePrefersReducedMotion();
+  const { categories, isLoading: isLoadingCategories } = useCatalogCategories();
 
   const scrollToTop = () => {
     const mainContent = document.getElementById("home-marketplace-content");
@@ -105,7 +110,7 @@ export function HomePage({
 
   const recentPosts = useMemo(() => {
     return displayedPosts
-      .filter((p) => p.status !== "SOLD")
+      .filter(isActivePost)
       .sort((a, b) => {
         const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -113,6 +118,56 @@ export function HomePage({
       })
       .slice(0, 10);
   }, [displayedPosts]);
+
+  const allListingsCarouselPosts = useMemo(() => {
+    return [...filteredPosts]
+      .filter(isActivePost)
+      .sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      });
+  }, [filteredPosts]);
+
+  const categorySections = useMemo(() => {
+    const postsByCategory = new Map<string, Post[]>();
+
+    availablePosts
+      .filter(isActivePost)
+      .forEach((post) => {
+        const normalizedCategoryName = post.category.trim().toLowerCase();
+        if (!normalizedCategoryName) {
+          return;
+        }
+
+        const categoryPosts = postsByCategory.get(normalizedCategoryName) || [];
+        categoryPosts.push(post);
+        postsByCategory.set(normalizedCategoryName, categoryPosts);
+      });
+
+    return categories.flatMap((category) => {
+      const normalizedCategoryName = category.name.trim().toLowerCase();
+      const matchingPosts = postsByCategory.get(normalizedCategoryName);
+
+      if (!matchingPosts || matchingPosts.length === 0) {
+        return [];
+      }
+
+      return [
+        {
+          categoryName: category.name,
+          displayName: resolveCategoryName(category, language),
+          posts: [...matchingPosts]
+            .sort((a, b) => {
+              const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+              const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+              return dateB - dateA;
+            })
+            .slice(0, 10),
+        },
+      ];
+    });
+  }, [availablePosts, categories, language]);
 
   return (
     <PageShell>
@@ -133,6 +188,8 @@ export function HomePage({
       <HomeCategoriesSection
         language={language}
         t={t}
+        categories={categories}
+        isLoading={isLoadingCategories}
         getCategoryTranslation={getCategoryTranslation}
         setSelectedCategoryForPage={setSelectedCategoryForPage}
         setShowAllPosts={setShowAllPosts}
@@ -190,6 +247,35 @@ export function HomePage({
         />
       ) : null}
 
+      {!isLoadingPosts &&
+      !isLoadingCategories &&
+      categorySections.length > 0
+        ? categorySections.map((section) => (
+            <PostCarousel
+              key={section.categoryName}
+              title={section.displayName}
+              subtitle={
+                language === "ar"
+                  ? `أحدث الإعلانات في ${section.displayName}`
+                  : `Latest listings in ${section.displayName}`
+              }
+              posts={section.posts}
+              language={language}
+              isAuthenticated={isAuthenticated}
+              currentUserId={currentUserId}
+              currentUserDisplayName={currentUserDisplayName}
+              favoriteIds={favoriteIds}
+              onFavoriteToggle={toggleFavorite}
+              onPostClick={(id) => onPostClick(id, section.categoryName)}
+              onViewAll={() =>
+                setSelectedCategoryForPage(section.categoryName)
+              }
+              viewAllLabel={language === "ar" ? "عرض الكل" : "View All"}
+              onRequireAuth={() => setShowLoginPrompt(true)}
+            />
+          ))
+        : null}
+
       {/* 6. Bottom Promotional Banner */}
       <HomePromotionalBanner
         title={
@@ -223,35 +309,9 @@ export function HomePage({
         id="home-marketplace-content"
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
       >
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-foreground">
-              {language === "ar" ? "جميع المنتجات" : "All Listings"}
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              {language === "ar"
-                ? "تصفح جميع الإعلانات المتاحة"
-                : "Browse all available listings"}
-            </p>
-          </div>
-        </div>
-
-        {/* View Controls */}
-        <MarketplaceDiscoveryControls
-          language={language}
-          className="mb-8"
-        />
-
-        {/* Loading State */}
-        {isLoadingPosts && (
-          <div className="py-2.5">
-            <PostResultsGridSkeleton
-              viewMode={viewMode}
-              count={12}
-              hideCategoryBadge={false}
-            />
-          </div>
-        )}
+        {isLoadingPosts ? (
+          <PostCarouselSkeleton hasSubtitle />
+        ) : null}
 
         {/* Error State */}
         {!isLoadingPosts && postsError && (
@@ -269,55 +329,56 @@ export function HomePage({
           </div>
         )}
 
-        {/* Post Grid */}
-        {!isLoadingPosts && (
-          <PostResultsGrid
-            posts={displayedPosts}
-            viewMode={viewMode}
-            onPostClick={(id) => onPostClick(id, "marketplace")}
-            favoriteIds={favoriteIds}
-            onFavoriteToggle={toggleFavorite}
+        {!isLoadingPosts && !postsError && allListingsCarouselPosts.length > 0 ? (
+          <PostCarousel
+            title={language === "ar" ? "جميع المنتجات" : "All Listings"}
+            subtitle={
+              language === "ar"
+                ? "تصفح جميع الإعلانات المتاحة"
+                : "Browse all available listings"
+            }
+            posts={allListingsCarouselPosts}
             language={language}
             isAuthenticated={isAuthenticated}
             currentUserId={currentUserId}
             currentUserDisplayName={currentUserDisplayName}
-            animated
-            emptyState={{
-              title: searchQuery
+            favoriteIds={favoriteIds}
+            onFavoriteToggle={toggleFavorite}
+            onPostClick={(id) => onPostClick(id, "marketplace")}
+            onRequireAuth={() => setShowLoginPrompt(true)}
+          />
+        ) : null}
+
+        {!isLoadingPosts &&
+        !postsError &&
+        allListingsCarouselPosts.length === 0 ? (
+          <MarketplaceEmptyState
+            title={
+              searchQuery
                 ? language === "ar"
                   ? "لا توجد نتائج"
                   : "No results found"
                 : language === "ar"
                   ? "لا توجد منشورات"
-                  : "No posts found",
-              description: searchQuery
+                  : "No posts found"
+            }
+            description={
+              searchQuery
                 ? language === "ar"
                   ? `لم نتمكن من العثور على أي منشورات تطابق "${searchQuery}"`
                   : `We couldn't find any posts matching "${searchQuery}"`
                 : language === "ar"
                   ? "جرب فئة أخرى أو أضف منشورات جديدة"
-                  : "Try a different category or add new posts",
-              actionLabel: searchQuery
+                  : "Try a different category or add new posts"
+            }
+            actionLabel={
+              searchQuery
                 ? language === "ar"
                   ? "مسح البحث"
                   : "Clear Search"
-                : undefined,
-              onAction: searchQuery ? () => setSearchQuery("") : undefined,
-            }}
-            onRequireAuth={() => setShowLoginPrompt(true)}
-          />
-        )}
-
-        {displayedPosts.length > 0 ? (
-          <MarketplaceResultsPagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            isLoading={isLoading}
-            language={language}
-            onPrevious={goToPreviousPage}
-            onNext={goToNextPage}
-            className="mt-12 mb-8"
-            showLoadingIndicator
+                : undefined
+            }
+            onAction={searchQuery ? () => setSearchQuery("") : undefined}
           />
         ) : null}
       </main>

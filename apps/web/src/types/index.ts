@@ -48,6 +48,9 @@ export interface User {
   name: string;
   avatar?: string;
   role: "user" | "admin";
+  roleName?: string;
+  hasAdminAccess?: boolean;
+  permissions?: string[];
 }
 
 export interface AuthState {

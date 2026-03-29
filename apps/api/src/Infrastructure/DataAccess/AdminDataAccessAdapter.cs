@@ -556,6 +556,28 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
                                   ReportID = r.ReportID,
                                   ReportType = r.ReportType,
                                   TargetID = r.TargetID,
+                                  TargetLabel =
+                                      r.ReportType == "LISTING"
+                                          ? _dbContext.Posts
+                                              .Where(post => post.PostID == r.TargetID)
+                                              .Select(post => post.PostTitle)
+                                              .FirstOrDefault()
+                                          : r.ReportType == "USER"
+                                              ? _dbContext.Users
+                                                  .Where(user => user.UserID == r.TargetID)
+                                                  .Select(user => (user.FirstName + " " + (user.LastName ?? "")).Trim())
+                                                  .FirstOrDefault()
+                                              : r.ReportType == "REVIEW"
+                                                  ? _dbContext.Reviews
+                                                      .Where(review => review.ReviewID == r.TargetID)
+                                                      .Select(review => review.Comment)
+                                                      .FirstOrDefault()
+                                                  : r.ReportType == "CHAT"
+                                                      ? _dbContext.Conversations
+                                                          .Where(conversation => conversation.ConversationID == r.TargetID)
+                                                          .Select(conversation => "Conversation #" + conversation.ConversationID)
+                                                          .FirstOrDefault()
+                                                      : null,
                                   Reason = r.Reason,
                                   Description = r.Description,
                                   ReporterUserID = r.ReporterUserID,

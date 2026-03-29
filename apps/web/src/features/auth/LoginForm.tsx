@@ -33,6 +33,8 @@ interface LoginFormProps {
   canSubmit: boolean;
   values: LoginFormValues;
   errors: LoginFormErrors;
+  areaOptions: Array<{ value: string; label: string }>;
+  isAreaDisabled: boolean;
   copy: LoginCopy;
   focusedField: LoginField | null;
   showPassword: boolean;
@@ -63,6 +65,8 @@ export function LoginForm({
   canSubmit,
   values,
   errors,
+  areaOptions,
+  isAreaDisabled,
   copy,
   focusedField,
   showPassword,
@@ -271,17 +275,15 @@ export function LoginForm({
                   isRTL={isRTL}
                 />
 
-                <AuthInputField
+                <AuthSelectField
                   id="area"
                   name="area"
                   label={copy.form.areaLabel}
                   required
-                  placeholder={copy.form.areaPlaceholder}
                   value={values.area}
+                  options={areaOptions}
                   error={errors.area}
-                  disabled={isLoading}
-                  type="text"
-                  autoComplete="address-level3"
+                  disabled={isLoading || isAreaDisabled}
                   icon={MapPin}
                   focused={focusedField === "area"}
                   onChange={(value) => onFieldChange("area", value)}

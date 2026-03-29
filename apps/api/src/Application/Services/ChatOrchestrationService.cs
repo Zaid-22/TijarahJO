@@ -281,12 +281,24 @@ public sealed class ChatOrchestrationService : IChatOrchestrationService
         NotificationEnvelope? notification = null;
         try
         {
+            string? senderDisplayName = null;
+            var senderResult = await _userQueryHandler.GetByIdAsync(
+                new UserByIdQuery { TargetUserId = command.SenderUserId },
+                cancellationToken);
+            if (senderResult.Success && senderResult.User is not null)
+            {
+                string first = senderResult.User.FirstName?.Trim() ?? string.Empty;
+                string last = senderResult.User.LastName?.Trim() ?? string.Empty;
+                senderDisplayName = $"{first} {last}".Trim();
+            }
+
             notification = await _notifications.CreateChatMessageNotificationAsync(
                 receiverId,
                 command.SenderUserId,
                 conversationId,
                 createdMessage.MessageModel.MessageId ?? 0,
                 createdMessage.MessageModel.Content,
+                senderDisplayName,
                 cancellationToken);
         }
         catch (Exception)

@@ -23,6 +23,7 @@
     "src/services/api/schemas/userSchema.ts",
     "src/services/api/shared.ts",
     "src/services/api/chatNormalization.ts",
+    "src/constants/appConfig.ts",
     "src/utils/idValidation.ts",
     "src/contexts/authRuntimePolicy.ts"
   ]

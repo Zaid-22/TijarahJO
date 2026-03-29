@@ -9,7 +9,7 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/conversations")]
-[Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+[Authorize(Policy = AuthorizationPolicies.ChatView)]
 public class AdminConversationsController : ControllerBase
 {
     private readonly IAdminQueryHandler _adminQueries;

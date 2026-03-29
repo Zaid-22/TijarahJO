@@ -58,15 +58,30 @@ function parseNonEmptyString(value: unknown, fallback: string): string {
   return trimmed.length > 0 ? trimmed : fallback;
 }
 
-function normalizeApiBaseUrl(value: string): string {
+function normalizeLocalLoopbackUrl(value: string): string {
+  try {
+    const parsed = new URL(value);
+    if (parsed.hostname === "127.0.0.1" || parsed.hostname === "::1") {
+      // Keep local auth and API cookies on a single loopback host in dev.
+      parsed.hostname = "localhost";
+    }
+
+    return parsed.toString();
+  } catch {
+    return value;
+  }
+}
+
+export function normalizeApiBaseUrl(value: string): string {
   const normalized = value.replace(/\/+$/, "");
+  const normalizedLoopbackUrl = normalizeLocalLoopbackUrl(normalized);
 
   // Backward-compatible guard: older env templates used `/api` without version.
-  if (/\/api$/i.test(normalized)) {
-    return `${normalized}/v1`;
+  if (/\/api$/i.test(normalizedLoopbackUrl)) {
+    return `${normalizedLoopbackUrl}/v1`;
   }
 
-  return normalized;
+  return normalizedLoopbackUrl;
 }
 
 const configuredApiBaseUrl = normalizeApiBaseUrl(

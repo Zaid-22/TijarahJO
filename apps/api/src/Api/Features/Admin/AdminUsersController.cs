@@ -10,7 +10,6 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/users")]
-[Authorize(Policy = AuthorizationPolicies.AdminOnly)]
 public class AdminUsersController : ControllerBase
 {
     private readonly IAdminQueryHandler _adminQueries;
@@ -23,6 +22,7 @@ public class AdminUsersController : ControllerBase
     }
 
     [HttpGet("{id}/details")]
+    [Authorize(Policy = AuthorizationPolicies.UsersView)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -45,6 +45,7 @@ public class AdminUsersController : ControllerBase
 
     /// <summary>Bulk update user statuses (ban or activate multiple users at once).</summary>
     [HttpPut("bulk-status")]
+    [Authorize(Policy = AuthorizationPolicies.UsersManage)]
     public async Task<ActionResult> BulkUpdateUserStatus([FromBody] BulkUserStatusRequest request)
     {
         if (request.UserIds == null || request.UserIds.Count == 0)

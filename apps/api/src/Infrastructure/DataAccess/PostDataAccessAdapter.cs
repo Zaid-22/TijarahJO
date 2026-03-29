@@ -84,7 +84,8 @@ public sealed class PostDataAccessAdapter : IPostDataAccess
         entity.AreaID = post.AreaId;
 
         _dbContext.AuditActorUserId = post.UserID > 0 ? post.UserID : null;
-        return await _dbContext.SaveChangesAsync(cancellationToken) > 0;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async Task<bool> DeletePostAsync(int? postId, int actorUserId, CancellationToken cancellationToken = default)

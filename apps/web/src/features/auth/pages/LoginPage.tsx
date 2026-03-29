@@ -8,6 +8,7 @@ import { normalizeJordanPhone } from "../../../utils/phone";
 import { LoginForm } from "../LoginForm";
 import { getLoginCopy } from "../loginCopy";
 import { PageShell } from "../../../shared/ui/page-shell";
+import { resolveHasAdminAccessFromPayload } from "../../../contexts/authUtils";
 import { SubpageHeader } from "../../../shared/ui/subpage-header";
 import {
   buildCurrentPath,
@@ -27,6 +28,7 @@ import {
 } from "../loginValidation";
 import { useLoginReducer } from "../useLoginReducer";
 import type { Language } from "../../../types";
+import { useLocationOptions } from "../../../shared/hooks/useLocationOptions";
 
 interface LoginPageProps {
   onLogin: (userData: {
@@ -94,6 +96,15 @@ const normalizeTwoFactorCode = (value: string): string => {
   return value.replace(/\D+/g, "");
 };
 
+const resolveLoginRole = (user: unknown): "admin" | "user" => {
+  const payload =
+    typeof user === "object" && user !== null
+      ? (user as Record<string, unknown>)
+      : null;
+
+  return resolveHasAdminAccessFromPayload(payload) ? "admin" : "user";
+};
+
 export function LoginPage({
   onLogin,
   onContinueAsGuest,
@@ -111,6 +122,10 @@ export function LoginPage({
   const [state, dispatch] = useLoginReducer({
     phone: "",
   });
+  const {
+    areaNames,
+    isLoadingAreas,
+  } = useLocationOptions(state.values.city);
   const isRTL = language === "ar";
   const currentPath = buildCurrentPath(location.pathname, location.search);
   const backPath = resolveBackPathFromLocationState({
@@ -177,6 +192,14 @@ export function LoginPage({
     dispatch({ type: "SET_FIELD", field, value });
   };
 
+  const handleFieldValueChange = (field: LoginField, value: string) => {
+    setFieldValue(field, value);
+
+    if (field === "city" && value !== state.values.city && state.values.area) {
+      dispatch({ type: "SET_FIELD", field: "area", value: "" });
+    }
+  };
+
   const setFieldError = (field: LoginField, value: string) => {
     dispatch({ type: "SET_ERROR", field, error: value });
   };
@@ -216,6 +239,11 @@ export function LoginPage({
     const validationErrors = validateForSubmit();
     return Object.values(validationErrors).every((value) => value === "");
   })();
+
+  const areaOptions = areaNames.map((areaName) => ({
+    value: areaName,
+    label: areaName,
+  }));
 
   const handleSignUp = async () => {
     const parsedIdentifier = parseAuthIdentifier(state.values.identifier);
@@ -300,7 +328,7 @@ export function LoginPage({
       phone: user?.phone || normalizedPhone,
       avatar: user?.avatar,
       joinedDate: formatJoinedDateLabel(user?.joinedDate, language),
-      role: user?.RoleName === "Admin" || user?.roleName === "admin" || user?.roleID === 1 || (user as unknown as Record<string, unknown>)?.role === "admin" ? "admin" : "user",
+      role: resolveLoginRole(user),
     });
   };
 
@@ -350,7 +378,7 @@ export function LoginPage({
       phone: user?.phone || "",
       avatar: user?.avatar,
       joinedDate: formatJoinedDateLabel(user?.joinedDate, language),
-      role: user?.RoleName === "Admin" || user?.roleName === "admin" || user?.roleID === 1 || (user as unknown as Record<string, unknown>)?.role === "admin" ? "admin" : "user",
+      role: resolveLoginRole(user),
     });
   };
 
@@ -407,7 +435,7 @@ export function LoginPage({
       phone: user?.phone || "",
       avatar: user?.avatar,
       joinedDate: formatJoinedDateLabel(user?.joinedDate, language),
-      role: user?.RoleName === "Admin" || user?.roleName === "admin" || user?.roleID === 1 || (user as unknown as Record<string, unknown>)?.role === "admin" ? "admin" : "user",
+      role: resolveLoginRole(user),
     });
   };
 
@@ -515,9 +543,11 @@ export function LoginPage({
       isLoading={state.isLoading}
       generalError={state.generalError}
       canSubmit={canSubmit}
-      values={state.values}
-      errors={state.errors}
-      copy={copy}
+        values={state.values}
+        errors={state.errors}
+        areaOptions={areaOptions}
+        isAreaDisabled={!state.values.city || isLoadingAreas || areaOptions.length === 0}
+        copy={copy}
       focusedField={state.focusedField}
       showPassword={state.showPassword}
       showConfirmPassword={state.showConfirmPassword}
@@ -540,7 +570,7 @@ export function LoginPage({
           code: normalizeTwoFactorCode(value),
         })
       }
-      onFieldChange={setFieldValue}
+        onFieldChange={handleFieldValueChange}
       onFieldFocus={handleFieldFocus}
       onFieldBlur={handleFieldBlur}
       onTogglePasswordVisibility={() => dispatch({ type: "TOGGLE_PASSWORD" })}

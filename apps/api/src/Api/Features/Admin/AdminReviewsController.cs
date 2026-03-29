@@ -10,7 +10,6 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/reviews")]
-[Authorize(Policy = AuthorizationPolicies.AdminOnly)]
 public class AdminReviewsController : ControllerBase
 {
     private readonly IAdminQueryHandler _adminQueries;
@@ -21,6 +20,7 @@ public class AdminReviewsController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = AuthorizationPolicies.ReviewsView)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -43,6 +43,7 @@ public class AdminReviewsController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Policy = AuthorizationPolicies.ReviewsModerate)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

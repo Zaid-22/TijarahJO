@@ -35,16 +35,21 @@ export const bannersApi = {
         method: "GET",
       });
 
-      if (response.success && response.data?.success) {
-        return response.data.banners.map(b => {
-          // ensure camelCase keys since Backend might return PascalCase if naming policy is missing
-          const camelCaseBanner: any = {};
-          for (const [key, value] of Object.entries(b)) {
-            const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
-            camelCaseBanner[camelKey] = value;
-          }
-          return camelCaseBanner as BannerModel;
-        });
+      if (response.success && response.data) {
+        // Handle PascalCase from backend
+        const isSuccess = response.data.success || (response.data as any).Success;
+        const items = response.data.banners || (response.data as any).Banners;
+        if (isSuccess && items) {
+          return items.map((b: any) => {
+            // ensure camelCase keys since Backend might return PascalCase if naming policy is missing
+            const camelCaseBanner: any = {};
+            for (const [key, value] of Object.entries(b)) {
+              const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
+              camelCaseBanner[camelKey] = value;
+            }
+            return camelCaseBanner as BannerModel;
+          });
+        }
       }
       return [];
     } catch (error) {

@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using TijarahJo.Api.Common.Authorization;
@@ -8,6 +10,30 @@ namespace TijarahJo.Api.Startup;
 
 public static class AuthenticationExtensions
 {
+    private static bool HasAdminAccessClaim(System.Security.Claims.ClaimsPrincipal user)
+        => user.HasClaim(PermissionClaimTypes.AdminAccess, "true")
+           || user.IsInRole(AppRoles.Admin);
+
+    private static bool HasPermission(
+        System.Security.Claims.ClaimsPrincipal user,
+        string permissionKey)
+        => user.IsInRole(AppRoles.Admin)
+           || user.HasClaim(PermissionClaimTypes.Permission, permissionKey);
+
+    private static Action<AuthorizationPolicyBuilder> RequireAdminAccess()
+        => policy =>
+        {
+            policy.RequireAuthenticatedUser();
+            policy.RequireAssertion(context => HasAdminAccessClaim(context.User));
+        };
+
+    private static Action<AuthorizationPolicyBuilder> RequirePermission(string permissionKey)
+        => policy =>
+        {
+            policy.RequireAuthenticatedUser();
+            policy.RequireAssertion(context => HasPermission(context.User, permissionKey));
+        };
+
     public static IServiceCollection AddTijarahJoAuthentication(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -142,12 +168,31 @@ public static class AuthenticationExtensions
             };
         });
 
+        services.AddTransient<IClaimsTransformation, PermissionClaimsTransformation>();
+
         services.AddAuthorizationBuilder()
             .AddPolicy(AuthorizationPolicies.AdminOnly, policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireRole(AppRoles.Admin);
-            });
+            })
+            .AddPolicy(AuthorizationPolicies.AdminAccess, RequireAdminAccess())
+            .AddPolicy(AuthorizationPolicies.UsersView, RequirePermission(PermissionKeys.UsersView))
+            .AddPolicy(AuthorizationPolicies.UsersManage, RequirePermission(PermissionKeys.UsersManage))
+            .AddPolicy(AuthorizationPolicies.PostsView, RequirePermission(PermissionKeys.PostsView))
+            .AddPolicy(AuthorizationPolicies.PostsModerate, RequirePermission(PermissionKeys.PostsModerate))
+            .AddPolicy(AuthorizationPolicies.ReviewsView, RequirePermission(PermissionKeys.ReviewsView))
+            .AddPolicy(AuthorizationPolicies.ReviewsModerate, RequirePermission(PermissionKeys.ReviewsModerate))
+            .AddPolicy(AuthorizationPolicies.ReportsView, RequirePermission(PermissionKeys.ReportsView))
+            .AddPolicy(AuthorizationPolicies.ReportsResolve, RequirePermission(PermissionKeys.ReportsResolve))
+            .AddPolicy(AuthorizationPolicies.ChatView, RequirePermission(PermissionKeys.ChatView))
+            .AddPolicy(AuthorizationPolicies.LocationsManage, RequirePermission(PermissionKeys.LocationsManage))
+            .AddPolicy(AuthorizationPolicies.BannersManage, RequirePermission(PermissionKeys.BannersManage))
+            .AddPolicy(AuthorizationPolicies.SettingsManage, RequirePermission(PermissionKeys.SettingsManage))
+            .AddPolicy(AuthorizationPolicies.AuditView, RequirePermission(PermissionKeys.AuditView))
+            .AddPolicy(AuthorizationPolicies.FraudView, RequirePermission(PermissionKeys.FraudView))
+            .AddPolicy(AuthorizationPolicies.RolesManage, RequirePermission(PermissionKeys.RolesManage))
+            .AddPolicy(AuthorizationPolicies.CategoriesManage, RequirePermission(PermissionKeys.CategoriesManage));
 
         return services;
     }

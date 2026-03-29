@@ -1,4 +1,5 @@
 import { User } from "../types";
+import { readStringArray, toBoolean } from "../services/api/normalizers";
 
 type BackendUserPayload = {
   Id?: string | number;
@@ -21,6 +22,12 @@ type BackendUserPayload = {
   role?: string | number;
   RoleName?: string;
   roleName?: string;
+  HasAdminAccess?: boolean;
+  hasAdminAccess?: boolean;
+  AdminPermissions?: string[];
+  adminPermissions?: string[];
+  Permissions?: string[];
+  permissions?: string[];
 };
 
 type UserFallback = Partial<User> & {
@@ -35,7 +42,56 @@ function asBackendUser(value: unknown): BackendUserPayload | null {
   return value as BackendUserPayload;
 }
 
-function mapRole(roleId: unknown): "admin" | "user" {
+function resolvePermissions(backendUser: BackendUserPayload): string[] {
+  return readStringArray(
+    backendUser.AdminPermissions ??
+      backendUser.adminPermissions ??
+      backendUser.Permissions ??
+      backendUser.permissions,
+  );
+}
+
+export function resolveHasAdminAccessFromPayload(
+  backendUser: BackendUserPayload | null | undefined,
+): boolean {
+  if (!backendUser) {
+    return false;
+  }
+
+  const explicitAdminAccess = toBoolean(
+    backendUser.HasAdminAccess ?? backendUser.hasAdminAccess,
+    false,
+  );
+  if (explicitAdminAccess) {
+    return true;
+  }
+
+  const permissions = resolvePermissions(backendUser);
+  if (permissions.length > 0) {
+    return true;
+  }
+
+  const roleValue =
+    backendUser.RoleID ??
+    backendUser.roleID ??
+    backendUser.Role ??
+    backendUser.role ??
+    backendUser.RoleName ??
+    backendUser.roleName;
+
+  return (
+    roleValue === 1 ||
+    roleValue === "1" ||
+    (typeof roleValue === "string" &&
+      roleValue.trim().toLowerCase() === "admin")
+  );
+}
+
+function mapRole(roleId: unknown, hasAdminAccess: boolean): "admin" | "user" {
+  if (hasAdminAccess) {
+    return "admin";
+  }
+
   if (
     roleId === 1 ||
     roleId === "1" ||
@@ -65,15 +121,13 @@ function toUserFromBackend(
     fallback.email ||
     "";
 
-  const role = mapRole(
-    backendUser.RoleID ??
-      backendUser.roleID ??
-      backendUser.Role ??
-      backendUser.role ??
-      backendUser.RoleName ??
-      backendUser.roleName ??
-      fallback.role,
-  );
+  const hasAdminAccess = resolveHasAdminAccessFromPayload(backendUser);
+  const role = mapRole(undefined, hasAdminAccess);
+  const permissions = resolvePermissions(backendUser);
+  const roleName =
+    backendUser.RoleName ??
+    backendUser.roleName ??
+    (typeof fallback.role === "string" ? fallback.role : undefined);
 
   return {
     id: String(
@@ -90,6 +144,9 @@ function toUserFromBackend(
     name: fullName,
     avatar: backendUser.Avatar || backendUser.avatar || fallback.avatar,
     role,
+    roleName: typeof roleName === "string" ? roleName : undefined,
+    hasAdminAccess,
+    permissions,
   };
 }
 
@@ -122,6 +179,33 @@ export function resolveUserFromAuthPayload(
   }
 
   return toUserFromBackend(backendUser, safeFallback);
+}
+
+export function userHasAdminAccess(user: Pick<User, "role" | "hasAdminAccess" | "permissions"> | null | undefined): boolean {
+  if (!user) {
+    return false;
+  }
+
+  return user.role === "admin" || user.hasAdminAccess === true || (user.permissions?.length ?? 0) > 0;
+}
+
+export function userHasAdminPermission(
+  user: Pick<User, "role" | "hasAdminAccess" | "permissions"> | null | undefined,
+  permissionKey: string,
+): boolean {
+  if (!permissionKey.trim()) {
+    return false;
+  }
+
+  if (!userHasAdminAccess(user)) {
+    return false;
+  }
+
+  if (!user?.permissions || user.permissions.length === 0) {
+    return user?.role === "admin";
+  }
+
+  return user.permissions.includes(permissionKey);
 }
 
 export const shouldClearTokenForAuthError = (error: unknown): boolean => {

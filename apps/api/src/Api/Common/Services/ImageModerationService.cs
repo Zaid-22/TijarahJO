@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Google.Cloud.Vision.V1;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace TijarahJo.Api.Common.Services;
@@ -14,11 +15,15 @@ public interface IImageModerationService
 public class ImageModerationService : IImageModerationService
 {
     private readonly ILogger<ImageModerationService> _logger;
+    private readonly IWebHostEnvironment _environment;
     private readonly Lazy<ImageAnnotatorClient> _client;
 
-    public ImageModerationService(ILogger<ImageModerationService> logger)
+    public ImageModerationService(
+        ILogger<ImageModerationService> logger,
+        IWebHostEnvironment environment)
     {
         _logger = logger;
+        _environment = environment;
         // The API automatically picks up Application Default Credentials (ADC) from the environment.
         _client = new Lazy<ImageAnnotatorClient>(() =>
         {
@@ -38,16 +43,10 @@ public class ImageModerationService : IImageModerationService
     {
         if (_client.Value == null) 
         {
-            _logger.LogWarning("Cloud Vision client not available. Skipping moderation.");
-            return new ModerationResult
-            {
-                IsAdult = false,
-                IsViolent = false,
-                IsMedical = false,
-                IsSpoof = false,
-                IsUnavailable = true,
-                FailureReason = "Image moderation service is unavailable."
-            };
+            _logger.LogWarning("Cloud Vision client not available. {Mode}", _environment.IsDevelopment()
+                ? "Allowing upload in development without moderation."
+                : "Rejecting upload because moderation is required.");
+            return BuildUnavailableResult();
         }
 
         try
@@ -77,16 +76,25 @@ public class ImageModerationService : IImageModerationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during image moderation");
-            return new ModerationResult
-            {
-                IsAdult = false,
-                IsViolent = false,
-                IsMedical = false,
-                IsSpoof = false,
-                IsUnavailable = true,
-                FailureReason = "Image moderation service is unavailable."
-            };
+            return BuildUnavailableResult();
         }
+    }
+
+    private ModerationResult BuildUnavailableResult()
+    {
+        bool isDevelopment = _environment.IsDevelopment();
+
+        return new ModerationResult
+        {
+            IsAdult = false,
+            IsViolent = false,
+            IsMedical = false,
+            IsSpoof = false,
+            IsUnavailable = !isDevelopment,
+            FailureReason = isDevelopment
+                ? null
+                : "Image moderation service is unavailable."
+        };
     }
 }
 

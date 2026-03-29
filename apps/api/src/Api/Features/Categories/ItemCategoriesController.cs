@@ -55,7 +55,7 @@ public class ItemCategoriesController(ICategoryQueryHandler categoryQueries, ICa
         return Ok(DTOMapper.ToCategoryResponseDTO(result.Category));
     }
 
-    [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+    [Authorize(Policy = AuthorizationPolicies.CategoriesManage)]
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -84,7 +84,7 @@ public class ItemCategoriesController(ICategoryQueryHandler categoryQueries, ICa
         );
     }
 
-    [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+    [Authorize(Policy = AuthorizationPolicies.CategoriesManage)]
     [HttpPut("{id:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -111,7 +111,7 @@ public class ItemCategoriesController(ICategoryQueryHandler categoryQueries, ICa
         return Ok(DTOMapper.ToCategoryResponseDTO(result.Category.CategoryModel));
     }
 
-    [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+    [Authorize(Policy = AuthorizationPolicies.CategoriesManage)]
     [HttpPost("upload-image")]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -138,7 +138,7 @@ public class ItemCategoriesController(ICategoryQueryHandler categoryQueries, ICa
         }
     }
 
-    [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+    [Authorize(Policy = AuthorizationPolicies.CategoriesManage)]
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

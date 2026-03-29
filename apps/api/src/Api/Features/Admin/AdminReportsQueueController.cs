@@ -10,7 +10,6 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/reports")]
-[Authorize(Policy = AuthorizationPolicies.AdminOnly)]
 public class AdminReportsQueueController : ControllerBase
 {
     private readonly IAdminDataAccess _adminDataAccess;
@@ -21,6 +20,7 @@ public class AdminReportsQueueController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = AuthorizationPolicies.ReportsView)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult> GetReports(
         [FromQuery] int? status = null,
@@ -33,6 +33,7 @@ public class AdminReportsQueueController : ControllerBase
     }
 
     [HttpPut("{id}/status")]
+    [Authorize(Policy = AuthorizationPolicies.ReportsResolve)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> UpdateReportStatus(int id, [FromBody] UpdateReportStatusRequest request)

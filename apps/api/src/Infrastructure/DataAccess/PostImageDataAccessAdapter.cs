@@ -78,7 +78,8 @@ public sealed class PostImageDataAccessAdapter : IPostImageDataAccess
         entity.UploadedAt = postImage.UploadedAt == default ? entity.UploadedAt : postImage.UploadedAt;
         entity.IsDeleted = postImage.IsDeleted;
 
-        return await _dbContext.SaveChangesAsync(cancellationToken) > 0;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async Task<bool> DeletePostImageAsync(int? postImageId, CancellationToken cancellationToken = default)
