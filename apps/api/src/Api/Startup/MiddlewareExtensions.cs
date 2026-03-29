@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using System.Text.Json;
+using TijarahJo.Api.Common.Utils;
+using TijarahJo.Application.Abstractions.Services;
 
 namespace TijarahJo.Api.Startup;
 
@@ -173,6 +175,52 @@ public static class MiddlewareExtensions
         return app;
     }
 
+    public static WebApplication UseTijarahJoMaintenanceMode(this WebApplication app)
+    {
+        app.Use(async (context, next) =>
+        {
+            if (!ShouldEvaluateMaintenanceMode(context.Request.Path))
+            {
+                await next();
+                return;
+            }
+
+            if (IsMaintenanceBypassRequest(context))
+            {
+                await next();
+                return;
+            }
+
+            var runtimeSettings = context.RequestServices.GetRequiredService<ISystemSettingsRuntimeService>();
+            bool maintenanceModeEnabled =
+                await runtimeSettings.IsMaintenanceModeEnabledAsync(context.RequestAborted);
+
+            if (!maintenanceModeEnabled)
+            {
+                await next();
+                return;
+            }
+
+            context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            context.Response.ContentType = "application/problem+json";
+
+            var problem = new ProblemDetails
+            {
+                Status = StatusCodes.Status503ServiceUnavailable,
+                Title = "Service Unavailable",
+                Detail = "TijarahJo is currently undergoing maintenance. Please try again later.",
+                Type = "https://httpstatuses.com/503",
+                Instance = context.Request.Path
+            };
+            problem.Extensions["code"] = "MAINTENANCE_MODE";
+            problem.Extensions["traceId"] = context.TraceIdentifier;
+
+            await WriteProblemDetailsAsync(context.Response, problem, context.RequestAborted);
+        });
+
+        return app;
+    }
+
     public static WebApplication UseTijarahJoStatusCodePages(this WebApplication app)
     {
         app.UseStatusCodePages(async statusCodeContext =>
@@ -202,5 +250,26 @@ public static class MiddlewareExtensions
         });
 
         return app;
+    }
+
+    private static bool ShouldEvaluateMaintenanceMode(PathString path)
+    {
+        return path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase) ||
+               path.StartsWithSegments("/chatHub", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsMaintenanceBypassRequest(HttpContext context)
+    {
+        PathString path = context.Request.Path;
+
+        if (ApiControllerHelpers.IsAdminUser(context.User))
+        {
+            return true;
+        }
+
+        return path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase) ||
+               path.StartsWithSegments("/swagger", StringComparison.OrdinalIgnoreCase) ||
+               path.StartsWithSegments("/api/v1/auth", StringComparison.OrdinalIgnoreCase) ||
+               path.StartsWithSegments("/api/v1/system/status", StringComparison.OrdinalIgnoreCase);
     }
 }

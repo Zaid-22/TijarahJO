@@ -112,6 +112,8 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<ILocationReadService, LocationReadService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IHeroBannerService, HeroBannerService>();
+        services.AddScoped<ISystemSettingsRuntimeService, SystemSettingsRuntimeService>();
+        services.AddScoped<IUserPermissionService, UserPermissionService>();
         services.AddSingleton<ICacheService, HybridCacheService>();
 
         services.AddSingleton<TijarahJo.Infrastructure.Jobs.ChannelBackgroundJobService>();

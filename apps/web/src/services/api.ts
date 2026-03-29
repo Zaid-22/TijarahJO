@@ -16,6 +16,7 @@ import { reportsApi } from "./api/reports";
 import { rolesApi } from "./api/roles";
 import { searchApi } from "./api/search";
 import { sellersApi } from "./api/sellers";
+import { systemApi } from "./api/system";
 import { usersApi } from "./api/users";
 import { adminApi } from "./api/admin";
 
@@ -33,5 +34,6 @@ export const api = {
   chat: chatApi,
   notifications: notificationsApi,
   search: searchApi,
+  system: systemApi,
   admin: adminApi,
 };

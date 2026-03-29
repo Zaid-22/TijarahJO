@@ -3,6 +3,7 @@ import {
   lazy,
   useEffect,
   useRef,
+  useState,
 } from "react";
 import { SearchProvider, useSearch } from "../contexts/SearchContext";
 import {
@@ -18,10 +19,12 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { ScrollToTop } from "../shared/ui/ScrollToTop";
 
 import { useAuth } from "../contexts/AuthContext";
+import { api } from "../services/api";
 import { deferredToast } from "../utils/toast";
 import { useScrollReset } from "./hooks/useScrollReset";
 import { useChatConnection } from "./hooks/useChatConnection";
 import { useNotificationPolling } from "./hooks/useNotificationPolling";
+import { MaintenanceScreen } from "./components/MaintenanceScreen";
 
 const Header = lazy(() =>
   import("../features/marketplace/components/Header").then((m) => ({
@@ -88,6 +91,9 @@ function AppContent() {
     message: "",
     shownAt: 0,
   });
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
+  const [hasLoadedMaintenanceStatus, setHasLoadedMaintenanceStatus] =
+    useState(false);
   const normalizedPathname = location.pathname
     .toLowerCase()
     .replace(/\/+$/, "");
@@ -99,7 +105,6 @@ function AppContent() {
     primarySegment !== "" && !KNOWN_PRIMARY_SEGMENTS.has(primarySegment);
   const shouldShowGlobalHeader =
     !isAuthRoute && !hasLocalPageHeader && !isUnknownPrimarySegment;
-    normalizedPathname === "/chat" || normalizedPathname.startsWith("/chat/");
 
   // Context Hooks
   const { userProfile } = useUserProfileContext();
@@ -139,6 +144,26 @@ function AppContent() {
   useEffect(() => {
     document.title = "TijarahJo - Jordan's Marketplace";
   }, []);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    const loadMaintenanceStatus = async () => {
+      const status = await api.system.getPublicStatus();
+      if (!isCurrent) {
+        return;
+      }
+
+      setIsMaintenanceMode(status.maintenanceMode);
+      setHasLoadedMaintenanceStatus(true);
+    };
+
+    void loadMaintenanceStatus();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [normalizedPathname]);
 
   const globalHeader = shouldShowGlobalHeader ? (
     <Suspense fallback={null}>
@@ -186,6 +211,23 @@ function AppContent() {
         </div>
       </div>
     );
+  }
+
+  if (!hasLoadedMaintenanceStatus && !isAuthRoute) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex flex-col">
+        <div className="flex-1 flex items-center justify-center">
+          <span
+            aria-hidden="true"
+            className="h-8 w-8 rounded-full border-2 border-primary/20 border-t-primary animate-spin"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (isMaintenanceMode && !isAuthRoute) {
+    return <MaintenanceScreen language={language} />;
   }
 
   return (

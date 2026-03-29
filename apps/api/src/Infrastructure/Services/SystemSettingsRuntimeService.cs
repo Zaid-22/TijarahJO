@@ -1,0 +1,91 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Infrastructure.Persistence;
+
+namespace TijarahJo.Infrastructure.Services;
+
+public sealed class SystemSettingsRuntimeService(
+    TijarahJoDbContext dbContext,
+    IMemoryCache cache) : ISystemSettingsRuntimeService
+{
+    private const string MaintenanceModeCacheKey = "system-settings:maintenance-mode";
+    private static readonly TimeSpan MaintenanceModeCacheDuration = TimeSpan.FromSeconds(15);
+
+    private readonly TijarahJoDbContext _dbContext = dbContext;
+    private readonly IMemoryCache _cache = cache;
+
+    public async Task<bool> IsMaintenanceModeEnabledAsync(CancellationToken cancellationToken = default)
+    {
+        if (_cache.TryGetValue(MaintenanceModeCacheKey, out PublicSystemStatus? cachedStatus) &&
+            cachedStatus is not null)
+        {
+            return cachedStatus.MaintenanceMode;
+        }
+
+        PublicSystemStatus status = await GetPublicStatusCoreAsync(cancellationToken);
+        _cache.Set(MaintenanceModeCacheKey, status, MaintenanceModeCacheDuration);
+        return status.MaintenanceMode;
+    }
+
+    public async Task<PublicSystemStatus> GetPublicStatusAsync(CancellationToken cancellationToken = default)
+    {
+        if (_cache.TryGetValue(MaintenanceModeCacheKey, out PublicSystemStatus? cachedStatus) &&
+            cachedStatus is not null)
+        {
+            return cachedStatus;
+        }
+
+        PublicSystemStatus status = await GetPublicStatusCoreAsync(cancellationToken);
+        _cache.Set(MaintenanceModeCacheKey, status, MaintenanceModeCacheDuration);
+        return status;
+    }
+
+    private async Task<PublicSystemStatus> GetPublicStatusCoreAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var maintenanceSetting = await _dbContext.SystemSettings
+                .AsNoTracking()
+                .Where(setting => setting.SettingKey == "MaintenanceMode")
+                .Select(setting => new
+                {
+                    setting.Value,
+                    setting.UpdatedAt
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (maintenanceSetting is null)
+            {
+                return new PublicSystemStatus
+                {
+                    MaintenanceMode = false
+                };
+            }
+
+            return new PublicSystemStatus
+            {
+                MaintenanceMode = ParseBooleanSetting(maintenanceSetting.Value),
+                MaintenanceModeUpdatedAt = maintenanceSetting.UpdatedAt
+            };
+        }
+        catch
+        {
+            return new PublicSystemStatus
+            {
+                MaintenanceMode = false
+            };
+        }
+    }
+
+    private static bool ParseBooleanSetting(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        string normalized = value.Trim().ToLowerInvariant();
+        return normalized is "true" or "1" or "yes" or "on";
+    }
+}
