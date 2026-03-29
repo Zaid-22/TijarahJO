@@ -60,19 +60,64 @@ public class AdminPermissionsController : ControllerBase
     [HttpPut("role/{roleId}")]
     public async Task<ActionResult> UpdateRolePermissions(int roleId, [FromBody] UpdateRolePermissionsRequest request)
     {
-        // Remove existing
+        bool roleExists = await _dbContext.Roles
+            .AsNoTracking()
+            .AnyAsync(role => role.RoleID == roleId, HttpContext.RequestAborted);
+
+        if (!roleExists)
+        {
+            return NotFound(new { Message = "Role not found." });
+        }
+
+        var requestedPermissionIds = RolePermissionUpdatePlanner.Create(
+            existingPermissionIds: [],
+            requestedPermissionIds: request.PermissionIds).NormalizedPermissionIds;
+
+        if (requestedPermissionIds.Count > 0)
+        {
+            var validPermissionIds = await _dbContext.Permissions
+                .AsNoTracking()
+                .Where(permission => requestedPermissionIds.Contains(permission.PermissionID))
+                .Select(permission => permission.PermissionID)
+                .ToListAsync(HttpContext.RequestAborted);
+
+            var invalidPermissionIds = requestedPermissionIds
+                .Except(validPermissionIds)
+                .OrderBy(permissionId => permissionId)
+                .ToArray();
+
+            if (invalidPermissionIds.Length > 0)
+            {
+                return BadRequest(new
+                {
+                    Message = $"Unknown permission IDs: {string.Join(", ", invalidPermissionIds)}."
+                });
+            }
+        }
+
         var existing = await _dbContext.RolePermissions
             .Where(rp => rp.RoleID == roleId)
             .ToListAsync(HttpContext.RequestAborted);
-        _dbContext.RolePermissions.RemoveRange(existing);
 
-        // Add new
-        foreach (var permId in request.PermissionIds)
+        RolePermissionUpdatePlan updatePlan = RolePermissionUpdatePlanner.Create(
+            existing.Select(rolePermission => rolePermission.PermissionID),
+            requestedPermissionIds);
+
+        var rolePermissionsToRemove = existing
+            .Where(rolePermission => updatePlan.PermissionIdsToRemove.Contains(rolePermission.PermissionID))
+            .ToList();
+
+        if (rolePermissionsToRemove.Count > 0)
+        {
+            _dbContext.RolePermissions.RemoveRange(rolePermissionsToRemove);
+        }
+
+        foreach (int permissionId in updatePlan.PermissionIdsToAdd)
         {
             _dbContext.RolePermissions.Add(new TijarahJo.Domain.Entities.RolePermissionEntity
             {
                 RoleID = roleId,
-                PermissionID = permId
+                PermissionID = permissionId
             });
         }
 
