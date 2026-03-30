@@ -119,7 +119,8 @@ async function registerUser(page, user) {
   await page.locator("#lastName").fill(user.lastName);
   await page.locator("#phone").fill(user.phone);
   await page.locator("#city").selectOption("Amman");
-  await page.locator("#area").fill("Sweifieh");
+  await expect(page.locator("#area")).toBeEnabled({ timeout: 20_000 });
+  await page.locator("#area").selectOption("Sweifieh");
   await page.locator("#authIdentifier").fill(user.email);
   await page.locator("#password").fill(user.password);
   await page.locator("#confirmPassword").fill(user.password);

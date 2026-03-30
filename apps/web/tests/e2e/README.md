@@ -24,5 +24,8 @@ To execute journeys against a real backend (no mock API interception), run:
 
 ```bash
 cd apps/web
-PW_BYPASS_CSP=0 VITE_API_BASE_URL=http://localhost:5033/api npx playwright test --config=playwright.config.cjs --project=chromium tests/browser-e2e/backend-live.spec.cjs
+npm run test:e2e:backend-live
 ```
+
+The backend-live signup journey depends on baseline location seed data and selects
+both city and area from the real dropdown fields rendered by the auth form.
