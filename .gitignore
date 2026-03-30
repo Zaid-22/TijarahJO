@@ -67,6 +67,7 @@ apps/web/test-results/
 .cache/
 *.pid
 parse_and_test.sh
+apps/api/src/Api/uploads/post-images/
 
 # Database
 *.db
