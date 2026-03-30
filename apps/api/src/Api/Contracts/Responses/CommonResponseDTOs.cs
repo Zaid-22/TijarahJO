@@ -38,12 +38,14 @@ public sealed class CityResponseDTO
 {
     public int CityId { get; set; }
     public string CityName { get; set; } = string.Empty;
+    public string CityNameAr { get; set; } = string.Empty;
 }
 
 public sealed class AreaResponseDTO
 {
     public int AreaId { get; set; }
     public string AreaName { get; set; } = string.Empty;
+    public string AreaNameAr { get; set; } = string.Empty;
     public int CityId { get; set; }
 }
 

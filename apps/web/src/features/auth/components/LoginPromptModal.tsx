@@ -53,7 +53,7 @@ export function LoginPromptModal({
 
           <Suspense
             fallback={
-              <div className="min-h-[24rem] animate-pulse rounded-2xl bg-card" />
+              <div className="min-h-96 animate-pulse rounded-2xl bg-card" />
             }
           >
             <LoginPage

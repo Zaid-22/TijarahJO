@@ -3,7 +3,6 @@ import { Language } from "../../translations";
 import { SettingsTranslations } from "../../translations/settings";
 import { SettingsPreferences } from "./types";
 import type { AppNotification } from "../../types";
-import { SavedSearchesSection } from "./SavedSearchesSection";
 import { AccountSection } from "./components/AccountSection";
 import { NotificationsSettingsSection } from "./components/NotificationsSettingsSection";
 import { PrivacySection } from "./components/PrivacySection";
@@ -43,7 +42,6 @@ interface SettingsContentProps {
   displayLocation: string;
   twoFactorDescription?: string;
   twoFactorControl?: ReactNode;
-  onNavigate?: (path: string) => void;
 }
 
 export function SettingsContent({
@@ -76,7 +74,6 @@ export function SettingsContent({
   displayLocation,
   twoFactorDescription,
   twoFactorControl,
-  onNavigate,
 }: SettingsContentProps) {
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -88,8 +85,6 @@ export function SettingsContent({
         displayLocation={displayLocation}
         onEditProfileClick={onEditProfileClick}
       />
-
-      <SavedSearchesSection language={language} onNavigate={onNavigate} />
 
       <NotificationsSettingsSection
         text={text}

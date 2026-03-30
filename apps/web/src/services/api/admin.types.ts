@@ -149,11 +149,13 @@ export type AdminAreaItem = {
   areaID: number;
   cityID: number;
   areaName: string;
+  areaNameAr: string;
 };
 
 export type AdminCityItem = {
   cityID: number;
   cityName: string;
+  cityNameAr: string;
   areas: AdminAreaItem[];
 };
 
@@ -178,4 +180,32 @@ export type AdminReportItem = {
 export type AdminReportListResult = {
   reports: AdminReportItem[];
   totalCount: number;
+};
+
+// ── RBAC Types ──
+
+export type PermissionItem = {
+  permissionID: number;
+  permissionKey: string;
+  description: string;
+  category: string;
+};
+
+// ── Fraud Detection Types ──
+
+export type FraudSignal = {
+  type: string;
+  severity: string;
+  count: number;
+  detail: string;
+};
+
+export type FraudSignalsResult = {
+  rapidRegistrations: boolean;
+  rapidRegistrationCount: number;
+  duplicateListings: number;
+  suspiciousPriceCount: number;
+  reviewBombingTargets: number;
+  checkedAt: string;
+  signals: FraudSignal[];
 };

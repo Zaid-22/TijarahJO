@@ -207,7 +207,7 @@ export function EditProfileFormSections({
 
           <div className="space-y-2">
             <Label htmlFor="city">
-              {t.city || "City"} <span className="text-destructive">*</span>
+              {t.city || "City"}
             </Label>
             <Select value={formData.city} onValueChange={(value) => onFieldChange("city", value)}>
               <SelectTrigger id="city" className={errors.city ? "border-destructive" : ""}>
@@ -238,30 +238,42 @@ export function EditProfileFormSections({
 
           <div className="space-y-2">
             <Label htmlFor="area">
-              {t.area || "Area"} <span className="text-destructive">*</span>
+              {t.area || "Area"}
             </Label>
-            <Input
-              id="area"
-              list="edit-profile-area-options"
+            <Select
               value={formData.area}
-              onChange={(e) => onFieldChange("area", e.target.value)}
-              placeholder={t.enterArea || "Enter your area"}
-              className={errors.area ? "border-destructive" : ""}
-            />
-            {areaSuggestions.length > 0 ? (
-              <datalist id="edit-profile-area-options">
-                {areaSuggestions.map((area) => (
-                  <option key={area} value={area}>
-                    {area}
-                  </option>
-                ))}
-              </datalist>
-            ) : null}
-            {isLoadingAreas ? (
-              <p className="text-xs text-muted-foreground">
-                {language === "ar" ? "جارٍ تحميل المناطق..." : "Loading areas..."}
-              </p>
-            ) : null}
+              onValueChange={(value) => onFieldChange("area", value)}
+              disabled={!formData.city || isLoadingAreas}
+            >
+              <SelectTrigger id="area" className={errors.area ? "border-destructive" : ""}>
+                <SelectValue placeholder={
+                  !formData.city
+                    ? language === "ar" ? "اختر المدينة أولاً" : "Select a city first"
+                    : isLoadingAreas
+                      ? language === "ar" ? "جارٍ تحميل المناطق..." : "Loading areas..."
+                      : t.enterArea || "Select your area"
+                } />
+              </SelectTrigger>
+              <SelectContent>
+                {areaSuggestions.length > 0 ? (
+                  areaSuggestions.map((area) => (
+                    <SelectItem key={area} value={area}>
+                      {area}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="__no_profile_areas__" disabled>
+                    {isLoadingAreas
+                      ? language === "ar"
+                        ? "جارٍ تحميل المناطق..."
+                        : "Loading areas..."
+                      : language === "ar"
+                        ? "لا توجد مناطق متاحة"
+                        : "No areas available"}
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
             {errors.area ? <p className="text-sm text-destructive">{errors.area}</p> : null}
           </div>
 

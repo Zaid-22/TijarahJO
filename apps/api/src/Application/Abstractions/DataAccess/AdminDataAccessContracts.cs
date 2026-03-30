@@ -139,11 +139,11 @@ public interface IAdminDataAccess
 
     // Locations CRUD
     Task<System.Collections.Generic.IReadOnlyList<AdminCityItem>> GetCitiesWithAreasAsync(CancellationToken cancellationToken = default);
-    Task<int> CreateCityAsync(string cityName, CancellationToken cancellationToken = default);
-    Task<bool> UpdateCityAsync(int cityId, string cityName, CancellationToken cancellationToken = default);
+    Task<int> CreateCityAsync(string cityName, string cityNameAr, CancellationToken cancellationToken = default);
+    Task<bool> UpdateCityAsync(int cityId, string cityName, string cityNameAr, CancellationToken cancellationToken = default);
     Task<bool> DeleteCityAsync(int cityId, CancellationToken cancellationToken = default);
-    Task<int> CreateAreaAsync(int cityId, string areaName, CancellationToken cancellationToken = default);
-    Task<bool> UpdateAreaAsync(int areaId, string areaName, CancellationToken cancellationToken = default);
+    Task<int> CreateAreaAsync(int cityId, string areaName, string areaNameAr, CancellationToken cancellationToken = default);
+    Task<bool> UpdateAreaAsync(int areaId, string areaName, string areaNameAr, CancellationToken cancellationToken = default);
     Task<bool> DeleteAreaAsync(int areaId, CancellationToken cancellationToken = default);
 
     // Reports
@@ -207,12 +207,14 @@ public sealed class AdminAreaItem
     public int AreaID { get; init; }
     public int CityID { get; init; }
     public string AreaName { get; init; } = string.Empty;
+    public string AreaNameAr { get; init; } = string.Empty;
 }
 
 public sealed class AdminCityItem
 {
     public int CityID { get; init; }
     public string CityName { get; init; } = string.Empty;
+    public string CityNameAr { get; init; } = string.Empty;
     public System.Collections.Generic.IReadOnlyList<AdminAreaItem> Areas { get; init; } = System.Array.Empty<AdminAreaItem>();
 }
 

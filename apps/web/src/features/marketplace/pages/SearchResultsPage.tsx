@@ -19,8 +19,6 @@ import { rankMarketplacePosts } from "../search/marketplaceSearch";
 import { useMarketplaceSearchResults } from "../search/useMarketplaceSearchResults";
 import { useMarketplaceDiscoveryState } from "../../../shared/hooks/useMarketplaceDiscoveryState";
 import { useMarketplaceSearchFilter } from "../../../shared/hooks/useMarketplaceSearchFilter";
-import { useSavedSearches } from "../../../shared/hooks/useSavedSearches";
-import { Bookmark, BookmarkCheck } from "lucide-react";
 
 interface SearchResultsPageProps {
   searchQuery: string;
@@ -245,29 +243,6 @@ export function SearchResultsPage({
     clearSearch();
   }, [clearSearch]);
 
-  const { addSavedSearch, isSearchSaved } = useSavedSearches();
-  const currentSearchIsSaved = isSearchSaved(
-    normalizedSearchQuery,
-    searchFilters.category,
-    searchFilters.city,
-  );
-
-  const handleSaveSearch = useCallback(() => {
-    if (
-      !normalizedSearchQuery &&
-      !searchFilters.category &&
-      !searchFilters.city
-    )
-      return;
-    addSavedSearch({
-      query: normalizedSearchQuery,
-      category: searchFilters.category,
-      city: searchFilters.city,
-      minPrice: searchFilters.minPrice,
-      maxPrice: searchFilters.maxPrice,
-    });
-  }, [normalizedSearchQuery, searchFilters, addSavedSearch]);
-
   return (
     <PageShell>
       <SubpageHeader
@@ -283,33 +258,6 @@ export function SearchResultsPage({
             : language === "ar"
               ? "نتائج البحث"
               : "Search results"
-        }
-        rightContent={
-          normalizedSearchQuery ? (
-            <button
-              type="button"
-              onClick={handleSaveSearch}
-              disabled={currentSearchIsSaved}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                currentSearchIsSaved
-                  ? "bg-primary/10 text-primary cursor-default"
-                  : "bg-card border border-border text-foreground hover:border-primary/30"
-              }`}
-              aria-label={language === "ar" ? "حفظ البحث" : "Save search"}
-            >
-              {currentSearchIsSaved ? (
-                <>
-                  <BookmarkCheck className="h-4 w-4" />
-                  {language === "ar" ? "محفوظ" : "Saved"}
-                </>
-              ) : (
-                <>
-                  <Bookmark className="h-4 w-4" />
-                  {language === "ar" ? "حفظ البحث" : "Save"}
-                </>
-              )}
-            </button>
-          ) : null
         }
       />
 

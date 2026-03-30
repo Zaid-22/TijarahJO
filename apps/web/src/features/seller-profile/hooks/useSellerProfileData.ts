@@ -58,6 +58,7 @@ interface SellerProfileState {
   name: string;
   joinDate: string;
   location: string;
+  bio?: string;
   avatar?: string;
 }
 
@@ -96,6 +97,7 @@ export function useSellerProfileData(userId: string | undefined) {
           name: sellerName,
           joinDate: seller.joinedDate || "2024",
           location,
+          bio: seller.bio,
           avatar: seller.avatar,
         });
 
@@ -130,6 +132,7 @@ export function useSellerProfileData(userId: string | undefined) {
             name: fallbackSellerName,
             joinDate: String(sellerRow.joinedAt ?? "2024"),
             location,
+            bio: String(sellerRow.bio ?? ""),
             avatar: String(sellerRow.avatar ?? ""),
           });
         }

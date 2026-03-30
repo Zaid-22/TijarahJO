@@ -1,4 +1,5 @@
 import { apiRequest, debugError } from "./client";
+import { toCamelCaseKeys } from "./admin";
 
 export type BannerModel = {
   bannerID: number;
@@ -36,19 +37,9 @@ export const bannersApi = {
       });
 
       if (response.success && response.data) {
-        // Handle PascalCase from backend
-        const isSuccess = response.data.success || (response.data as any).Success;
-        const items = response.data.banners || (response.data as any).Banners;
-        if (isSuccess && items) {
-          return items.map((b: any) => {
-            // ensure camelCase keys since Backend might return PascalCase if naming policy is missing
-            const camelCaseBanner: any = {};
-            for (const [key, value] of Object.entries(b)) {
-              const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
-              camelCaseBanner[camelKey] = value;
-            }
-            return camelCaseBanner as BannerModel;
-          });
+        const data = toCamelCaseKeys<HeroBannerListResult>(response.data);
+        if (data.success && data.banners) {
+          return data.banners;
         }
       }
       return [];

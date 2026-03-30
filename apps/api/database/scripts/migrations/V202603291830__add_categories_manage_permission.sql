@@ -1,6 +1,7 @@
 -- =============================================================================
 -- V202603291830 — Add Categories Manage Permission
--- Adds the missing categories.manage permission and grants it to Admin.
+-- ATOMICITY_EXCEPTION: Idempotent seed inserts for the missing permission and
+-- default Admin role mapping.
 -- =============================================================================
 
 USE TijarahJoDB;

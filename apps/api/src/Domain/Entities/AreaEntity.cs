@@ -5,6 +5,7 @@ public sealed class AreaEntity
     public int AreaID { get; set; }
     public int CityID { get; set; }
     public string AreaName { get; set; } = string.Empty;
+    public string AreaNameAr { get; set; } = string.Empty;
 
     // Navigation
     public CityEntity? City { get; set; }

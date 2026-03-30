@@ -33,6 +33,7 @@ public sealed class TwoFactorDeliveryTests
             authCommands,
             new FakeUserQueryHandler(),
             new FakeRoleService(),
+            new FakeUserPermissionService(),
             CreateTwoFactorService(),
             new FakeEmailTwoFactorSender(new EmailTwoFactorSendResult(false, "SMTP unavailable.")),
             new FakeTokenBlacklistService(),
@@ -67,6 +68,7 @@ public sealed class TwoFactorDeliveryTests
             users,
             new FakeTokenService(),
             new FakeRoleService(),
+            new FakeUserPermissionService(),
             new FakeEmailTwoFactorSender(new EmailTwoFactorSendResult(false, "Two-factor email delivery is not configured on the server.")),
             NullLogger<TwoFactorController>.Instance
         )
@@ -97,6 +99,7 @@ public sealed class TwoFactorDeliveryTests
             users,
             new FakeTokenService(),
             new FakeRoleService(),
+            new FakeUserPermissionService(),
             new FakeEmailTwoFactorSender(new EmailTwoFactorSendResult(
                 true,
                 DebugCode: "123456",
@@ -212,6 +215,20 @@ public sealed class TwoFactorDeliveryTests
 
         public Task<UserExistsQueryResult> ExistsAsync(int userId, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
+    }
+
+    private sealed class FakeUserPermissionService : IUserPermissionService
+    {
+        public Task<UserPermissionSnapshot> GetUserPermissionSnapshotAsync(int userId, CancellationToken cancellationToken = default)
+            => Task.FromResult(new UserPermissionSnapshot
+            {
+                RoleName = "User",
+                HasAdminAccess = false,
+                PermissionKeys = []
+            });
+
+        public Task<bool> HasPermissionAsync(int userId, string permissionKey, CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
     }
 
     private sealed class FakeRoleService : IRoleService

@@ -114,7 +114,7 @@ export function HomeHeroSection({
     return (
       <section className="relative w-full overflow-hidden bg-gradient-to-b from-muted/30 to-background py-4 sm:py-6">
         <div className="relative w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
-          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl bg-muted animate-pulse h-[450px] sm:h-[350px] md:h-auto md:aspect-[21/8] w-full" />
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl bg-muted animate-pulse h-96 sm:h-80 md:h-auto md:aspect-[21/8] w-full" />
         </div>
       </section>
     );
@@ -134,7 +134,7 @@ export function HomeHeroSection({
       <div className="relative w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 pt-4 sm:pt-6 pb-2">
         <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl">
           {/* Aspect ratio wrapper — responsive for mobile, taller or aspect based */}
-          <div className="relative w-full min-h-[450px] sm:min-h-[350px] md:min-h-0 md:aspect-[21/8]">
+          <div className="relative w-full min-h-96 sm:min-h-80 md:min-h-0 md:aspect-[21/8]">
             {banners.map((banner, index) => (
               <button
                 key={banner.id}
@@ -157,6 +157,7 @@ export function HomeHeroSection({
                 }
                 aria-hidden={index !== currentIndex}
                 tabIndex={index === currentIndex ? 0 : -1}
+                disabled={index !== currentIndex}
               >
                 <div className={`relative w-full h-full flex flex-col md:flex-row items-center justify-center md:justify-between px-6 sm:px-12 lg:px-24 py-6 md:py-0 gap-4 md:gap-0 ${isRTL ? 'md:flex-row-reverse' : ''}`}>
                   {/* Text Content Area */}

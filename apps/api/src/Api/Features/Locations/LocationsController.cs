@@ -26,7 +26,8 @@ public sealed class LocationsController : ControllerBase
         return Ok(cities.Select(city => new CityResponseDTO
         {
             CityId = city.CityId,
-            CityName = city.CityName
+            CityName = city.CityName,
+            CityNameAr = city.CityNameAr
         }).ToList());
     }
 
@@ -46,6 +47,7 @@ public sealed class LocationsController : ControllerBase
         {
             AreaId = area.AreaId,
             AreaName = area.AreaName,
+            AreaNameAr = area.AreaNameAr,
             CityId = area.CityId
         }).ToList());
     }
