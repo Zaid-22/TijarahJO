@@ -190,7 +190,11 @@ if (featureFlags.EnableHealthChecks)
 // ---------------------------------------------------------------------------
 // Rate limiting
 // ---------------------------------------------------------------------------
-if (featureFlags.EnableRateLimiting)
+// Keep production/staging protection on, but avoid throttling local dev and
+// backend-connected browser E2E runs that legitimately issue many short-burst
+// requests from a single loopback client.
+bool enableRateLimiting = featureFlags.EnableRateLimiting && !builder.Environment.IsDevelopment();
+if (enableRateLimiting)
 {
     builder.Services.AddRateLimiter(options =>
     {
@@ -297,7 +301,7 @@ if (urls.Contains("https", StringComparison.OrdinalIgnoreCase))
 
 app.UseCors("AllowAll");
 
-if (featureFlags.EnableRateLimiting)
+if (enableRateLimiting)
     app.UseRateLimiter();
 
 app.UseAuthentication();
