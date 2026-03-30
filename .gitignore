@@ -66,6 +66,7 @@ apps/web/test-results/
 *.temp
 .cache/
 *.pid
+parse_and_test.sh
 
 # Database
 *.db
