@@ -1,88 +1,131 @@
-import { ShieldAlert, Wrench } from "lucide-react";
+import { ArrowRight, ShieldAlert } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Logo } from "../../shared/ui/logo";
 
 type MaintenanceScreenProps = {
   language: "en" | "ar";
+  maintenanceReason?: string | null;
+  maintenanceExpectedReturn?: string | null;
 };
 
 const copyByLanguage = {
   en: {
-    eyebrow: "Scheduled maintenance",
-    title: "We're improving TijarahJo right now.",
-    description:
-      "The public marketplace is temporarily unavailable while we finish maintenance. Please check back shortly.",
-    adminHint: "Admins can still sign in to manage the platform.",
+    eyebrow: "Maintenance mode",
+    title: "We'll be back shortly.",
+    description: "The marketplace is temporarily unavailable.",
+    expectedReturnLabel: "Expected return",
+    expectedReturnFallback: "Within about 1 hour",
+    reasonLabel: "Why this is happening",
+    reasonFallback: "Performance improvements and feature updates.",
+    guidanceLabel: "What you can do now",
+    guidance: "Please check back in a little while. Admins can still sign in and use the dashboard.",
     adminAction: "Admin sign in",
   },
   ar: {
-    eyebrow: "صيانة مجدولة",
-    title: "نعمل الآن على تحسين تجارة جو.",
-    description:
-      "السوق العام غير متاح مؤقتاً بينما ننهي أعمال الصيانة. الرجاء المحاولة مرة أخرى بعد قليل.",
-    adminHint: "لا يزال بإمكان المشرفين تسجيل الدخول لإدارة المنصة.",
+    eyebrow: "وضع الصيانة",
+    title: "سنعود قريباً.",
+    description: "السوق متوقف مؤقتاً.",
+    expectedReturnLabel: "الوقت المتوقع للعودة",
+    expectedReturnFallback: "خلال حوالي ساعة",
+    reasonLabel: "سبب التوقف",
+    reasonFallback: "تحسين الأداء وإضافة ميزات جديدة.",
+    guidanceLabel: "ماذا يمكنك أن تفعل الآن",
+    guidance:
+      "يرجى المحاولة مرة أخرى بعد قليل. لا يزال بإمكان المشرفين تسجيل الدخول واستخدام لوحة الإدارة.",
     adminAction: "دخول المشرفين",
   },
 } as const;
 
-export function MaintenanceScreen({ language }: MaintenanceScreenProps) {
+export function MaintenanceScreen({
+  language,
+  maintenanceReason,
+  maintenanceExpectedReturn,
+}: MaintenanceScreenProps) {
   const isArabic = language === "ar";
   const copy = copyByLanguage[language];
+  const textAlignClass = isArabic ? "text-right" : "text-left";
+  const reason = maintenanceReason?.trim() || copy.reasonFallback;
+  const expectedReturn =
+    maintenanceExpectedReturn?.trim() || copy.expectedReturnFallback;
 
   return (
     <div
       dir={isArabic ? "rtl" : "ltr"}
-      className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(37,99,235,0.18),_transparent_35%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_45%,_#ffffff_100%)] text-slate-950"
+      className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,_#f8fbff_0%,_#eef3ff_55%,_#ffffff_100%)] text-slate-950"
     >
-      <div className="mx-auto flex min-h-screen max-w-5xl items-center px-6 py-16 sm:px-10">
-        <div className="grid w-full gap-8 rounded-[2rem] border border-slate-200/80 bg-white/85 p-8 shadow-[0_24px_80px_rgba(15,23,42,0.12)] backdrop-blur sm:p-12 lg:grid-cols-[1.3fr_0.7fr]">
-          <section className="space-y-6">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_center,_rgba(59,130,246,0.12),_transparent_62%)]" />
+
+      <div className="mx-auto flex min-h-screen max-w-3xl items-center px-6 py-10 sm:px-8 lg:px-10">
+        <section
+          className={`w-full rounded-[2rem] border border-slate-200/80 bg-white/95 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-sm sm:p-12 ${textAlignClass}`}
+        >
+          <div className={`mb-8 flex ${isArabic ? "justify-start sm:justify-end" : "justify-start"}`}>
+            <Logo size="md" />
+          </div>
+
+          <div
+            className={`mb-6 flex ${isArabic ? "justify-start sm:justify-end" : "justify-start"}`}
+          >
             <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700">
               <ShieldAlert className="h-4 w-4" />
               <span>{copy.eyebrow}</span>
             </div>
+          </div>
 
-            <div className="space-y-4">
-              <h1 className="max-w-2xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
-                {copy.title}
-              </h1>
-              <p className="max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">
-                {copy.description}
+          <div className="space-y-4">
+            <h1 className="max-w-2xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
+              {copy.title}
+            </h1>
+            <p className="max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">
+              {copy.description}
+            </p>
+          </div>
+
+          <div className="mt-8 space-y-3 border-t border-slate-200 pt-6">
+            <div className="rounded-2xl bg-slate-50 px-4 py-3">
+              <p className="text-xs font-semibold tracking-wide text-slate-500">
+                {copy.expectedReturnLabel}
+              </p>
+              <p className="mt-1 text-base font-semibold text-slate-900">
+                {expectedReturn}
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4">
-              <Link
-                to="/login"
-                className="inline-flex items-center justify-center rounded-full bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
-              >
-                {copy.adminAction}
-              </Link>
-              <p className="text-sm text-slate-500">{copy.adminHint}</p>
+            <div className="rounded-2xl bg-slate-50 px-4 py-3">
+              <p className="text-xs font-semibold tracking-wide text-slate-500">
+                {copy.reasonLabel}
+              </p>
+              <p className="mt-1 text-sm leading-7 text-slate-700">
+                {reason}
+              </p>
             </div>
-          </section>
 
-          <aside className="rounded-[1.5rem] border border-slate-200 bg-slate-950 p-6 text-slate-100 shadow-inner">
-            <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/20 text-blue-300">
-              <Wrench className="h-6 w-6" />
+            <div className="rounded-2xl bg-slate-50 px-4 py-3">
+              <p className="text-xs font-semibold tracking-wide text-slate-500">
+                {copy.guidanceLabel}
+              </p>
+              <p className="mt-1 text-sm leading-7 text-slate-700">
+                {copy.guidance}
+              </p>
             </div>
-            <h2 className="text-xl font-semibold">
-              {isArabic ? "نعمل خلف الكواليس" : "Working behind the scenes"}
-            </h2>
-            <p className="mt-3 text-sm leading-7 text-slate-300">
-              {isArabic
-                ? "نقوم حالياً بتحديثات على المنصة لضمان تجربة أفضل وأكثر استقراراً عند عودة الخدمة."
-                : "We're applying platform updates so the marketplace comes back faster, cleaner, and more reliable."}
-            </p>
-            <div className="mt-8 space-y-3 text-sm text-slate-300">
-              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                {isArabic ? "لوحة الإدارة ستبقى متاحة للمشرفين." : "Admin tools remain available for administrators."}
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                {isArabic ? "سيعود السوق العام تلقائياً بعد إيقاف وضع الصيانة." : "The public marketplace will return automatically when maintenance mode is turned off."}
-              </div>
-            </div>
-          </aside>
-        </div>
+          </div>
+
+          <div
+            className={`mt-8 flex ${
+              isArabic ? "justify-start sm:justify-end" : "justify-start"
+            }`}
+          >
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+            >
+              <span>{copy.adminAction}</span>
+              <ArrowRight
+                className={`h-4 w-4 ${isArabic ? "rotate-180" : ""}`}
+              />
+            </Link>
+          </div>
+        </section>
       </div>
     </div>
   );

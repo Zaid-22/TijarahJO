@@ -98,12 +98,11 @@ export function validateEditProfileForm(
       language === "ar" ? "اسم العائلة مطلوب" : "Last name is required";
   }
 
-  if (!formData.city.trim()) {
-    errors.city = language === "ar" ? "المدينة مطلوبة" : "City is required";
-  }
-
-  if (!formData.area.trim()) {
-    errors.area = language === "ar" ? "المنطقة مطلوبة" : "Area is required";
+  if (formData.city.trim() && !formData.area.trim()) {
+    errors.area =
+      language === "ar"
+        ? "المنطقة مطلوبة عند تحديد المدينة"
+        : "Area is required when a city is selected";
   }
 
   const phoneDigits = formData.phone.replace(/\D/g, "");

@@ -198,7 +198,7 @@ export function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="h-[250px] w-full">
-                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                <ResponsiveContainer width="100%" height={250}>
                   <LineChart
                     data={analytics.weeklyUsers}
                     margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
@@ -263,7 +263,7 @@ export function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="h-[250px] w-full">
-                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                <ResponsiveContainer width="100%" height={250}>
                   <BarChart
                     data={analytics.categoryData}
                     margin={{ top: 10, right: 10, left: -20, bottom: 0 }}

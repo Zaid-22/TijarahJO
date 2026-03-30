@@ -21,7 +21,8 @@ public sealed class LocationReadService : ILocationReadService
             .Select(city => new CityLookupResult
             {
                 CityId = city.CityID,
-                CityName = city.CityName
+                CityName = city.CityName,
+                CityNameAr = city.CityNameAr
             })
             .ToListAsync(cancellationToken);
     }
@@ -36,6 +37,7 @@ public sealed class LocationReadService : ILocationReadService
             {
                 AreaId = area.AreaID,
                 AreaName = area.AreaName,
+                AreaNameAr = area.AreaNameAr,
                 CityId = area.CityID
             })
             .ToListAsync(cancellationToken);

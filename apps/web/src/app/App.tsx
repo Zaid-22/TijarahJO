@@ -25,6 +25,7 @@ import { useScrollReset } from "./hooks/useScrollReset";
 import { useChatConnection } from "./hooks/useChatConnection";
 import { useNotificationPolling } from "./hooks/useNotificationPolling";
 import { MaintenanceScreen } from "./components/MaintenanceScreen";
+import type { PublicSystemStatus } from "../services/api/system";
 
 const Header = lazy(() =>
   import("../features/marketplace/components/Header").then((m) => ({
@@ -91,7 +92,8 @@ function AppContent() {
     message: "",
     shownAt: 0,
   });
-  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
+  const [maintenanceStatus, setMaintenanceStatus] =
+    useState<PublicSystemStatus | null>(null);
   const [hasLoadedMaintenanceStatus, setHasLoadedMaintenanceStatus] =
     useState(false);
   const normalizedPathname = location.pathname
@@ -154,7 +156,7 @@ function AppContent() {
         return;
       }
 
-      setIsMaintenanceMode(status.maintenanceMode);
+      setMaintenanceStatus(status);
       setHasLoadedMaintenanceStatus(true);
     };
 
@@ -226,8 +228,14 @@ function AppContent() {
     );
   }
 
-  if (isMaintenanceMode && !isAuthRoute) {
-    return <MaintenanceScreen language={language} />;
+  if (maintenanceStatus?.maintenanceMode && !isAuthRoute) {
+    return (
+      <MaintenanceScreen
+        language={language}
+        maintenanceReason={maintenanceStatus.maintenanceReason}
+        maintenanceExpectedReturn={maintenanceStatus.maintenanceExpectedReturn}
+      />
+    );
   }
 
   return (

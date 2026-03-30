@@ -21,8 +21,8 @@ SEED_BASELINE_FILES=(
 
 SEED_DEV_FILES=(
   "seeds/dev/INSERT_DEV_SEED_USER.sql"
+  "seeds/dev/INSERT_ADMIN_USER.sql"
   "seeds/dev/INSERT_SAMPLE_POSTS.sql"
-  "seeds/dev/INSERT_DUMMY_IMAGES.sql"
 )
 
 SEED_TEST_FILES=(

@@ -29,7 +29,7 @@ public sealed class HeroBannerListResult
     public bool Success { get; init; }
     public int StatusCode { get; init; }
     public string? Message { get; init; }
-    public IReadOnlyList<HeroBannerModel> Banners { get; init; } = Array.Empty<HeroBannerModel>();
+    public IReadOnlyList<HeroBannerModel> Banners { get; init; } = [];
 }
 
 public sealed class HeroBannerMutationResult

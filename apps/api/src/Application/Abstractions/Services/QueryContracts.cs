@@ -146,12 +146,14 @@ public sealed class CityLookupResult
 {
     public int CityId { get; init; }
     public string CityName { get; init; } = string.Empty;
+    public string CityNameAr { get; init; } = string.Empty;
 }
 
 public sealed class AreaLookupResult
 {
     public int AreaId { get; init; }
     public string AreaName { get; init; } = string.Empty;
+    public string AreaNameAr { get; init; } = string.Empty;
     public int CityId { get; init; }
 }
 

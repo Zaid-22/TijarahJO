@@ -45,15 +45,23 @@ public sealed class SystemSettingsRuntimeService(
     {
         try
         {
-            var maintenanceSetting = await _dbContext.SystemSettings
+            var settings = await _dbContext.SystemSettings
                 .AsNoTracking()
-                .Where(setting => setting.SettingKey == "MaintenanceMode")
+                .Where(setting =>
+                    setting.SettingKey == "MaintenanceMode" ||
+                    setting.SettingKey == "MaintenanceReason" ||
+                    setting.SettingKey == "MaintenanceExpectedReturn")
                 .Select(setting => new
                 {
+                    setting.SettingKey,
                     setting.Value,
                     setting.UpdatedAt
                 })
-                .FirstOrDefaultAsync(cancellationToken);
+                .ToListAsync(cancellationToken);
+
+            var maintenanceSetting = settings.FirstOrDefault(setting => setting.SettingKey == "MaintenanceMode");
+            var maintenanceReasonSetting = settings.FirstOrDefault(setting => setting.SettingKey == "MaintenanceReason");
+            var maintenanceExpectedReturnSetting = settings.FirstOrDefault(setting => setting.SettingKey == "MaintenanceExpectedReturn");
 
             if (maintenanceSetting is null)
             {
@@ -66,7 +74,9 @@ public sealed class SystemSettingsRuntimeService(
             return new PublicSystemStatus
             {
                 MaintenanceMode = ParseBooleanSetting(maintenanceSetting.Value),
-                MaintenanceModeUpdatedAt = maintenanceSetting.UpdatedAt
+                MaintenanceModeUpdatedAt = maintenanceSetting.UpdatedAt,
+                MaintenanceReason = NormalizeTextSetting(maintenanceReasonSetting?.Value),
+                MaintenanceExpectedReturn = NormalizeTextSetting(maintenanceExpectedReturnSetting?.Value)
             };
         }
         catch
@@ -87,5 +97,15 @@ public sealed class SystemSettingsRuntimeService(
 
         string normalized = value.Trim().ToLowerInvariant();
         return normalized is "true" or "1" or "yes" or "on";
+    }
+
+    private static string? NormalizeTextSetting(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return value.Trim();
     }
 }

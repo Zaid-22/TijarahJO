@@ -44,7 +44,7 @@ export function EditProfilePage({
   const [hasChanges, setHasChanges] = useState(false);
   const [errors, setErrors] = useState<EditProfileValidationErrors>({});
   const { cityNames, areaNames, isLoadingCities, isLoadingAreas } =
-    useLocationOptions(formData.city);
+    useLocationOptions(formData.city, language);
   const cityOptions = useMemo(() => {
     const normalizedOptionSet = new Set(
       cityNames
@@ -79,7 +79,13 @@ export function EditProfilePage({
   }, [areaNames, formData.area]);
 
   const handleFieldChange = (field: keyof UserProfile, value: string) => {
-    setFormData((current) => applyProfileFieldChange(current, field, value));
+    setFormData((current) => {
+      const next = applyProfileFieldChange(current, field, value);
+      if (field === "city" && value !== current.city) {
+        return applyProfileFieldChange(next, "area", "");
+      }
+      return next;
+    });
     setHasChanges(true);
   };
 

@@ -7,11 +7,13 @@ function normalizeLocationName(value: string): string {
   return value.trim().toLocaleLowerCase();
 }
 
-export function useLocationOptions(selectedCityName: string) {
+export function useLocationOptions(selectedCityName: string, language?: string) {
   const [cities, setCities] = useState<LocationCity[]>([]);
   const [areas, setAreas] = useState<LocationArea[]>([]);
   const [isLoadingCities, setIsLoadingCities] = useState(true);
   const [isLoadingAreas, setIsLoadingAreas] = useState(false);
+
+  const isArabic = language === "ar";
 
   const normalizedSelectedCityName = normalizeLocationName(selectedCityName);
 
@@ -20,8 +22,11 @@ export function useLocationOptions(selectedCityName: string) {
       return undefined;
     }
 
+    // Match by either English or Arabic name
     return cities.find(
-      (city) => normalizeLocationName(city.cityName) === normalizedSelectedCityName,
+      (city) =>
+        normalizeLocationName(city.cityName) === normalizedSelectedCityName ||
+        normalizeLocationName(city.cityNameAr) === normalizedSelectedCityName,
     )?.cityId;
   }, [cities, normalizedSelectedCityName]);
 
@@ -89,8 +94,21 @@ export function useLocationOptions(selectedCityName: string) {
     };
   }, [selectedCityId]);
 
-  const cityNames = useMemo(() => cities.map((city) => city.cityName), [cities]);
-  const areaNames = useMemo(() => areas.map((area) => area.areaName), [areas]);
+  const cityNames = useMemo(
+    () =>
+      cities.map((city) =>
+        isArabic && city.cityNameAr ? city.cityNameAr : city.cityName,
+      ),
+    [cities, isArabic],
+  );
+
+  const areaNames = useMemo(
+    () =>
+      areas.map((area) =>
+        isArabic && area.areaNameAr ? area.areaNameAr : area.areaName,
+      ),
+    [areas, isArabic],
+  );
 
   return {
     cities,

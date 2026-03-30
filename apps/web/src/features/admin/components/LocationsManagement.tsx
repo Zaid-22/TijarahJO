@@ -19,7 +19,7 @@ import {
   DialogFooter,
 } from "../../../shared/ui/dialog";
 import { api } from "../../../services/api";
-import { AdminCityItem } from "../../../services/api/admin";
+import { type AdminCityItem } from "../../../services/api/admin.types";
 import { logger } from "../../../shared/lib/logger";
 
 export function LocationsManagement() {
@@ -33,6 +33,7 @@ export function LocationsManagement() {
     "addCity" | "editCity" | "addArea" | "editArea"
   >("addCity");
   const [editName, setEditName] = useState("");
+  const [editNameAr, setEditNameAr] = useState("");
   const [editId, setEditId] = useState(0);
   const [editCityId, setEditCityId] = useState(0);
 
@@ -63,33 +64,35 @@ export function LocationsManagement() {
   const openDialog = (
     mode: typeof dialogMode,
     name = "",
+    nameAr = "",
     id = 0,
     cityId = 0,
   ) => {
     setDialogMode(mode);
     setEditName(name);
+    setEditNameAr(nameAr);
     setEditId(id);
     setEditCityId(cityId);
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
-    if (!editName.trim()) {
-      toast.error("Name is required");
+    if (!editName.trim() || !editNameAr.trim()) {
+      toast.error("Both English and Arabic names are required");
       return;
     }
     try {
       if (dialogMode === "addCity") {
-        await api.admin.createCity(editName.trim());
+        await api.admin.createCity(editName.trim(), editNameAr.trim());
         toast.success("City created");
       } else if (dialogMode === "editCity") {
-        await api.admin.updateCity(editId, editName.trim());
+        await api.admin.updateCity(editId, editName.trim(), editNameAr.trim());
         toast.success("City updated");
       } else if (dialogMode === "addArea") {
-        await api.admin.createArea(editCityId, editName.trim());
+        await api.admin.createArea(editCityId, editName.trim(), editNameAr.trim());
         toast.success("Area created");
       } else if (dialogMode === "editArea") {
-        await api.admin.updateArea(editId, editName.trim());
+        await api.admin.updateArea(editId, editName.trim(), editNameAr.trim());
         toast.success("Area updated");
       }
       setDialogOpen(false);
@@ -198,6 +201,11 @@ export function LocationsManagement() {
                     <span className="font-semibold text-foreground">
                       {city.cityName}
                     </span>
+                    {city.cityNameAr && (
+                      <span className="text-sm text-muted-foreground" dir="rtl">
+                        ({city.cityNameAr})
+                      </span>
+                    )}
                     <Badge variant="secondary" className="text-xs">
                       {city.areas?.length ?? 0} areas
                     </Badge>
@@ -212,7 +220,7 @@ export function LocationsManagement() {
                       variant="ghost"
                       size="icon"
                       aria-label={`Add area to ${city.cityName}`}
-                      onClick={() => openDialog("addArea", "", 0, city.cityID)}
+                      onClick={() => openDialog("addArea", "", "", 0, city.cityID)}
                     >
                       <Plus className="w-4 h-4" />
                     </Button>
@@ -221,7 +229,7 @@ export function LocationsManagement() {
                       size="icon"
                       aria-label={`Edit ${city.cityName}`}
                       onClick={() =>
-                        openDialog("editCity", city.cityName, city.cityID)
+                        openDialog("editCity", city.cityName, city.cityNameAr, city.cityID)
                       }
                     >
                       <Pencil className="w-4 h-4" />
@@ -256,9 +264,16 @@ export function LocationsManagement() {
                           key={area.areaID}
                           className="flex items-center justify-between px-10 py-3 border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors"
                         >
-                          <span className="text-sm text-foreground">
-                            {area.areaName}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-foreground">
+                              {area.areaName}
+                            </span>
+                            {area.areaNameAr && (
+                              <span className="text-xs text-muted-foreground" dir="rtl">
+                                ({area.areaNameAr})
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-1">
                             <Button
                               variant="ghost"
@@ -268,6 +283,7 @@ export function LocationsManagement() {
                                 openDialog(
                                   "editArea",
                                   area.areaName,
+                                  area.areaNameAr,
                                   area.areaID,
                                   area.cityID,
                                 )
@@ -307,13 +323,31 @@ export function LocationsManagement() {
           <DialogHeader>
             <DialogTitle>{dialogTitle}</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <Input
-              placeholder="Enter name..."
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSave()}
-            />
+          <div className="py-4 space-y-3">
+            <div>
+              <label htmlFor="location-name-en" className="text-sm font-medium text-foreground mb-1 block">
+                Name (English)
+              </label>
+              <Input
+                id="location-name-en"
+                placeholder="Enter English name..."
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="location-name-ar" className="text-sm font-medium text-foreground mb-1 block">
+                الاسم (عربي)
+              </label>
+              <Input
+                id="location-name-ar"
+                placeholder="أدخل الاسم بالعربية..."
+                value={editNameAr}
+                onChange={(e) => setEditNameAr(e.target.value)}
+                dir="rtl"
+                onKeyDown={(e) => e.key === "Enter" && handleSave()}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>

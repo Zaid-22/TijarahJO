@@ -8,6 +8,8 @@ public sealed class PublicSystemStatus
 {
     public bool MaintenanceMode { get; init; }
     public DateTime? MaintenanceModeUpdatedAt { get; init; }
+    public string? MaintenanceReason { get; init; }
+    public string? MaintenanceExpectedReturn { get; init; }
 }
 
 public interface ISystemSettingsRuntimeService

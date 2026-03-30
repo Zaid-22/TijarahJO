@@ -72,7 +72,7 @@ export function SellItemDialogContent({
     [catalogCategories],
   );
   const { cityNames, areaNames, isLoadingCities, isLoadingAreas } =
-    useLocationOptions(formData.location);
+    useLocationOptions(formData.location, language);
   const cityOptions = useMemo(() => {
     const normalizedOptionSet = new Set(
       cityNames
@@ -350,31 +350,42 @@ export function SellItemDialogContent({
             ? "المنطقة / الحي (اختياري)"
             : "Area / Neighborhood (Optional)"}
         </Label>
-        <Input
-          id="area"
-          list="sell-item-area-suggestions"
-          placeholder={
-            language === "ar"
-              ? "مثال: الدوار السابع، الصويفية، إلخ"
-              : "e.g. 7th Circle, Sweifieh, etc."
-          }
+        <Select
           value={formData.area}
-          onChange={(e) => setFormData({ ...formData, area: e.target.value })}
-        />
-        {areaSuggestions.length > 0 ? (
-          <datalist id="sell-item-area-suggestions">
-            {areaSuggestions.map((area) => (
-              <option key={area} value={area}>
-                {area}
-              </option>
-            ))}
-          </datalist>
-        ) : null}
-        {isLoadingAreas ? (
-          <p className="text-xs text-muted-foreground">
-            {language === "ar" ? "جارٍ تحميل المناطق..." : "Loading areas..."}
-          </p>
-        ) : null}
+          onValueChange={(value) => setFormData({ ...formData, area: value })}
+          disabled={!formData.location || isLoadingAreas}
+        >
+          <SelectTrigger id="area">
+            <SelectValue placeholder={
+              !formData.location
+                ? language === "ar" ? "اختر المدينة أولاً" : "Select a city first"
+                : isLoadingAreas
+                  ? language === "ar" ? "جارٍ تحميل المناطق..." : "Loading areas..."
+                  : language === "ar"
+                    ? "مثال: الدوار السابع، الصويفية، إلخ"
+                    : "e.g. 7th Circle, Sweifieh, etc."
+            } />
+          </SelectTrigger>
+          <SelectContent>
+            {areaSuggestions.length > 0 ? (
+              areaSuggestions.map((area) => (
+                <SelectItem key={area} value={area}>
+                  {area}
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="__no_sell_areas__" disabled>
+                {isLoadingAreas
+                  ? language === "ar"
+                    ? "جارٍ تحميل المناطق..."
+                    : "Loading areas..."
+                  : language === "ar"
+                    ? "لا توجد مناطق متاحة"
+                    : "No areas available"}
+              </SelectItem>
+            )}
+          </SelectContent>
+        </Select>
       </div>
 
       <SellItemImagePicker

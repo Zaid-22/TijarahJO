@@ -50,21 +50,17 @@ export function useProfileSaveAction({
         throw new Error(message);
       }
 
-      if (!trimmedCity) {
-        const message = "City is required to update your profile.";
-        deferredToast.error(message);
-        throw new Error(message);
-      }
-
-      if (!trimmedArea) {
-        const message = "Area is required to update your profile.";
+      if (trimmedCity && !trimmedArea) {
+        const message = "Area is required when a city is selected.";
         deferredToast.error(message);
         throw new Error(message);
       }
 
       try {
-        const cityId = await resolveCityId(trimmedCity);
-        const areaId = cityId
+        const cityId = trimmedCity
+          ? await resolveCityId(trimmedCity)
+          : undefined;
+        const areaId = cityId && trimmedArea
           ? await resolveAreaId(cityId, trimmedArea)
           : undefined;
 

@@ -9,24 +9,21 @@ import type {
   SystemSettingItem,
   AdminConversationListResult,
   AdminConversationDetail,
-  AdminCityItem,
   AdminReportListResult,
+  PermissionItem,
+  FraudSignalsResult,
 } from "./admin.types";
+import { adminLocationsApi } from "./admin-locations";
 
 // Re-export all types so existing consumers don't break
 export type * from "./admin.types";
-
-export type BannerMutationResult = {
-  success: boolean;
-  message?: string;
-};
 
 /**
  * Recursively converts all object keys from PascalCase to camelCase.
  * The backend uses `PropertyNamingPolicy = null` which preserves PascalCase,
  * but the frontend types expect camelCase.
  */
-function toCamelCaseKeys<T>(obj: unknown): T {
+export function toCamelCaseKeys<T>(obj: unknown): T {
   if (Array.isArray(obj)) {
     return obj.map((item) => toCamelCaseKeys(item)) as T;
   }
@@ -328,78 +325,6 @@ export const adminApi = {
     }
   },
 
-  // ── Locations CRUD ──
-
-  getCities: async (): Promise<AdminCityItem[]> => {
-    try {
-      const response = await apiRequest<AdminCityItem[]>(
-        "/admin/locations/cities",
-        { method: "GET" },
-      );
-      if (response.success && response.data) return toCamelCaseKeys<AdminCityItem[]>(response.data);
-      throw new Error("Failed to fetch cities");
-    } catch (error) {
-      debugError("Failed to fetch cities:", error);
-      throw error;
-    }
-  },
-
-  createCity: async (name: string): Promise<{ cityID: number }> => {
-    const response = await apiRequest<{ cityID: number }>(
-      "/admin/locations/cities",
-      {
-        method: "POST",
-        body: JSON.stringify({ name }),
-      },
-    );
-    if (response.success && response.data) return response.data;
-    throw new Error("Failed to create city");
-  },
-
-  updateCity: async (id: number, name: string): Promise<boolean> => {
-    const response = await apiRequest(`/admin/locations/cities/${id}`, {
-      method: "PUT",
-      body: JSON.stringify({ name }),
-    });
-    return response.success;
-  },
-
-  deleteCity: async (id: number): Promise<boolean> => {
-    const response = await apiRequest(`/admin/locations/cities/${id}`, {
-      method: "DELETE",
-    });
-    return response.success;
-  },
-
-  createArea: async (
-    cityID: number,
-    name: string,
-  ): Promise<{ areaID: number }> => {
-    const response = await apiRequest<{ areaID: number }>(
-      "/admin/locations/areas",
-      {
-        method: "POST",
-        body: JSON.stringify({ cityID, name }),
-      },
-    );
-    if (response.success && response.data) return response.data;
-    throw new Error("Failed to create area");
-  },
-
-  updateArea: async (id: number, name: string): Promise<boolean> => {
-    const response = await apiRequest(`/admin/locations/areas/${id}`, {
-      method: "PUT",
-      body: JSON.stringify({ name }),
-    });
-    return response.success;
-  },
-
-  deleteArea: async (id: number): Promise<boolean> => {
-    const response = await apiRequest(`/admin/locations/areas/${id}`, {
-      method: "DELETE",
-    });
-    return response.success;
-  },
 
   // ── Reports ──
 
@@ -493,6 +418,8 @@ export const adminApi = {
     return response.success;
   },
 
+  ...adminLocationsApi,
+
   // ── Fraud Detection ──
 
   getFraudSignals: async (): Promise<FraudSignalsResult> => {
@@ -509,122 +436,4 @@ export const adminApi = {
     }
   },
 
-  // ── Hero Banners ──
-
-  getBanners: async (): Promise<any[]> => {
-    try {
-      const response = await apiRequest<any>("/admin/banners", { method: "GET" });
-      if (response.success && response.data) {
-        const data = toCamelCaseKeys<any>(response.data);
-        if (data.success) {
-          return data.banners || [];
-        }
-      }
-      return [];
-    } catch (error) {
-      debugError("adminApi.getBanners", error);
-      return [];
-    }
-  },
-
-  createBanner: async (bannerData: any): Promise<BannerMutationResult> => {
-    try {
-      const response = await apiRequest("/admin/banners", {
-        method: "POST",
-        body: JSON.stringify(bannerData),
-      });
-      if (response.success) {
-        return { success: true };
-      }
-
-      return {
-        success: false,
-        message: response.error?.message || "Failed to add banner",
-      };
-    } catch (error) {
-      debugError("adminApi.createBanner", error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : "Failed to add banner",
-      };
-    }
-  },
-
-  updateBanner: async (
-    id: number,
-    bannerData: any,
-  ): Promise<BannerMutationResult> => {
-    try {
-      const response = await apiRequest(`/admin/banners/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(bannerData),
-      });
-      if (response.success) {
-        return { success: true };
-      }
-
-      return {
-        success: false,
-        message: response.error?.message || "Failed to update banner",
-      };
-    } catch (error) {
-      debugError("adminApi.updateBanner", error);
-      return {
-        success: false,
-        message:
-          error instanceof Error ? error.message : "Failed to update banner",
-      };
-    }
-  },
-
-  deleteBanner: async (id: number): Promise<boolean> => {
-    try {
-      const response = await apiRequest(`/admin/banners/${id}`, {
-        method: "DELETE",
-      });
-      return response.success;
-    } catch (error) {
-      debugError("adminApi.deleteBanner", error);
-      return false;
-    }
-  },
-
-  toggleBannerActive: async (id: number): Promise<boolean> => {
-    try {
-      const response = await apiRequest(`/admin/banners/${id}/toggle`, {
-        method: "PATCH",
-      });
-      return response.success;
-    } catch (error) {
-      debugError("adminApi.toggleBannerActive", error);
-      return false;
-    }
-  },
-};
-
-
-// ── Additional Types ──
-
-export type PermissionItem = {
-  permissionID: number;
-  permissionKey: string;
-  description: string;
-  category: string;
-};
-
-export type FraudSignal = {
-  type: string;
-  severity: string;
-  count: number;
-  detail: string;
-};
-
-export type FraudSignalsResult = {
-  rapidRegistrations: boolean;
-  rapidRegistrationCount: number;
-  duplicateListings: number;
-  suspiciousPriceCount: number;
-  reviewBombingTargets: number;
-  checkedAt: string;
-  signals: FraudSignal[];
 };

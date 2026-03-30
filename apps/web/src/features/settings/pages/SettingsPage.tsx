@@ -41,7 +41,6 @@ interface SettingsPageProps {
   onReportIssue?: () => void;
   onOpenTerms?: () => void;
   onOpenPrivacy?: () => void;
-  onNavigate?: (path: string) => void;
 }
 
 export function SettingsPage({
@@ -59,7 +58,6 @@ export function SettingsPage({
   onReportIssue,
   onOpenTerms,
   onOpenPrivacy,
-  onNavigate,
 }: SettingsPageProps) {
   const isRTL = language === "ar";
   const [settingsPreferences, setSettingsPreferences] =
@@ -177,7 +175,6 @@ export function SettingsPage({
           onReportIssue={onReportIssue}
           onOpenTerms={onOpenTerms}
           onOpenPrivacy={onOpenPrivacy}
-          onNavigate={onNavigate}
           text={text}
           settingsPreferences={settingsPreferences}
           updatePreference={updatePreference}

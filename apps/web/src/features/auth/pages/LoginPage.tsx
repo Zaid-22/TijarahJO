@@ -125,7 +125,7 @@ export function LoginPage({
   const {
     areaNames,
     isLoadingAreas,
-  } = useLocationOptions(state.values.city);
+  } = useLocationOptions(state.values.city, language);
   const isRTL = language === "ar";
   const currentPath = buildCurrentPath(location.pathname, location.search);
   const backPath = resolveBackPathFromLocationState({
@@ -591,7 +591,7 @@ export function LoginPage({
         onBack={() => navigate(backPath, { replace: true })}
         isRTL={isRTL}
         backLabel={isRTL ? "العودة إلى السوق" : "Back to marketplace"}
-        onLogoClick={() => navigate("/")}
+        showLogo={false}
       />
       {formComponent}
     </PageShell>

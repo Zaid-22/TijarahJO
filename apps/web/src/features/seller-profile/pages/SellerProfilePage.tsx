@@ -70,6 +70,11 @@ export function SellerProfilePage() {
       language === "ar" ? "الدردشة مع البائع" : "Chat with Seller",
     activeListings:
       language === "ar" ? "الإعلانات النشطة" : "Active Listings",
+    aboutMe: language === "ar" ? "نبذة عن البائع" : "About the Seller",
+    noBio:
+      language === "ar"
+        ? "لا توجد نبذة متاحة حالياً."
+        : "No seller bio available yet.",
     noActiveListings:
       language === "ar" ? "لا توجد إعلانات نشطة." : "No active listings.",
     writeReview:
@@ -243,6 +248,15 @@ export function SellerProfilePage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left Column: Active Listings */}
         <div className="md:col-span-2 space-y-6">
+          <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
+            <h2 className="text-xl font-bold text-foreground mb-3">
+              {labels.aboutMe}
+            </h2>
+            <p className="text-sm leading-7 text-muted-foreground whitespace-pre-wrap">
+              {sellerProfile?.bio?.trim() || labels.noBio}
+            </p>
+          </div>
+
           <h2 className="text-xl font-bold text-foreground">
             {labels.activeListings}
           </h2>

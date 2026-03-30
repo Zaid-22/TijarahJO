@@ -1,64 +1,19 @@
-import { useState, useCallback, useRef, useEffect } from "react";
-import {
-  Image,
-  Plus,
-  Pencil,
-  Trash2,
-  GripVertical,
-  Eye,
-  EyeOff,
-  Upload,
-  Link,
-} from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../../shared/ui/card";
+import { useState, useCallback, useEffect } from "react";
+import { Plus } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
-import { Input } from "../../../shared/ui/input";
-import { Label } from "../../../shared/ui/label";
 import { Badge } from "../../../shared/ui/badge";
 import { toast } from "sonner";
-import { adminApi } from "../../../services/api/admin";
+import { adminBannersApi as adminApi } from "../../../services/api/admin-banners";
 import { type BannerModel } from "../../../services/api/banners";
 import { LoadingState } from "../../../shared/ui/loading-state";
 import { getAllHeroBanners } from "../../home/components/heroBannerData";
-
-type BannerFormState = {
-  title: string;
-  titleAr: string;
-  subtitle: string;
-  subtitleAr: string;
-  buttonText: string;
-  buttonTextAr: string;
-  imageUrl: string;
-  bgClass: string;
-  textClass: string;
-  altText: string;
-  altTextAr: string;
-  linkUrl: string;
-  isActive: boolean;
-  displayOrder: number;
-};
-
-const DEFAULT_BANNER_FORM_STATE: BannerFormState = {
-  title: "",
-  titleAr: "",
-  subtitle: "",
-  subtitleAr: "",
-  buttonText: "Learn More",
-  buttonTextAr: "اعرف المزيد",
-  imageUrl: "",
-  bgClass: "bg-background",
-  textClass: "text-foreground",
-  altText: "",
-  altTextAr: "",
-  linkUrl: "",
-  isActive: true,
-  displayOrder: 0,
-};
+import {
+  BannerForm,
+  DEFAULT_BANNER_FORM_STATE,
+  type BannerFormState,
+} from "./banners/BannerForm";
+import { BannerListItem } from "./banners/BannerListItem";
+import { FallbackBannerPreview } from "./banners/FallbackBannerPreview";
 
 function toBannerFormState(
   banner?: BannerModel,
@@ -98,7 +53,6 @@ export function AdminBannersManagement() {
   const [bannerForm, setBannerForm] = useState<BannerFormState>(
     DEFAULT_BANNER_FORM_STATE,
   );
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadBanners = useCallback(async () => {
     setIsLoading(true);
@@ -144,7 +98,6 @@ export function AdminBannersManagement() {
   };
 
   const removeBanner = async (id: number) => {
-    // Relying on backend deletion; advanced prompt could be added later
     const success = await adminApi.deleteBanner(id);
     if (success) {
       toast.success("Banner removed");
@@ -224,8 +177,7 @@ export function AdminBannersManagement() {
     setIsLoading(true);
     const defaults = getAllHeroBanners();
     let successCount = 0;
-    
-    // Process sequentially to maintain deterministic order
+
     for (const banner of defaults) {
       const result = await adminApi.createBanner({
         title: banner.title,
@@ -253,30 +205,6 @@ export function AdminBannersManagement() {
       toast.error("Failed to restore default banners");
       setIsLoading(false);
     }
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("File size must be under 5MB");
-      return;
-    }
-
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setBannerForm((prev) => ({
-        ...prev,
-        imageUrl: String(reader.result || ""),
-      }));
-    };
-    reader.readAsDataURL(file);
   };
 
   // Drag and drop reordering
@@ -314,12 +242,10 @@ export function AdminBannersManagement() {
   };
 
   if (isLoading) {
-    return <LoadingState label="Loading Banners..." minHeightClassName="min-h-[400px]" />;
+    return <LoadingState label="Loading Banners..." minHeightClassName="min-h-96" />;
   }
 
   const activeCount = banners.filter((b) => b.isActive).length;
-  const defaultBanners = getAllHeroBanners();
-  const defaultBannerCount = defaultBanners.length;
 
   return (
     <div className="space-y-6">
@@ -345,7 +271,6 @@ export function AdminBannersManagement() {
                 resetBannerForm();
                 return;
               }
-
               openCreateForm();
             }}
             className="gap-2"
@@ -356,409 +281,39 @@ export function AdminBannersManagement() {
         </div>
       </div>
 
-      {/* Add Banner Form */}
+      {/* Add / Edit Banner Form */}
       {showBannerForm && (
-        <Card className="border-primary/30 shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg">
-              {editingBannerId === null ? "Add New Banner" : "Edit Banner"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="banner-title">Title (English)</Label>
-                <Input
-                  id="banner-title"
-                  placeholder="Buy and Sell Easily"
-                  value={bannerForm.title}
-                  onChange={(e) =>
-                    setBannerForm((prev) => ({
-                      ...prev,
-                      title: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="banner-title-ar">Title (Arabic)</Label>
-                <Input
-                  id="banner-title-ar"
-                  placeholder="اشتري وبيع بسهولة"
-                  value={bannerForm.titleAr}
-                  onChange={(e) =>
-                    setBannerForm((prev) => ({
-                      ...prev,
-                      titleAr: e.target.value,
-                    }))
-                  }
-                  dir="rtl"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="banner-subtitle">Subtitle (English)</Label>
-                <Input
-                  id="banner-subtitle"
-                  placeholder="Join Jordan's largest marketplace today."
-                  value={bannerForm.subtitle}
-                  onChange={(e) =>
-                    setBannerForm((prev) => ({
-                      ...prev,
-                      subtitle: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="banner-subtitle-ar">Subtitle (Arabic)</Label>
-                <Input
-                  id="banner-subtitle-ar"
-                  placeholder="انضم إلى أكبر سوق إلكتروني في الأردن اليوم."
-                  value={bannerForm.subtitleAr}
-                  onChange={(e) =>
-                    setBannerForm((prev) => ({
-                      ...prev,
-                      subtitleAr: e.target.value,
-                    }))
-                  }
-                  dir="rtl"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="banner-button">Button Text (English)</Label>
-                <Input
-                  id="banner-button"
-                  placeholder="Start Now"
-                  value={bannerForm.buttonText}
-                  onChange={(e) =>
-                    setBannerForm((prev) => ({
-                      ...prev,
-                      buttonText: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="banner-button-ar">Button Text (Arabic)</Label>
-                <Input
-                  id="banner-button-ar"
-                  placeholder="ابدأ الآن"
-                  value={bannerForm.buttonTextAr}
-                  onChange={(e) =>
-                    setBannerForm((prev) => ({
-                      ...prev,
-                      buttonTextAr: e.target.value,
-                    }))
-                  }
-                  dir="rtl"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="banner-upload">Image Upload</Label>
-                <div className="flex gap-2">
-                  <Button
-                    id="banner-upload"
-                    type="button"
-                    variant="outline"
-                    className="w-full justify-start text-muted-foreground"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    {bannerForm.imageUrl ? "Change Image" : "Upload Image"}
-                  </Button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleFileUpload}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="banner-link">Link URL (optional)</Label>
-                <div className="relative">
-                  <Link className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="banner-link"
-                    placeholder="/posts or /category/Electronics"
-                    value={bannerForm.linkUrl}
-                    onChange={(e) =>
-                      setBannerForm((prev) => ({
-                        ...prev,
-                        linkUrl: e.target.value,
-                      }))
-                    }
-                    className="pl-9"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="banner-alt-en">Alt Text (English)</Label>
-                <Input
-                  id="banner-alt-en"
-                  placeholder="Summer Sale Banner"
-                  value={bannerForm.altText}
-                  onChange={(e) =>
-                    setBannerForm((prev) => ({
-                      ...prev,
-                      altText: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="banner-alt-ar">Alt Text (Arabic)</Label>
-                <Input
-                  id="banner-alt-ar"
-                  placeholder="إعلان التخفيضات الصيفية"
-                  value={bannerForm.altTextAr}
-                  onChange={(e) =>
-                    setBannerForm((prev) => ({
-                      ...prev,
-                      altTextAr: e.target.value,
-                    }))
-                  }
-                  dir="rtl"
-                />
-              </div>
-            </div>
-
-            {/* Preview */}
-            {bannerForm.imageUrl && (
-              <div className="rounded-xl overflow-hidden border border-border bg-muted/30">
-                <img
-                  src={bannerForm.imageUrl}
-                  alt="Banner preview"
-                  className="w-full h-40 object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "";
-                  }}
-                />
-              </div>
-            )}
-
-            <div className="flex gap-3 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowBannerForm(false);
-                  resetBannerForm();
-                }}
-              >
-                Cancel
-              </Button>
-              <Button onClick={saveBanner}>
-                {editingBannerId === null ? (
-                  <>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Banner
-                  </>
-                ) : (
-                  <>
-                    <Pencil className="w-4 h-4 mr-2" />
-                    Save Changes
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <BannerForm
+          editingBannerId={editingBannerId}
+          bannerForm={bannerForm}
+          onFormChange={setBannerForm}
+          onSave={saveBanner}
+          onCancel={() => {
+            setShowBannerForm(false);
+            resetBannerForm();
+          }}
+        />
       )}
 
       {/* Banners List */}
       <div className="space-y-3">
         {banners.map((banner, index) => (
-          <Card
+          <BannerListItem
             key={banner.bannerID}
-            draggable
+            banner={banner}
+            index={index}
+            isDragging={dragIndex === index}
             onDragStart={() => handleDragStart(index)}
             onDragOver={(e) => handleDragOver(e, index)}
             onDragEnd={handleDragEnd}
-            className={`transition-all duration-200 ${
-              dragIndex === index
-                ? "opacity-50 scale-95 border-primary"
-                : "hover:shadow-md"
-            } ${!banner.isActive ? "opacity-60" : ""}`}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-center gap-4">
-                {/* Drag Handle */}
-                <div className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground">
-                  <GripVertical className="w-5 h-5" />
-                </div>
-
-                {/* Preview Image */}
-                <div className="relative w-32 h-20 rounded-lg overflow-hidden border border-border flex-shrink-0 bg-muted">
-                  {banner.imageUrl ? (
-                    <img
-                      src={banner.imageUrl}
-                      alt={banner.altText}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Image className="w-6 h-6 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-medium text-sm text-foreground truncate">
-                      {banner.title || banner.titleAr || banner.altText || "Untitled banner"}
-                    </p>
-                    <Badge
-                      variant={banner.isActive ? "default" : "outline"}
-                      className="text-xs flex-shrink-0"
-                    >
-                      {banner.isActive ? "Active" : "Hidden"}
-                    </Badge>
-                  </div>
-                  <p
-                    className="text-xs text-muted-foreground truncate"
-                    dir="rtl"
-                  >
-                    {banner.titleAr || banner.altTextAr}
-                  </p>
-                  {!!(banner.subtitle || banner.subtitleAr) && (
-                    <p className="text-xs text-muted-foreground truncate mt-1">
-                      {banner.subtitle || banner.subtitleAr}
-                    </p>
-                  )}
-                  {banner.linkUrl && (
-                    <p className="text-xs text-primary mt-1 truncate">
-                      → {banner.linkUrl}
-                    </p>
-                  )}
-                </div>
-
-                {/* Order */}
-                <div className="text-xs text-muted-foreground font-mono w-8 text-center flex-shrink-0">
-                   #{banner.displayOrder} ({index + 1})
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openEditForm(banner)}
-                    title="Edit banner"
-                    aria-label="Edit banner"
-                    className="h-8 w-8"
-                  >
-                    <Pencil className="w-4 h-4 text-primary" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={toggleActive.bind(null, banner.bannerID)}
-                    title={banner.isActive ? "Hide banner" : "Show banner"}
-                    aria-label={banner.isActive ? "Hide banner" : "Show banner"}
-                    className="h-8 w-8"
-                  >
-                    {banner.isActive ? (
-                      <Eye className="w-4 h-4 text-emerald-500" />
-                    ) : (
-                      <EyeOff className="w-4 h-4 text-muted-foreground" />
-                    )}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={removeBanner.bind(null, banner.bannerID)}
-                    title="Remove banner"
-                    aria-label="Remove banner"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            onEdit={() => openEditForm(banner)}
+            onToggleActive={() => toggleActive(banner.bannerID)}
+            onRemove={() => removeBanner(banner.bannerID)}
+          />
         ))}
 
         {banners.length === 0 && (
-          <Card className="border-dashed">
-            <CardContent className="py-12">
-              <div className="flex flex-col items-center justify-center text-muted-foreground gap-3">
-                <Image className="h-12 w-12 opacity-30" />
-                <p className="font-medium text-lg text-foreground">
-                  No backend banners configured
-                </p>
-                <p className="text-sm text-center">
-                  The homepage is currently using the built-in fallback banners shown below.
-                </p>
-                <p className="text-sm text-center max-w-xl">
-                  Import the {defaultBannerCount} default homepage banners into the backend with
-                  {" "}
-                  Reset to Defaults, or add new backend banners here.
-                </p>
-                <Button variant="outline" onClick={resetToDefaults} className="mt-2">
-                  Reset to Defaults
-                </Button>
-              </div>
-
-              {defaultBanners.length > 0 && (
-                <div className="mt-8 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">Fallback Preview</Badge>
-                    <p className="text-sm text-muted-foreground">
-                      These are the frontend defaults currently visible on the homepage.
-                    </p>
-                  </div>
-
-                  {defaultBanners.map((banner, index) => (
-                    <Card key={banner.id} className="bg-muted/20">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-4">
-                          <div className="relative w-32 h-20 rounded-lg overflow-hidden border border-border flex-shrink-0 bg-muted">
-                            <img
-                              src={banner.imageUrl}
-                              alt={banner.altText}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="font-medium text-sm text-foreground truncate">
-                                {banner.altText}
-                              </p>
-                              <Badge variant={banner.isActive ? "default" : "outline"}>
-                                {banner.isActive ? "Active" : "Hidden"}
-                              </Badge>
-                            </div>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {banner.title}
-                            </p>
-                            <p
-                              className="text-xs text-muted-foreground truncate"
-                              dir="rtl"
-                            >
-                              {banner.altTextAr}
-                            </p>
-                            {banner.linkUrl && (
-                              <p className="text-xs text-primary mt-1 truncate">
-                                → {banner.linkUrl}
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="text-xs text-muted-foreground font-mono w-8 text-center flex-shrink-0">
-                            #{banner.order} ({index + 1})
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <FallbackBannerPreview onResetToDefaults={resetToDefaults} />
         )}
       </div>
     </div>

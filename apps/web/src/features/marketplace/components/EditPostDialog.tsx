@@ -21,6 +21,7 @@ import { Upload, X } from "lucide-react";
 import { Post } from "../../../types";
 import { deferredToast } from "../../../utils/toast";
 import { useCatalogCategories } from "../../../shared/hooks/useCatalogCategories";
+import { useLocationOptions } from "../../../shared/hooks/useLocationOptions";
 import type { UpdatePostInput } from "../../../app/routes/usePostActions";
 
 const MAX_IMAGES = 5;
@@ -91,16 +92,20 @@ export function EditPostDialog({
     });
   }, [catalogCategories, post.category]);
 
-  const locations = [
-    "Amman",
-    "Irbid",
-    "Zarqa",
-    "Aqaba",
-    "Madaba",
-    "Karak",
-    "Mafraq",
-    "Tafilah",
-  ];
+  const { cityNames, areaNames, isLoadingCities, isLoadingAreas } =
+    useLocationOptions(location, language);
+  const cityOptions = useMemo(() => {
+    const normalizedOptionSet = new Set(cityNames.map((city) => city.trim().toLocaleLowerCase()).filter((city) => city.length > 0));
+    const normalizedCurrent = location.trim();
+    if (normalizedCurrent && !normalizedOptionSet.has(normalizedCurrent.toLocaleLowerCase())) return [normalizedCurrent, ...cityNames];
+    return cityNames;
+  }, [cityNames, location]);
+  const areaOptions = useMemo(() => {
+    const normalizedOptionSet = new Set(areaNames.map((a) => a.trim().toLocaleLowerCase()).filter((a) => a.length > 0));
+    const normalizedCurrent = area.trim();
+    if (normalizedCurrent && !normalizedOptionSet.has(normalizedCurrent.toLocaleLowerCase())) return [normalizedCurrent, ...areaNames];
+    return areaNames;
+  }, [areaNames, area]);
 
   useEffect(() => {
     const objectUrls = objectUrlsRef.current;
@@ -211,10 +216,7 @@ export function EditPostDialog({
 
       <form onSubmit={handleSubmit} className="space-y-6 mt-4">
         <div className="space-y-2">
-          <Label
-            htmlFor="edit-name"
-            className={"text-start block"}
-          >
+          <Label htmlFor="edit-name" className="text-start block">
             {language === "ar" ? "اسم المنشور" : "Post Name"} *
           </Label>
           <Input
@@ -230,10 +232,7 @@ export function EditPostDialog({
         </div>
 
         <div className="space-y-2">
-          <Label
-            htmlFor="edit-price"
-            className={"text-start block"}
-          >
+          <Label htmlFor="edit-price" className="text-start block">
             {language === "ar" ? "السعر (دينار أردني)" : "Price (JOD)"} *
           </Label>
           <Input
@@ -250,17 +249,11 @@ export function EditPostDialog({
         </div>
 
         <div className="space-y-2">
-          <Label
-            htmlFor="edit-category"
-            className={"text-start block"}
-          >
+          <Label htmlFor="edit-category" className="text-start block">
             {language === "ar" ? "الفئة" : "Category"} *
           </Label>
           <Select value={category} onValueChange={setCategory} required>
-            <SelectTrigger
-              id="edit-category"
-              className={"text-start"}
-            >
+            <SelectTrigger id="edit-category" className="text-start">
               <SelectValue
                 placeholder={
                   language === "ar" ? "اختر الفئة" : "Select category"
@@ -278,45 +271,67 @@ export function EditPostDialog({
         </div>
 
         <div className="space-y-2">
-          <Label
-            htmlFor="edit-location"
-            className={"text-start block"}
-          >
+          <Label htmlFor="edit-location" className="text-start block">
             {language === "ar" ? "المدينة" : "City"} *
           </Label>
-          <Select value={location} onValueChange={setLocation} required>
-            <SelectTrigger
-              id="edit-location"
-              className={"text-start"}
-            >
+          <Select value={location} onValueChange={(value) => { setLocation(value); setArea(""); }} required>
+            <SelectTrigger id="edit-location" className="text-start">
               <SelectValue
                 placeholder={language === "ar" ? "اختر المدينة" : "Select city"}
               />
             </SelectTrigger>
             <SelectContent>
-              {locations.map((loc) => (
-                <SelectItem key={loc} value={loc}>
-                  {loc}
+              {cityOptions.length > 0 ? (
+                cityOptions.map((city) => (
+                  <SelectItem key={city} value={city}>
+                    {city}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="__no_edit_cities__" disabled>
+                  {isLoadingCities
+                    ? language === "ar" ? "جارٍ تحميل المدن..." : "Loading cities..."
+                    : language === "ar" ? "لا توجد مدن متاحة" : "No cities available"}
                 </SelectItem>
-              ))}
+              )}
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-2">
-          <Label
-            htmlFor="edit-area"
-            className={"text-start block"}
-          >
+          <Label htmlFor="edit-area" className="text-start block">
             {language === "ar" ? "المنطقة" : "Area"}
           </Label>
-          <Input
-            id="edit-area"
+          <Select
             value={area}
-            onChange={(e) => setArea(e.target.value)}
-            placeholder={language === "ar" ? "مثال: عمان" : "e.g. Amman"}
-            className={"text-start"}
-          />
+            onValueChange={setArea}
+            disabled={!location || isLoadingAreas}
+          >
+            <SelectTrigger id="edit-area" className={"text-start"}>
+              <SelectValue placeholder={
+                !location
+                  ? language === "ar" ? "اختر المدينة أولاً" : "Select a city first"
+                  : isLoadingAreas
+                    ? language === "ar" ? "جارٍ تحميل المناطق..." : "Loading areas..."
+                    : language === "ar" ? "اختر المنطقة" : "Select area"
+              } />
+            </SelectTrigger>
+            <SelectContent>
+              {areaOptions.length > 0 ? (
+                areaOptions.map((a) => (
+                  <SelectItem key={a} value={a}>
+                    {a}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="__no_edit_areas__" disabled>
+                  {isLoadingAreas
+                    ? language === "ar" ? "جارٍ تحميل المناطق..." : "Loading areas..."
+                    : language === "ar" ? "لا توجد مناطق متاحة" : "No areas available"}
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">
@@ -399,10 +414,7 @@ export function EditPostDialog({
         </div>
 
         <div className="space-y-2">
-          <Label
-            htmlFor="edit-description"
-            className={"text-start block"}
-          >
+          <Label htmlFor="edit-description" className="text-start block">
             {language === "ar" ? "الوصف (اختياري)" : "Description (Optional)"}
           </Label>
           <Textarea

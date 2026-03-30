@@ -467,29 +467,32 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
             {
                 CityID = c.CityID,
                 CityName = c.CityName,
+                CityNameAr = c.CityNameAr,
                 Areas = c.Areas.OrderBy(a => a.AreaName).Select(a => new AdminAreaItem
                 {
                     AreaID = a.AreaID,
                     CityID = a.CityID,
-                    AreaName = a.AreaName
+                    AreaName = a.AreaName,
+                    AreaNameAr = a.AreaNameAr
                 }).ToList()
             })
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<int> CreateCityAsync(string cityName, CancellationToken cancellationToken = default)
+    public async Task<int> CreateCityAsync(string cityName, string cityNameAr, CancellationToken cancellationToken = default)
     {
-        var entity = new TijarahJo.Domain.Entities.CityEntity { CityName = cityName };
+        var entity = new TijarahJo.Domain.Entities.CityEntity { CityName = cityName, CityNameAr = cityNameAr };
         await _dbContext.Cities.AddAsync(entity, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return entity.CityID;
     }
 
-    public async Task<bool> UpdateCityAsync(int cityId, string cityName, CancellationToken cancellationToken = default)
+    public async Task<bool> UpdateCityAsync(int cityId, string cityName, string cityNameAr, CancellationToken cancellationToken = default)
     {
         var entity = await _dbContext.Cities.FindAsync([cityId], cancellationToken);
         if (entity == null) return false;
         entity.CityName = cityName;
+        entity.CityNameAr = cityNameAr;
         await _dbContext.SaveChangesAsync(cancellationToken);
         return true;
     }
@@ -503,19 +506,20 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
         return true;
     }
 
-    public async Task<int> CreateAreaAsync(int cityId, string areaName, CancellationToken cancellationToken = default)
+    public async Task<int> CreateAreaAsync(int cityId, string areaName, string areaNameAr, CancellationToken cancellationToken = default)
     {
-        var entity = new TijarahJo.Domain.Entities.AreaEntity { CityID = cityId, AreaName = areaName };
+        var entity = new TijarahJo.Domain.Entities.AreaEntity { CityID = cityId, AreaName = areaName, AreaNameAr = areaNameAr };
         await _dbContext.Areas.AddAsync(entity, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return entity.AreaID;
     }
 
-    public async Task<bool> UpdateAreaAsync(int areaId, string areaName, CancellationToken cancellationToken = default)
+    public async Task<bool> UpdateAreaAsync(int areaId, string areaName, string areaNameAr, CancellationToken cancellationToken = default)
     {
         var entity = await _dbContext.Areas.FindAsync([areaId], cancellationToken);
         if (entity == null) return false;
         entity.AreaName = areaName;
+        entity.AreaNameAr = areaNameAr;
         await _dbContext.SaveChangesAsync(cancellationToken);
         return true;
     }

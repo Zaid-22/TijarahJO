@@ -31,10 +31,10 @@ public class AdminLocationsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status201Created)]
     public async Task<ActionResult> CreateCity([FromBody] CityRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request?.Name))
-            return BadRequest("City name is required.");
+        if (string.IsNullOrWhiteSpace(request?.Name) || string.IsNullOrWhiteSpace(request?.NameAr))
+            return BadRequest("City name and Arabic name are required.");
 
-        int cityId = await _adminDataAccess.CreateCityAsync(request.Name, HttpContext.RequestAborted);
+        int cityId = await _adminDataAccess.CreateCityAsync(request.Name, request.NameAr, HttpContext.RequestAborted);
         return Created($"/api/v1/admin/locations/cities/{cityId}", new { CityID = cityId });
     }
 
@@ -43,10 +43,10 @@ public class AdminLocationsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> UpdateCity(int id, [FromBody] CityRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request?.Name))
-            return BadRequest("City name is required.");
+        if (string.IsNullOrWhiteSpace(request?.Name) || string.IsNullOrWhiteSpace(request?.NameAr))
+            return BadRequest("City name and Arabic name are required.");
 
-        bool updated = await _adminDataAccess.UpdateCityAsync(id, request.Name, HttpContext.RequestAborted);
+        bool updated = await _adminDataAccess.UpdateCityAsync(id, request.Name, request.NameAr, HttpContext.RequestAborted);
         if (!updated) return NotFound();
         return Ok(new { Message = "City updated." });
     }
@@ -65,10 +65,10 @@ public class AdminLocationsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status201Created)]
     public async Task<ActionResult> CreateArea([FromBody] AreaRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request?.Name) || request.CityID < 1)
-            return BadRequest("City ID and area name are required.");
+        if (string.IsNullOrWhiteSpace(request?.Name) || string.IsNullOrWhiteSpace(request?.NameAr) || request.CityID < 1)
+            return BadRequest("City ID, area name, and Arabic name are required.");
 
-        int areaId = await _adminDataAccess.CreateAreaAsync(request.CityID, request.Name, HttpContext.RequestAborted);
+        int areaId = await _adminDataAccess.CreateAreaAsync(request.CityID, request.Name, request.NameAr, HttpContext.RequestAborted);
         return Created($"/api/v1/admin/locations/areas/{areaId}", new { AreaID = areaId });
     }
 
@@ -77,10 +77,10 @@ public class AdminLocationsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> UpdateArea(int id, [FromBody] AreaRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request?.Name))
-            return BadRequest("Area name is required.");
+        if (string.IsNullOrWhiteSpace(request?.Name) || string.IsNullOrWhiteSpace(request?.NameAr))
+            return BadRequest("Area name and Arabic name are required.");
 
-        bool updated = await _adminDataAccess.UpdateAreaAsync(id, request.Name, HttpContext.RequestAborted);
+        bool updated = await _adminDataAccess.UpdateAreaAsync(id, request.Name, request.NameAr, HttpContext.RequestAborted);
         if (!updated) return NotFound();
         return Ok(new { Message = "Area updated." });
     }
@@ -99,10 +99,12 @@ public class AdminLocationsController : ControllerBase
 public sealed class CityRequest
 {
     public string Name { get; set; } = string.Empty;
+    public string NameAr { get; set; } = string.Empty;
 }
 
 public sealed class AreaRequest
 {
     public int CityID { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string NameAr { get; set; } = string.Empty;
 }
