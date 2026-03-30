@@ -25,8 +25,11 @@ export const adminLocationsApi = {
         body: JSON.stringify({ name, nameAr }),
       },
     );
-    if (response.success && response.data) return response.data;
-    throw new Error("Failed to create city");
+    if (!response.success) {
+      throw new Error(response.error.message || "Failed to create city");
+    }
+
+    return response.data;
   },
 
   updateCity: async (id: number, name: string, nameAr: string): Promise<boolean> => {
@@ -34,14 +37,16 @@ export const adminLocationsApi = {
       method: "PUT",
       body: JSON.stringify({ name, nameAr }),
     });
-    return response.success;
+    if (response.success) return true;
+    throw new Error(response.error?.message || "Failed to update city");
   },
 
   deleteCity: async (id: number): Promise<boolean> => {
     const response = await apiRequest(`/admin/locations/cities/${id}`, {
       method: "DELETE",
     });
-    return response.success;
+    if (response.success) return true;
+    throw new Error(response.error?.message || "Failed to delete city");
   },
 
   createArea: async (
@@ -56,8 +61,11 @@ export const adminLocationsApi = {
         body: JSON.stringify({ cityID, name, nameAr }),
       },
     );
-    if (response.success && response.data) return response.data;
-    throw new Error("Failed to create area");
+    if (!response.success) {
+      throw new Error(response.error.message || "Failed to create area");
+    }
+
+    return response.data;
   },
 
   updateArea: async (id: number, name: string, nameAr: string): Promise<boolean> => {
@@ -65,13 +73,15 @@ export const adminLocationsApi = {
       method: "PUT",
       body: JSON.stringify({ name, nameAr }),
     });
-    return response.success;
+    if (response.success) return true;
+    throw new Error(response.error?.message || "Failed to update area");
   },
 
   deleteArea: async (id: number): Promise<boolean> => {
     const response = await apiRequest(`/admin/locations/areas/${id}`, {
       method: "DELETE",
     });
-    return response.success;
+    if (response.success) return true;
+    throw new Error(response.error?.message || "Failed to delete area");
   },
 };

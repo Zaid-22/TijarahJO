@@ -44,6 +44,9 @@ export function LocationsManagement() {
     name: string;
   } | null>(null);
 
+  const getErrorMessage = (error: unknown, fallback: string) =>
+    error instanceof Error && error.message ? error.message : fallback;
+
   const fetchCities = async () => {
     try {
       setIsLoading(true);
@@ -99,7 +102,7 @@ export function LocationsManagement() {
       await fetchCities();
     } catch (error) {
       logger.warn("[LocationsManagement] Save failed", error);
-      toast.error("Save failed");
+      toast.error(getErrorMessage(error, "Save failed"));
     }
   };
 
@@ -111,7 +114,7 @@ export function LocationsManagement() {
       await fetchCities();
     } catch (error) {
       logger.warn("[LocationsManagement] Delete city failed", error);
-      toast.error("Failed to delete city");
+      toast.error(getErrorMessage(error, "Failed to delete city"));
     }
   };
 
@@ -123,7 +126,7 @@ export function LocationsManagement() {
       await fetchCities();
     } catch (error) {
       logger.warn("[LocationsManagement] Delete area failed", error);
-      toast.error("Failed to delete area");
+      toast.error(getErrorMessage(error, "Failed to delete area"));
     }
   };
 
