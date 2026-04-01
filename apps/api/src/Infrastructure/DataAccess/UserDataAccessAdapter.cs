@@ -93,8 +93,8 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
         _dbContext.AuditActorUserId = actorUserId;
         try
         {
-            int rowsAffected = await _dbContext.SaveChangesAsync(cancellationToken);
-            return rowsAffected > 0;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return true;
         }
         catch (DbUpdateException)
         {
