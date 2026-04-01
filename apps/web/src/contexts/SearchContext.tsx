@@ -3,10 +3,11 @@ import {
   type ReactNode,
   useCallback,
   useContext,
+  useEffect,
   useRef,
+  useState,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import { useLocalStorage } from "../shared/hooks/useLocalStorage";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -42,14 +43,14 @@ interface SearchProviderProps {
 export function SearchProvider({ children }: SearchProviderProps) {
   const navigate = useNavigate();
 
-  const [searchQuery, setSearchQueryRaw] = useLocalStorage(
-    "tijarahjo_search_query",
-    "",
-  );
-  const [activeSearchQuery, setActiveSearchQuery] = useLocalStorage(
-    "tijarahjo_active_search_query",
-    "",
-  );
+  const [searchQuery, setSearchQueryRaw] = useState("");
+  const [activeSearchQuery, setActiveSearchQuery] = useState("");
+
+  useEffect(() => {
+    // Remove legacy persisted search so a full refresh always starts clean.
+    localStorage.removeItem("tijarahjo_search_query");
+    localStorage.removeItem("tijarahjo_active_search_query");
+  }, []);
 
   // Ref keeps the latest value available synchronously for submitSearch.
   const searchQueryRef = useRef(searchQuery);

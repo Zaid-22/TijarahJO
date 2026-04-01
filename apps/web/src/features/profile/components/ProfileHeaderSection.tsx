@@ -1,6 +1,7 @@
 import { Calendar, Edit, MapPin, User } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../../../shared/ui/avatar";
+import { resolveAvatarSrc } from "../../../shared/lib/avatar";
 import type { ProfilePageUserProfile } from "../types";
 
 interface ProfileHeaderSectionProps {
@@ -23,7 +24,10 @@ export function ProfileHeaderSection({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 pb-6">
           <Avatar className="w-20 h-20 sm:w-24 sm:h-24 border-4 border-background">
-            <AvatarImage src={userProfile.avatar} className="object-cover object-center" />
+            <AvatarImage
+              src={resolveAvatarSrc(userProfile.avatar)}
+              className="object-cover object-center"
+            />
             <AvatarFallback className="bg-muted text-muted-foreground">
               <User className="h-8 w-8 sm:h-9 sm:w-9" />
             </AvatarFallback>

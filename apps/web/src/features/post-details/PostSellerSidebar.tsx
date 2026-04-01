@@ -3,6 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../shared/ui/avatar";
 import { Badge } from "../../shared/ui/badge";
 import { Button } from "../../shared/ui/button";
 import { Card, CardContent } from "../../shared/ui/card";
+import { resolveAvatarSrc } from "../../shared/lib/avatar";
 import { Separator } from "../../shared/ui/separator";
 import type { Language, Post } from "../../types";
 
@@ -60,9 +61,10 @@ export function PostSellerSidebar({
         <CardContent className="pt-6">
           <div className="text-center mb-4">
             <Avatar className="w-20 h-20 mx-auto mb-3">
-              {sellerAvatar && (
-                <AvatarImage src={sellerAvatar} alt={publicSellerName} />
-              )}
+              <AvatarImage
+                src={resolveAvatarSrc(sellerAvatar)}
+                alt={publicSellerName}
+              />
               <AvatarFallback>{publicSellerName.charAt(0)}</AvatarFallback>
             </Avatar>
             <h3 className="mb-1 text-lg font-bold text-foreground">
