@@ -18,9 +18,12 @@ let postImageRowsByPostIdCache: Record<
 let categoriesCacheUpdatedAt = 0;
 let usersCacheUpdatedAt = 0;
 
-let citiesCache: Record<string, string> | null = null;
+let citiesCache: Record<string, { en: string; ar: string }> | null = null;
 let citiesCacheUpdatedAt = 0;
-const areasCacheByCityId: Record<string, Record<string, string>> = {};
+const areasCacheByCityId: Record<
+  string,
+  Record<string, { en: string; ar: string }>
+> = {};
 
 let usersAllEndpointAccessible: boolean | null = null;
 
@@ -268,15 +271,15 @@ async function ensureUsersCache(
 
 async function ensureCitiesCache(
   forceRefresh: boolean = false,
-): Promise<Record<string, string>> {
+): Promise<Record<string, { en: string; ar: string }>> {
   if (!forceRefresh && citiesCache && isCacheFresh(citiesCacheUpdatedAt)) {
     return citiesCache;
   }
 
   const cities = await locationsApi.getCities();
-  const nextCache: Record<string, string> = {};
+  const nextCache: Record<string, { en: string; ar: string }> = {};
   cities.forEach((city) => {
-    nextCache[String(city.cityId)] = city.cityName;
+    nextCache[String(city.cityId)] = { en: city.cityName, ar: city.cityNameAr };
   });
 
   citiesCache = nextCache;
@@ -287,16 +290,16 @@ async function ensureCitiesCache(
 async function ensureAreasCache(
   cityId: number,
   forceRefresh: boolean = false,
-): Promise<Record<string, string>> {
+): Promise<Record<string, { en: string; ar: string }>> {
   const cityKey = String(cityId);
   if (!forceRefresh && areasCacheByCityId[cityKey]) {
     return areasCacheByCityId[cityKey];
   }
 
   const areas = await locationsApi.getAreasByCity(cityId);
-  const nextCache: Record<string, string> = {};
+  const nextCache: Record<string, { en: string; ar: string }> = {};
   areas.forEach((area) => {
-    nextCache[String(area.areaId)] = area.areaName;
+    nextCache[String(area.areaId)] = { en: area.areaName, ar: area.areaNameAr };
   });
 
   areasCacheByCityId[cityKey] = nextCache;
@@ -321,22 +324,32 @@ export async function resolveCityId(
   const entries = Object.entries(citiesCache);
 
   // 1. Exact match
-  for (const [id, name] of entries) {
-    if (name.toLowerCase() === normalizedCity || id === normalizedCity) {
+  for (const [id, names] of entries) {
+    if (
+      names.en.toLowerCase() === normalizedCity ||
+      names.ar.toLowerCase() === normalizedCity ||
+      id === normalizedCity
+    ) {
       return toPositiveIntegerId(id);
     }
   }
 
   // 2. Starts-with match
-  for (const [id, name] of entries) {
-    if (name.toLowerCase().startsWith(normalizedCity)) {
+  for (const [id, names] of entries) {
+    if (
+      names.en.toLowerCase().startsWith(normalizedCity) ||
+      names.ar.toLowerCase().startsWith(normalizedCity)
+    ) {
       return toPositiveIntegerId(id);
     }
   }
 
   // 3. Contains match
-  for (const [id, name] of entries) {
-    if (name.toLowerCase().includes(normalizedCity)) {
+  for (const [id, names] of entries) {
+    if (
+      names.en.toLowerCase().includes(normalizedCity) ||
+      names.ar.toLowerCase().includes(normalizedCity)
+    ) {
       return toPositiveIntegerId(id);
     }
   }
@@ -363,22 +376,32 @@ export async function resolveAreaId(
   const entries = Object.entries(areasCache);
 
   // 1. Exact match
-  for (const [id, name] of entries) {
-    if (name.toLowerCase() === normalizedArea || id === normalizedArea) {
+  for (const [id, names] of entries) {
+    if (
+      names.en.toLowerCase() === normalizedArea ||
+      names.ar.toLowerCase() === normalizedArea ||
+      id === normalizedArea
+    ) {
       return toPositiveIntegerId(id);
     }
   }
 
   // 2. Starts-with match (e.g. "madab" matches "Madaba")
-  for (const [id, name] of entries) {
-    if (name.toLowerCase().startsWith(normalizedArea)) {
+  for (const [id, names] of entries) {
+    if (
+      names.en.toLowerCase().startsWith(normalizedArea) ||
+      names.ar.toLowerCase().startsWith(normalizedArea)
+    ) {
       return toPositiveIntegerId(id);
     }
   }
 
   // 3. Contains match (e.g. "adab" matches "Madaba")
-  for (const [id, name] of entries) {
-    if (name.toLowerCase().includes(normalizedArea)) {
+  for (const [id, names] of entries) {
+    if (
+      names.en.toLowerCase().includes(normalizedArea) ||
+      names.ar.toLowerCase().includes(normalizedArea)
+    ) {
       return toPositiveIntegerId(id);
     }
   }
@@ -468,7 +491,7 @@ export async function enrichPostsWithCategoryAndSeller(
         ? String(post?.City ?? post?.city).trim()
         : "";
     if (!cityName && cityId !== null && cityId !== undefined) {
-      cityName = resolvedCities[String(cityId)] || "";
+      cityName = resolvedCities[String(cityId)]?.en || "";
     }
 
     let areaName =
@@ -483,7 +506,7 @@ export async function enrichPostsWithCategoryAndSeller(
       cityId !== undefined
     ) {
       const cityAreas = areasCacheByCityId[String(cityId)] || {};
-      areaName = cityAreas[String(areaId)] || "";
+      areaName = cityAreas[String(areaId)]?.en || "";
     }
 
     return {
