@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { APP_CONFIG } from "../../../constants/appConfig";
 import { useAuth } from "../../../contexts/AuthContext";
+import { persistAuthSessionHint } from "../../../contexts/authContextUtils";
 import { api } from "../../../services/api";
 import { normalizeJordanPhone } from "../../../utils/phone";
 import { getLoginCopy } from "../loginCopy";
@@ -277,6 +278,7 @@ export function LoginPage({
     role?: "user" | "admin";
   }) => {
     localStorage.removeItem("tijarahjo_logged_out");
+    persistAuthSessionHint();
     await checkAuth();
 
     const currentUserResponse = await api.auth.getCurrentUser();
