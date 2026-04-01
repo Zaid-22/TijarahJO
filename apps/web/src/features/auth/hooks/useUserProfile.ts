@@ -3,6 +3,7 @@ import { UserProfile } from "../../../types";
 import { useAuth } from "../../../contexts/AuthContext";
 import { api } from "../../../services/api";
 import { logger } from "../../../shared/lib/logger";
+import { DEFAULT_AVATAR_SRC } from "../../../shared/lib/avatar";
 
 function formatJoinedDate(value: unknown, fallback: string): string {
   if (value !== null && value !== undefined && value !== "") {
@@ -34,8 +35,7 @@ export function useUserProfile() {
     area: "",
     location: "",
     bio: "",
-    avatar:
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop",
+    avatar: DEFAULT_AVATAR_SRC,
     joinedDate: "Jan 2024",
   });
 
@@ -53,7 +53,7 @@ export function useUserProfile() {
         firstName: user.firstName || prev.firstName || "",
         lastName: user.lastName || prev.lastName || "",
         email: user.email || prev.email || "",
-        avatar: user.avatar || prev.avatar,
+        avatar: user.avatar || prev.avatar || DEFAULT_AVATAR_SRC,
       }));
     }
   }, [user, isAuthenticated]);
@@ -92,6 +92,8 @@ export function useUserProfile() {
           name: displayName,
           email: backendUser.email || prev.email,
           phone: backendUser.phone || prev.phone || "",
+          bio: backendUser.bio || prev.bio || "",
+          avatar: backendUser.avatar || prev.avatar || DEFAULT_AVATAR_SRC,
           city,
           area,
           location: area ? `${city}, ${area}` : city,

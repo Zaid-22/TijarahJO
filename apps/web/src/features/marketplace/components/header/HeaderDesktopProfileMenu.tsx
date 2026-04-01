@@ -11,6 +11,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "../../../../shared/ui/avatar";
+import { resolveAvatarSrc } from "../../../../shared/lib/avatar";
 import { Button } from "../../../../shared/ui/button";
 import {
   DropdownMenu,
@@ -76,7 +77,7 @@ export function HeaderDesktopProfileMenu({
         >
           <Avatar className="h-9 w-9 border border-border/70 bg-muted shadow-sm ring-2 ring-background">
             <AvatarImage
-              src={userAvatar}
+              src={resolveAvatarSrc(userAvatar)}
               alt={currentUserDisplayName || "User"}
               className="object-cover object-center"
             />

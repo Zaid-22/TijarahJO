@@ -13,6 +13,7 @@ import { Input } from "../../../shared/ui/input";
 import { Label } from "../../../shared/ui/label";
 import { Textarea } from "../../../shared/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "../../../shared/ui/avatar";
+import { resolveAvatarSrc } from "../../../shared/lib/avatar";
 import {
   Select,
   SelectContent,
@@ -81,7 +82,10 @@ export function EditProfileFormSections({
           <div className="flex items-center gap-6">
             <div className="relative">
               <Avatar className="w-24 h-24">
-                <AvatarImage src={formData.avatar} className="object-cover object-center" />
+                <AvatarImage
+                  src={resolveAvatarSrc(formData.avatar)}
+                  className="object-cover object-center"
+                />
                 <AvatarFallback className="bg-muted text-muted-foreground">
                   <User className="h-9 w-9" />
                 </AvatarFallback>
