@@ -53,6 +53,7 @@ export function useFavorites(options: UseFavoritesOptions = {}) {
 
   const {
     data: authFavoriteIds,
+    error: authFavoritesError,
     isLoading: isLoadingAuthFavorites,
     isFetching: isFetchingAuthFavorites,
     refetch: refetchAuthFavorites,
@@ -74,8 +75,17 @@ export function useFavorites(options: UseFavoritesOptions = {}) {
     },
   });
 
+  const hasAuthFavoritesFailure =
+    enabled && isAuthenticated && authFavoritesError !== null;
+
+  const persistLocalFavoriteIds = useCallback((nextIds: string[]) => {
+    const normalizedIds = normalizeFavoriteIds(nextIds);
+    setGuestFavoriteIds(normalizedIds);
+    storage.set(STORAGE_KEYS.FAVORITES, normalizedIds);
+  }, []);
+
   useEffect(() => {
-    if (!enabled || isAuthenticated) {
+    if (!enabled || (isAuthenticated && !hasAuthFavoritesFailure)) {
       return;
     }
 
@@ -83,15 +93,15 @@ export function useFavorites(options: UseFavoritesOptions = {}) {
       storage.get<string[]>(STORAGE_KEYS.FAVORITES, []),
     );
     setGuestFavoriteIds(savedFavorites);
-  }, [enabled, isAuthenticated]);
+  }, [enabled, hasAuthFavoritesFailure, isAuthenticated]);
 
   useEffect(() => {
-    if (!enabled || isAuthenticated) {
+    if (!enabled || (isAuthenticated && !hasAuthFavoritesFailure)) {
       return;
     }
 
     storage.set(STORAGE_KEYS.FAVORITES, normalizeFavoriteIds(guestFavoriteIds));
-  }, [enabled, guestFavoriteIds, isAuthenticated]);
+  }, [enabled, guestFavoriteIds, hasAuthFavoritesFailure, isAuthenticated]);
 
   useEffect(() => {
     if (!enabled || !isAuthenticated) {
@@ -109,12 +119,18 @@ export function useFavorites(options: UseFavoritesOptions = {}) {
       return [];
     }
 
-    if (isAuthenticated) {
+    if (isAuthenticated && !hasAuthFavoritesFailure) {
       return normalizeFavoriteIds(authFavoriteIds || []);
     }
 
     return normalizeFavoriteIds(guestFavoriteIds);
-  }, [authFavoriteIds, enabled, guestFavoriteIds, isAuthenticated]);
+  }, [
+    authFavoriteIds,
+    enabled,
+    guestFavoriteIds,
+    hasAuthFavoritesFailure,
+    isAuthenticated,
+  ]);
 
   const recoverAuthFavorites = useCallback(
     async (snapshot: string[] | undefined) => {
@@ -221,10 +237,19 @@ export function useFavorites(options: UseFavoritesOptions = {}) {
       }
 
       if (!isAuthenticated) {
-        setGuestFavoriteIds((previous) =>
-          previous.includes(normalizedPostId)
-            ? previous
-            : [...previous, normalizedPostId],
+        persistLocalFavoriteIds(
+          guestFavoriteIds.includes(normalizedPostId)
+            ? guestFavoriteIds
+            : [...guestFavoriteIds, normalizedPostId],
+        );
+        return;
+      }
+
+      if (hasAuthFavoritesFailure) {
+        persistLocalFavoriteIds(
+          guestFavoriteIds.includes(normalizedPostId)
+            ? guestFavoriteIds
+            : [...guestFavoriteIds, normalizedPostId],
         );
         return;
       }
@@ -233,9 +258,23 @@ export function useFavorites(options: UseFavoritesOptions = {}) {
         return;
       }
 
-      void addFavoriteMutation.mutate(normalizedPostId).catch(() => undefined);
+      void addFavoriteMutation.mutate(normalizedPostId).catch(() => {
+        persistLocalFavoriteIds(
+          guestFavoriteIds.includes(normalizedPostId)
+            ? guestFavoriteIds
+            : [...guestFavoriteIds, normalizedPostId],
+        );
+      });
     },
-    [addFavoriteMutation, enabled, favoriteIds, isAuthenticated],
+    [
+      addFavoriteMutation,
+      enabled,
+      favoriteIds,
+      guestFavoriteIds,
+      hasAuthFavoritesFailure,
+      isAuthenticated,
+      persistLocalFavoriteIds,
+    ],
   );
 
   const removeFavorite = useCallback(
@@ -246,8 +285,15 @@ export function useFavorites(options: UseFavoritesOptions = {}) {
       }
 
       if (!isAuthenticated) {
-        setGuestFavoriteIds((previous) =>
-          previous.filter((id) => id !== normalizedPostId),
+        persistLocalFavoriteIds(
+          guestFavoriteIds.filter((id) => id !== normalizedPostId),
+        );
+        return;
+      }
+
+      if (hasAuthFavoritesFailure) {
+        persistLocalFavoriteIds(
+          guestFavoriteIds.filter((id) => id !== normalizedPostId),
         );
         return;
       }
@@ -256,9 +302,21 @@ export function useFavorites(options: UseFavoritesOptions = {}) {
         return;
       }
 
-      void removeFavoriteMutation.mutate(normalizedPostId).catch(() => undefined);
+      void removeFavoriteMutation.mutate(normalizedPostId).catch(() => {
+        persistLocalFavoriteIds(
+          guestFavoriteIds.filter((id) => id !== normalizedPostId),
+        );
+      });
     },
-    [enabled, favoriteIds, isAuthenticated, removeFavoriteMutation],
+    [
+      enabled,
+      favoriteIds,
+      guestFavoriteIds,
+      hasAuthFavoritesFailure,
+      isAuthenticated,
+      persistLocalFavoriteIds,
+      removeFavoriteMutation,
+    ],
   );
 
   const toggleFavorite = useCallback(
@@ -284,20 +342,25 @@ export function useFavorites(options: UseFavoritesOptions = {}) {
   );
 
   const clearFavorites = useCallback(() => {
-    if (!isAuthenticated) {
-      setGuestFavoriteIds([]);
-      storage.set(STORAGE_KEYS.FAVORITES, []);
+    if (!isAuthenticated || hasAuthFavoritesFailure) {
+      persistLocalFavoriteIds([]);
       return;
     }
 
     updateServerQueryData(authFavoritesCacheKey, () => [], {
       cancelInFlight: true,
     });
-  }, [authFavoritesCacheKey, isAuthenticated]);
+  }, [
+    authFavoritesCacheKey,
+    hasAuthFavoritesFailure,
+    isAuthenticated,
+    persistLocalFavoriteIds,
+  ]);
 
   const isLoading =
     enabled &&
     isAuthenticated &&
+    !hasAuthFavoritesFailure &&
     ((isLoadingAuthFavorites && favoriteIds.length === 0) ||
       (isFetchingAuthFavorites && favoriteIds.length === 0));
 

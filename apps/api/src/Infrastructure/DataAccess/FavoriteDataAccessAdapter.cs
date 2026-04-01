@@ -42,7 +42,10 @@ public sealed class FavoriteDataAccessAdapter : IFavoriteDataAccess
             return false;
         }
 
+        // Ignore the global soft-delete filter so we can revive a deleted favorite
+        // instead of hitting the unique index with a duplicate insert.
         FavoriteEntity? existing = await _dbContext.Favorites
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(item => item.UserID == userId && item.PostID == postId, cancellationToken);
         if (existing is not null)
         {
@@ -72,6 +75,7 @@ public sealed class FavoriteDataAccessAdapter : IFavoriteDataAccess
         catch (DbUpdateException)
         {
             return await _dbContext.Favorites
+                .IgnoreQueryFilters()
                 .AsNoTracking()
                 .AnyAsync(item => item.UserID == userId && item.PostID == postId && !item.IsDeleted, cancellationToken);
         }

@@ -234,6 +234,55 @@ public sealed class ApiValidationIntegrationTests
     }
 
     [RequiresBaseUrlFact]
+    public async Task Favorites_Add_AfterDelete_RestoresSoftDeletedFavorite()
+    {
+        using var client = CreateClient(IntegrationTestEnvironment.RequireBaseUri());
+        string token = await SignUpAndGetTokenAsync(client);
+        int categoryId = await GetFirstCategoryIdAsync(client);
+        int postId = await CreatePostAsync(client, token, categoryId);
+
+        using (var addRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/favorites"))
+        {
+            addRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            addRequest.Content = JsonContent.Create(new { postId = postId.ToString() });
+
+            HttpResponseMessage addResponse = await client.SendAsync(addRequest);
+            string addContent = await addResponse.Content.ReadAsStringAsync();
+            Assert.True(addResponse.IsSuccessStatusCode, $"Initial favorite add failed ({(int)addResponse.StatusCode}): {addContent}");
+        }
+
+        using (var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/favorites/{postId}"))
+        {
+            deleteRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            HttpResponseMessage deleteResponse = await client.SendAsync(deleteRequest);
+            string deleteContent = await deleteResponse.Content.ReadAsStringAsync();
+            Assert.True(deleteResponse.IsSuccessStatusCode, $"Favorite delete failed ({(int)deleteResponse.StatusCode}): {deleteContent}");
+        }
+
+        using (var restoreRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/favorites"))
+        {
+            restoreRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            restoreRequest.Content = JsonContent.Create(new { postId = postId.ToString() });
+
+            HttpResponseMessage restoreResponse = await client.SendAsync(restoreRequest);
+            string restoreContent = await restoreResponse.Content.ReadAsStringAsync();
+            Assert.True(restoreResponse.IsSuccessStatusCode, $"Favorite restore failed ({(int)restoreResponse.StatusCode}): {restoreContent}");
+        }
+
+        using var getRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/favorites");
+        getRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        HttpResponseMessage getResponse = await client.SendAsync(getRequest);
+        string getContent = await getResponse.Content.ReadAsStringAsync();
+        Assert.True(getResponse.IsSuccessStatusCode, $"Favorites fetch failed ({(int)getResponse.StatusCode}): {getContent}");
+
+        using JsonDocument json = JsonDocument.Parse(getContent);
+        JsonElement favorites = json.RootElement.GetProperty("favorites");
+        Assert.Contains(favorites.EnumerateArray().Select(item => item.GetString()), value => value == postId.ToString());
+    }
+
+    [RequiresBaseUrlFact]
     public async Task Notifications_MarkAsRead_WithInvalidId_ReturnsBadRequestProblemDetails()
     {
         using var client = CreateClient(IntegrationTestEnvironment.RequireBaseUri());
