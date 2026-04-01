@@ -7,6 +7,7 @@ import { useAppSettings } from "../../../contexts/AppSettingsContext";
 import { useUserProfileContext } from "../../../contexts/UserProfileContext";
 import { useLocationOptions } from "../../../shared/hooks/useLocationOptions";
 import { normalizeJordanPhone } from "../../../utils/phone";
+import { DEFAULT_AVATAR_SRC } from "../../../shared/lib/avatar";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { AuthInputField } from "../AuthInputField";
 import { AuthPhoneField } from "../AuthPhoneField";
@@ -15,19 +16,39 @@ import { AuthAvatarUpload } from "../AuthAvatarUpload";
 import { Alert, AlertDescription } from "../../../shared/ui/alert";
 import { AlertCircle } from "lucide-react";
 
+/** Returns true when the avatar is empty or is just the local default placeholder. */
+function isPlaceholderAvatar(src: string | undefined | null): boolean {
+  return !src || src === DEFAULT_AVATAR_SRC;
+}
+
 export function CompleteProfilePage() {
   const navigate = useNavigate();
   const { language } = useAppSettings();
   const { userProfile, refreshProfile } = useUserProfileContext();
   const isRTL = language === "ar";
 
+  const initialAvatar = isPlaceholderAvatar(userProfile?.avatar) ? "" : userProfile!.avatar;
   const [firstName, setFirstName] = useState(userProfile?.firstName || "");
   const [lastName, setLastName] = useState(userProfile?.lastName || "");
   const [phone, setPhone] = useState(userProfile?.phone || "");
   const [city, setCity] = useState(userProfile?.city || "");
   const [area, setArea] = useState(userProfile?.area || "");
-  const [avatarPreview, setAvatarPreview] = useState<string>(userProfile?.avatar || "");
+  const [avatarPreview, setAvatarPreview] = useState<string>(initialAvatar);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Sync profile data when it loads asynchronously (e.g. Google avatar URL)
+  useEffect(() => {
+    if (userProfile) {
+      if (!firstName && userProfile.firstName) setFirstName(userProfile.firstName);
+      if (!lastName && userProfile.lastName) setLastName(userProfile.lastName);
+      if (!phone && userProfile.phone) setPhone(userProfile.phone);
+      if (!city && userProfile.city) setCity(userProfile.city);
+      if (!area && userProfile.area) setArea(userProfile.area);
+      if (isPlaceholderAvatar(avatarPreview) && !isPlaceholderAvatar(userProfile.avatar)) {
+        setAvatarPreview(userProfile.avatar);
+      }
+    }
+  }, [userProfile, firstName, lastName, phone, city, area, avatarPreview]);
   const [isLoading, setIsLoading] = useState(false);
   const [generalError, setGeneralError] = useState("");
   const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -125,6 +146,13 @@ export function CompleteProfilePage() {
         return;
       }
 
+      // Only send Avatar if it's a valid http/https URL (e.g. Google avatar).
+      // Base64 data URLs from local file uploads are too large for the API
+      // and will crash the server. They are only used for local preview.
+      const isValidAvatarUrl =
+        avatarPreview &&
+        (avatarPreview.startsWith("http://") || avatarPreview.startsWith("https://"));
+
       await api.users.updateUser(userProfile.id, {
         FirstName: trimmedFirstName,
         LastName: trimmedLastName,
@@ -132,7 +160,7 @@ export function CompleteProfilePage() {
         CityId: resolvedCityId,
         AreaId: resolvedAreaId,
         Email: userProfile.email,
-        ...(avatarPreview ? { Avatar: avatarPreview } : {}),
+        ...(isValidAvatarUrl ? { Avatar: avatarPreview } : {}),
       });
 
       refreshProfile();
