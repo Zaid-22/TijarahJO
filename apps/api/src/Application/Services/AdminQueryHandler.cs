@@ -168,6 +168,62 @@ public sealed class AdminQueryHandler : IAdminQueryHandler
         }
     }
 
+    public async Task<AdminPostCommentsQueryResult> GetAdminPostCommentsAsync(string? search = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await _adminDataAccess.GetAdminPostCommentsAsync(search, pageNumber, pageSize, cancellationToken);
+            return new AdminPostCommentsQueryResult
+            {
+                Success = true,
+                StatusCode = 200,
+                Result = result
+            };
+        }
+        catch (Exception ex)
+        {
+            return new AdminPostCommentsQueryResult
+            {
+                Success = false,
+                StatusCode = 500,
+                Message = $"Error retrieving admin post comments: {ex.Message}"
+            };
+        }
+    }
+
+    public async Task<AdminPostCommentDeleteResult> SoftDeletePostCommentAsync(int commentId, int adminUserId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            bool deleted = await _adminDataAccess.SoftDeletePostCommentAsync(commentId, adminUserId, cancellationToken);
+            if (!deleted)
+            {
+                return new AdminPostCommentDeleteResult
+                {
+                    Success = false,
+                    StatusCode = 404,
+                    Message = $"Comment with ID {commentId} not found."
+                };
+            }
+
+            return new AdminPostCommentDeleteResult
+            {
+                Success = true,
+                StatusCode = 200,
+                Message = "Comment deleted successfully."
+            };
+        }
+        catch (Exception ex)
+        {
+            return new AdminPostCommentDeleteResult
+            {
+                Success = false,
+                StatusCode = 500,
+                Message = $"Error deleting post comment: {ex.Message}"
+            };
+        }
+    }
+
     // ── Phase 2: Audit Log ──
 
     public async Task<AdminAuditLogQueryResult> GetAuditLogsAsync(string? tableName = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)

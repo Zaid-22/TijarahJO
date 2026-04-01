@@ -6,6 +6,8 @@ public static class PermissionKeys
     public const string UsersManage = "users.manage";
     public const string PostsView = "posts.view";
     public const string PostsModerate = "posts.moderate";
+    public const string CommentsView = "comments.view";
+    public const string CommentsModerate = "comments.moderate";
     public const string ReviewsView = "reviews.view";
     public const string ReviewsModerate = "reviews.moderate";
     public const string ReportsView = "reports.view";

@@ -44,6 +44,9 @@ export const formatPostedAgo = (
     const diffHours = Math.floor(diffTime / ONE_HOUR_MS);
     if (diffHours === 0) {
       const diffMinutes = Math.floor(diffTime / ONE_MINUTE_MS);
+      if (diffMinutes <= 0) {
+        return language === "ar" ? "نُشر الآن" : "Posted just now";
+      }
       return language === "ar"
         ? `نُشر منذ ${diffMinutes} ${diffMinutes === 1 ? "دقيقة" : "دقائق"}`
         : `Posted ${diffMinutes} ${diffMinutes === 1 ? "minute" : "minutes"} ago`;

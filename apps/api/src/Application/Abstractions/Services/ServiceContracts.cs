@@ -271,3 +271,49 @@ public interface IPostReadService
     Task<PostReadCollectionResult> GetByCategoryIdAsync(int categoryId, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
     Task<PostViewIncrementResult> IncrementViewsAsync(int postId, CancellationToken cancellationToken = default);
 }
+
+// ---------------------------------------------------------------------------
+// Post Comments
+// ---------------------------------------------------------------------------
+
+public enum PostCommentFailureReason
+{
+    InvalidRequest,
+    PostNotFound,
+    CommentNotFound,
+    Forbidden,
+    RateLimited,
+    PersistenceFailed
+}
+
+public sealed class PostCommentResult
+{
+    public bool Success { get; init; }
+    public PostCommentModel? Comment { get; init; }
+    public PostCommentFailureReason? FailureReason { get; init; }
+    public string? Message { get; init; }
+}
+
+public sealed class PostCommentListResult
+{
+    public bool Success { get; init; }
+    public IReadOnlyList<PostCommentModel> Comments { get; init; } = Array.Empty<PostCommentModel>();
+    public int TotalCount { get; init; }
+    public PostCommentFailureReason? FailureReason { get; init; }
+    public string? Message { get; init; }
+}
+
+public interface IPostCommentService
+{
+    Task<PostCommentResult> AddCommentAsync(
+        int postId, int userId, string? content, int? parentCommentId = null, CancellationToken cancellationToken = default);
+    Task<PostCommentListResult> GetTopLevelCommentsAsync(
+        int postId, int pageNumber = 1, int pageSize = 20, CancellationToken cancellationToken = default);
+    Task<PostCommentListResult> GetRepliesAsync(
+        int parentCommentId, int pageNumber = 1, int pageSize = 20, CancellationToken cancellationToken = default);
+    Task<PostCommentResult> UpdateCommentAsync(
+        int commentId, int actorUserId, string? content, CancellationToken cancellationToken = default);
+    Task<PostCommentResult> DeleteCommentAsync(
+        int commentId, int actorUserId, bool actorIsAdmin, int? postOwnerId = null, CancellationToken cancellationToken = default);
+}
+

@@ -181,6 +181,8 @@ public static class AuthenticationExtensions
             .AddPolicy(AuthorizationPolicies.UsersManage, RequirePermission(PermissionKeys.UsersManage))
             .AddPolicy(AuthorizationPolicies.PostsView, RequirePermission(PermissionKeys.PostsView))
             .AddPolicy(AuthorizationPolicies.PostsModerate, RequirePermission(PermissionKeys.PostsModerate))
+            .AddPolicy(AuthorizationPolicies.CommentsView, RequirePermission(PermissionKeys.CommentsView))
+            .AddPolicy(AuthorizationPolicies.CommentsModerate, RequirePermission(PermissionKeys.CommentsModerate))
             .AddPolicy(AuthorizationPolicies.ReviewsView, RequirePermission(PermissionKeys.ReviewsView))
             .AddPolicy(AuthorizationPolicies.ReviewsModerate, RequirePermission(PermissionKeys.ReviewsModerate))
             .AddPolicy(AuthorizationPolicies.ReportsView, RequirePermission(PermissionKeys.ReportsView))

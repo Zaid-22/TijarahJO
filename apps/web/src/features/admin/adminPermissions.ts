@@ -2,6 +2,8 @@ export const ADMIN_PERMISSIONS = {
   usersView: "users.view",
   usersManage: "users.manage",
   postsView: "posts.view",
+  commentsView: "comments.view",
+  commentsModerate: "comments.moderate",
   reviewsView: "reviews.view",
   chatView: "chat.view",
   categoriesManage: "categories.manage",
