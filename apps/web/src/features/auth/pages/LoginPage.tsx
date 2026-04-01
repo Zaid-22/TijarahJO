@@ -1,15 +1,15 @@
 /* eslint-disable max-lines */
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { APP_CONFIG } from "../../../constants/appConfig";
 import { useAuth } from "../../../contexts/AuthContext";
 import { api } from "../../../services/api";
 import { normalizeJordanPhone } from "../../../utils/phone";
-import { LoginForm } from "../LoginForm";
 import { getLoginCopy } from "../loginCopy";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { resolveHasAdminAccessFromPayload } from "../../../contexts/authUtils";
 import { SubpageHeader } from "../../../shared/ui/subpage-header";
+import { LoginForm } from "../LoginForm";
 import {
   buildCurrentPath,
   resolveBackPathFromLocationState,
@@ -105,6 +105,24 @@ const resolveLoginRole = (user: unknown): "admin" | "user" => {
   return resolveHasAdminAccessFromPayload(payload) ? "admin" : "user";
 };
 
+const readAuthString = (
+  payload: Record<string, unknown> | null,
+  ...keys: string[]
+): string => {
+  if (!payload) {
+    return "";
+  }
+
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+
+  return "";
+};
+
 export function LoginPage({
   onLogin,
   onContinueAsGuest,
@@ -122,6 +140,9 @@ export function LoginPage({
   const [state, dispatch] = useLoginReducer({
     phone: "",
   });
+  const [avatarPreview, setAvatarPreview] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const {
     areaNames,
     isLoadingAreas,
@@ -245,6 +266,70 @@ export function LoginPage({
     label: areaName,
   }));
 
+  const finalizeAuthenticatedLogin = async (fallbackUser: {
+    id?: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    avatar?: string;
+    joinedDate?: string;
+    role?: "user" | "admin";
+  }) => {
+    localStorage.removeItem("tijarahjo_logged_out");
+    await checkAuth();
+
+    const currentUserResponse = await api.auth.getCurrentUser();
+    if (!currentUserResponse.success || !currentUserResponse.data) {
+      dispatch({
+        type: "SET_GENERAL_ERROR",
+        error:
+          language === "ar"
+            ? "تمت الاستجابة لتسجيل الدخول لكن لم يتم إنشاء جلسة صالحة. حاول مرة أخرى."
+            : "Login response succeeded, but no authenticated session was established. Please try again.",
+      });
+      return;
+    }
+
+    const authenticatedUser =
+      typeof currentUserResponse.data === "object" &&
+      currentUserResponse.data !== null
+        ? (currentUserResponse.data as Record<string, unknown>)
+        : null;
+
+    onLogin({
+      id:
+        readAuthString(authenticatedUser, "Id", "id", "UserID", "userID") ||
+        fallbackUser.id,
+      firstName:
+        readAuthString(authenticatedUser, "FirstName", "firstName") ||
+        fallbackUser.firstName,
+      lastName:
+        readAuthString(authenticatedUser, "LastName", "lastName") ||
+        fallbackUser.lastName,
+      email:
+        readAuthString(authenticatedUser, "Email", "email") ||
+        fallbackUser.email,
+      phone:
+        readAuthString(authenticatedUser, "Phone", "phone") ||
+        fallbackUser.phone,
+      avatar:
+        readAuthString(authenticatedUser, "Avatar", "avatar") ||
+        fallbackUser.avatar,
+      joinedDate: formatJoinedDateLabel(
+        readAuthString(
+          authenticatedUser,
+          "JoinedDate",
+          "joinedDate",
+          "JoinDate",
+          "joinDate",
+        ) || fallbackUser.joinedDate,
+        language,
+      ),
+      role: resolveLoginRole(authenticatedUser) || fallbackUser.role,
+    });
+  };
+
   const handleSignUp = async () => {
     const parsedIdentifier = parseAuthIdentifier(state.values.identifier);
     const normalizedPhone = normalizeJordanPhone(state.values.phone);
@@ -287,23 +372,19 @@ export function LoginPage({
       return;
     }
 
-    const response = await api.auth.register(
-      parsedIdentifier.email || "",
-      state.values.password,
-      `${state.values.firstName.trim()} ${state.values.lastName.trim()}`,
-      normalizedPhone,
-      normalizedCity,
-      normalizedArea,
-    );
+    const response = await api.auth.signup({
+      email: parsedIdentifier.email || "",
+      password: state.values.password,
+      firstName: state.values.firstName.trim(),
+      lastName: state.values.lastName.trim(),
+      phone: normalizedPhone,
+      city: normalizedCity,
+      area: normalizedArea,
+      avatar: avatarPreview || undefined,
+    });
 
-    if (!response.success || !response.data) {
-      const baseMessage =
-        response.error ||
-        extractErrorMessage(
-          response,
-          copy.errors.registrationFailedFallback,
-          backendConnectionMessage,
-        );
+    if (!response.success) {
+      const baseMessage = response.error?.message || response.message || copy.errors.registrationFailedFallback;
       dispatch({
         type: "SET_GENERAL_ERROR",
         error: appendDuplicateAccountHint(
@@ -314,12 +395,8 @@ export function LoginPage({
       return;
     }
 
-    localStorage.removeItem("tijarahjo_logged_out");
-    await checkAuth();
-
-    const user = response.data.user;
-
-    onLogin({
+    const user = response.user;
+    await finalizeAuthenticatedLogin({
       id: user?.id,
       firstName: user?.firstName || state.values.firstName.trim(),
       lastName: user?.lastName || state.values.lastName.trim(),
@@ -327,7 +404,7 @@ export function LoginPage({
         user?.email || parsedIdentifier.email || state.values.identifier.trim(),
       phone: user?.phone || normalizedPhone,
       avatar: user?.avatar,
-      joinedDate: formatJoinedDateLabel(user?.joinedDate, language),
+      joinedDate: user?.joinedDate,
       role: resolveLoginRole(user),
     });
   };
@@ -365,19 +442,15 @@ export function LoginPage({
       return;
     }
 
-    localStorage.removeItem("tijarahjo_logged_out");
-    await checkAuth();
-
     const user = response.user;
-
-    onLogin({
+    await finalizeAuthenticatedLogin({
       id: user?.id,
       firstName: user?.firstName || "",
       lastName: user?.lastName || "",
       email: user?.email || state.values.identifier.trim(),
       phone: user?.phone || "",
       avatar: user?.avatar,
-      joinedDate: formatJoinedDateLabel(user?.joinedDate, language),
+      joinedDate: user?.joinedDate,
       role: resolveLoginRole(user),
     });
   };
@@ -423,18 +496,15 @@ export function LoginPage({
       return;
     }
 
-    localStorage.removeItem("tijarahjo_logged_out");
-    await checkAuth();
-
     const user = response.user;
-    onLogin({
+    await finalizeAuthenticatedLogin({
       id: user?.id,
       firstName: user?.firstName || "",
       lastName: user?.lastName || "",
       email: user?.email || state.values.identifier.trim(),
       phone: user?.phone || "",
       avatar: user?.avatar,
-      joinedDate: formatJoinedDateLabel(user?.joinedDate, language),
+      joinedDate: user?.joinedDate,
       role: resolveLoginRole(user),
     });
   };
@@ -535,10 +605,49 @@ export function LoginPage({
     dispatch({ type: "CANCEL_TWO_FACTOR" });
   };
 
+  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      dispatch({
+        type: "SET_GENERAL_ERROR",
+        error: language === "ar" 
+          ? "حجم الملف كبير جداً. الحد الأقصى هو 5 ميغابايت." 
+          : "File size too large. Maximum size is 5MB.",
+      });
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      dispatch({
+        type: "SET_GENERAL_ERROR",
+        error: language === "ar"
+          ? "الرجاء اختيار صورة صالحة (JPG, PNG, GIF)."
+          : "Please select an image file (JPG, PNG, or GIF).",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatarPreview(String(reader.result || ""));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const formComponent = (
-    <LoginForm
-      language={language}
-      isSignUp={state.mode === "signUp"}
+    <>
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        onChange={handleAvatarUpload}
+        accept="image/*"
+      />
+      <LoginForm
+        language={language}
+        isSignUp={state.mode === "signUp"}
       showGoogleAuth={googleAuthEnabled}
       isLoading={state.isLoading}
       generalError={state.generalError}
@@ -577,8 +686,11 @@ export function LoginPage({
       onToggleConfirmPasswordVisibility={() =>
         dispatch({ type: "TOGGLE_CONFIRM_PASSWORD" })
       }
+      avatarPreview={avatarPreview}
+      onAvatarClick={() => fileInputRef.current?.click()}
       isModal={isModal}
     />
+    </>
   );
 
   if (isModal) {
