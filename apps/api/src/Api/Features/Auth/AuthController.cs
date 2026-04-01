@@ -94,7 +94,7 @@ public class AuthController(
                 );
             }
 
-            if (sendResult.DebugCode is { Length: > 0 })
+            if (sendResult.DebugCode is { Length: > 0 } && _logger.IsEnabled(LogLevel.Information))
             {
                 _logger.LogInformation(
                     "Two-factor login debug code issued for user {UserId}.",
