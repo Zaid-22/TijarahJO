@@ -98,6 +98,26 @@ public sealed class AdminReviewListResult
     public int TotalCount { get; init; }
 }
 
+public sealed class AdminPostCommentItem
+{
+    public int CommentID { get; init; }
+    public int PostID { get; init; }
+    public string PostTitle { get; init; } = string.Empty;
+    public int UserID { get; init; }
+    public string AuthorName { get; init; } = string.Empty;
+    public int? ParentCommentID { get; init; }
+    public int ReplyCount { get; init; }
+    public string Content { get; init; } = string.Empty;
+    public System.DateTime CreatedAt { get; init; }
+    public System.DateTime UpdatedAt { get; init; }
+}
+
+public sealed class AdminPostCommentListResult
+{
+    public System.Collections.Generic.IReadOnlyList<AdminPostCommentItem> Comments { get; init; } = System.Array.Empty<AdminPostCommentItem>();
+    public int TotalCount { get; init; }
+}
+
 // ── Phase 2: Audit Log ──
 
 public sealed class AdminAuditLogItem
@@ -129,6 +149,8 @@ public interface IAdminDataAccess
     // Phase 2
     Task<AdminReviewListResult> GetAdminReviewsAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
     Task<bool> SoftDeleteReviewAsync(int reviewId, int adminUserId, CancellationToken cancellationToken = default);
+    Task<AdminPostCommentListResult> GetAdminPostCommentsAsync(string? search = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
+    Task<bool> SoftDeletePostCommentAsync(int commentId, int adminUserId, CancellationToken cancellationToken = default);
     Task<AdminAuditLogResult> GetAuditLogsAsync(string? tableName = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
 
     // Phase 3

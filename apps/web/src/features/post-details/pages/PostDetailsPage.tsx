@@ -4,6 +4,7 @@ import { PostDetailsHeader } from "../PostDetailsHeader";
 import { PostImageGallery } from "../PostImageGallery";
 import { PostSellerSidebar } from "../PostSellerSidebar";
 import { PostSummaryCard } from "../PostSummaryCard";
+import { PostCommentsSection } from "../components/PostCommentsSection";
 import { SimilarItemsSection } from "../SimilarItemsSection";
 import { ReportPostDialog } from "../../marketplace/components/ReportPostDialog";
 import { ShareListingDialog } from "../../marketplace/components/ShareListingDialog";
@@ -69,6 +70,7 @@ export function PostDetailsPage({
   const [sellerName, setSellerName] = useState<string | null>(null);
   const [sellerCity, setSellerCity] = useState<string | null>(null);
   const [sellerArea, setSellerArea] = useState<string | null>(null);
+  const [sellerActiveListingsCount, setSellerActiveListingsCount] = useState<number | null>(null);
   const [displayedViews, setDisplayedViews] = useState<number>(post.views ?? 0);
   const [nowTimestamp, setNowTimestamp] = useState<number>(() => Date.now());
 
@@ -124,6 +126,7 @@ export function PostDetailsPage({
       setSellerName(null);
       setSellerCity(null);
       setSellerArea(null);
+      setSellerActiveListingsCount(null);
 
       if (!post.sellerId) {
         return;
@@ -167,17 +170,20 @@ export function PostDetailsPage({
           setSellerPhone(phone);
         }
 
-        if (!city && !area) {
-          try {
-            const sellerProfileResponse = await api.sellers.getSellerProfile(
-              String(post.sellerId),
-            );
-            const sellerProfile = sellerProfileResponse?.seller;
-            city = sellerProfile?.city || city;
-            area = sellerProfile?.area || area;
-          } catch {
-            // Keep existing location fallback behavior if seller profile fetch fails.
+        try {
+          const sellerProfileResponse = await api.sellers.getSellerProfile(
+            String(post.sellerId),
+          );
+          const sellerProfile = sellerProfileResponse?.seller;
+          if (sellerProfile) {
+            if (!city) city = sellerProfile.city || city;
+            if (!area) area = sellerProfile.area || area;
+            if (typeof sellerProfile.activeListingsCount === "number" && !cancelled) {
+              setSellerActiveListingsCount(sellerProfile.activeListingsCount);
+            }
           }
+        } catch {
+          // Keep existing location fallback behavior if seller profile fetch fails.
         }
 
         if (city) {
@@ -217,10 +223,11 @@ export function PostDetailsPage({
     [post.area, post.location, sellerArea, sellerCity, t.jordan],
   );
 
-  const activeListingsCount = useMemo(
+  const clientSideActiveCount = useMemo(
     () => countActiveListings(allPosts, post),
     [allPosts, post],
   );
+  const activeListingsCount = sellerActiveListingsCount ?? clientSideActiveCount;
 
   const postedAgoLabel = useMemo(
     () =>
@@ -274,13 +281,39 @@ export function PostDetailsPage({
               displayLocationLabel={displayLocationLabel}
               postedAgoLabel={postedAgoLabel}
               displayedViews={displayedViews}
-              labels={{
-                descriptionTitle: t.descriptionTitle,
-                soldOut: t.soldOut,
-                views: t.views,
-              }}
-            />
-          </div>
+                labels={{
+                  descriptionTitle: t.descriptionTitle,
+                  soldOut: t.soldOut,
+                  views: t.views,
+                }}
+              />
+
+              <PostCommentsSection
+                postId={post.id}
+                language={language}
+                postOwnerId={post.sellerId}
+                labels={{
+                  commentsTitle: t.commentsTitle,
+                  addComment: t.addComment,
+                  commentPlaceholder: t.commentPlaceholder,
+                  submitComment: t.submitComment,
+                  noComments: t.noComments,
+                  deleteComment: t.deleteComment,
+                  loadMoreComments: t.loadMoreComments,
+                  loginToComment: t.loginToComment,
+                  commentAdded: t.commentAdded,
+                  commentDeleted: t.commentDeleted,
+                  reply: t.reply,
+                  hideReplies: t.hideReplies,
+                  showReplies: t.showReplies,
+                  editComment: t.editComment,
+                  cancelEdit: t.cancelEdit,
+                  saveComment: t.saveComment,
+                  commentUpdated: t.commentUpdated,
+                  replies: t.replies,
+                }}
+              />
+            </div>
 
           <PostSellerSidebar
             language={language}

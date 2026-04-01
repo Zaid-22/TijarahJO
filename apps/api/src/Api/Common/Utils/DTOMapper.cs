@@ -174,7 +174,7 @@ public static class DTOMapper
                 SellerId = post.SellerId,
                 Category = post.Category,
                 CategoryId = post.CategoryId,
-                Image = "", // Not returning images in search by default
+                Image = post.Image ?? "",
                 Phone = post.Phone,
                 Description = post.Description,
                 CreatedAt = post.CreatedAt,
@@ -265,6 +265,25 @@ public static class DTOMapper
             IsRead = notification.IsRead,
             CreatedAt = notification.CreatedAt,
             ReadAt = notification.ReadAt
+        };
+    }
+
+    public static PostCommentResponseDTO ToPostCommentResponseDTO(Domain.Models.PostCommentModel model, HttpRequest? request = null)
+    {
+        return new PostCommentResponseDTO
+        {
+            CommentID = model.CommentID ?? 0,
+            Id = model.CommentID?.ToString() ?? string.Empty,
+            PostID = model.PostID,
+            UserID = model.UserID,
+            ParentCommentID = model.ParentCommentID,
+            Content = model.Content,
+            CreatedAt = model.CreatedAt,
+            UpdatedAt = model.UpdatedAt,
+            AuthorName = model.AuthorName,
+            AuthorAvatar = ResolveAssetUrl(request, model.AuthorAvatar),
+            ReplyCount = model.ReplyCount,
+            IsEdited = model.UpdatedAt > model.CreatedAt.AddSeconds(1)
         };
     }
 }

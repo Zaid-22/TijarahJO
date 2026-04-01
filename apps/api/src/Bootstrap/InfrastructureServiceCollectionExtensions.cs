@@ -100,6 +100,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IReviewDataAccess, ReviewDataAccessAdapter>();
         services.AddScoped<IVerificationChallengeDataAccess, VerificationChallengeDataAccessAdapter>();
         services.AddScoped<IAdminDataAccess, AdminDataAccessAdapter>();
+        services.AddScoped<IPostCommentDataAccess, PostCommentDataAccessAdapter>();
 
         // Register the resolved connection string so raw-SQL services can inject it.
         services.AddSingleton(new DatabaseConnectionString(connectionString));

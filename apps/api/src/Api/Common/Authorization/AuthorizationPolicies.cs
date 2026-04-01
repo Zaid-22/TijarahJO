@@ -8,6 +8,8 @@ public static class AuthorizationPolicies
     public const string UsersManage = "UsersManage";
     public const string PostsView = "PostsView";
     public const string PostsModerate = "PostsModerate";
+    public const string CommentsView = "CommentsView";
+    public const string CommentsModerate = "CommentsModerate";
     public const string ReviewsView = "ReviewsView";
     public const string ReviewsModerate = "ReviewsModerate";
     public const string ReportsView = "ReportsView";

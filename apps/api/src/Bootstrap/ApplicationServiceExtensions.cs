@@ -73,6 +73,9 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IReviewSubmissionService, ReviewSubmissionService>();
 
+        // Post Comments
+        services.AddScoped<IPostCommentService, PostCommentService>();
+
         // Admin
         services.AddScoped<IAdminQueryHandler, AdminQueryHandler>();
 

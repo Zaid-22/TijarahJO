@@ -86,6 +86,24 @@ export type AdminReviewListResult = {
   totalCount: number;
 };
 
+export type AdminPostCommentItem = {
+  commentID: number;
+  postID: number;
+  postTitle: string;
+  userID: number;
+  authorName: string;
+  parentCommentID: number | null;
+  replyCount: number;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminPostCommentListResult = {
+  comments: AdminPostCommentItem[];
+  totalCount: number;
+};
+
 export type AdminAuditLogItem = {
   auditLogID: number;
   tableName: string;

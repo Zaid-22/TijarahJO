@@ -61,6 +61,11 @@ const ReviewsModeration = lazy(() =>
     default: m.ReviewsModeration,
   })),
 );
+const PostCommentsModeration = lazy(() =>
+  import("../features/admin/components/PostCommentsModeration").then((m) => ({
+    default: m.PostCommentsModeration,
+  })),
+);
 const AuditLogViewer = lazy(() =>
   import("../features/admin/components/AuditLogViewer").then((m) => ({
     default: m.AuditLogViewer,
@@ -155,6 +160,16 @@ ReactDOM.createRoot(rootElement).render(
                       requiredPermission={ADMIN_PERMISSIONS.postsView}
                     >
                       <ListingsManagement />
+                    </AdminPermissionRoute>
+                  }
+                />
+                <Route
+                  path="comments"
+                  element={
+                    <AdminPermissionRoute
+                      requiredPermission={ADMIN_PERMISSIONS.commentsView}
+                    >
+                      <PostCommentsModeration />
                     </AdminPermissionRoute>
                   }
                 />

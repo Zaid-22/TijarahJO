@@ -11,6 +11,7 @@ import { favoritesApi } from "./api/favorites";
 import { locationsApi } from "./api/locations";
 import { notificationsApi } from "./api/notifications";
 import { postsApi } from "./api/posts";
+import { commentsApi } from "./api/comments";
 import { reviewsApi } from "./api/reviews";
 import { reportsApi } from "./api/reports";
 import { rolesApi } from "./api/roles";
@@ -29,6 +30,7 @@ export const api = {
   sellers: sellersApi,
   users: usersApi,
   locations: locationsApi,
+  comments: commentsApi,
   reviews: reviewsApi,
   reports: reportsApi,
   chat: chatApi,

@@ -279,6 +279,77 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
         return true;
     }
 
+    public async Task<AdminPostCommentListResult> GetAdminPostCommentsAsync(string? search = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
+    {
+        var normalizedSearch = search?.Trim();
+
+        var query =
+            from comment in _dbContext.PostComments.AsNoTracking()
+            join user in _dbContext.Users.AsNoTracking().IgnoreQueryFilters() on comment.UserID equals user.UserID into userGroup
+            from user in userGroup.DefaultIfEmpty()
+            join post in _dbContext.Posts.AsNoTracking().IgnoreQueryFilters() on comment.PostID equals post.PostID into postGroup
+            from post in postGroup.DefaultIfEmpty()
+            select new { comment, user, post };
+
+        if (!string.IsNullOrWhiteSpace(normalizedSearch))
+        {
+            var searchTerm = normalizedSearch!;
+            query = query.Where(x =>
+                x.comment.Content.Contains(searchTerm) ||
+                (x.post != null && (x.post.PostTitle ?? string.Empty).Contains(searchTerm)) ||
+                (x.user != null && (
+                    ((x.user.FirstName ?? string.Empty) + " " + (x.user.LastName ?? string.Empty)).Trim().Contains(searchTerm) ||
+                    (x.user.FirstName ?? string.Empty).Contains(searchTerm) ||
+                    (x.user.LastName ?? string.Empty).Contains(searchTerm))));
+        }
+
+        int totalCount = await query.CountAsync(cancellationToken);
+
+        int safePage = System.Math.Max(1, pageNumber);
+        int safeSize = System.Math.Clamp(pageSize, 1, 200);
+
+        var items = await query
+            .OrderByDescending(x => x.comment.CreatedAt)
+            .ThenByDescending(x => x.comment.CommentID)
+            .Skip((safePage - 1) * safeSize)
+            .Take(safeSize)
+            .Select(x => new AdminPostCommentItem
+            {
+                CommentID = x.comment.CommentID,
+                PostID = x.comment.PostID,
+                PostTitle = x.post != null ? x.post.PostTitle ?? string.Empty : string.Empty,
+                UserID = x.comment.UserID,
+                AuthorName = x.user != null
+                    ? ((x.user.FirstName ?? string.Empty) + " " + (x.user.LastName ?? string.Empty)).Trim()
+                    : "Unknown user",
+                ParentCommentID = x.comment.ParentCommentID,
+                ReplyCount = _dbContext.PostComments.Count(reply => reply.ParentCommentID == x.comment.CommentID),
+                Content = x.comment.Content,
+                CreatedAt = x.comment.CreatedAt,
+                UpdatedAt = x.comment.UpdatedAt
+            })
+            .ToListAsync(cancellationToken);
+
+        return new AdminPostCommentListResult
+        {
+            TotalCount = totalCount,
+            Comments = items
+        };
+    }
+
+    public async Task<bool> SoftDeletePostCommentAsync(int commentId, int adminUserId, CancellationToken cancellationToken = default)
+    {
+        var entity = await _dbContext.PostComments
+            .FirstOrDefaultAsync(comment => comment.CommentID == commentId, cancellationToken);
+
+        if (entity == null) return false;
+
+        entity.IsDeleted = true;
+        _dbContext.AuditActorUserId = adminUserId;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     // ── Phase 2: Audit Log ──
 
     public async Task<AdminAuditLogResult> GetAuditLogsAsync(string? tableName = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)

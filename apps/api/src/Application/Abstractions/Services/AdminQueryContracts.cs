@@ -63,6 +63,21 @@ public sealed class AdminReviewDeleteResult
     public string? Message { get; init; }
 }
 
+public sealed class AdminPostCommentsQueryResult
+{
+    public bool Success { get; init; }
+    public int StatusCode { get; init; }
+    public string? Message { get; init; }
+    public TijarahJo.Application.Abstractions.DataAccess.AdminPostCommentListResult? Result { get; init; }
+}
+
+public sealed class AdminPostCommentDeleteResult
+{
+    public bool Success { get; init; }
+    public int StatusCode { get; init; }
+    public string? Message { get; init; }
+}
+
 public sealed class AdminAuditLogQueryResult
 {
     public bool Success { get; init; }
@@ -80,6 +95,8 @@ public interface IAdminQueryHandler
     // Phase 2
     Task<AdminReviewsQueryResult> GetAdminReviewsAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
     Task<AdminReviewDeleteResult> SoftDeleteReviewAsync(int reviewId, int adminUserId, CancellationToken cancellationToken = default);
+    Task<AdminPostCommentsQueryResult> GetAdminPostCommentsAsync(string? search = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
+    Task<AdminPostCommentDeleteResult> SoftDeletePostCommentAsync(int commentId, int adminUserId, CancellationToken cancellationToken = default);
     Task<AdminAuditLogQueryResult> GetAuditLogsAsync(string? tableName = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
 
     // Phase 3

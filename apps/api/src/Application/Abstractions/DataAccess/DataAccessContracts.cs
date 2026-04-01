@@ -117,3 +117,17 @@ public interface IVerificationChallengeDataAccess
     Task UpsertChallengeStateAsync(int userId, string challengeType, string stateJson, DateTime expiresAt, CancellationToken cancellationToken = default);
     Task DeleteChallengeStateAsync(int userId, string challengeType, CancellationToken cancellationToken = default);
 }
+
+public interface IPostCommentDataAccess
+{
+    Task<int> AddCommentAsync(PostCommentModel comment, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PostCommentModel>> GetTopLevelCommentsByPostIdAsync(
+        int postId, int pageNumber = 1, int pageSize = 20, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PostCommentModel>> GetRepliesByParentIdAsync(
+        int parentCommentId, int pageNumber = 1, int pageSize = 20, CancellationToken cancellationToken = default);
+    Task<PostCommentModel?> GetCommentByIdAsync(int commentId, CancellationToken cancellationToken = default);
+    Task<bool> UpdateCommentAsync(int commentId, string content, CancellationToken cancellationToken = default);
+    Task<bool> DeleteCommentAsync(int commentId, int actorUserId, CancellationToken cancellationToken = default);
+    Task<int> GetRecentCommentCountAsync(int userId, TimeSpan window, CancellationToken cancellationToken = default);
+    Task<int> GetCommentCountByPostIdAsync(int postId, CancellationToken cancellationToken = default);
+}

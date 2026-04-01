@@ -6,6 +6,10 @@ const {
   parseUserSchema,
   parseUsersCollection,
 } = require("../../.unit-dist/services/api/schemas/userSchema.js");
+const {
+  parsePostComment,
+  parseCommentListResponse,
+} = require("../../.unit-dist/services/api/schemas/commentsSchema.js");
 
 test("parseAuthEnvelope normalizes backend auth payload", () => {
   const parsed = parseAuthEnvelope({
@@ -79,4 +83,76 @@ test("parseUsersCollection filters invalid entries", () => {
   assert.equal(parsed.length, 2);
   assert.equal(parsed[0].id, "1");
   assert.equal(parsed[1].id, "2");
+});
+
+test("parsePostComment normalizes PascalCase backend payload", () => {
+  const parsed = parsePostComment({
+    CommentID: 91,
+    Id: "91",
+    PostID: 12,
+    UserID: 5,
+    ParentCommentID: null,
+    Content: "Hello world",
+    CreatedAt: "2026-04-01T08:00:00.000Z",
+    UpdatedAt: "2026-04-01T08:00:00.000Z",
+    AuthorName: "Ali Saleh",
+    AuthorAvatar: "/uploads/a.png",
+    ReplyCount: 2,
+    IsEdited: false,
+  });
+
+  assert.ok(parsed);
+  assert.equal(parsed.commentId, 91);
+  assert.equal(parsed.id, "91");
+  assert.equal(parsed.postId, 12);
+  assert.equal(parsed.userId, 5);
+  assert.equal(parsed.content, "Hello world");
+  assert.equal(parsed.authorName, "Ali Saleh");
+  assert.equal(parsed.replyCount, 2);
+  assert.equal(parsed.isEdited, false);
+});
+
+test("parseCommentListResponse normalizes comment collections", () => {
+  const parsed = parseCommentListResponse({
+    Comments: [
+      {
+        CommentID: 7,
+        PostID: 3,
+        UserID: 11,
+        Content: "First",
+        CreatedAt: "2026-04-01T08:00:00.000Z",
+        UpdatedAt: "2026-04-01T08:00:00.000Z",
+        ReplyCount: 0,
+        IsEdited: false,
+      },
+    ],
+    TotalCount: 1,
+    Page: 1,
+    PageSize: 20,
+  });
+
+  assert.ok(parsed);
+  assert.equal(parsed.totalCount, 1);
+  assert.equal(parsed.page, 1);
+  assert.equal(parsed.pageSize, 20);
+  assert.equal(parsed.comments.length, 1);
+  assert.equal(parsed.comments[0].commentId, 7);
+  assert.equal(parsed.comments[0].content, "First");
+});
+
+test("parsePostComment treats timezone-less backend timestamps as UTC", () => {
+  const parsed = parsePostComment({
+    CommentID: 19,
+    PostID: 32,
+    UserID: 1002,
+    Content: "Recent comment",
+    CreatedAt: "2026-04-01T09:54:32.450001",
+    UpdatedAt: "2026-04-01T09:54:32.450001",
+    ReplyCount: 0,
+    IsEdited: false,
+  });
+
+  assert.ok(parsed);
+  assert.equal(parsed.createdAt, "2026-04-01T09:54:32.450Z");
+  assert.equal(parsed.updatedAt, "2026-04-01T09:54:32.450Z");
 });

@@ -5,6 +5,7 @@ import type {
   AdminPostListResult,
   AdminUserDetails,
   AdminReviewListResult,
+  AdminPostCommentListResult,
   AdminAuditLogResult,
   SystemSettingItem,
   AdminConversationListResult,
@@ -210,6 +211,57 @@ export const adminApi = {
       return response.success;
     } catch (error) {
       debugError(`Failed to delete review ${reviewId}:`, error);
+      return false;
+    }
+  },
+
+  /**
+   * Get paginated admin post comments with optional search
+   */
+  getPostComments: async (
+    page = 1,
+    pageSize = 50,
+    searchQuery = "",
+  ): Promise<AdminPostCommentListResult> => {
+    try {
+      const params = new URLSearchParams();
+      params.set("page", page.toString());
+      params.set("pageSize", pageSize.toString());
+      if (searchQuery.trim()) {
+        params.set("search", searchQuery.trim());
+      }
+
+      const response = await apiRequest<AdminPostCommentListResult>(
+        `/admin/post-comments?${params.toString()}`,
+        { method: "GET" },
+      );
+
+      if (response.success && response.data) {
+        return toCamelCaseKeys<AdminPostCommentListResult>(response.data);
+      }
+
+      const errorMessage =
+        !response.success && response.error
+          ? response.error.message
+          : "Failed to fetch admin post comments";
+      throw new Error(errorMessage);
+    } catch (error) {
+      debugError("Failed to fetch admin post comments:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Soft-delete a post comment (moderation action)
+   */
+  deletePostComment: async (commentId: number): Promise<boolean> => {
+    try {
+      const response = await apiRequest(`/admin/post-comments/${commentId}`, {
+        method: "DELETE",
+      });
+      return response.success;
+    } catch (error) {
+      debugError(`Failed to delete post comment ${commentId}:`, error);
       return false;
     }
   },
