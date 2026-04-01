@@ -12,21 +12,14 @@ namespace TijarahJo.Api.Features.Users;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/users")]
-public class UsersController : ControllerBase
+public class UsersController(
+    IUserQueryHandler userQueries,
+    IUserCommandService userCommands,
+    IAuthorizationService authorizationService) : ControllerBase
 {
-    private readonly IUserQueryHandler _userQueries;
-    private readonly IUserCommandService _userCommands;
-    private readonly IAuthorizationService _authorizationService;
-
-    public UsersController(
-        IUserQueryHandler userQueries,
-        IUserCommandService userCommands,
-        IAuthorizationService authorizationService)
-    {
-        _userQueries = userQueries;
-        _userCommands = userCommands;
-        _authorizationService = authorizationService;
-    }
+    private readonly IUserQueryHandler _userQueries = userQueries;
+    private readonly IUserCommandService _userCommands = userCommands;
+    private readonly IAuthorizationService _authorizationService = authorizationService;
 
     [Authorize(Policy = AuthorizationPolicies.UsersView)]
     [HttpGet("")]
@@ -44,12 +37,11 @@ public class UsersController : ControllerBase
 
         if (result.Users.Count == 0)
         {
-            return Ok(new List<UserResponseDTO>());
+            return Ok(Array.Empty<UserResponseDTO>());
         }
 
-        List<UserResponseDTO> dtoList = result.Users
-            .Select(u => DTOMapper.ToUserResponseDTO(u, request: Request))
-            .ToList();
+        List<UserResponseDTO> dtoList = [.. result.Users
+            .Select(u => DTOMapper.ToUserResponseDTO(u, request: Request))];
         return Ok(dtoList);
     }
 
