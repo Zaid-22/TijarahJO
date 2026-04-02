@@ -13,6 +13,7 @@ export interface HeaderActionHandlers {
 export interface HeaderIdentity {
   language: Language;
   isAuthenticated: boolean;
+  authLoading?: boolean;
   isAdmin: boolean;
   currentUserDisplayName?: string;
   userAvatar?: string;

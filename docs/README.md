@@ -46,7 +46,7 @@ API-specific documentation for contracts, endpoint conventions, route versioning
 ## Frontend (`frontend/`)
 
 - `ID_SYSTEM.md` — canonical frontend ID model and implementation details
-- `AUTH_RUNTIME_QA_MATRIX.md` — runtime authentication behavior and QA matrix
+- `AUTH_RUNTIME_QA_MATRIX.md` — runtime authentication QA matrix, including signed-in hard refresh and session-revalidation UI expectations
 
 ## Setup (`setup/`)
 
@@ -97,4 +97,4 @@ API-specific documentation for contracts, endpoint conventions, route versioning
 3. Prefer one canonical document per topic; link instead of duplicating.
 4. Mark legacy documents clearly and move them into section `archive/` folders.
 
-Last Updated: 2026-03-24
+Last Updated: 2026-04-02

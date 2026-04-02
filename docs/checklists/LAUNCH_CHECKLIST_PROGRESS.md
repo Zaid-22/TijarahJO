@@ -1,108 +1,47 @@
 # Launch Checklist Progress Report
 
-**Date:** 2026-02-17  
-**Status:** In Progress
+**Date:** 2026-04-02  
+**Status:** Active launch-hardening snapshot
 
-## ✅ Completed Critical Items
+This file is a lightweight progress view. The canonical launch gate list remains:
 
-### 1. Security & Authentication ✅
+- `docs/checklists/LAUNCH_READINESS_CHECKLIST.md`
 
-- [x] **JWT Signing Key** - Moved to environment variable support
-  - ✅ Updated `Program.cs` to read from `JWT_SIGNING_KEY` env var
-  - ✅ Falls back to appsettings.json for development
-  - ✅ Validates that key is present at startup
+## Completed or Established Baseline
 
-- [x] **Database Connection String** - Moved to environment variable support
-  - ✅ Updated `clsDataAccessSettings.cs` to read from `DATABASE_CONNECTION_STRING` env var
-  - ✅ Supports individual DB_* variables for flexibility
-  - ✅ Falls back to development defaults
+- Environment-based backend configuration is documented and in active use
+- Local bootstrap flow exists through `./scripts/bootstrap_db.sh`
+- Local app startup flow exists through `./scripts/run-dev.sh`
+- Cookie-backed JWT auth, logout invalidation, and refresh recovery are implemented
+- Frontend signed-in refresh behavior is documented and aligned with current runtime behavior
+- API endpoint inventory is maintained in `docs/reports/API_ENDPOINTS_STATUS.md`
+- Database schema, migrations, and bundle workflows are documented under `apps/api/database/` and `docs/DATABASE.md`
 
-- [x] **Production Configuration** - Created
-  - ✅ Created `appsettings.Production.json`
-  - ✅ Created `ENVIRONMENT_VARIABLES.md` documentation
-  - ✅ Updated CORS configuration for production
+## In Progress / Needs Continued Validation
 
-### 2. Authorization & Permissions ✅
+- Launch checklist items still need explicit verification rather than assumption-based completion
+- Production deployment hardening still needs full operational review
+- Some launch-readiness items remain checklist-driven rather than evidence-backed
 
-- [x] **Enable Authorization on Protected Endpoints**
-  - ✅ Added `[Authorize]` to `AddPost` endpoint
-  - ✅ Added `[Authorize]` to `UpdatePost` endpoint
-  - ✅ Added `[Authorize]` to `DeletePost` endpoint
-  - ✅ Added `[Authorize]` to `UpdateUser` endpoint
-  - ✅ `GetCurrentUser` already had `[Authorize]`
+## Remaining High-Signal Launch Areas
 
-- [x] **User ID Extraction from JWT**
-  - ✅ Implemented in `AddPost` - extracts user ID from token
-  - ✅ Implemented in `UpdatePost` - verifies ownership
-  - ✅ Implemented in `DeletePost` - verifies ownership
-  - ✅ Implemented in `UpdateUser` - verifies ownership (allows admin override)
-  - ✅ Uses `ClaimTypes.NameIdentifier` for user ID
+1. Production security hardening
+   - Secret management
+   - HTTPS/TLS edge strategy
+   - production CORS review
 
-- [x] **Ownership Verification**
-  - ✅ `UpdatePost` - Verifies user owns the post before allowing update
-  - ✅ `DeletePost` - Verifies user owns the post before allowing deletion
-  - ✅ `UpdateUser` - Users can only update their own profile (admin exception)
-  - ✅ `AddPost` - User ID is set from JWT token, preventing impersonation
+2. Operational readiness
+   - backup/restore confidence
+   - deployment runbook validation
+   - production monitoring/logging expectations
 
-### 3. CORS Configuration ✅
+3. Quality verification
+   - end-to-end launch smoke coverage
+   - launch-critical permission and ownership testing
+   - explicit production configuration review
 
-- [x] **Environment-Based CORS**
-  - ✅ Development: Allows localhost:5173
-  - ✅ Production: Configurable via `CORS:AllowedOrigins` or `FrontendUrl`
+## How to Use This File
 
-## 🔄 In Progress
-
-### Code Quality
-- [ ] Remove debug console.log statements (wrap in environment check)
-- [ ] Fix compiler warnings (nullable reference warnings)
-
-## ⏳ Remaining Critical Items
-
-### High Priority (Do Before Launch)
-
-1. **Image Upload Implementation** ⏳
-   - [ ] Create file upload endpoint
-   - [ ] Replace base64 storage
-   - [ ] Implement image storage solution
-
-2. **Form Validation** ⏳
-   - [ ] Replace all `alert()` calls with toast notifications
-   - [ ] Add comprehensive client-side validation
-
-3. **Database Integrity** ⏳
-   - [ ] Run duplicate check script
-   - [ ] Add CASCADE DELETE for post images
-   - [ ] Verify foreign key constraints
-
-4. **Testing** ⏳
-   - [ ] Test authorization - verify users cannot modify others' posts
-   - [ ] Test ownership checks
-   - [ ] End-to-end testing of all features
-
-5. **Error Handling** ⏳
-   - [ ] Add try-catch to all API calls
-   - [ ] Improve error messages
-   - [ ] Add error logging
-
-## 📊 Progress Summary
-
-- **Completed:** 12 critical items
-- **In Progress:** 2 items
-- **Remaining:** ~23 critical items
-- **Overall Progress:** ~35% of critical items completed
-
-## 🎯 Next Steps
-
-1. Test the authorization changes to ensure they work correctly
-2. Implement image upload functionality
-3. Add comprehensive form validation
-4. Run database cleanup and integrity checks
-5. Perform end-to-end testing
-
-## 📝 Notes
-
-- All security-related code changes have been implemented
-- Authorization is now properly enforced
-- Environment variable support is ready for production
-- Need to test thoroughly before launch
-
+- Use this file for a current high-level progress summary
+- Use `LAUNCH_READINESS_CHECKLIST.md` to track exact remaining work
+- Prefer evidence from scripts, tests, and docs over old completion percentages

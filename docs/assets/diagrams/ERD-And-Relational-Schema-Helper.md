@@ -1,9 +1,9 @@
 # 🗂️ TijarahJo - ERD & Relational Schema Helper
 
 > **Version**: 1.0  
-> **Last Updated**: December 8, 2025  
-> **Tracking File**: `ERD-TRACKING.md`  
-> **Purpose**: Source of truth for domain modeling before ERD diagramming
+> **Last Updated**: April 2, 2026  
+> **Status**: Historical planning helper, not the canonical runtime schema reference  
+> **Canonical schema docs**: `docs/DATABASE.md` and `apps/api/README.md`
 
 ---
 ---
@@ -227,7 +227,7 @@ TijarahJo is a **C2C (Consumer-to-Consumer) marketplace** platform similar to OL
 
 ## 2.3 Entity: Role
 
-> **Description**: Defines what actions a user can perform (from 04-RolesAndAuthorization.md)
+> **Description**: Defines what actions a user can perform within the marketplace permission model.
 
 ```
 ┌────────────────────────────────────────┐
@@ -290,7 +290,7 @@ TijarahJo is a **C2C (Consumer-to-Consumer) marketplace** platform similar to OL
 
 ## 2.6 Entity: RefreshToken
 
-> **Description**: JWT refresh tokens for multi-device authentication
+> **Status**: Legacy concept only. The current runtime uses a JWT cookie plus `/api/auth/refresh` and token blacklisting; this table is not part of the active schema.
 
 ```
 ┌────────────────────────────────────────┐
@@ -1261,5 +1261,4 @@ CREATE TABLE Transactions (
 
 ---
 
-> **Tracking**: See `ERD-TRACKING.md` for documentation progress  
-> **Related**: `04-RolesAndAuthorization.md` for auth details
+> **Canonical follow-up**: Use `docs/DATABASE.md` for the active schema and `docs/reports/API_ENDPOINTS_STATUS.md` for runtime API/auth behavior.

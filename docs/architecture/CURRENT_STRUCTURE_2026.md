@@ -71,8 +71,8 @@ final project primary/
   - Integration tests: `apps/api/tests/Integration.Tests/`
   - API contract/smoke scripts: `apps/api/tests/contracts/`
 - **Database assets:**
-  - `apps/api/database/scripts/migrations/` — 21 versioned migration files
-  - `apps/api/database/scripts/procedures/`, `seeds/`, `maintenance/`
+  - `apps/api/database/scripts/migrations/` — 34 versioned migration files
+  - `apps/api/database/scripts/seeds/`, `diagnostics/`, `maintenance/`, `setup/`
   - `apps/api/database/schema/`
   - `apps/api/database/bundles/` — generated consolidated SQL bundles
 
@@ -100,4 +100,4 @@ final project primary/
 | `make ci-local` | Full local CI mirror |
 | `make sql-bundles` | Regenerate consolidated SQL bundles |
 
-Updated: 2026-03-24
+Updated: 2026-04-02

@@ -1,442 +1,186 @@
 # TijarahJo - Setup Guide for New Computer
 
-This guide will help you set up the TijarahJo project on a new computer, including the database.
+Use this guide when onboarding the project onto a fresh machine.
 
----
+## Recommended Path
 
-## 📋 Prerequisites
+The current repo workflow is:
 
-### Required Software
+1. Configure local secrets in the repo root `.env`
+2. Bootstrap the database with `./scripts/bootstrap_db.sh`
+3. Start backend + frontend with `./scripts/run-dev.sh`
 
-1. **.NET 8.0 SDK**
-   - Download: https://dotnet.microsoft.com/download/dotnet/8.0
-   - Verify: `dotnet --version` (should show 8.0.x)
+This is the preferred path over older manual SQL or Visual Studio-only setup flows.
 
-2. **SQL Server**
-   - SQL Server Express or Full Version
-   - Download: https://www.microsoft.com/sql-server/sql-server-downloads
-   - **OR** SQL Server LocalDB (included with Visual Studio)
-   - Verify: Connect using SQL Server Management Studio (SSMS)
+## Prerequisites
 
-3. **Node.js 16+ and npm**
-   - Download: https://nodejs.org/
-   - Verify: `node --version` and `npm --version`
+Install these first:
 
-4. **Git** (optional, if cloning from repository)
-   - Download: https://git-scm.com/
+1. .NET 8 SDK
+2. Node.js 18+ and npm
+3. Docker Desktop with `docker compose`
+4. Git
+5. Optional: SQL Server Management Studio for manual DB inspection
 
-5. **Code Editor** (optional)
-   - Visual Studio Code: https://code.visualstudio.com/
-   - Visual Studio 2022: https://visualstudio.microsoft.com/
+## Step 1: Prepare Local Environment
 
----
-
-## 🗄️ Database Setup
-
-### Step 1: Install SQL Server
-
-1. Install SQL Server (Express or Full version)
-2. During installation, note:
-   - **Server Name**: Usually `localhost` or `localhost\SQLEXPRESS`
-   - **Authentication Mode**: Choose "Mixed Mode" (SQL Server + Windows Authentication)
-   - **SA Password**: Set a strong password (you'll need this)
-
-### Step 2: Create Database from Canonical Scripts
-
-1. Open SQL Server Management Studio (SSMS)
-
-2. Connect to your SQL Server instance
-
-3. Create a new database:
-   ```sql
-   CREATE DATABASE TijarahJoDB;
-   GO
-   ```
-
-4. Run the canonical bootstrap flow:
-   - From repo root run: `./scripts/bootstrap_db.sh`
-   - This applies base schema + ordered migrations automatically.
-   - It also applies baseline seed data by default (`seed_data.sql`).
-   - This repository does not track `.bak` backup files.
-   - Manual SQL execution is only needed for troubleshooting.
-
-5. Manual alternative (if not using bootstrap):
-   - Run `apps/api/database/bundles/schema.sql`
-   - Then run `apps/api/database/bundles/migrations.sql`
-   - Optional: run `apps/api/database/bundles/seed_data.sql`
-
-6. (Optional) Add sample data:
-   - Run: `apps/api/database/scripts/seeds/dev/INSERT_SAMPLE_POSTS.sql`
-   - Run: `apps/api/database/scripts/seeds/test/CREATE_TEST_USER.sql`
-
-### Step 3: Configure Database Connection
-
-The project uses environment variables for database connection. You need to configure:
-
-**Connection String Format:**
-```
-Data Source=SERVER_NAME;Database=TijarahJoDB;User Id=LOGIN;Password=PASSWORD;TrustServerCertificate=True;
-```
-
-**Example:**
-```
-Data Source=localhost;Database=TijarahJoDB;User Id=sa;Password=YourPassword123;TrustServerCertificate=True;
-```
-
----
-
-## ⚙️ Backend Setup
-
-### Step 1: Navigate to Backend Directory
+From the repo root:
 
 ```bash
-cd "apps/api/src/Api"
+cp .env.example .env
 ```
 
-### Step 2: Configure Database Connection
+Update `.env` with real values for at least:
 
-#### Method 1: Environment Variables (Recommended)
+- `MSSQL_SA_PASSWORD`
+- `JWT_SIGNING_KEY`
+- `DB_APP_PASSWORD`
 
-**Windows (Command Prompt):**
-```cmd
-set DB_HOST=localhost
-set DB_NAME=TijarahJoDB
-set DB_USER=sa
-set DB_PASSWORD=YourPassword123
-```
+Important notes:
 
-**Windows (PowerShell):**
-```powershell
-$env:DB_HOST="localhost"
-$env:DB_NAME="TijarahJoDB"
-$env:DB_USER="sa"
-$env:DB_PASSWORD="YourPassword123"
-```
+- `DB_RUNTIME_PRINCIPAL=app` is the default and requires `DB_APP_PASSWORD`
+- `VITE_API_BASE_URL` should normally stay `http://localhost:5033/api/v1`
+- `GOOGLE_AUTH_*` values are optional for local setup
 
-**macOS/Linux:**
-```bash
-export DB_HOST=localhost
-export DB_NAME=TijarahJoDB
-export DB_USER=sa
-export DB_PASSWORD=YourPassword123
-```
+Reference templates:
 
-**OR use full connection string:**
-```bash
-export DATABASE_CONNECTION_STRING="Data Source=localhost;Database=TijarahJoDB;User Id=sa;Password=YourPassword123;TrustServerCertificate=True;"
-```
+- `.env.example`
+- `docs/setup/ENV_TEMPLATE.txt`
+- `apps/api/src/Api/ENVIRONMENT_VARIABLES.md`
 
-#### Method 2: Edit appsettings.Development.json
+## Step 2: Bootstrap the Database
 
-Edit `apps/api/src/Api/appsettings.Development.json`:
-
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Data Source=localhost;Database=TijarahJoDB;User Id=sa;Password=YourPassword123;TrustServerCertificate=True;"
-  }
-}
-```
-
-⚠️ **Security Note:** Never commit passwords to version control!
-
-### Step 3: Configure JWT Settings
-
-Edit `apps/api/src/Api/appsettings.Development.json`:
-
-```json
-{
-  "JWT": {
-    "Issuer": "https://localhost",
-    "Audience": "https://localhost",
-    "Lifetime": 120,
-    "SigningKey": "YOUR_SECRET_KEY_HERE_MIN_32_CHARACTERS"
-  }
-}
-```
-
-**Generate a secure key:**
-- Use at least 32 characters
-- Mix of letters, numbers, and symbols
-- Keep it secret!
-
-### Step 4: Restore Dependencies
+Run:
 
 ```bash
+./scripts/bootstrap_db.sh
+```
+
+What this does:
+
+- starts SQL Server in Docker
+- recreates `TijarahJoDB`
+- applies canonical schema + ordered migrations
+- applies baseline seed data
+- starts the backend on `http://localhost:5033`
+- runs API verification unless disabled
+
+Useful options:
+
+```bash
+./scripts/bootstrap_db.sh --no-volume-reset
+./scripts/bootstrap_db.sh --no-verify
+./scripts/bootstrap_db.sh --keep-backend
+./scripts/bootstrap_db.sh --with-dev-seeds
+```
+
+If you need a deeper DB checklist, use:
+
+- `docs/setup/DATABASE_SETUP_CHECKLIST.md`
+
+## Step 3: Start the App
+
+Run:
+
+```bash
+./scripts/run-dev.sh
+```
+
+This script:
+
+- loads `.env` automatically
+- validates backend/database auth config before startup
+- starts the backend on `http://localhost:5033`
+- starts the frontend on `http://localhost:5173`
+
+Default local URLs:
+
+- Backend API: `http://localhost:5033`
+- Swagger: `http://localhost:5033/swagger`
+- Frontend: `http://localhost:5173`
+
+## Step 4: Verify Everything
+
+Check these:
+
+- Swagger loads at `http://localhost:5033/swagger`
+- Frontend loads at `http://localhost:5173`
+- Categories/posts load in the UI
+- Login/signup works
+- Signed-in refresh keeps the page visible and restores account state cleanly
+
+## Manual Fallback
+
+Use this only if you are troubleshooting or intentionally avoiding the scripts.
+
+### Backend only
+
+```bash
+cd apps/api/src/Api
 dotnet restore
-```
-
-### Step 5: Build the Project
-
-```bash
 dotnet build
+ASPNETCORE_ENVIRONMENT=Development \
+ASPNETCORE_URLS=http://localhost:5033 \
+JWT_SIGNING_KEY='<your-jwt-signing-key>' \
+DATABASE_CONNECTION_STRING='Data Source=localhost,1433;Database=TijarahJoDB;User Id=sa;Password=<your-password>;TrustServerCertificate=True;Encrypt=False;' \
+dotnet run --no-launch-profile
 ```
 
-### Step 6: Run the Backend
+### Frontend only
 
-```bash
-dotnet run
-```
-
-The API should start on:
-- HTTP: `http://localhost:5033`
-- HTTPS: `https://localhost:7064` (if configured)
-- Swagger UI: `http://localhost:5033/swagger`
-
----
-
-## 🎨 Frontend Setup
-
-### Step 1: Navigate to Frontend Directory
-
-```bash
-cd "apps/web"
-```
-
-### Step 2: Install Dependencies
-
-```bash
-npm install
-```
-
-### Step 3: Configure API Base URL
-
-Create a `.env` file in the frontend root directory:
+Create `apps/web/.env` if needed:
 
 ```env
 VITE_API_BASE_URL=http://localhost:5033/api/v1
 ```
 
-**For HTTPS:**
-```env
-VITE_API_BASE_URL=https://localhost:7064/api/v1
-```
-
-### Step 4: Run the Frontend
+Then run:
 
 ```bash
-npm run dev
-```
-
-The frontend should start on: `http://localhost:5173`
-
----
-
-## ✅ Verification Checklist
-
-### Database
-- [ ] SQL Server is installed and running
-- [ ] Database `TijarahJoDB` exists
-- [ ] Can connect to database using SSMS
-- [ ] Schema and migrations are applied (no runtime stored procedures required)
-- [ ] Test data is loaded (optional)
-
-### Backend
-- [ ] .NET 8.0 SDK is installed
-- [ ] Dependencies restored (`dotnet restore`)
-- [ ] Project builds successfully (`dotnet build`)
-- [ ] Database connection configured
-- [ ] JWT signing key configured
-- [ ] Backend runs without errors
-- [ ] Swagger UI is accessible
-- [ ] Can test an endpoint (e.g., GET /api/v1/categories)
-
-### Frontend
-- [ ] Node.js and npm are installed
-- [ ] Dependencies installed (`npm install`)
-- [ ] API base URL configured
-- [ ] Frontend runs without errors
-- [ ] Can access the application in browser
-- [ ] Can see posts/categories (if data exists)
-
-### Integration
-- [ ] Frontend can connect to backend API
-- [ ] Authentication works (login/signup)
-- [ ] Can fetch posts from backend
-- [ ] Can create/edit/delete posts
-- [ ] Images upload correctly
-
----
-
-## 🔧 Troubleshooting
-
-### Database Connection Issues
-
-**Problem:** "Cannot connect to database"
-
-**Solutions:**
-1. Verify SQL Server is running:
-   - Windows: Check Services → SQL Server
-   - macOS/Linux: Check SQL Server service status
-
-2. Check connection string:
-   - Verify server name (localhost, localhost\SQLEXPRESS, etc.)
-   - Verify database name (TijarahJoDB)
-   - Verify login and password
-
-3. Check SQL Server authentication:
-   - Ensure "SQL Server Authentication" is enabled
-   - Verify SA account is enabled
-
-4. Test connection in SSMS first
-
-**Problem:** "Login failed for user"
-
-**Solutions:**
-1. Verify login and password are correct
-2. Check if SQL Server Authentication is enabled
-3. Try Windows Authentication if available
-
-### Backend Issues
-
-**Problem:** "JWT SigningKey is not configured"
-
-**Solution:**
-- Set JWT SigningKey in `appsettings.Development.json`
-- Or set `JWT_SIGNING_KEY` environment variable
-
-**Problem:** "CORS policy error"
-
-**Solution:**
-- Verify frontend URL is in CORS allowed origins
-- Check `Program.cs` CORS configuration
-- For development, it should allow `http://localhost:5173`
-
-### Frontend Issues
-
-**Problem:** "Cannot connect to API"
-
-**Solutions:**
-1. Verify backend is running
-2. Check API base URL in `.env` file
-3. Verify CORS is configured correctly
-4. Check browser console for errors
-
-**Problem:** "Module not found" errors
-
-**Solution:**
-- Delete `node_modules` folder
-- Delete `package-lock.json`
-- Run `npm install` again
-
----
-
-## 🔐 Security Best Practices
-
-### For Development
-- Use `appsettings.Development.json` for local settings
-- Never commit passwords to Git
-- Use strong JWT signing keys
-
-### For Production
-- Use environment variables for all sensitive data
-- Use strong database passwords
-- Use HTTPS
-- Configure proper CORS origins
-- Use secure JWT signing keys (at least 32 characters)
-- Never expose connection strings in code
-
----
-
-## 📝 Environment Variables Reference
-
-### Backend Environment Variables
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `DB_HOST` | SQL Server hostname | `localhost` |
-| `DB_NAME` | Database name | `TijarahJoDB` |
-| `DB_USER` | Database login | `sa` |
-| `DB_PASSWORD` | Database password | `YourPassword123` |
-| `DATABASE_CONNECTION_STRING` | Full connection string | `Data Source=...` |
-| `JWT_SIGNING_KEY` | JWT secret key | `YourSecretKey123...` |
-| `JWT_ISSUER` | JWT issuer | `https://localhost` |
-| `JWT_AUDIENCE` | JWT audience | `https://localhost` |
-| `ASPNETCORE_ENVIRONMENT` | Environment | `Development` or `Production` |
-| `CORS_AllowedOrigins` | Allowed CORS origins | `http://localhost:5173` |
-
-### Frontend Environment Variables
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `VITE_API_BASE_URL` | Backend API base URL | `http://localhost:5033/api/v1` |
-
----
-
-## 🚀 Quick Start Script
-
-### Windows (PowerShell)
-
-Create `setup.ps1`:
-
-```powershell
-# Set environment variables
-$env:DB_HOST="localhost"
-$env:DB_NAME="TijarahJoDB"
-$env:DB_USER="sa"
-$env:DB_PASSWORD="YourPassword123"
-$env:JWT_SIGNING_KEY="YourSecretKeyHere12345678901234567890"
-
-# Backend
-cd "apps/api/src/Api"
-dotnet restore
-dotnet build
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "dotnet run"
-
-# Frontend
-cd "../../../apps/web"
-npm install
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "npm run dev"
-```
-
-### macOS/Linux
-
-Create `setup.sh`:
-
-```bash
-#!/bin/bash
-
-# Set environment variables
-export DB_HOST=localhost
-export DB_NAME=TijarahJoDB
-export DB_USER=sa
-export DB_PASSWORD=YourPassword123
-export JWT_SIGNING_KEY=YourSecretKeyHere12345678901234567890
-
-# Backend
-cd "apps/api/src/Api"
-dotnet restore
-dotnet build
-dotnet run &
-
-# Frontend
-cd "../../../apps/web"
+cd apps/web
 npm install
 npm run dev
 ```
 
----
+## Troubleshooting
 
-## 📚 Additional Resources
+### `JWT_SIGNING_KEY is not configured`
 
-- **Database Setup**: See `apps/api/database/scripts/README.md`
-- **Backend Setup**: See `docs/setup/BACKEND_SETUP_STEP_BY_STEP.md`
-- **Troubleshooting**: See `docs/troubleshooting/`
-- **Historical Integration Report**: See `docs/reports/archive/INTEGRATION_REPORT_2024.md`
+Set `JWT_SIGNING_KEY` in `.env` or your shell before running the scripts.
 
----
+### `DB_APP_PASSWORD must be set when DB_RUNTIME_PRINCIPAL=app`
 
-## ❓ Need Help?
+Set `DB_APP_PASSWORD` in `.env`, or switch to `DB_RUNTIME_PRINCIPAL=sa` only if you intentionally want that runtime mode.
 
-If you encounter issues:
+### SQL login/auth failure during bootstrap
 
-1. Check the troubleshooting section above
-2. Review error messages in console/logs
-3. Verify all prerequisites are installed
-4. Check database connection using SSMS
-5. Review configuration files
+Try a clean Docker reset:
 
----
+```bash
+docker compose -f infra/docker-compose.yml down -v
+```
 
-**Last Updated:** December 2024  
-**Version:** 1.0.0
+Then update `.env` and rerun:
+
+```bash
+./scripts/bootstrap_db.sh
+```
+
+### Frontend cannot connect to API
+
+Check:
+
+- backend is running on `http://localhost:5033`
+- `VITE_API_BASE_URL=http://localhost:5033/api/v1`
+- browser console for CORS or network errors
+
+## Related Docs
+
+- `README-RUN.md`
+- `docs/setup/QUICK_SETUP_CHECKLIST.md`
+- `docs/setup/DATABASE_SETUP_CHECKLIST.md`
+- `docs/setup/BACKEND_SETUP_STEP_BY_STEP.md`
+- `apps/api/src/Api/ENVIRONMENT_VARIABLES.md`
+
+**Last Updated:** 2026-04-02
+**Version:** 2.0

@@ -20,7 +20,7 @@ This document provides **complete documentation** of the **Entity-Relationship D
 
 ---
 
-## 🧱 Entities Overview (22 Tables)
+## 🧱 Entities Overview (23 Tables)
 
 ### Core Marketplace
 1. **Users** — registered accounts
@@ -47,14 +47,15 @@ This document provides **complete documentation** of the **Entity-Relationship D
 14. **Permissions** — granular permission keys
 15. **RolePermissions** — role-to-permission mapping
 16. **BlacklistedTokens** — revoked JWT tokens
-17. **UserExternalIdentities** — OAuth provider links
-18. **Reports** — abuse/fraud reports
+17. **VerificationChallenges** — hashed verification state for auth challenge flows
+18. **UserExternalIdentities** — OAuth provider links
+19. **Reports** — abuse/fraud reports
 
 ### System
-19. **AuditLog** — data mutation audit trail
-20. **SystemSettings** — admin-configurable feature flags
-21. **PostStatusLookup** — post status reference data
-22. **UserStatusLookup** — user status reference data
+20. **AuditLog** — data mutation audit trail
+21. **SystemSettings** — admin-configurable feature flags
+22. **PostStatusLookup** — post status reference data
+23. **UserStatusLookup** — user status reference data
 
 ---
 
@@ -339,6 +340,22 @@ Revoked JWT tokens for secure logout.
 
 ---
 
+## ✅ Entity: VerificationChallenges
+
+Hashed verification state for session recovery and challenge-based auth flows.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| **TokenHash** (PK) | NVARCHAR | Hashed verification token |
+| UserID (FK) | INT | References `Users` |
+| Purpose | NVARCHAR | Challenge purpose (`login`, `2fa_setup`, `password_reset`, etc.) |
+| ExpiresAt | DATETIME2 | Expiry timestamp |
+| StateData | NVARCHAR? | JSON payload for challenge state |
+
+**Runtime note:** The active schema uses `BlacklistedTokens` and `VerificationChallenges` for auth/session state. There is no current `RefreshTokens` table in the runtime database.
+
+---
+
 ## 🌐 Entity: UserExternalIdentities
 
 OAuth / social login provider links.
@@ -488,7 +505,7 @@ Reference table for user status codes.
 - **Conversation pair model** — `User1ID < User2ID` prevents duplicate threads
 - **Audit logging** — mutations recorded in same transaction via EF Core interceptor
 - `CreatedAt` / `UpdatedAt` timestamps via EF Core `UpdatedAtInterceptor`
-- **22 entity tables** managed via **21 ordered migration scripts**
+- **23 entity tables** managed via **34 ordered migration scripts**
 
 ---
 
@@ -500,4 +517,4 @@ Reference table for user status codes.
 
 ---
 
-Last Updated: 2026-03-25
+Last Updated: 2026-04-02

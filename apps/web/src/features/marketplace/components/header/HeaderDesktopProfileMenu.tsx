@@ -27,6 +27,7 @@ type HeaderDesktopProfileMenuProps = HeaderActionHandlers &
     HeaderIdentity,
     | "language"
     | "isAuthenticated"
+    | "authLoading"
     | "isAdmin"
     | "currentUserDisplayName"
     | "userAvatar"
@@ -36,6 +37,7 @@ type HeaderDesktopProfileMenuProps = HeaderActionHandlers &
 export function HeaderDesktopProfileMenu({
   language,
   isAuthenticated,
+  authLoading,
   isAdmin,
   currentUserDisplayName,
   userAvatar,
@@ -48,6 +50,10 @@ export function HeaderDesktopProfileMenu({
   onLogout,
 }: HeaderDesktopProfileMenuProps) {
   const iconSpacingClass = language === "ar" ? "ml-2" : "mr-2";
+
+  if (authLoading) {
+    return <div className="hidden h-10 w-24 sm:block" aria-hidden="true" />;
+  }
 
   if (!isAuthenticated) {
     return (
