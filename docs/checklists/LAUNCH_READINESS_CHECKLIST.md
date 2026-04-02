@@ -2,7 +2,7 @@
 
 **Project:** TijarahJo Marketplace Platform  
 **Status:** Pre-Launch Preparation  
-**Last Updated:** 2026-02-17
+**Last Updated:** 2026-04-02
 
 ---
 
@@ -94,9 +94,9 @@
 
 ### Important (Should Fix Soon)
 
-- [ ] **Token Refresh Mechanism**
-  - [ ] Implement token refresh endpoint
-  - [ ] Handle token expiration gracefully
+- [ ] **Session Refresh Hardening**
+  - [x] Provide authenticated refresh endpoint (`POST /api/auth/refresh`)
+  - [x] Handle token expiration gracefully via frontend retry and session revalidation
   - [ ] Auto-refresh tokens before expiration
 
 ---

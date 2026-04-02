@@ -3,8 +3,8 @@
 ## Versioning Policy
 
 - Canonical API routes are route-versioned: `/api/v1/...`.
+- Selected compatibility aliases under `/api/...` are still present for active clients; use `docs/reports/API_ENDPOINTS_STATUS.md` for the current inventory.
 - Query/header version overrides are not part of the contract.
-- Unversioned `/api/...` aliases are intentionally removed.
 
 ## Startup Modes
 
@@ -67,6 +67,15 @@ Expected:
 - `/health/live` returns `200`.
 - `/health/ready` returns `200` when DB is reachable.
 - `/api/v1/search` returns `200` and includes `api-supported-versions: 1.0`.
+
+## Auth Session Verification
+
+Validate cookie-authenticated session recovery after deployment:
+
+1. Sign in through the frontend.
+2. Hard refresh a public page.
+3. Confirm the page shell stays visible and auth-dependent header actions return without a temporary logged-out flash.
+4. Trigger an authenticated API request after session expiry and confirm the client can recover through `POST /api/auth/refresh` when the session is still renewable.
 
 ## Performance Hardening Gates
 

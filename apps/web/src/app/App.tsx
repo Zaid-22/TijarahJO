@@ -107,6 +107,7 @@ function AppContent() {
     primarySegment !== "" && !KNOWN_PRIMARY_SEGMENTS.has(primarySegment);
   const shouldShowGlobalHeader =
     !isAuthRoute && !hasLocalPageHeader && !isUnknownPrimarySegment;
+  const shouldRenderGlobalHeader = shouldShowGlobalHeader;
 
   // Context Hooks
   const { userProfile } = useUserProfileContext();
@@ -167,7 +168,7 @@ function AppContent() {
     };
   }, [normalizedPathname]);
 
-  const globalHeader = shouldShowGlobalHeader ? (
+  const globalHeader = shouldRenderGlobalHeader ? (
     <Suspense fallback={null}>
       <Header
         language={language}
@@ -197,23 +198,10 @@ function AppContent() {
         darkMode={darkMode}
         isAdmin={user?.role === "admin"}
         unreadMessagesCount={unreadNotificationsCount}
+        authLoading={authLoading}
       />
     </Suspense>
   ) : null;
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col">
-        {globalHeader}
-        <div className="flex-1 flex items-center justify-center">
-          <span
-            aria-hidden="true"
-            className="h-8 w-8 rounded-full border-2 border-primary/20 border-t-primary animate-spin"
-          />
-        </div>
-      </div>
-    );
-  }
 
   if (!hasLoadedMaintenanceStatus && !isAuthRoute) {
     return (

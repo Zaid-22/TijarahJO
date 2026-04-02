@@ -2,66 +2,43 @@
 
 Use this checklist when setting up the project on a new computer.
 
----
-
 ## ✅ Prerequisites Installation
 
 - [ ] Install .NET 8.0 SDK
   - Verify: `dotnet --version`
   - Should show: `8.0.x`
 
-- [ ] Install SQL Server (Express or Full)
-  - Verify: Can connect using SSMS
-  - Note server name: `_________________`
-
-- [ ] Install Node.js 16+ and npm
+- [ ] Install Node.js 18+ and npm
   - Verify: `node --version` and `npm --version`
 
-- [ ] Install Git (if cloning from repository)
+- [ ] Install Docker Desktop
+  - Verify: `docker --version`
+  - Verify: `docker compose version`
+
+- [ ] Install Git
   - Verify: `git --version`
 
----
+## ✅ Local Environment
+
+- [ ] Copy `.env.example` to `.env`
+- [ ] Set `MSSQL_SA_PASSWORD`
+- [ ] Set `JWT_SIGNING_KEY`
+- [ ] Set `DB_APP_PASSWORD`
+- [ ] Confirm `VITE_API_BASE_URL=http://localhost:5033/api/v1`
 
 ## ✅ Database Setup
 
-- [ ] SQL Server is running
-- [ ] Recreate database from canonical scripts (`./scripts/bootstrap_db.sh`)
+- [ ] Run `./scripts/bootstrap_db.sh`
 - [ ] Database `TijarahJoDB` exists
-- [ ] Can connect to database using SSMS
-- [ ] Test connection with credentials:
-  - Server: `_________________`
-  - Login: `_________________`
-  - Password: `_________________`
+- [ ] Swagger loads at `http://localhost:5033/swagger`
+- [ ] API verification passes
 
----
+## ✅ App Startup
 
-## ✅ Backend Configuration
-
-- [ ] Navigate to: `apps/api/src/Api`
-- [ ] Configure database connection (choose one):
-  - [ ] Set environment variables (DB_HOST, DB_NAME, DB_USER, DB_PASSWORD)
-  - [ ] OR edit `appsettings.Development.json`
-- [ ] Configure JWT SigningKey in `appsettings.Development.json`
-- [ ] Run `dotnet restore`
-- [ ] Run `dotnet build` (should succeed)
-- [ ] Run `dotnet run`
-- [ ] Backend starts on: `http://localhost:5033`
-- [ ] Swagger UI accessible: `http://localhost:5033/swagger`
-- [ ] Test endpoint: GET `/api/v1/categories` (should return data)
-
----
-
-## ✅ Frontend Configuration
-
-- [ ] Navigate to: `apps/web`
-- [ ] Create `.env` file with: `VITE_API_BASE_URL=http://localhost:5033/api/v1`
-- [ ] Run `npm install`
-- [ ] Run `npm run dev`
-- [ ] Frontend starts on: `http://localhost:5173`
-- [ ] Application loads in browser
-- [ ] No console errors
-
----
+- [ ] Run `./scripts/run-dev.sh`
+- [ ] Backend starts on `http://localhost:5033`
+- [ ] Frontend starts on `http://localhost:5173`
+- [ ] No startup errors in terminal output
 
 ## ✅ Integration Testing
 
@@ -69,47 +46,41 @@ Use this checklist when setting up the project on a new computer.
 - [ ] Frontend can fetch posts from backend
 - [ ] Can register a new user
 - [ ] Can login with credentials
+- [ ] Signed-in hard refresh restores account state cleanly
 - [ ] Can create a new post
 - [ ] Can view post details
 - [ ] Can edit own post
 - [ ] Can delete own post
 - [ ] Images upload correctly
 
----
-
 ## ✅ Final Verification
 
-- [ ] All features working
 - [ ] No errors in browser console
 - [ ] No errors in backend logs
 - [ ] Database operations working
 - [ ] Authentication working
-- [ ] Ready for development!
-
----
+- [ ] Ready for development
 
 ## 📝 Configuration Notes
 
-**Database Connection:**
+**Backend API:**
 ```
-Server: _________________
-Database: TijarahJoDB
-Login: _________________
-Password: _________________
+http://localhost:5033
 ```
 
-**JWT Signing Key:**
+**Frontend:**
 ```
-Key: _________________
+http://localhost:5173
 ```
 
 **API Base URL:**
 ```
-URL: http://localhost:5033/api/v1
+http://localhost:5033/api/v1
 ```
 
 ---
 
+**Last Updated:** 2026-04-02  
 **Setup Date:** _______________  
 **Setup By:** _______________  
 **Computer:** _______________

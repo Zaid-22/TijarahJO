@@ -37,7 +37,7 @@
 - User profiles with editable information
 - Post ownership detection and permissions
 - Phone number with Jordan "+962" prefix validation
-- JWT token authentication with auto-refresh
+- Cookie-backed JWT authentication with `/auth/refresh` retry and quiet session revalidation
 
 ### 💬 Real-Time Chat
 - Real-time messaging via SignalR WebSocket connection
@@ -169,12 +169,13 @@ The application will be available at **http://localhost:5173**
 ✅ Google OAuth flow integrated
 ✅ Two-Factor Authentication (TOTP) setup and verification
 ✅ Server-side image uploads for posts and chat
+✅ Signed-in hard refresh keeps the page shell visible while auth header actions wait for session revalidation
 
 ### Backend API Surface
 
 | Group | Endpoints |
 |-------|-----------|
-| **Auth** | `/api/auth/*` — login, signup, logout, me, Google OAuth |
+| **Auth** | `/api/auth/*` — login, signup, logout, me, refresh, Google OAuth |
 | **2FA** | `/api/v1/auth/2fa/*` — status, setup/start, setup/confirm, verify-login, disable |
 | **Password Reset** | `/api/v1/auth/forgot-password/*` — request, confirm |
 | **Posts** | `/api/posts/*` — feed, CRUD, status, views |
@@ -227,7 +228,7 @@ cd apps/web && npx playwright test
 ### ✅ Completed
 - [x] All UI components and responsive design
 - [x] Full backend integration (REST + SignalR)
-- [x] JWT authentication with Google OAuth
+- [x] Cookie-backed JWT authentication, refresh retry, and Google OAuth
 - [x] Two-Factor Authentication (TOTP)
 - [x] Real-time chat with image sharing
 - [x] Notifications with push support

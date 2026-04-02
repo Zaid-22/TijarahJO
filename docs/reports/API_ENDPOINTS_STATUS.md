@@ -1,8 +1,9 @@
 # API Endpoints Status Report
 
 **Base URL:** `http://localhost:5033`
-**Verified:** 2026-03-24
-**Verification source:** `./scripts/verify_all_apis.sh` + CI backend checks
+**Reviewed:** 2026-04-02
+**Last live verification source:** `./scripts/verify_all_apis.sh` + CI backend checks
+**Last live verification date:** 2026-03-24
 
 ## Summary
 
@@ -22,6 +23,7 @@
 - `POST /api/auth/signup`
 - `POST /api/auth/logout` (`[Authorize]`)
 - `GET /api/auth/me` (`[Authorize]`)
+- `POST /api/auth/refresh` (`[Authorize]`)
 - `GET /api/auth/google/start`
 - `GET /api/v1/auth/google/callback`
 

@@ -30,6 +30,7 @@ interface HeaderMobileMenuSheetProps extends HeaderActionHandlers {
   language: Language;
   isRTL: boolean;
   isAuthenticated: boolean;
+  authLoading: boolean;
   isAdmin: boolean;
   unreadMessagesCount: number;
   categories: Category[];
@@ -80,6 +81,7 @@ export function HeaderMobileMenuSheet({
   language,
   isRTL,
   isAuthenticated,
+  authLoading,
   isAdmin,
   unreadMessagesCount,
   categories,
@@ -130,7 +132,7 @@ export function HeaderMobileMenuSheet({
         </SheetHeader>
 
         <div className="mt-6 space-y-4 pb-6">
-          {isAuthenticated ? (
+          {!authLoading && isAuthenticated ? (
             <div className="space-y-2">
               <h3 className="px-4 text-sm text-muted-foreground">
                 {language === "ar" ? "الحساب" : "Account"}
@@ -173,7 +175,7 @@ export function HeaderMobileMenuSheet({
                 />
               </div>
             </div>
-          ) : (
+          ) : !authLoading ? (
             <div className="space-y-2">
               <Button
                 onClick={() => closeAndRun(onShowProfile)}
@@ -185,7 +187,7 @@ export function HeaderMobileMenuSheet({
                 </span>
               </Button>
             </div>
-          )}
+          ) : null}
 
           <div className="space-y-2">
             <h3 className="px-4 text-sm text-muted-foreground">

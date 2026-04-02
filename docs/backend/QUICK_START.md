@@ -17,6 +17,12 @@ This command builds bundles and applies:
 1. `apps/api/database/bundles/master.sql` (`base schema + ordered migrations`)
 2. `apps/api/database/bundles/seed_data.sql` (`baseline seeds`)
 
+If you want the frontend started too, use:
+
+```bash
+./scripts/run-dev.sh
+```
+
 ## Start API (local)
 
 From `apps/api/src/Api`:
@@ -39,6 +45,7 @@ Expected behavior:
 - `health/live` checks process liveness only.
 - `health/ready` checks dependency readiness (currently database connectivity).
 - Canonical API route prefix is `/api/v1`.
+- Selected compatibility aliases under `/api/...` remain active; use `docs/reports/API_ENDPOINTS_STATUS.md` for the current inventory.
 
 ## Manual Path
 
@@ -65,6 +72,9 @@ Problem: login/signup fails with SQL errors
 Problem: categories/roles endpoints return empty arrays
 - Solution: apply `apps/api/database/bundles/seed_data.sql`
 
+Problem: signed-in frontend refresh shows auth/session issues
+- Solution: verify `/api/auth/me`, `/api/auth/refresh`, and the frontend auth runtime behavior documented in `docs/frontend/AUTH_RUNTIME_QA_MATRIX.md`
+
 Problem: migration error after partial manual run
 - Solution: rerun in canonical order: schema -> migrations -> seeds
 
@@ -72,3 +82,5 @@ Problem: migration error after partial manual run
 
 For startup mode behavior (strict Redis vs degraded vs no Redis), see:
 - `docs/backend/OPERATIONS_RUNBOOK.md`
+
+Last Reviewed: 2026-04-02

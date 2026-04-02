@@ -13,6 +13,7 @@ import { HeaderNotificationsDropdown } from "./header/HeaderNotificationsDropdow
 interface HeaderProps {
   language: Language;
   isAuthenticated?: boolean;
+  authLoading?: boolean;
   currentUserDisplayName?: string;
   userAvatar?: string;
   showBackButton?: boolean;
@@ -39,6 +40,7 @@ interface HeaderProps {
 export function Header({
   language,
   isAuthenticated = false,
+  authLoading = false,
   currentUserDisplayName,
   userAvatar,
   showBackButton = false,
@@ -71,6 +73,7 @@ export function Header({
   );
   const actionIconButtonClassName =
     "group relative h-10 w-10 rounded-full border border-border/60 bg-background/70 p-0 text-muted-foreground shadow-sm hover:border-primary/35 hover:bg-primary/5 hover:text-primary hover:shadow-md transition-all";
+  const shouldShowAuthenticatedActions = !authLoading && isAuthenticated;
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/20 bg-background/80 shadow-md backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 transition-all duration-300">
@@ -96,6 +99,7 @@ export function Header({
                   language={language}
                   isRTL={isRTL}
                   isAuthenticated={isAuthenticated}
+                  authLoading={authLoading}
                   isAdmin={isAdmin}
                   unreadMessagesCount={normalizedUnreadMessagesCount}
                   categories={categories}
@@ -139,7 +143,7 @@ export function Header({
 
           {/* Right section: Profile, Actions & Sell Button */}
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            {isAuthenticated && (
+            {shouldShowAuthenticatedActions && (
               <HeaderNotificationsDropdown
                 language={language}
                 unreadCount={normalizedUnreadMessagesCount}
@@ -147,7 +151,7 @@ export function Header({
               />
             )}
 
-            {isAuthenticated && (
+            {shouldShowAuthenticatedActions && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -159,7 +163,7 @@ export function Header({
               </Button>
             )}
 
-            {isAuthenticated && (
+            {shouldShowAuthenticatedActions && (
               <Button
                 size="sm"
                 className="h-10 rounded-full bg-primary px-2 text-primary-foreground shadow-lg hover:bg-primary/95 hover:shadow-xl active:scale-95 sm:px-5"
@@ -180,6 +184,7 @@ export function Header({
             <HeaderDesktopProfileMenu
               language={language}
               isAuthenticated={isAuthenticated}
+              authLoading={authLoading}
               isAdmin={isAdmin}
               currentUserDisplayName={currentUserDisplayName}
               userAvatar={userAvatar}

@@ -4,7 +4,8 @@ API-facing documentation (OpenAPI guidance, endpoint conventions, versioning not
 
 ## Current API Contract Rules
 
-- Route versioning only: `/api/v1/...`
+- Canonical route prefix is `/api/v1/...`
+- Selected compatibility aliases under `/api/...` remain active in runtime; use `docs/reports/API_ENDPOINTS_STATUS.md` for the supported endpoint inventory.
 - Query/header version overrides are not supported.
 - Request/response contracts live under:
   - `apps/api/src/Api/Contracts/Requests`

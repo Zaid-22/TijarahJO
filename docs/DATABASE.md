@@ -336,3 +336,9 @@ erDiagram
 - **Constraints over Statuses**: Both Users and Posts rely on Lookup tables (`UserStatusLookup`, `PostStatusLookup`) for status values rather than inline CHECK constraints, treating the lookup tables as the single source of truth.
 - **Ordered Pairs in Chat**: `Conversations` guarantees exactly ONE thread between two users per context by enforcing `User1ID < User2ID` and maintaining a UNIQUE constraint across `(User1ID, User2ID, PostID)`.
 - **Search Optimization**: All critical searching text fields use database-level `PERSISTED` computed Normalized columns to maintain consistent casing, trimming, and spacing (e.g. `SearchTitleNormalized`, `SearchFullNameNormalized`).
+
+## Auth Persistence Notes
+
+- `BlacklistedTokens` stores revoked JWT `jti` values so logout and forced invalidation can block previously issued cookies.
+- `VerificationChallenges` stores hashed verification state for flows such as login challenges, setup confirmation, and password reset verification.
+- There is no active `RefreshTokens` table in the current schema; session renewal is handled through the authenticated `/api/auth/refresh` path plus JWT cookie rotation and blacklisting.

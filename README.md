@@ -112,9 +112,9 @@ make ci-local                  # Full local CI mirror
 | **Frontend** | React 18, TypeScript 5, Vite, Tailwind CSS v4, Radix UI, Framer Motion |
 | **Backend** | ASP.NET Core 8, Entity Framework Core, SignalR |
 | **Database** | SQL Server 2022, Flyway-style ordered migrations |
-| **Auth** | JWT + refresh tokens, Google OAuth 2.0, TOTP 2FA |
+| **Auth** | Cookie-backed JWT auth with refresh endpoint, Google OAuth 2.0, TOTP 2FA |
 | **Infra** | Docker Compose, GitHub Actions CI |
 
 ---
 
-Last Updated: 2026-03-28
+Last Updated: 2026-04-02
