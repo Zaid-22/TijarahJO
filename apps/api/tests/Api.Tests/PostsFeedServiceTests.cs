@@ -1,7 +1,11 @@
+using Microsoft.AspNetCore.Hosting;
 using TijarahJo.Api.Common.Services;
+using TijarahJo.Api.Common.Configuration;
 using TijarahJo.Infrastructure.Queries;
 using TijarahJo.Infrastructure.DataAccess;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Options;
 
 namespace TijarahJo.Api.Tests;
 
@@ -9,7 +13,9 @@ public sealed class PostsFeedServiceTests
 {
     private readonly PostsFeedService _service = new(
         new PostListingQueryService(new DatabaseConnectionString("Data Source=fake;Database=fake;")),
-        new MemoryCache(new MemoryCacheOptions())
+        new MemoryCache(new MemoryCacheOptions()),
+        new FakeWebHostEnvironment(),
+        Options.Create(new FileStorageOptions())
     );
 
     [Fact]
@@ -64,5 +70,15 @@ public sealed class PostsFeedServiceTests
 
         Assert.Equal(1, request.Page);
         Assert.Equal(25, request.Limit);
+    }
+
+    private sealed class FakeWebHostEnvironment : IWebHostEnvironment
+    {
+        public string ApplicationName { get; set; } = "TijarahJo.Api.Tests";
+        public IFileProvider WebRootFileProvider { get; set; } = new NullFileProvider();
+        public string WebRootPath { get; set; } = AppContext.BaseDirectory;
+        public string EnvironmentName { get; set; } = "Development";
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
     }
 }

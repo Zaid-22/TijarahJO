@@ -57,12 +57,12 @@ export function AuthPhoneField({
   const prefix = APP_CONFIG.defaultPhonePrefix;
 
   const inputPaddingClassName = isRTL
-    ? "pl-4 pr-22 sm:pr-26 text-right"
-    : "pr-4 pl-22 sm:pl-26 text-left";
+    ? "pl-4 pr-28 sm:pr-32"
+    : "pr-4 pl-28 sm:pl-32";
 
   const prefixPositionClassName = isRTL
-    ? "right-12 sm:right-14 pr-2 border-r border-transparent"
-    : "left-12 sm:left-14 pl-2 border-l border-transparent";
+    ? "right-12 sm:right-14"
+    : "left-12 sm:left-14";
 
   // Make sure placeholder does not contain the prefix or a leading zero
   const cleanPlaceholder = placeholder
@@ -74,7 +74,7 @@ export function AuthPhoneField({
     <div className="space-y-2">
       <label
         htmlFor={id}
-        className={`text-sm text-foreground block w-full text-start`}
+        className={`text-sm text-foreground block w-full ${isRTL ? "text-right" : "text-left"}`}
       >
         {label} {required && <span className="text-destructive">*</span>}
       </label>
@@ -91,12 +91,10 @@ export function AuthPhoneField({
 
         {/* Prefix Label */}
         <div
-          className={`absolute select-none z-10 text-muted-foreground font-medium text-sm sm:text-base flex items-center justify-center ${prefixPositionClassName}`}
+          className={`absolute select-none z-10 text-muted-foreground font-medium text-sm sm:text-base flex items-center ${prefixPositionClassName}`}
           dir="ltr"
         >
-          <span
-            className="inline-block py-1 border-e border-border pe-3 me-1"
-          >
+          <span className="inline-flex items-center py-1 border-e border-border pe-3 me-1">
             {prefix}
           </span>
         </div>
@@ -120,7 +118,7 @@ export function AuthPhoneField({
           }}
           onFocus={onFocus}
           onBlur={onBlur}
-          className={`${INPUT_BASE_CLASS} ${inputPaddingClassName} ${inputStateClassName} w-full`}
+          className={`${INPUT_BASE_CLASS} ${inputPaddingClassName} ${inputStateClassName} w-full text-left [direction:ltr] tabular-nums`}
           disabled={disabled}
           maxLength={9} // Only 9 digits
         />
@@ -128,7 +126,7 @@ export function AuthPhoneField({
 
       {error && (
         <p
-          className={`mt-1 text-xs text-destructive text-start`}
+          className={`mt-1 text-xs text-destructive ${isRTL ? "text-right" : "text-left"}`}
         >
           {error}
         </p>

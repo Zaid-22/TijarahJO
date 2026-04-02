@@ -60,3 +60,24 @@ test("transformPostModelToPost maps backend post shape to frontend post", () => 
     "https://example.com/2.jpg",
   ]);
 });
+
+test("transformPostModelToPost prefers thumbnail image for card previews", () => {
+  const post = transformPostModelToPost(
+    {
+      PostID: 11,
+      UserID: 4,
+      CategoryID: 3,
+      PostTitle: "Chair",
+      Price: 99,
+      City: "Amman",
+      Seller: "Ali",
+      Category: "Furniture",
+      ThumbnailImage: "/uploads/post-images/11.thumb.webp",
+      Images: ["https://example.com/full-1.jpg"],
+    },
+    [],
+  );
+
+  assert.equal(post.image, "http://localhost:5033/uploads/post-images/11.thumb.webp");
+  assert.deepEqual(post.images, ["https://example.com/full-1.jpg"]);
+});

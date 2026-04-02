@@ -12,7 +12,9 @@ public sealed class SearchReadService : ISearchReadService, ISearchCacheInvalida
     private readonly IPostListingQueryService _postListingQueries;
     private readonly IMemoryCache _cache;
 
-    public SearchReadService(IPostListingQueryService postListingQueries, IMemoryCache cache)
+    public SearchReadService(
+        IPostListingQueryService postListingQueries,
+        IMemoryCache cache)
     {
         _postListingQueries = postListingQueries;
         _cache = cache;

@@ -1,6 +1,8 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Api.Common.Configuration;
 using TijarahJo.Api.Common.Utils;
 using TijarahJo.Api.Contracts.Requests;
 using TijarahJo.Api.Contracts.Responses;
@@ -13,10 +15,17 @@ namespace TijarahJo.Api.Features.Sellers;
 public class SellersController : ControllerBase
 {
     private readonly ISellerQueryHandler _sellerQueries;
+    private readonly IWebHostEnvironment _environment;
+    private readonly FileStorageOptions _fileStorageOptions;
 
-    public SellersController(ISellerQueryHandler sellerQueries)
+    public SellersController(
+        ISellerQueryHandler sellerQueries,
+        IWebHostEnvironment environment,
+        IOptions<FileStorageOptions> fileStorageOptions)
     {
         _sellerQueries = sellerQueries;
+        _environment = environment;
+        _fileStorageOptions = fileStorageOptions.Value;
     }
 
     [HttpGet("{sellerId}")]
@@ -31,7 +40,11 @@ public class SellersController : ControllerBase
             return this.ToSellerProfileProblem(result, "Failed to fetch seller profile.");
         }
 
-        return Ok(DTOMapper.ToSellerProfileResponseDTO(result.Profile, Request));
+        return Ok(DTOMapper.ToSellerProfileResponseDTO(
+            result.Profile,
+            Request,
+            _environment.ContentRootPath,
+            _fileStorageOptions));
     }
 
     [HttpGet("top")]

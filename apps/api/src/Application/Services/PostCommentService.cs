@@ -7,21 +7,15 @@ using TijarahJo.Domain.Models;
 
 namespace TijarahJo.Application.Services;
 
-public sealed class PostCommentService : IPostCommentService
+public sealed class PostCommentService(IPostCommentDataAccess commentDataAccess, IPostDataAccess postDataAccess) : IPostCommentService
 {
-    private readonly IPostCommentDataAccess _commentDataAccess;
-    private readonly IPostDataAccess _postDataAccess;
+    private readonly IPostCommentDataAccess _commentDataAccess = commentDataAccess;
+    private readonly IPostDataAccess _postDataAccess = postDataAccess;
 
     // Rate limit: max 5 comments per user per minute
     private const int RateLimitMaxComments = 5;
     private static readonly TimeSpan RateLimitWindow = TimeSpan.FromMinutes(1);
     private const int MaxContentLength = 2000;
-
-    public PostCommentService(IPostCommentDataAccess commentDataAccess, IPostDataAccess postDataAccess)
-    {
-        _commentDataAccess = commentDataAccess;
-        _postDataAccess = postDataAccess;
-    }
 
     public async Task<PostCommentResult> AddCommentAsync(
         int postId, int userId, string? content, int? parentCommentId = null, CancellationToken cancellationToken = default)

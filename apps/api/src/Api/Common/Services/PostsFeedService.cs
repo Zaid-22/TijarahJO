@@ -1,15 +1,23 @@
 using System.Globalization;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Api.Common.Configuration;
 
 namespace TijarahJo.Api.Common.Services
 {
-    public sealed class PostsFeedService(IPostListingQueryService postListingQueries, IMemoryCache cache) : IPostsFeedService
+    public sealed class PostsFeedService(
+        IPostListingQueryService postListingQueries,
+        IMemoryCache cache,
+        IWebHostEnvironment environment,
+        IOptions<FileStorageOptions> fileStorageOptions) : IPostsFeedService
     {
         private const int MaxFeedPageSize = 200;
         private readonly IPostListingQueryService _postListingQueries = postListingQueries;
         private readonly IMemoryCache _cache = cache;
+        private readonly IWebHostEnvironment _environment = environment;
+        private readonly FileStorageOptions _fileStorageOptions = fileStorageOptions.Value;
 
         public sealed record NormalizedFeedRequest(int Page, int Limit);
 
@@ -72,6 +80,14 @@ namespace TijarahJo.Api.Common.Services
                     Category = row.CategoryName,
                     CategoryId = row.CategoryId.ToString(CultureInfo.InvariantCulture),
                     Image = images.Count > 0 ? images[0] : string.Empty,
+                    ThumbnailImage = images.Count > 0 &&
+                        LocalPostImageFileStorageService.TryResolveThumbnailPublicUrl(
+                            images[0],
+                            _environment.ContentRootPath,
+                            _fileStorageOptions,
+                            out string thumbnailImage)
+                        ? thumbnailImage
+                        : string.Empty,
                     Images = images,
                     Phone = string.Empty,
                     Description = row.PostDescription,
@@ -169,6 +185,9 @@ namespace TijarahJo.Api.Common.Services
 
         [JsonPropertyName("image")]
         public string Image { get; init; } = string.Empty;
+
+        [JsonPropertyName("thumbnailImage")]
+        public string ThumbnailImage { get; init; } = string.Empty;
 
         [JsonPropertyName("images")]
         public IReadOnlyList<string> Images { get; init; } = [];

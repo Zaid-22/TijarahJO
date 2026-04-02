@@ -20,7 +20,6 @@ import {
   SheetTrigger,
 } from "../../../../shared/ui/sheet";
 import {
-  resolveCategoryIcon,
   resolveCategoryName,
 } from "../../../../shared/lib/categoryVisuals";
 import { cn } from "../../../../shared/ui/utils";
@@ -195,7 +194,6 @@ export function HeaderMobileMenuSheet({
             </h3>
             <div className="space-y-1">
               {categories.map((category) => {
-                const CategoryIcon = resolveCategoryIcon(category.icon);
                 const categoryName = resolveCategoryName(category, language);
 
                 return (
@@ -203,9 +201,8 @@ export function HeaderMobileMenuSheet({
                     key={String(category.id || category.name)}
                     variant="ghost"
                     onClick={() => onCategorySelected(category.name)}
-                    className="h-auto w-full justify-start gap-3 rounded-lg px-4 py-3 text-foreground hover:bg-muted"
+                    className="h-auto w-full justify-start rounded-lg px-4 py-3 text-foreground hover:bg-muted"
                   >
-                    <CategoryIcon className="h-5 w-5 text-primary" />
                     <span>{categoryName}</span>
                   </Button>
                 );

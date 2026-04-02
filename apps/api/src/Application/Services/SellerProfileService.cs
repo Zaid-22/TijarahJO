@@ -112,7 +112,11 @@ public sealed class SellerProfileService : ISellerProfileService
         }
     }
 
-    private static SellerPostReadModel MapPost(PostListingRow row, int sellerId, string sellerName, string sellerPhone)
+    private static SellerPostReadModel MapPost(
+        PostListingRow row,
+        int sellerId,
+        string sellerName,
+        string sellerPhone)
     {
         string status = PostStatusPolicy.TryNormalizeClientStatus(row.ClientStatus, out string normalizedStatus)
             ? normalizedStatus

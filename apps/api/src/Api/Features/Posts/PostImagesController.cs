@@ -1,7 +1,9 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Api.Common.Configuration;
 using TijarahJo.Api.Common.Services;
 using TijarahJo.Api.Common.Utils;
 using TijarahJo.Api.Contracts.Requests;
@@ -19,19 +21,25 @@ public class PostImagesController : ControllerBase
     private readonly IPostImageCommandService _postImageCommands;
     private readonly IPostImageFileStorageService _postImageStorage;
     private readonly IImageModerationService _imageModeration;
+    private readonly IWebHostEnvironment _environment;
+    private readonly FileStorageOptions _fileStorageOptions;
 
     public PostImagesController(
         ILogger<PostImagesController> logger,
         IPostImageQueryHandler postImageQueries,
         IPostImageCommandService postImageCommands,
         IPostImageFileStorageService postImageStorage,
-        IImageModerationService imageModeration)
+        IImageModerationService imageModeration,
+        IWebHostEnvironment environment,
+        IOptions<FileStorageOptions> fileStorageOptions)
     {
         _logger = logger;
         _postImageQueries = postImageQueries;
         _postImageCommands = postImageCommands;
         _postImageStorage = postImageStorage;
         _imageModeration = imageModeration;
+        _environment = environment;
+        _fileStorageOptions = fileStorageOptions.Value;
     }
 
     [HttpGet("")]
@@ -53,7 +61,10 @@ public class PostImagesController : ControllerBase
         }
 
         List<PostImageResponseDTO> dtoList = result.PostImages
-            .Select(DTOMapper.ToPostImageResponseDTO)
+            .Select(postImage => DTOMapper.ToPostImageResponseDTO(
+                postImage,
+                _environment.ContentRootPath,
+                _fileStorageOptions))
             .ToList();
 
         _logger.LogDebug("Returning {Count} non-deleted post images.", dtoList.Count);
@@ -73,7 +84,10 @@ public class PostImagesController : ControllerBase
         }
 
         List<PostImageResponseDTO> images = result.PostImages
-            .Select(DTOMapper.ToPostImageResponseDTO)
+            .Select(postImage => DTOMapper.ToPostImageResponseDTO(
+                postImage,
+                _environment.ContentRootPath,
+                _fileStorageOptions))
             .ToList();
 
         return Ok(images);
@@ -91,7 +105,10 @@ public class PostImagesController : ControllerBase
             return this.ToPostImageByIdQueryProblem(result, "Failed to fetch post image.");
         }
 
-        return Ok(DTOMapper.ToPostImageResponseDTO(result.PostImage));
+        return Ok(DTOMapper.ToPostImageResponseDTO(
+            result.PostImage,
+            _environment.ContentRootPath,
+            _fileStorageOptions));
     }
 
     [Authorize]
@@ -122,7 +139,10 @@ public class PostImagesController : ControllerBase
         return CreatedAtAction(
             nameof(GetPostImageById),
             new { id = result.PostImage.PostImageID },
-            DTOMapper.ToPostImageResponseDTO(result.PostImage.PostImageModel)
+            DTOMapper.ToPostImageResponseDTO(
+                result.PostImage.PostImageModel,
+                _environment.ContentRootPath,
+                _fileStorageOptions)
         );
     }
 
@@ -198,7 +218,10 @@ public class PostImagesController : ControllerBase
             return this.ToPostImageCommandProblem(result, "Post image upload failed.");
         }
 
-        PostImageResponseDTO postImageDto = DTOMapper.ToPostImageResponseDTO(result.PostImage.PostImageModel);
+        PostImageResponseDTO postImageDto = DTOMapper.ToPostImageResponseDTO(
+            result.PostImage.PostImageModel,
+            _environment.ContentRootPath,
+            _fileStorageOptions);
         return CreatedAtAction(
             nameof(GetPostImageById),
             new { id = result.PostImage.PostImageID },
@@ -242,7 +265,10 @@ public class PostImagesController : ControllerBase
             return this.ToPostImageCommandProblem(result, "Post image update failed.");
         }
 
-        return Ok(DTOMapper.ToPostImageResponseDTO(result.PostImage.PostImageModel));
+        return Ok(DTOMapper.ToPostImageResponseDTO(
+            result.PostImage.PostImageModel,
+            _environment.ContentRootPath,
+            _fileStorageOptions));
     }
 
     [Authorize]

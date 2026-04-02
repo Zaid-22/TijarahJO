@@ -1,5 +1,9 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.Processing;
 using TijarahJo.Api.Common.Configuration;
 
 namespace TijarahJo.Api.Common.Services;
@@ -16,6 +20,7 @@ public interface IPostImageFileStorageService
     void ValidateFileOrThrow(IFormFile file);
     Task<StoredPostImageFile> SaveAsync(IFormFile file, CancellationToken cancellationToken = default);
     Task<StoredPostImageFile> SaveChatImageAsync(IFormFile file, CancellationToken cancellationToken = default);
+    Task<StoredPostImageFile> SaveUserAvatarAsync(IFormFile file, CancellationToken cancellationToken = default);
     Task DeleteByPublicUrlAsync(string publicUrl, CancellationToken cancellationToken = default);
 }
 
@@ -23,12 +28,12 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
 {
     private static readonly StringComparison PathComparison =
         OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+    private static readonly string[] DefaultAllowedImageExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
 
     private readonly IWebHostEnvironment _environment;
     private readonly FileStorageOptions _options;
     private readonly ILogger<LocalPostImageFileStorageService> _logger;
     private readonly HashSet<string> _allowedImageExtensions;
-    private static readonly string[] other = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
 
     public LocalPostImageFileStorageService(
         IWebHostEnvironment environment,
@@ -49,6 +54,7 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
             file,
             ResolveAbsolutePostImagesRootPath(_environment.ContentRootPath, _options),
             fileName => BuildPublicPostImageUrl(fileName, _options),
+            generateThumbnail: true,
             cancellationToken
         );
     }
@@ -61,6 +67,20 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
             file,
             ResolveAbsoluteChatImagesRootPath(_environment.ContentRootPath, _options),
             fileName => BuildPublicChatImagePath(fileName, _options),
+            generateThumbnail: false,
+            cancellationToken
+        );
+    }
+
+    public async Task<StoredPostImageFile> SaveUserAvatarAsync(IFormFile file, CancellationToken cancellationToken = default)
+    {
+        ValidateFileOrThrow(file);
+
+        return await SaveValidatedFile(
+            file,
+            ResolveAbsoluteUserAvatarsRootPath(_environment.ContentRootPath, _options),
+            fileName => BuildPublicUserAvatarUrl(fileName, _options),
+            generateThumbnail: false,
             cancellationToken
         );
     }
@@ -97,7 +117,38 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
             File.Delete(targetPath);
         }
 
+        string thumbnailPath = BuildThumbnailAbsoluteFilePath(targetPath);
+        if (File.Exists(thumbnailPath))
+        {
+            File.Delete(thumbnailPath);
+        }
+
         return Task.CompletedTask;
+    }
+
+    public static bool TryResolveThumbnailPublicUrl(
+        string publicUrl,
+        string contentRootPath,
+        FileStorageOptions options,
+        out string thumbnailPublicUrl)
+    {
+        thumbnailPublicUrl = string.Empty;
+        if (!TryResolveAbsoluteStoredFilePath(publicUrl, contentRootPath, options, out string absoluteFilePath))
+        {
+            return false;
+        }
+
+        string thumbnailAbsoluteFilePath = BuildThumbnailAbsoluteFilePath(absoluteFilePath);
+        if (!File.Exists(thumbnailAbsoluteFilePath))
+        {
+            return false;
+        }
+
+        string uploadsRoot = ResolveAbsoluteUploadsRootPath(contentRootPath, options);
+        string relativePath = Path.GetRelativePath(uploadsRoot, thumbnailAbsoluteFilePath)
+            .Replace("\\", "/", StringComparison.Ordinal);
+        thumbnailPublicUrl = $"{NormalizeRequestPath(options.PublicBasePath)}/{relativePath}";
+        return true;
     }
 
     public static bool TryResolveAbsoluteStoredFilePath(
@@ -169,6 +220,13 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
         return Path.GetFullPath(Path.Combine(uploadsRoot, chatImagesSegment));
     }
 
+    public static string ResolveAbsoluteUserAvatarsRootPath(string contentRootPath, FileStorageOptions options)
+    {
+        string uploadsRoot = ResolveAbsoluteUploadsRootPath(contentRootPath, options);
+        string userAvatarsSegment = NormalizePathSegment(options.UserAvatarsPath, "user-avatars");
+        return Path.GetFullPath(Path.Combine(uploadsRoot, userAvatarsSegment));
+    }
+
     public static string NormalizeRequestPath(string requestPath)
     {
         string normalized = string.IsNullOrWhiteSpace(requestPath)
@@ -195,6 +253,20 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
         string basePath = NormalizeRequestPath(options.PublicBasePath);
         string chatImagesSegment = NormalizePathSegment(options.ChatImagesPath, "chat-images");
         return $"{basePath}/{chatImagesSegment}/{fileName}";
+    }
+
+    public static string BuildPublicUserAvatarUrl(string fileName, FileStorageOptions options)
+    {
+        string basePath = NormalizeRequestPath(options.PublicBasePath);
+        string userAvatarsSegment = NormalizePathSegment(options.UserAvatarsPath, "user-avatars");
+        return $"{basePath}/{userAvatarsSegment}/{fileName}";
+    }
+
+    public static string BuildThumbnailFileName(string fileName)
+    {
+        string extension = Path.GetExtension(fileName);
+        string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+        return $"{fileNameWithoutExtension}.thumb{extension}";
     }
 
     public void ValidateFileOrThrow(IFormFile file)
@@ -234,8 +306,19 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
         IFormFile file,
         string absoluteDirectory,
         Func<string, string> publicUrlBuilder,
+        bool generateThumbnail,
         CancellationToken cancellationToken)
     {
+        if (ShouldOptimizeImage(file))
+        {
+            return await SaveOptimizedImageAsync(
+                file,
+                absoluteDirectory,
+                publicUrlBuilder,
+                generateThumbnail,
+                cancellationToken);
+        }
+
         string extension = Path.GetExtension(file.FileName).ToLowerInvariant();
         string fileName = $"{DateTime.UtcNow:yyyyMMddHHmmssfff}_{Guid.NewGuid():N}{extension}";
         Directory.CreateDirectory(absoluteDirectory);
@@ -261,6 +344,161 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
             ContentType: string.IsNullOrWhiteSpace(file.ContentType) ? null : file.ContentType
         );
     }
+
+    private async Task<StoredPostImageFile> SaveOptimizedImageAsync(
+        IFormFile file,
+        string absoluteDirectory,
+        Func<string, string> publicUrlBuilder,
+        bool generateThumbnail,
+        CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(absoluteDirectory);
+
+        try
+        {
+            await using Stream inputStream = file.OpenReadStream();
+            using Image image = await Image.LoadAsync(inputStream, cancellationToken);
+
+            image.Mutate(context =>
+            {
+                context.AutoOrient();
+
+                if (NeedsResize(image.Width, image.Height))
+                {
+                    context.Resize(new ResizeOptions
+                    {
+                        Mode = ResizeMode.Max,
+                        Size = new Size(
+                            Math.Max(1, _options.MaxImageWidth),
+                            Math.Max(1, _options.MaxImageHeight)),
+                    });
+                }
+            });
+
+            StripMetadata(image);
+
+            string optimizedExtension = ResolveOptimizedExtension(file.FileName);
+            string fileName = $"{DateTime.UtcNow:yyyyMMddHHmmssfff}_{Guid.NewGuid():N}{optimizedExtension}";
+            string absoluteFilePath = Path.Combine(absoluteDirectory, fileName);
+            await using var optimizedBuffer = new MemoryStream();
+            await image.SaveAsync(optimizedBuffer, CreateEncoder(optimizedExtension), cancellationToken);
+            optimizedBuffer.Position = 0;
+
+            await using (var outputStream = new FileStream(absoluteFilePath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                await optimizedBuffer.CopyToAsync(outputStream, cancellationToken);
+            }
+
+            if (generateThumbnail)
+            {
+                await SaveThumbnailAsync(image, absoluteDirectory, fileName, cancellationToken);
+            }
+
+            string publicUrl = publicUrlBuilder(fileName);
+            long optimizedSize = optimizedBuffer.Length;
+            string contentType = ResolveContentType(optimizedExtension);
+
+            _logger.LogInformation(
+                "Optimized image file {FileName} from {OriginalSizeBytes} bytes to {OptimizedSizeBytes} bytes at {Path}.",
+                fileName,
+                file.Length,
+                optimizedSize,
+                absoluteFilePath
+            );
+
+            return new StoredPostImageFile(
+                PublicUrl: publicUrl,
+                FileName: fileName,
+                SizeBytes: optimizedSize,
+                ContentType: contentType
+            );
+        }
+        catch (UnknownImageFormatException ex)
+        {
+            throw new ArgumentException("Invalid image file.", ex);
+        }
+    }
+
+    private bool ShouldOptimizeImage(IFormFile file)
+    {
+        if (!_options.OptimizeImages)
+        {
+            return false;
+        }
+
+        string extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        return extension is ".jpg" or ".jpeg" or ".png" or ".webp";
+    }
+
+    private bool NeedsResize(int width, int height)
+        => width > Math.Max(1, _options.MaxImageWidth) || height > Math.Max(1, _options.MaxImageHeight);
+
+    private string ResolveOptimizedExtension(string originalFileName)
+    {
+        string originalExtension = Path.GetExtension(originalFileName).ToLowerInvariant();
+        if (_options.ConvertImagesToWebp && originalExtension != ".gif")
+        {
+            return ".webp";
+        }
+
+        return originalExtension;
+    }
+
+    private IImageEncoder CreateEncoder(string extension)
+        => extension switch
+        {
+            ".webp" => new WebpEncoder
+            {
+                Quality = Math.Clamp(_options.WebpQuality, 1, 100),
+            },
+            _ => throw new InvalidOperationException($"No encoder configured for optimized image extension '{extension}'.")
+        };
+
+    private async Task SaveThumbnailAsync(
+        Image image,
+        string absoluteDirectory,
+        string originalFileName,
+        CancellationToken cancellationToken)
+    {
+        string thumbnailFileName = BuildThumbnailFileName(originalFileName);
+        string thumbnailAbsolutePath = Path.Combine(absoluteDirectory, thumbnailFileName);
+        using Image thumbnail = image.Clone(context => context.Resize(new ResizeOptions
+        {
+            Mode = ResizeMode.Max,
+            Size = new Size(
+                Math.Max(1, _options.ThumbnailMaxImageWidth),
+                Math.Max(1, _options.ThumbnailMaxImageHeight)),
+        }));
+
+        StripMetadata(thumbnail);
+        await using var outputStream = new FileStream(thumbnailAbsolutePath, FileMode.Create, FileAccess.Write, FileShare.None);
+        await thumbnail.SaveAsync(outputStream, new WebpEncoder
+        {
+            Quality = Math.Clamp(_options.ThumbnailWebpQuality, 1, 100),
+        }, cancellationToken);
+    }
+
+    private static string BuildThumbnailAbsoluteFilePath(string absoluteFilePath)
+        => Path.Combine(
+            Path.GetDirectoryName(absoluteFilePath) ?? string.Empty,
+            BuildThumbnailFileName(Path.GetFileName(absoluteFilePath)));
+
+    private static void StripMetadata(Image image)
+    {
+        image.Metadata.ExifProfile = null;
+        image.Metadata.IccProfile = null;
+        image.Metadata.XmpProfile = null;
+    }
+
+    private static string ResolveContentType(string extension)
+        => extension switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".webp" => "image/webp",
+            ".gif" => "image/gif",
+            _ => "application/octet-stream",
+        };
 
     private static string NormalizePathSegment(string value, string fallback)
     {
@@ -298,7 +536,7 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
 
         if (normalized.Count == 0)
         {
-            normalized.UnionWith(other);
+            normalized.UnionWith(DefaultAllowedImageExtensions);
         }
 
         return normalized;

@@ -44,6 +44,7 @@ interface PostDetailsPageProps {
   onFavoriteToggle?: (postId: string) => void;
   isAuthenticated?: boolean;
   currentUserDisplayName?: string;
+  onRequireAuth?: () => void;
 }
 
 export function PostDetailsPage({
@@ -61,6 +62,8 @@ export function PostDetailsPage({
   favoriteIds = [],
   onFavoriteToggle,
   isAuthenticated = false,
+  currentUserDisplayName,
+  onRequireAuth,
 }: PostDetailsPageProps) {
   type ActiveDialog = "delete" | "edit" | "phone" | "report" | "share" | null;
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
@@ -251,6 +254,7 @@ export function PostDetailsPage({
         isFavorited={isFavorited}
         onBack={onBack}
         onFavoriteToggle={onFavoriteToggle}
+        onRequireAuth={onRequireAuth}
         onShare={() => setActiveDialog("share")}
         onReport={() => setActiveDialog("report")}
         backToListingsLabel={t.backToListings}
@@ -348,15 +352,17 @@ export function PostDetailsPage({
         </div>
       </div>
 
-      {/* Similar Items & More from Seller */}
+      {/* Similar Posts & More from Seller */}
       <SimilarItemsSection
         currentPost={post}
         allPosts={allPosts}
         language={language}
         isAuthenticated={isAuthenticated}
+        currentUserDisplayName={currentUserDisplayName}
         favoriteIds={favoriteIds}
         onFavoriteToggle={onFavoriteToggle}
         onPostClick={onPostClick}
+        onRequireAuth={onRequireAuth}
       />
 
       <PostActionDialogs

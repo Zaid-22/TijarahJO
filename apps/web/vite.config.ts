@@ -229,7 +229,9 @@ export default defineConfig(({ mode }) => {
             }
 
             if (
-              normalizedId.includes("/node_modules/class-variance-authority/") ||
+              normalizedId.includes(
+                "/node_modules/class-variance-authority/",
+              ) ||
               normalizedId.includes("/node_modules/clsx/") ||
               normalizedId.includes("/node_modules/tailwind-merge/")
             ) {
@@ -266,6 +268,10 @@ export default defineConfig(({ mode }) => {
       host: "localhost",
       port: 5173,
       headers: {
+        // Prevent browsers from holding onto stale optimized dependency chunks
+        // across dev-server restarts, which can surface as 404s under
+        // /node_modules/.vite/deps and then cascade into lazy import failures.
+        "Cache-Control": "no-store",
         "Content-Security-Policy": "frame-ancestors 'none';",
       },
       // open: true, // commented out to prevent dev server from hanging
@@ -276,6 +282,9 @@ export default defineConfig(({ mode }) => {
     },
     // Optimize HMR to prevent unnecessary reloads
     optimizeDeps: {
+      // Force a fresh prebundle on each dev-server start so browsers do not
+      // keep using stale dependency wrapper files with old internal chunk names.
+      force: true,
       exclude: [],
     },
   };

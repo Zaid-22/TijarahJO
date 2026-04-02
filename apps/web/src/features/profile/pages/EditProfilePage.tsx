@@ -1,9 +1,8 @@
-import { motion } from "framer-motion";
+
 import { toast } from "sonner";
 import { useMemo, useRef, useState } from "react";
 import { translations, Language } from "../../../translations";
-import { Button } from "../../../shared/ui/button";
-import { Save } from "lucide-react";
+
 import { SubpageHeader } from "../../../shared/ui/subpage-header";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { EditProfileFormSections } from "../edit/EditProfileFormSections";
@@ -18,6 +17,8 @@ import type {
   EditProfileValidationErrors,
 } from "../types";
 import { useLocationOptions } from "../../../shared/hooks/useLocationOptions";
+
+import { api } from "../../../services/api";
 
 type UserProfile = EditProfileFormProfile;
 
@@ -41,6 +42,7 @@ export function EditProfilePage({
   const [formData, setFormData] = useState<UserProfile>(() =>
     createInitialEditProfileForm(profile),
   );
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [errors, setErrors] = useState<EditProfileValidationErrors>({});
   const { cityNames, areaNames, isLoadingCities, isLoadingAreas } =
@@ -103,9 +105,9 @@ export function EditProfilePage({
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > 10 * 1024 * 1024) {
       toast.error(
-        t.fileSizeTooLarge || "File size too large. Maximum size is 5MB.",
+        t.fileSizeTooLarge || "File size too large. Maximum size is 10MB.",
       );
       return;
     }
@@ -117,6 +119,7 @@ export function EditProfilePage({
       return;
     }
 
+    setAvatarFile(file);
     const reader = new FileReader();
     reader.onloadend = () => {
       handleFieldChange("avatar", String(reader.result || ""));
@@ -125,6 +128,7 @@ export function EditProfilePage({
   };
 
   const handlePhotoRemove = () => {
+    setAvatarFile(null);
     handleFieldChange("avatar", "");
   };
 
@@ -145,20 +149,48 @@ export function EditProfilePage({
     }
 
     setErrors({});
-    const savePromise = onSave(formData);
+    
+    // Process save with potential file upload
+    const doSave = async () => {
+      let finalAvatarUrl = formData.avatar;
+      
+      if (avatarFile) {
+        try {
+          const resolvedUserId = profile.id || String(profile.id);
+          const uploadResult = await api.users.uploadAvatar(resolvedUserId, avatarFile);
+          if (uploadResult && uploadResult.avatarUrl) {
+            finalAvatarUrl = uploadResult.avatarUrl;
+          }
+        } catch (error) {
+          toast.error(
+            language === "ar"
+              ? "فشل في رفع الصورة"
+              : "Failed to upload image"
+          );
+          return;
+        }
+      }
 
-    if (savePromise instanceof Promise) {
-      savePromise
-        .then(() => {
-          setHasChanges(false);
-        })
-        .catch(() => {
-          // Error toast is handled by route-level save action.
-        });
-      return;
-    }
+      // If they removed the photo, or if they just kept their google photo
+      const isValidAvatarUrl =
+        !avatarFile &&
+        finalAvatarUrl &&
+        (finalAvatarUrl.startsWith("http://") || finalAvatarUrl.startsWith("https://") || finalAvatarUrl.startsWith("/uploads/"));
 
-    setHasChanges(false);
+      const dataToSave = {
+        ...formData,
+        avatar: isValidAvatarUrl ? finalAvatarUrl : (avatarFile ? finalAvatarUrl : ""),
+      };
+
+      const savePromise = onSave(dataToSave);
+      if (savePromise instanceof Promise) {
+        await savePromise;
+      }
+      setHasChanges(false);
+      setAvatarFile(null);
+    };
+
+    doSave().catch(() => {});
   };
 
   const handleCancel = () => {
@@ -176,21 +208,6 @@ export function EditProfilePage({
         backLabel={t.cancel || "Cancel"}
         showLogo={false}
         title={t.editProfile || "Edit Profile"}
-        rightContent={hasChanges ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.2 }}
-          >
-            <Button
-              onClick={handleSave}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              <Save className={`w-4 h-4 me-2`} />
-              {t.saveChanges || "Save Changes"}
-            </Button>
-          </motion.div>
-        ) : null}
       />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

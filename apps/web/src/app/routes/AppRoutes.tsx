@@ -19,7 +19,7 @@ export function AppRoutes() {
 
   const { language, darkMode, setDarkMode, toggleLanguage } = useAppSettings();
   const { isAuthenticated, logout, loading: isAuthLoading } = useAuth();
-  const { userProfile, setUserProfile, currentUserDisplayName } =
+  const { userProfile, setUserProfile, currentUserDisplayName, isLoading: isProfileLoading, isProfileComplete } =
     useUserProfileContext();
   const { activeSearchQuery } = useSearch();
 
@@ -43,6 +43,8 @@ export function AppRoutes() {
 
   const [showAuthModal, setShowAuthModal] = useState(false);
   const promptLoginModal = () => setShowAuthModal(true);
+
+  const shouldShowProfileCompletion = isAuthenticated && !isAuthLoading && !isProfileLoading && !isProfileComplete;
 
   const redirectToLogin = () => navigate("/login");
   const requireAuth = (element: ReactElement) =>
@@ -95,6 +97,9 @@ export function AppRoutes() {
         }}
         onContinueAsGuest={() => setShowAuthModal(false)}
       />
+      {shouldShowProfileCompletion && location.pathname !== "/complete-profile" && (
+        <Navigate to="/complete-profile" replace />
+      )}
     </Suspense>
   );
 }

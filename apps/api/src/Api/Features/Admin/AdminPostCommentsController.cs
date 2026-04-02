@@ -10,14 +10,9 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/post-comments")]
-public class AdminPostCommentsController : ControllerBase
+public class AdminPostCommentsController(IAdminQueryHandler adminQueries) : ControllerBase
 {
-    private readonly IAdminQueryHandler _adminQueries;
-
-    public AdminPostCommentsController(IAdminQueryHandler adminQueries)
-    {
-        _adminQueries = adminQueries;
-    }
+    private readonly IAdminQueryHandler _adminQueries = adminQueries;
 
     [HttpGet]
     [Authorize(Policy = AuthorizationPolicies.CommentsView)]
@@ -65,7 +60,7 @@ public class AdminPostCommentsController : ControllerBase
         var result = await _adminQueries.SoftDeletePostCommentAsync(id, currentUserId, cancellationToken);
         if (result.Success)
         {
-            return Ok(new { Message = result.Message });
+            return Ok(new { result.Message });
         }
 
         return Problem(

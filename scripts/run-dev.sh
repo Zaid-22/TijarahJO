@@ -116,6 +116,7 @@ cleanup() {
   if [[ -n "${BACKEND_PID:-}" ]]; then
     kill "$BACKEND_PID" 2>/dev/null || true
   fi
+  pkill -f "TijarahJo.Api" 2>/dev/null || true
   if [[ -n "${FRONTEND_PID:-}" ]]; then
     kill "$FRONTEND_PID" 2>/dev/null || true
   fi

@@ -1,6 +1,8 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Api.Common.Configuration;
 using TijarahJo.Api.Common.Utils;
 using TijarahJo.Api.Contracts.Responses;
 
@@ -12,10 +14,17 @@ namespace TijarahJo.Api.Features.Search;
 public class SearchController : ControllerBase
 {
     private readonly ISearchQueryHandler _searchQueries;
+    private readonly IWebHostEnvironment _environment;
+    private readonly FileStorageOptions _fileStorageOptions;
 
-    public SearchController(ISearchQueryHandler searchQueries)
+    public SearchController(
+        ISearchQueryHandler searchQueries,
+        IWebHostEnvironment environment,
+        IOptions<FileStorageOptions> fileStorageOptions)
     {
         _searchQueries = searchQueries;
+        _environment = environment;
+        _fileStorageOptions = fileStorageOptions.Value;
     }
 
     [HttpGet]
@@ -30,6 +39,6 @@ public class SearchController : ControllerBase
             return this.ToSearchQueryProblem(result, "Search request failed.");
         }
 
-        return Ok(DTOMapper.ToSearchResponseDTO(result.Result));
+        return Ok(DTOMapper.ToSearchResponseDTO(result.Result, _environment.ContentRootPath, _fileStorageOptions));
     }
 }

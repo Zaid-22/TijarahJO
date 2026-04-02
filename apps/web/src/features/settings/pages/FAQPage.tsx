@@ -28,12 +28,12 @@ export function FAQPage({ language, onBack }: FAQPageProps) {
       helpCenterCta: "Open Help Center",
       questions: [
         {
-          q: "How do I buy an item?",
-          a: "You can browse items by category or search for specific posts. Once you find an item you like, you can contact the seller directly via the chat feature or by phone if listed.",
+          q: "How do I buy a post?",
+          a: "You can browse posts by category or search for specific posts. Once you find a post you like, you can contact the seller directly via the chat feature or by phone if listed.",
         },
         {
-          q: "How do I sell an item?",
-          a: "To sell an item, you need to sign in to your account. Click on the 'Sell' or 'Add Post' button, fill in the details about your post including images, price, and description, and then publish your listing.",
+          q: "How do I sell a post?",
+          a: "To sell a post, you need to sign in to your account. Click on the 'Sell' or 'Add Post' button, fill in the details about your post including images, price, and description, and then publish your listing.",
         },
         {
           q: "Is TijarahJo free to use?",

@@ -32,7 +32,6 @@ public class CreateUserRequest
     [StringLength(1000)]
     public string? Bio { get; set; }
 
-    [StringLength(2000)]
     public string? Avatar { get; set; }
 
     public DateTime? JoinDate { get; set; }

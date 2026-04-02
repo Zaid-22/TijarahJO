@@ -71,8 +71,8 @@ export function BannerForm({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("File size must be under 5MB");
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File size must be under 10MB");
       return;
     }
 

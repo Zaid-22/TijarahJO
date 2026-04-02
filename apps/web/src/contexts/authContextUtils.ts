@@ -24,6 +24,7 @@ export const debugAuthError = (...args: unknown[]) => {
 
 export const AUTH_GUEST_KEY = "guestMode";
 export const AUTH_LOGOUT_KEY = "tijarahjo_logged_out";
+export const AUTH_SESSION_HINT_KEY = "tijarahjo_has_authenticated";
 export const AUTH_LEGACY_KEYS = [
   "tijarahjo_token",
   "tijarahjo_auth",
@@ -75,6 +76,30 @@ export const isRetryableAuthError = (
     normalizedMessage.includes("cannot connect to backend") ||
     normalizedMessage.includes("timed out")
   );
+};
+
+export const hasStoredAuthSessionHint = (): boolean => {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return localStorage.getItem(AUTH_SESSION_HINT_KEY) === "true";
+};
+
+export const persistAuthSessionHint = (): void => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  localStorage.setItem(AUTH_SESSION_HINT_KEY, "true");
+};
+
+export const clearAuthSessionHint = (): void => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  localStorage.removeItem(AUTH_SESSION_HINT_KEY);
 };
 
 export type AuthFallbackUser = {

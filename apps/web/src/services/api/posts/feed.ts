@@ -8,7 +8,11 @@ import {
   parsePostsEnvelope,
 } from "../schemas/postSchema";
 import { transformPostModelToPost } from "./mappers";
-import { getPostImagesByPostId } from "./lookups";
+import {
+  getPostImagePreviewUrl,
+  getPostImageRowsByPostId,
+  enrichPostsWithCategoryAndSeller,
+} from "./lookups";
 import { RawPost } from "./types";
 
 const FEED_PAGE_SIZE = 500;
@@ -79,16 +83,36 @@ async function fetchFeedPage(
   );
   const imageEntries = await Promise.all(
     missingImagePostIds.map(async (postId) => {
-      const images = await getPostImagesByPostId(postId);
-      return [postId, images] as const;
+      const imageRows = await getPostImageRowsByPostId(postId);
+      const images = imageRows
+        .map((row) => row.PostImageURL ?? row.postImageURL)
+        .filter(
+          (value): value is string =>
+            typeof value === "string" && value.trim().length > 0,
+        );
+      return [
+        postId,
+        {
+          images,
+          thumbnailImage: getPostImagePreviewUrl(imageRows),
+        },
+      ] as const;
     }),
   );
   const imagesByPostId = Object.fromEntries(imageEntries);
 
-  const posts = parsedPayload.posts.map((post, index) =>
+  const enrichedPosts = await enrichPostsWithCategoryAndSeller(parsedPayload.posts);
+
+  const posts = enrichedPosts.map((post, index) =>
     transformPostModelToPost(
-      post,
-      imagesByPostId[getPostId(post)] ||
+      {
+        ...post,
+        thumbnailImage:
+          imagesByPostId[getPostId(post)]?.thumbnailImage ||
+          post.thumbnailImage ||
+          post.ThumbnailImage,
+      },
+      imagesByPostId[getPostId(post)]?.images ||
         (Array.isArray(post?.Images)
           ? post.Images
           : Array.isArray(post?.images)

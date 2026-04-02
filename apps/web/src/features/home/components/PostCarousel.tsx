@@ -182,7 +182,7 @@ export function PostCarousel({
           {posts.map((post) => (
             <div
               key={post.id}
-              className="flex-shrink-0 w-[260px] sm:w-[280px] md:w-[300px] snap-start"
+              className="w-[282px] flex-shrink-0 snap-start sm:w-[300px] md:w-[320px]"
             >
               <PostCard
                 post={post}

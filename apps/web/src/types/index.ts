@@ -19,6 +19,8 @@ export interface Post {
   createdAt?: string;
   updatedAt?: string;
   views?: number;
+  averageRating?: number;
+  reviewCount?: number;
   condition?: string;
   status?: "ACTIVE" | "SOLD" | "DELETED"; // Listing status - defaults to ACTIVE
 }
@@ -93,4 +95,19 @@ export interface AppNotification {
   isRead: boolean;
   createdAt: string;
   readAt?: string;
+}
+
+export interface PostComment {
+  commentId: number;
+  id: string; // String version of CommentID
+  postId: number;
+  userId: number;
+  parentCommentId?: number | null;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  authorName?: string;
+  authorAvatar?: string;
+  replyCount: number;
+  isEdited: boolean;
 }

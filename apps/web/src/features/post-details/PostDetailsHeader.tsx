@@ -12,6 +12,7 @@ interface PostDetailsHeaderProps {
   isFavorited: boolean;
   onBack: () => void;
   onFavoriteToggle?: (postId: string) => void;
+  onRequireAuth?: () => void;
   onShare?: () => void;
   onReport?: () => void;
   backToListingsLabel: string;
@@ -26,6 +27,7 @@ export function PostDetailsHeader({
   isFavorited,
   onBack,
   onFavoriteToggle,
+  onRequireAuth,
   onShare,
   onReport,
   backToListingsLabel,
@@ -45,12 +47,19 @@ export function PostDetailsHeader({
         <Share2 className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
       </Button>
 
-      {isAuthenticated && !isOwnPost && (
+      {!isOwnPost && (
         <Button
           variant="ghost"
           size="sm"
           className="h-9 w-9 rounded-lg p-0 transition-all duration-200 hover:scale-110 hover:bg-background hover:shadow-sm sm:h-10 sm:w-10"
-          onClick={onReport}
+          onClick={() => {
+            if (!isAuthenticated) {
+              onRequireAuth?.();
+              return;
+            }
+
+            onReport?.();
+          }}
           title={language === "ar" ? "الإبلاغ عن الإعلان" : "Report listing"}
           aria-label={
             language === "ar" ? "الإبلاغ عن هذا الإعلان" : "Report this listing"
@@ -60,12 +69,19 @@ export function PostDetailsHeader({
         </Button>
       )}
 
-      {isAuthenticated && !isOwnPost && (
+      {!isOwnPost && (
         <Button
           variant="ghost"
           size="sm"
           className="h-9 w-9 rounded-lg p-0 transition-all duration-200 hover:scale-110 hover:bg-background hover:shadow-sm sm:h-10 sm:w-10"
-          onClick={() => onFavoriteToggle?.(post.id)}
+          onClick={() => {
+            if (!isAuthenticated) {
+              onRequireAuth?.();
+              return;
+            }
+
+            onFavoriteToggle?.(post.id);
+          }}
           title={isFavorited ? "Remove from favorites" : "Add to favorites"}
           aria-label={
             isFavorited

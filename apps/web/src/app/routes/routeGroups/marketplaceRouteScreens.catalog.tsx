@@ -3,6 +3,7 @@ import { CategoryRouteWrapper } from "../CategoryRouteWrapper";
 import { useMarketplaceRouteContext } from "./marketplaceRouteContext";
 import { type MarketplaceRouteDefinition } from "./marketplaceRouteDefinitions";
 import { useSearch } from "../../../contexts/SearchContext";
+import { APP_ROUTE_PATHS } from "../routeConfig";
 
 const AllPostsPage = lazy(() =>
   import("../../../features/marketplace/pages/AllPostsPage").then((m) => ({
@@ -27,7 +28,7 @@ function AllPostsMarketplaceRouteScreen() {
 
   return (
     <AllPostsPage
-      onBack={() => navigate("/")}
+      onBack={() => navigate(APP_ROUTE_PATHS.home)}
       language={appProps.language}
       posts={sharedPostRouteProps.availablePosts}
       onPostClick={(id) => navigateToPost(id, "/posts")}
@@ -58,7 +59,7 @@ function SearchResultsMarketplaceRouteScreen() {
     <SearchResultsPage
       searchQuery={activeSearchQuery}
       posts={sharedPostRouteProps.availablePosts}
-      onBack={() => navigate("/")}
+      onBack={() => navigate(APP_ROUTE_PATHS.home)}
       onPostClick={(id) => navigateToPost(id, "/search")}
       language={appProps.language}
       favoriteIds={sharedPostRouteProps.favoriteIds}
@@ -94,7 +95,7 @@ function CategoryMarketplaceRouteScreen() {
       availablePosts={sharedPostRouteProps.availablePosts}
       favoriteIds={sharedPostRouteProps.favoriteIds}
       onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
-      onBack={() => navigate("/")}
+      onBack={() => navigate(APP_ROUTE_PATHS.home)}
       onOpenPost={(id) => navigateToPost(id, "/category")}
       onRequireAuth={promptLoginModal}
     />
@@ -103,15 +104,15 @@ function CategoryMarketplaceRouteScreen() {
 
 export const marketplaceCatalogRoutes: MarketplaceRouteDefinition[] = [
   {
-    path: "/posts",
+    path: APP_ROUTE_PATHS.posts,
     Screen: AllPostsMarketplaceRouteScreen,
   },
   {
-    path: "/search",
+    path: APP_ROUTE_PATHS.search,
     Screen: SearchResultsMarketplaceRouteScreen,
   },
   {
-    path: "/category/:categoryName",
+    path: APP_ROUTE_PATHS.category,
     Screen: CategoryMarketplaceRouteScreen,
   },
 ];

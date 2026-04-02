@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { UserProfile } from "../../../types";
 import { useAuth } from "../../../contexts/AuthContext";
 import { api } from "../../../services/api";
@@ -38,6 +38,7 @@ export function useUserProfile() {
     avatar: DEFAULT_AVATAR_SRC,
     joinedDate: "Jan 2024",
   });
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (user && isAuthenticated) {
@@ -58,65 +59,71 @@ export function useUserProfile() {
     }
   }, [user, isAuthenticated]);
 
-  useEffect(() => {
+  const fetchProfileData = useCallback(async () => {
     const userId = String(user?.id || "").trim();
     if (!isAuthenticated || !userId) {
+      setIsLoading(false);
       return;
     }
 
-    let cancelled = false;
-
-    const fetchUserProfile = async () => {
-      try {
-        const backendUser = await api.users.getUser(userId);
-        if (cancelled || !backendUser) {
-          return;
-        }
-
-        const firstName = backendUser.firstName || user?.firstName || "";
-        const lastName = backendUser.lastName || user?.lastName || "";
-        const displayName =
-          `${firstName} ${lastName}`.trim() ||
-          backendUser.name ||
-          user?.name ||
-          user?.email ||
-          "";
-        const city = backendUser.city || "";
-        const area = backendUser.area || "";
-
-        setUserProfile((prev) => ({
-          ...prev,
-          id: String(backendUser.id || backendUser.userId || userId),
-          firstName,
-          lastName,
-          name: displayName,
-          email: backendUser.email || prev.email,
-          phone: backendUser.phone || prev.phone || "",
-          bio: backendUser.bio || prev.bio || "",
-          avatar: backendUser.avatar || prev.avatar || DEFAULT_AVATAR_SRC,
-          city,
-          area,
-          location: area ? `${city}, ${area}` : city,
-          joinedDate: formatJoinedDate(
-              backendUser.joinedAt,
-            prev.joinedDate,
-          ),
-        }));
-      } catch (error) {
-        logger.warn("[useUserProfile] Failed to fetch extended profile:", error);
+    setIsLoading(true);
+    try {
+      const backendUser = await api.users.getUser(userId);
+      if (!backendUser) {
+        setIsLoading(false);
+        return;
       }
-    };
 
-    fetchUserProfile();
+      const firstName = backendUser.firstName || user?.firstName || "";
+      const lastName = backendUser.lastName || user?.lastName || "";
+      const displayName =
+        `${firstName} ${lastName}`.trim() ||
+        backendUser.name ||
+        user?.name ||
+        user?.email ||
+        "";
+      const city = backendUser.city || "";
+      const area = backendUser.area || "";
 
-    return () => {
-      cancelled = true;
-    };
+      setUserProfile((prev) => ({
+        ...prev,
+        id: String(backendUser.id || backendUser.userId || userId),
+        firstName,
+        lastName,
+        name: displayName,
+        email: backendUser.email || prev.email,
+        phone: backendUser.phone || prev.phone || "",
+        bio: backendUser.bio || prev.bio || "",
+        avatar: backendUser.avatar || prev.avatar || DEFAULT_AVATAR_SRC,
+        city,
+        area,
+        location: area ? `${city}, ${area}` : city,
+        joinedDate: formatJoinedDate(
+          backendUser.joinedAt,
+          prev.joinedDate,
+        ),
+      }));
+    } catch (error) {
+      logger.warn("[useUserProfile] Failed to fetch extended profile:", error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [isAuthenticated, user?.id, user?.firstName, user?.lastName, user?.name, user?.email]);
+
+  useEffect(() => {
+    fetchProfileData();
+  }, [fetchProfileData]);
+
+  const isProfileComplete = Boolean(
+    userProfile.phone && userProfile.city && userProfile.area
+  );
 
   return {
     userProfile,
     setUserProfile,
     currentUserDisplayName: CURRENT_USER_DISPLAY_NAME,
+    isLoading,
+    isProfileComplete,
+    refreshProfile: fetchProfileData,
   };
 }

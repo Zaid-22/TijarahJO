@@ -132,7 +132,16 @@ public sealed class UserCommandService : IUserCommandService
 
         if (command.Phone != null)
         {
-            user = user with { Phone = PhoneNumberNormalizer.NormalizeJordanPhone(command.Phone) };
+            string? normalizedPhone = PhoneNumberNormalizer.NormalizeJordanPhone(command.Phone);
+            if (normalizedPhone != null && normalizedPhone != user.Phone)
+            {
+                UserModel? existingUser = await _users.GetUserByLoginAsync(normalizedPhone, cancellationToken);
+                if (existingUser != null && existingUser.UserID != user.UserID)
+                {
+                    return Failure(UserCommandFailureReason.InvalidRequest, "Phone number is already associated with another account.");
+                }
+            }
+            user = user with { Phone = normalizedPhone };
         }
 
         if (command.CityId.HasValue || command.AreaId.HasValue)

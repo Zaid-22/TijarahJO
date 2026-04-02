@@ -12,7 +12,6 @@ export interface SearchFilters {
   city?: string;
   minPrice?: number;
   maxPrice?: number;
-  condition?: string;
   sortBy?: "date" | "price" | "views";
   sortOrder?: "asc" | "desc";
 }
@@ -55,14 +54,6 @@ const JORDAN_CITIES_AR: Record<string, string> = {
   Balqa: "البلقاء",
 };
 
-const CONDITIONS_EN = ["New", "Used - Like New", "Used - Good", "Used - Fair"];
-const CONDITIONS_AR = [
-  "جديد",
-  "مستعمل - كالجديد",
-  "مستعمل - جيد",
-  "مستعمل - مقبول",
-];
-
 const SORT_OPTIONS_EN = [
   { value: "date-desc", label: "Newest First" },
   { value: "date-asc", label: "Oldest First" },
@@ -88,7 +79,6 @@ export function AdvancedSearchFilters({
 }: AdvancedSearchFiltersProps) {
   const { categories } = useCatalogCategories();
   const isRTL = language === "ar";
-  const conditions = language === "ar" ? CONDITIONS_AR : CONDITIONS_EN;
   const sortOptions = language === "ar" ? SORT_OPTIONS_AR : SORT_OPTIONS_EN;
   const currentSort = `${filters.sortBy || "date"}-${filters.sortOrder || "desc"}`;
 
@@ -104,7 +94,6 @@ export function AdvancedSearchFilters({
     filters.city ||
     filters.minPrice ||
     filters.maxPrice ||
-    filters.condition ||
     (filters.sortBy && filters.sortBy !== "date");
 
   const labels = {
@@ -116,8 +105,6 @@ export function AdvancedSearchFilters({
     priceRange: language === "ar" ? "نطاق السعر" : "Price Range",
     min: language === "ar" ? "الحد الأدنى" : "Min",
     max: language === "ar" ? "الحد الأعلى" : "Max",
-    condition: language === "ar" ? "الحالة" : "Condition",
-    allConditions: language === "ar" ? "جميع الحالات" : "All Conditions",
     sortBy: language === "ar" ? "ترتيب حسب" : "Sort By",
     apply: language === "ar" ? "تطبيق" : "Apply Filters",
     clear: language === "ar" ? "مسح الكل" : "Clear All",
@@ -220,37 +207,6 @@ export function AdvancedSearchFilters({
               className="rounded-xl"
             />
           </div>
-        </div>
-      </FilterGroup>
-
-      {/* Condition Filter */}
-      <FilterGroup label={labels.condition}>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => updateFilter("condition", undefined)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium border transition-all ${
-              !filters.condition
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-card text-foreground border-border hover:border-primary/30"
-            }`}
-          >
-            {labels.allConditions}
-          </button>
-          {conditions.map((cond) => (
-            <button
-              key={cond}
-              type="button"
-              onClick={() => updateFilter("condition", cond)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium border transition-all ${
-                filters.condition === cond
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-card text-foreground border-border hover:border-primary/30"
-              }`}
-            >
-              {cond}
-            </button>
-          ))}
         </div>
       </FilterGroup>
 

@@ -6,14 +6,9 @@ using TijarahJo.Infrastructure.Persistence;
 
 namespace TijarahJo.Infrastructure.DataAccess;
 
-public sealed class PostCommentDataAccessAdapter : IPostCommentDataAccess
+public sealed class PostCommentDataAccessAdapter(TijarahJoDbContext dbContext) : IPostCommentDataAccess
 {
-    private readonly TijarahJoDbContext _dbContext;
-
-    public PostCommentDataAccessAdapter(TijarahJoDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
+    private readonly TijarahJoDbContext _dbContext = dbContext;
 
     public async Task<int> AddCommentAsync(PostCommentModel comment, CancellationToken cancellationToken = default)
     {

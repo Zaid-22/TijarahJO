@@ -16,6 +16,7 @@ import {
   AUTH_GUEST_KEY,
   AUTH_LEGACY_KEYS,
   AUTH_LOGOUT_KEY,
+  clearAuthSessionHint,
   AuthFallbackUser,
   BACKEND_UNAVAILABLE_MESSAGE,
   CurrentUserResult,
@@ -23,9 +24,11 @@ import {
   debugAuthLog,
   debugAuthWarn,
   getErrorMessage,
+  hasStoredAuthSessionHint,
   isRetryableAuthError,
   normalizeMessage,
   pause,
+  persistAuthSessionHint,
   SESSION_EXPIRED_MESSAGE,
 } from "./authContextUtils";
 import { performAuthLogin, performAuthRegister } from "./authActions";
@@ -52,9 +55,12 @@ export function useAuthProviderController(): AuthContextType {
 
   const clearAuthStorage = useCallback(() => {
     localStorage.removeItem(AUTH_GUEST_KEY);
+    clearAuthSessionHint();
     for (const key of AUTH_LEGACY_KEYS) {
       localStorage.removeItem(key);
     }
+    // Clear favorites when logging out to prevent guest mode from inheriting them
+    localStorage.removeItem("tijarahjo_favorites");
     // Note: AUTH_LOGOUT_KEY is intentionally NOT cleared here —
     // it is only cleared on explicit login/signup.
   }, []);
@@ -118,6 +124,7 @@ export function useAuthProviderController(): AuthContextType {
   const persistAuthenticatedSession = useCallback((user: User) => {
     localStorage.removeItem(AUTH_GUEST_KEY);
     localStorage.removeItem(AUTH_LOGOUT_KEY);
+    persistAuthSessionHint();
     setIsGuest(false);
     setAuthError(null);
     setAuthState({
@@ -256,6 +263,26 @@ export function useAuthProviderController(): AuthContextType {
     }
 
     const guestMode = localStorage.getItem(AUTH_GUEST_KEY);
+    const currentPathname =
+      typeof window !== "undefined" ? window.location.pathname : "";
+    const isAuthScreen =
+      currentPathname === "/login" || currentPathname === "/forgot-password";
+    const shouldSkipLoggedOutProbeInDev =
+      import.meta.env.DEV &&
+      isAuthScreen &&
+      !authState.isAuthenticated &&
+      !authState.user &&
+      guestMode !== "true" &&
+      !hasStoredAuthSessionHint() &&
+      !AUTH_LEGACY_KEYS.some((k) => localStorage.getItem(k) !== null);
+
+    if (shouldSkipLoggedOutProbeInDev) {
+      clearAuthStorage();
+      setSignedOutState();
+      authCheckInitializedRef.current = true;
+      setLoading(false);
+      return;
+    }
 
     let currentUserResult = await fetchCurrentUser(authState.user?.email || "");
     if (currentUserResult.status === "network_error") {
@@ -341,6 +368,7 @@ export function useAuthProviderController(): AuthContextType {
     if (isLatestRun()) {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     authState.isAuthenticated,
     authState.user?.email,

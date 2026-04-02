@@ -1,7 +1,5 @@
 import React, { useState, useEffect, forwardRef } from "react";
 
-("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODgiIGhlaWdodD0iODgiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgc3Ryb2tlPSIjMDAwIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBvcGFjaXR5PSIuMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIzLjciPjxyZWN0IHg9IjE2IiB5PSIxNiIgd2lkdGg9IjU2IiBoZWlnaHQ9IjU2IiByeD0iNiIvPjxwYXRoIGQ9Im0xNiA1OCAxNi0xOCAzMiAzMiIvPjxjaXJjbGUgY3g9IjUzIiBjeT0iMzUiIHI9IjciLz48L3N2Zz4KCg==");
-
 interface ImageWithFallbackProps extends Omit<
   React.ImgHTMLAttributes<HTMLImageElement>,
   "onError"
@@ -38,16 +36,16 @@ export const ImageWithFallback = forwardRef<
   const resolvedImageClassName = hasObjectFitClass
     ? className
     : `${className || ""} object-cover`.trim();
+  const placeholderClassName = `inline-flex items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.14),transparent_38%),linear-gradient(135deg,rgba(15,23,42,0.06),rgba(15,23,42,0.12))] text-center align-middle ${className ?? ""}`;
+  const placeholderIconClassName = "h-12 w-12 text-white/80 drop-shadow-[0_8px_18px_rgba(15,23,42,0.18)]";
 
   // If src is empty or invalid, show placeholder immediately
   if (!currentSrc || currentSrc.trim() === "") {
     return (
-      <div
-        className={`inline-block bg-gradient-to-br from-muted to-muted/70 text-center align-middle flex items-center justify-center ${className ?? ""}`}
-      >
-        <div className="flex flex-col items-center justify-center text-muted-foreground">
+      <div className={placeholderClassName}>
+        <div className="flex items-center justify-center">
           <svg
-            className="w-12 h-12 mb-2"
+            className={placeholderIconClassName}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -59,19 +57,16 @@ export const ImageWithFallback = forwardRef<
               d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
             />
           </svg>
-          <span className="text-xs">No Image</span>
         </div>
       </div>
     );
   }
 
   return didError ? (
-    <div
-      className={`inline-block bg-gradient-to-br from-muted to-muted/70 text-center align-middle flex items-center justify-center ${className ?? ""}`}
-    >
-      <div className="flex flex-col items-center justify-center text-muted-foreground">
+    <div className={placeholderClassName}>
+      <div className="flex items-center justify-center">
         <svg
-          className="w-12 h-12 mb-2"
+          className={placeholderIconClassName}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -83,7 +78,6 @@ export const ImageWithFallback = forwardRef<
             d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
           />
         </svg>
-        <span className="text-xs">Image Error</span>
       </div>
     </div>
   ) : (

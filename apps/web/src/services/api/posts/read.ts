@@ -4,7 +4,9 @@ import { parseRawPost, parseRawPostsCollection } from "../schemas/postSchema";
 import { transformPostModelToPost } from "./mappers";
 import { RawPost } from "./types";
 import {
+  getPostImagePreviewUrl,
   getPostImagesByPostId,
+  getPostImageRowsByPostId,
   enrichPostsWithCategoryAndSeller,
 } from "./lookups";
 
@@ -65,9 +67,10 @@ export async function getPostsByUserId(userId: string): Promise<Post[]> {
     : [];
 
   if (parsedPosts.length > 0) {
+    const enrichedPosts = await enrichPostsWithCategoryAndSeller(parsedPosts);
     const missingImagePostIds = Array.from(
       new Set(
-        parsedPosts
+        enrichedPosts
           .filter((post) => !postHasEmbeddedImages(post))
           .map((post) => getPostId(post))
           .filter((postId) => postId.length > 0),
@@ -76,16 +79,34 @@ export async function getPostsByUserId(userId: string): Promise<Post[]> {
 
     const imageEntries = await Promise.all(
       missingImagePostIds.map(async (postId) => {
-        const images = await getPostImagesByPostId(postId);
-        return [postId, images] as const;
+        const imageRows = await getPostImageRowsByPostId(postId);
+        const images = imageRows
+          .map((row) => row.PostImageURL ?? row.postImageURL)
+          .filter(
+            (value): value is string =>
+              typeof value === "string" && value.trim().length > 0,
+          );
+        return [
+          postId,
+          {
+            images,
+            thumbnailImage: getPostImagePreviewUrl(imageRows),
+          },
+        ] as const;
       }),
     );
     const imagesByPostId = Object.fromEntries(imageEntries);
 
-    return parsedPosts.map((post, index) =>
+    return enrichedPosts.map((post, index) =>
       transformPostModelToPost(
-        post,
-        imagesByPostId[getPostId(post)] || [],
+        {
+          ...post,
+          thumbnailImage:
+            imagesByPostId[getPostId(post)]?.thumbnailImage ||
+            post.thumbnailImage ||
+            post.ThumbnailImage,
+        },
+        imagesByPostId[getPostId(post)]?.images || [],
         index,
       ),
     );

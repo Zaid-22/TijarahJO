@@ -14,6 +14,7 @@ import { AuthInputField } from "./AuthInputField";
 import { AuthPhoneField } from "./AuthPhoneField";
 import { AuthSelectField } from "./AuthSelectField";
 import { AuthGoogleButton } from "./AuthGoogleButton";
+import { AuthAvatarUpload } from "./AuthAvatarUpload";
 import { JORDAN_CITIES, JORDAN_CITIES_AR } from "./loginUtils";
 import { AuthPageLayout } from "./components/AuthPageLayout";
 import type { Language } from "../../types";
@@ -53,6 +54,8 @@ interface LoginFormProps {
   onFieldBlur: (field: LoginField) => void;
   onTogglePasswordVisibility: () => void;
   onToggleConfirmPasswordVisibility: () => void;
+  avatarPreview?: string;
+  onAvatarClick?: () => void;
   isModal?: boolean;
 }
 
@@ -85,6 +88,8 @@ export function LoginForm({
   onFieldBlur,
   onTogglePasswordVisibility,
   onToggleConfirmPasswordVisibility,
+  avatarPreview,
+  onAvatarClick,
   isModal,
 }: LoginFormProps) {
   const isRTL = language === "ar";
@@ -192,6 +197,15 @@ export function LoginForm({
                 onFocus={() => {}}
                 onBlur={() => {}}
                 isRTL={isRTL}
+              />
+            )}
+
+            {!isTwoFactorStep && isSignUp && (
+              <AuthAvatarUpload
+                avatarPreview={avatarPreview}
+                onAvatarClick={onAvatarClick}
+                tapToUploadText={copy.form.tapToUpload}
+                uploadPhotoOptionalText={copy.form.uploadPhotoOptional}
               />
             )}
 

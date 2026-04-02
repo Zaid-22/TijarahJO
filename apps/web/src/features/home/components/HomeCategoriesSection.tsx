@@ -1,6 +1,5 @@
 import type { Language } from "../../../types";
 import type { Category } from "../../../types/api";
-import { resolveCategoryIcon } from "../../../shared/lib/categoryVisuals";
 
 type HomeCategoriesSectionProps = {
   language: Language;
@@ -87,7 +86,6 @@ export function HomeCategoriesSection({
                   ) : (
                     /* Fallback: icon-based card */
                     <CategoryIconFallback
-                      iconKey={category.icon}
                       label={categoryLabel}
                     />
                   )}
@@ -104,23 +102,13 @@ export function HomeCategoriesSection({
  * when no database image is available.
  */
 function CategoryIconFallback({
-  iconKey,
   label,
 }: {
-  iconKey: string;
   label: string;
 }) {
-  const Icon = resolveCategoryIcon(iconKey);
-
   return (
-    <div className="flex flex-col items-center gap-3 p-4">
-      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-primary/15 to-secondary/15 dark:from-primary/25 dark:to-secondary/25 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-        <Icon
-          className="h-7 w-7 sm:h-8 sm:w-8 text-primary"
-          strokeWidth={1.75}
-        />
-      </div>
-      <span className="text-xs sm:text-sm font-medium text-foreground text-center line-clamp-2 leading-tight group-hover:text-primary transition-colors duration-200">
+    <div className="flex h-full w-full items-end bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-4 sm:p-5">
+      <span className="text-sm sm:text-base font-semibold text-foreground text-center line-clamp-2 leading-tight group-hover:text-primary transition-colors duration-200 w-full">
         {label}
       </span>
     </div>
