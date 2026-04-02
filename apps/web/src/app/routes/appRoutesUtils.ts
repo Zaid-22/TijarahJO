@@ -2,24 +2,12 @@ import { APP_CONFIG } from "../../constants/appConfig";
 import { categoryNameToArabic } from "../../data/categoryTranslations";
 import { Language, Post, UserProfile } from "../../types";
 import type { PostImageInput } from "../../types/api";
+import { matchPath } from "react-router-dom";
 import type {
   EditProfileFormProfile,
   ProfilePageUserProfile,
 } from "../../features/profile/types";
-
-const POST_DATA_ROUTE_PATTERNS = [
-  /^\/$/,
-  /^\/favorites$/,
-  /^\/posts$/,
-  /^\/search$/,
-  /^\/profile$/,
-  /^\/category\/[^/]+$/,
-];
-
-const FAVORITES_DATA_ROUTE_PATTERNS = [
-  ...POST_DATA_ROUTE_PATTERNS,
-  /^\/post\/[^/]+$/,
-];
+import { APP_DATA_ROUTE_CONFIG } from "./routeConfig";
 
 export type CreatePostInput = {
   name: string;
@@ -51,24 +39,38 @@ function normalizePathname(pathname: string): string {
   return normalized || "/";
 }
 
-function matchesAnyRoutePattern(
+function matchesRouteDataRequirement(
   pathname: string,
-  patterns: RegExp[],
+  requirement: "loadsPostsData" | "loadsFavoritesData",
 ): boolean {
-  return patterns.some((pattern) => pattern.test(pathname));
+  return APP_DATA_ROUTE_CONFIG.some((routeConfig) => {
+    if (!routeConfig[requirement]) {
+      return false;
+    }
+
+    return Boolean(
+      matchPath(
+        {
+          path: routeConfig.path,
+          end: true,
+        },
+        pathname,
+      ),
+    );
+  });
 }
 
 export function shouldLoadPostsForPath(pathname: string): boolean {
-  return matchesAnyRoutePattern(
+  return matchesRouteDataRequirement(
     normalizePathname(pathname),
-    POST_DATA_ROUTE_PATTERNS,
+    "loadsPostsData",
   );
 }
 
 export function shouldLoadFavoritesForPath(pathname: string): boolean {
-  return matchesAnyRoutePattern(
+  return matchesRouteDataRequirement(
     normalizePathname(pathname),
-    FAVORITES_DATA_ROUTE_PATTERNS,
+    "loadsFavoritesData",
   );
 }
 

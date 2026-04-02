@@ -9,10 +9,28 @@ public sealed class FileStorageOptions
 
     public string ChatImagesPath { get; set; } = "chat-images";
 
+    public string UserAvatarsPath { get; set; } = "user-avatars";
+
     // Public URL prefix used to serve files via static file middleware.
     public string PublicBasePath { get; set; } = "/uploads";
 
     public long MaxPostImageBytes { get; set; } = 5 * 1024 * 1024;
+
+    public bool OptimizeImages { get; set; } = true;
+
+    public bool ConvertImagesToWebp { get; set; } = true;
+
+    public int MaxImageWidth { get; set; } = 2048;
+
+    public int MaxImageHeight { get; set; } = 2048;
+
+    public int WebpQuality { get; set; } = 75;
+
+    public int ThumbnailMaxImageWidth { get; set; } = 640;
+
+    public int ThumbnailMaxImageHeight { get; set; } = 640;
+
+    public int ThumbnailWebpQuality { get; set; } = 60;
 
     public string[] AllowedImageExtensions { get; set; } =
     [

@@ -30,6 +30,5 @@ public class SignUpRequest
     [StringLength(1000)]
     public string? Bio { get; set; }
 
-    [StringLength(2000)]
     public string? Avatar { get; set; }
 }

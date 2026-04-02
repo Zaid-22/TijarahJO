@@ -96,8 +96,10 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
             await _dbContext.SaveChangesAsync(cancellationToken);
             return true;
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex)
         {
+            System.IO.File.WriteAllText("/tmp/tj_db_error.log", ex.ToString());
+            Console.WriteLine("DB UPDATE EXCEPTION: " + ex.ToString());
             return false;
         }
     }

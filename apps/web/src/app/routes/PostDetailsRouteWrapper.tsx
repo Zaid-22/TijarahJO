@@ -27,6 +27,7 @@ interface PostDetailsRouteWrapperProps {
   onNavigateSeller: (sellerId: string, fromPath?: string) => void;
   onNavigateChat: (sellerId: string, fromPath?: string) => void;
   onNavigateLogin: () => void;
+  onRequireAuth?: () => void;
   onUpdatePost: (updatedPost: UpdatePostInput) => Promise<void>;
   onUpdatePostStatus: (statusData: UpdatePostStatusInput) => Promise<void>;
   onDeletePost: (postId: string) => Promise<void>;
@@ -47,6 +48,7 @@ export function PostDetailsRouteWrapper({
   onNavigateSeller,
   onNavigateChat,
   onNavigateLogin,
+  onRequireAuth,
   onUpdatePost,
   onUpdatePostStatus,
   onDeletePost,
@@ -190,6 +192,7 @@ export function PostDetailsRouteWrapper({
       onFavoriteToggle={onFavoriteToggle}
       isAuthenticated={isAuthenticated}
       currentUserDisplayName={currentUserDisplayName}
+      onRequireAuth={onRequireAuth}
     />
   );
 }

@@ -121,7 +121,15 @@ FileStorage__RootPath=/var/lib/tijarahjo/uploads
 FileStorage__PublicBasePath=/uploads
 # Optional overrides
 FileStorage__PostImagesPath=post-images
-FileStorage__MaxPostImageBytes=5242880
+FileStorage__MaxPostImageBytes=10485760
+FileStorage__OptimizeImages=true
+FileStorage__ConvertImagesToWebp=true
+FileStorage__MaxImageWidth=2048
+FileStorage__MaxImageHeight=2048
+FileStorage__WebpQuality=75
+FileStorage__ThumbnailMaxImageWidth=640
+FileStorage__ThumbnailMaxImageHeight=640
+FileStorage__ThumbnailWebpQuality=60
 ```
 
 ## 🛠️ Development Setup
@@ -152,6 +160,7 @@ TwoFactor__ChallengeSigningKey=your-local-dev-2fa-challenge-signing-key
 ### API versioning contract
 
 - Canonical route prefix is `/api/v1`.
+- Selected compatibility aliases under `/api` remain active in runtime; use `docs/reports/API_ENDPOINTS_STATUS.md` when you need the current endpoint inventory.
 - Query/header API version overrides are not part of the supported contract.
 
 ## ⚠️ Security Notes

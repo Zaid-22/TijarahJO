@@ -195,12 +195,12 @@ export function HomePage({
         setShowAllPosts={setShowAllPosts}
       />
 
-      {/* 3. Featured Items Carousel */}
+      {/* 3. Featured Posts Carousel */}
       {isLoadingPosts ? (
         <PostCarouselSkeleton hasSubtitle />
       ) : featuredPosts.length > 0 ? (
         <PostCarousel
-          title={language === "ar" ? "المنتجات المميزة" : "Featured Items"}
+          title={language === "ar" ? "المنشورات المميزة" : "Featured Posts"}
           subtitle={
             language === "ar"
               ? "أبرز المنتجات المتوفرة حالياً"
@@ -222,7 +222,7 @@ export function HomePage({
 
 
 
-      {/* 5. Recent Items Carousel */}
+      {/* 5. Recent Posts Carousel */}
       {isLoadingPosts ? (
         <PostCarouselSkeleton hasSubtitle />
       ) : recentPosts.length > 0 ? (
@@ -285,8 +285,8 @@ export function HomePage({
         }
         subtitle={
           language === "ar"
-            ? "اعرض منتجاتك واوصل للمشترين في كل المحافظات"
-            : "List your items and reach buyers in every governorate"
+            ? "اعرض منشوراتك ووصلها للمشترين في كل المحافظات"
+            : "List your posts and reach buyers in every governorate"
         }
         buttonLabel={
           isAuthenticated

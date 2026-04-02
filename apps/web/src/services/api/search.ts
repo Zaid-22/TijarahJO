@@ -1,6 +1,7 @@
 import { PostsListResponse, SearchRequest } from "../../types/api";
 import { ApiRequestOptions, apiRequest } from "./client";
 import { transformPostModelToPost } from "./posts/mappers";
+import { enrichPostsWithCategoryAndSeller } from "./posts/lookups";
 import {
   parsePaginationPayload,
   parsePostsEnvelope,
@@ -84,7 +85,8 @@ export const searchApi = {
       : null;
 
     if (parsedPayload) {
-      const posts = parsedPayload.posts.map((post, index) =>
+      const enrichedPosts = await enrichPostsWithCategoryAndSeller(parsedPayload.posts);
+      const posts = enrichedPosts.map((post, index) =>
         transformPostModelToPost(
           post,
           normalizeImages(post?.images ?? post?.Images),

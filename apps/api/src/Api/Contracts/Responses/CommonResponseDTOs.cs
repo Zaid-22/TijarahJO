@@ -111,6 +111,8 @@ public sealed class SellerPostResponseDTO
     public string CategoryId { get; set; } = string.Empty;
     [JsonPropertyName("image")]
     public string Image { get; set; } = string.Empty;
+    [JsonPropertyName("thumbnailImage")]
+    public string ThumbnailImage { get; set; } = string.Empty;
     [JsonPropertyName("images")]
     public List<string> Images { get; set; } = new();
     [JsonPropertyName("phone")]

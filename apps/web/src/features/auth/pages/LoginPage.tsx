@@ -5,6 +5,7 @@ import { APP_CONFIG } from "../../../constants/appConfig";
 import { useAuth } from "../../../contexts/AuthContext";
 import { persistAuthSessionHint } from "../../../contexts/authContextUtils";
 import { api } from "../../../services/api";
+import { debugError } from "../../../services/api/client";
 import { normalizeJordanPhone } from "../../../utils/phone";
 import { getLoginCopy } from "../loginCopy";
 import { PageShell } from "../../../shared/ui/page-shell";
@@ -142,6 +143,7 @@ export function LoginPage({
     phone: "",
   });
   const [avatarPreview, setAvatarPreview] = useState<string>("");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -382,11 +384,15 @@ export function LoginPage({
       phone: normalizedPhone,
       city: normalizedCity,
       area: normalizedArea,
-      avatar: avatarPreview || undefined,
+      avatar: avatarPreview?.startsWith("http") ? avatarPreview : undefined,
     });
 
     if (!response.success) {
-      const baseMessage = response.error?.message || response.message || copy.errors.registrationFailedFallback;
+      const baseMessage = extractErrorMessage(
+        response,
+        copy.errors.registrationFailedFallback,
+        backendConnectionMessage,
+      );
       dispatch({
         type: "SET_GENERAL_ERROR",
         error: appendDuplicateAccountHint(
@@ -397,7 +403,16 @@ export function LoginPage({
       return;
     }
 
-    const user = response.user;
+    let user = response.user;
+    if (user?.id && avatarFile) {
+      try {
+        const uploadRes = await api.users.uploadAvatar(user.id, avatarFile);
+        user = { ...user, avatar: uploadRes.avatarUrl };
+      } catch (err) {
+        debugError("Failed to upload avatar", err);
+      }
+    }
+
     await finalizeAuthenticatedLogin({
       id: user?.id,
       firstName: user?.firstName || state.values.firstName.trim(),
@@ -611,12 +626,12 @@ export function LoginPage({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > 10 * 1024 * 1024) {
       dispatch({
         type: "SET_GENERAL_ERROR",
         error: language === "ar" 
-          ? "حجم الملف كبير جداً. الحد الأقصى هو 5 ميغابايت." 
-          : "File size too large. Maximum size is 5MB.",
+          ? "حجم الملف كبير جداً. الحد الأقصى هو 10 ميغابايت." 
+          : "File size too large. Maximum size is 10MB.",
       });
       return;
     }
@@ -634,6 +649,7 @@ export function LoginPage({
     const reader = new FileReader();
     reader.onloadend = () => {
       setAvatarPreview(String(reader.result || ""));
+      setAvatarFile(file);
     };
     reader.readAsDataURL(file);
   };

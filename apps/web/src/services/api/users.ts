@@ -283,6 +283,37 @@ export const usersApi = {
   },
 
   /**
+   * Upload user avatar image file
+   */
+  uploadAvatar: async (userId: string, file: File): Promise<{ avatarUrl: string }> => {
+    const normalizedUserId = normalizeUserId(userId);
+    if (!normalizedUserId) {
+      throw new Error("Invalid user ID");
+    }
+
+    const formData = new FormData();
+    formData.append("File", file);
+
+    debugLog("[uploadAvatar] Uploading avatar for user:", normalizedUserId);
+
+    const response = await apiRequest<{ AvatarUrl: string }>(`/users/${normalizedUserId}/avatar`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (response.success && response.data) {
+      debugLog("[uploadAvatar] Upload successful:", response.data.AvatarUrl);
+      return { avatarUrl: response.data.AvatarUrl };
+    }
+
+    const errorMessage = !response.success && response.error?.message
+      ? response.error.message
+      : "Failed to upload avatar";
+    debugError("[uploadAvatar] Failed:", errorMessage);
+    throw new Error(errorMessage);
+  },
+
+  /**
    * Get all users (Admin only)
    */
   getAllUsers: async (): Promise<{

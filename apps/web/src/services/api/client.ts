@@ -73,13 +73,15 @@ function hasAuthorizationHeader(headers?: HeadersInit): boolean {
 async function resolveCsrfToken(
   method: string,
   headers?: HeadersInit,
+  options: { forceRefresh?: boolean } = {},
 ): Promise<string | null> {
   if (!isUnsafeMethod(method) || hasAuthorizationHeader(headers)) {
     return null;
   }
 
+  const { forceRefresh = false } = options;
   const existingToken = getCookieValue("XSRF-TOKEN");
-  if (existingToken) {
+  if (existingToken && !forceRefresh) {
     return existingToken;
   }
 
@@ -245,6 +247,28 @@ export async function apiRequest<T>(
         if (freshCsrfToken) {
           retryHeaders.set("X-CSRF-Token", freshCsrfToken);
         }
+        response = await fetch(`${API_BASE_URL}${endpoint}`, {
+          ...requestOptions,
+          credentials: requestOptions.credentials ?? "include",
+          signal: controller.signal,
+          headers: retryHeaders,
+        });
+      }
+    }
+
+    // Cookie-authenticated unsafe requests can fail with 403 if the antiforgery
+    // token pair is stale or missing. Force-refresh the CSRF token and retry once.
+    if (
+      response.status === 403 &&
+      isUnsafeMethod(method) &&
+      !hasAuthorizationHeader(requestOptions.headers)
+    ) {
+      const freshCsrfToken = await resolveCsrfToken(method, requestOptions.headers, {
+        forceRefresh: true,
+      });
+      if (freshCsrfToken) {
+        const retryHeaders = new Headers(requestHeaders);
+        retryHeaders.set("X-CSRF-Token", freshCsrfToken);
         response = await fetch(`${API_BASE_URL}${endpoint}`, {
           ...requestOptions,
           credentials: requestOptions.credentials ?? "include",

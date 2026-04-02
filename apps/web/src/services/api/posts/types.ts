@@ -8,6 +8,9 @@ export interface RawPostImage {
   postImageId?: unknown;
   PostImageURL?: unknown;
   postImageURL?: unknown;
+  ThumbnailPostImageURL?: unknown;
+  thumbnailPostImageURL?: unknown;
+  thumbnailPostImageUrl?: unknown;
   IsDeleted?: unknown;
   isDeleted?: unknown;
 }
@@ -72,6 +75,10 @@ export interface RawPost {
   areaId?: unknown;
   PostImageURL?: unknown;
   postImageURL?: unknown;
+  ThumbnailImage?: unknown;
+  thumbnailImage?: unknown;
+  thumbnailImageURL?: unknown;
+  thumbnailImageUrl?: unknown;
   Image?: unknown;
   image?: unknown;
   Images?: unknown;
@@ -80,6 +87,10 @@ export interface RawPost {
   createdAt?: unknown;
   Views?: unknown;
   views?: unknown;
+  AverageRating?: unknown;
+  averageRating?: unknown;
+  ReviewCount?: unknown;
+  reviewCount?: unknown;
   Status?: unknown;
   status?: unknown;
   IsDeleted?: unknown;

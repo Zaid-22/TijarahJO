@@ -6,6 +6,7 @@ import {
 } from "../../../shared/lib/backNavigation";
 import { useMarketplaceRouteContext } from "./marketplaceRouteContext";
 import { type MarketplaceRouteDefinition } from "./marketplaceRouteDefinitions";
+import { APP_ROUTE_PATHS } from "../routeConfig";
 
 const FAQPage = lazy(() =>
   import("../../../features/settings/pages/FAQPage").then((m) => ({ default: m.FAQPage })),
@@ -97,7 +98,7 @@ function NotificationsMarketplaceRouteScreen() {
   return (
     <NotificationsPage
       language={appProps.language}
-      onBack={() => navigate("/")}
+      onBack={() => navigate(APP_ROUTE_PATHS.home)}
       onNavigate={(path) => navigate(path)}
     />
   );
@@ -105,23 +106,23 @@ function NotificationsMarketplaceRouteScreen() {
 
 export const marketplaceContentRoutes: MarketplaceRouteDefinition[] = [
   {
-    path: "/faq",
+    path: APP_ROUTE_PATHS.faq,
     Screen: FaqMarketplaceRouteScreen,
   },
   {
-    path: "/terms",
+    path: APP_ROUTE_PATHS.terms,
     Screen: TermsMarketplaceRouteScreen,
   },
   {
-    path: "/privacy",
+    path: APP_ROUTE_PATHS.privacy,
     Screen: PrivacyMarketplaceRouteScreen,
   },
   {
-    path: "/help",
+    path: APP_ROUTE_PATHS.help,
     Screen: HelpMarketplaceRouteScreen,
   },
   {
-    path: "/notifications",
+    path: APP_ROUTE_PATHS.notifications,
     Screen: NotificationsMarketplaceRouteScreen,
   },
 ];

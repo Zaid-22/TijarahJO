@@ -2,6 +2,7 @@ import { lazy } from "react";
 import { useMarketplaceRouteContext } from "./marketplaceRouteContext";
 import { type MarketplaceRouteDefinition } from "./marketplaceRouteDefinitions";
 import { useSearch } from "../../../contexts/SearchContext";
+import { APP_ROUTE_BUILDERS, APP_ROUTE_PATHS } from "../routeConfig";
 
 const HomePage = lazy(() =>
   import("../../../features/home/pages/HomePage").then((m) => ({ default: m.HomePage })),
@@ -43,12 +44,12 @@ function HomeMarketplaceRouteScreen() {
           return;
         }
 
-        navigate("/sell");
+        navigate(APP_ROUTE_PATHS.sell);
       }}
-      setShowAllPosts={(show: boolean) => show && navigate("/posts")}
+      setShowAllPosts={(show: boolean) => show && navigate(APP_ROUTE_PATHS.posts)}
       setSelectedCategoryForPage={(categoryName: string) =>
         categoryName &&
-        navigate(`/category/${encodeURIComponent(categoryName)}`)
+        navigate(APP_ROUTE_BUILDERS.category(categoryName))
       }
       isLoadingPosts={routeState.isLoadingPostsFromRouteData}
       postsError={routeState.postsError}
@@ -68,7 +69,7 @@ function HomeMarketplaceRouteScreen() {
 
 export const marketplaceHomeRoutes: MarketplaceRouteDefinition[] = [
   {
-    path: "/",
+    path: APP_ROUTE_PATHS.home,
     Screen: HomeMarketplaceRouteScreen,
   },
 ];

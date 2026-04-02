@@ -394,8 +394,8 @@ export function EditPostDialog({
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   {language === "ar"
-                    ? "PNG, JPG, GIF حتى 5MB"
-                    : "PNG, JPG, GIF up to 5MB"}
+                    ? "PNG, JPG, GIF حتى 10MB"
+                    : "PNG, JPG, GIF up to 10MB"}
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   {images.length}/{MAX_IMAGES} {language === "ar" ? "صور" : "images"}

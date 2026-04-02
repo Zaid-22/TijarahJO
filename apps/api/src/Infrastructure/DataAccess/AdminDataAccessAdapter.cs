@@ -323,7 +323,7 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
                     ? ((x.user.FirstName ?? string.Empty) + " " + (x.user.LastName ?? string.Empty)).Trim()
                     : "Unknown user",
                 ParentCommentID = x.comment.ParentCommentID,
-                ReplyCount = _dbContext.PostComments.Count(reply => reply.ParentCommentID == x.comment.CommentID),
+                ReplyCount = _dbContext.PostComments.Count(reply => reply.ParentCommentID.HasValue && reply.ParentCommentID.Value == x.comment.CommentID),
                 Content = x.comment.Content,
                 CreatedAt = x.comment.CreatedAt,
                 UpdatedAt = x.comment.UpdatedAt

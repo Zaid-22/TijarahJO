@@ -199,7 +199,7 @@ export function PostCommentsSection({
         <CardContent className="p-4">
           <Textarea
             placeholder={labels.commentPlaceholder}
-            className="mb-3 min-h-[100px] border-primary/20 focus-visible:ring-primary/40 text-base cursor-text"
+            className="mb-3 min-h-24 border-primary/20 focus-visible:ring-primary/40 text-base cursor-text"
             value={newComment}
             onChange={(e) => {
               if (!isAuthenticated) {

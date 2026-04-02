@@ -2,11 +2,53 @@ import { lazy } from "react";
 import { PostDetailsRouteWrapper } from "../PostDetailsRouteWrapper";
 import { useMarketplaceRouteContext } from "./marketplaceRouteContext";
 import { type MarketplaceRouteDefinition } from "./marketplaceRouteDefinitions";
+import { APP_ROUTE_BUILDERS, APP_ROUTE_PATHS } from "../routeConfig";
+import { deferredToast } from "../../../utils/toast";
 
-const SellerProfilePage = lazy(() =>
-  import("../../../features/seller-profile/pages/SellerProfilePage").then((m) => ({
-    default: m.SellerProfilePage,
-  })),
+function lazyImportWithRetry<TModule>(
+  load: () => Promise<TModule>,
+  retryKey: string,
+) {
+  return async () => {
+    try {
+      const module = await load();
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem(retryKey);
+      }
+      return module;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isRecoverableImportError =
+        /Failed to fetch dynamically imported module|Importing a module script failed/i.test(
+          message,
+        );
+
+      if (
+        typeof window !== "undefined" &&
+        isRecoverableImportError &&
+        !window.sessionStorage.getItem(retryKey)
+      ) {
+        window.sessionStorage.setItem(retryKey, "1");
+        window.location.reload();
+
+        return new Promise<never>(() => {
+          // Keep React.lazy pending while the page reload is in flight.
+        });
+      }
+
+      throw error;
+    }
+  };
+}
+
+const SellerProfilePage = lazy(
+  lazyImportWithRetry(
+    () =>
+      import("../../../features/seller-profile/pages/SellerProfilePage").then((m) => ({
+        default: m.SellerProfilePage,
+      })),
+    "lazy-import-retry:seller-profile-page",
+  ),
 );
 
 function PostDetailsMarketplaceRouteScreen() {
@@ -18,6 +60,7 @@ function PostDetailsMarketplaceRouteScreen() {
     navigateToPost,
     sharedPostRouteProps,
     sharedUserRouteProps,
+    promptLoginModal,
   } = useMarketplaceRouteContext();
 
   return (
@@ -30,24 +73,25 @@ function PostDetailsMarketplaceRouteScreen() {
       favoriteIds={sharedPostRouteProps.favoriteIds}
       currentUserDisplayName={sharedUserRouteProps.currentUserDisplayName}
       onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
-      onOpenPost={(id) => navigateToPost(id, "/")}
-      onNavigateHome={() => navigate("/")}
-      onNavigateProfile={() => navigate("/profile")}
+      onOpenPost={(id) => navigateToPost(id, APP_ROUTE_PATHS.home)}
+      onNavigateHome={() => navigate(APP_ROUTE_PATHS.home)}
+      onNavigateProfile={() => navigate(APP_ROUTE_PATHS.profile)}
       onNavigateSeller={(sellerId, fromPath) =>
-        navigate(`/seller/${sellerId}`, {
+        navigate(APP_ROUTE_BUILDERS.sellerProfile(sellerId), {
           state: {
-            fromPath: fromPath || "/",
+            fromPath: fromPath || APP_ROUTE_PATHS.home,
           },
         })
       }
       onNavigateChat={(sellerId, fromPath) =>
-        navigate(`/chat/${sellerId}`, {
+        navigate(APP_ROUTE_BUILDERS.chatUser(sellerId), {
           state: {
-            fromPath: fromPath || "/",
+            fromPath: fromPath || APP_ROUTE_PATHS.home,
           },
         })
       }
-      onNavigateLogin={() => navigate("/login")}
+      onNavigateLogin={() => navigate(APP_ROUTE_PATHS.login)}
+      onRequireAuth={promptLoginModal}
       onUpdatePost={postActions.updatePost}
       onUpdatePostStatus={postActions.updatePostStatus}
       onDeletePost={postActions.deletePost}
@@ -56,16 +100,60 @@ function PostDetailsMarketplaceRouteScreen() {
 }
 
 function SellerMarketplaceRouteScreen() {
-  return <SellerProfilePage />;
+  const {
+    appProps,
+    postActions,
+    navigate,
+    sharedPostRouteProps,
+    sharedUserRouteProps,
+  } = useMarketplaceRouteContext();
+
+  return (
+    <SellerProfilePage
+      language={appProps.language}
+      favoriteIds={sharedPostRouteProps.favoriteIds}
+      onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
+      isAuthenticated={sharedUserRouteProps.isAuthenticated}
+      currentUserId={sharedUserRouteProps.currentUserId}
+      currentUserDisplayName={sharedUserRouteProps.currentUserDisplayName}
+      onSettingsClick={() => navigate(APP_ROUTE_PATHS.settings)}
+      onEditProfileClick={() => navigate(APP_ROUTE_PATHS.profileEdit)}
+      onAddPostClick={() => navigate(APP_ROUTE_PATHS.sell)}
+      onDeletePost={async (postId) => {
+        try {
+          await postActions.deletePost(postId);
+          deferredToast.success(
+            appProps.language === "ar" ? "تم حذف المنشور" : "Post deleted",
+          );
+        } catch {
+          deferredToast.error(
+            appProps.language === "ar" ? "حدث خطأ أثناء الحذف" : "Error deleting post",
+          );
+        }
+      }}
+      onUpdatePost={async (updatedPost) => {
+        try {
+          await postActions.updatePost(updatedPost);
+          deferredToast.success(
+            appProps.language === "ar" ? "تم تحديث المنشور" : "Post updated",
+          );
+        } catch {
+          deferredToast.error(
+            appProps.language === "ar" ? "حدث خطأ أثناء التحديث" : "Error updating post",
+          );
+        }
+      }}
+    />
+  );
 }
 
 export const marketplacePostRoutes: MarketplaceRouteDefinition[] = [
   {
-    path: "/post/:id",
+    path: APP_ROUTE_PATHS.postDetails,
     Screen: PostDetailsMarketplaceRouteScreen,
   },
   {
-    path: "/seller/:userId",
+    path: APP_ROUTE_PATHS.sellerProfile,
     Screen: SellerMarketplaceRouteScreen,
   },
 ];

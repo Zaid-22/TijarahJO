@@ -44,6 +44,9 @@ export interface LoginCopy {
     verifyTwoFactorButton: string;
     verifyingTwoFactor: string;
     cancelTwoFactor: string;
+    profilePhoto: string;
+    uploadPhotoOptional: string;
+    tapToUpload: string;
   };
   errors: {
     backendConnection: string;
@@ -108,6 +111,9 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       verifyTwoFactorButton: "Verify Code",
       verifyingTwoFactor: "Verifying...",
       cancelTwoFactor: "Back to Sign In",
+      profilePhoto: "Profile Photo",
+      uploadPhotoOptional: "Upload a photo (optional)",
+      tapToUpload: "Tap to upload",
     },
     errors: {
       backendConnection:
@@ -194,6 +200,9 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       verifyTwoFactorButton: "تأكيد الرمز",
       verifyingTwoFactor: "جارٍ التحقق...",
       cancelTwoFactor: "العودة لتسجيل الدخول",
+      profilePhoto: "صورة الملف الشخصي",
+      uploadPhotoOptional: "تحميل صورة (اختياري)",
+      tapToUpload: "انقر للتحميل",
     },
     errors: {
       backendConnection:

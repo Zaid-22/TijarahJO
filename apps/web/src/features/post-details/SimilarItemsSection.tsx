@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { PostCarousel } from "../home/components/PostCarousel";
 import type { Language, Post } from "../../types";
+import { api } from "../../services/api";
+import { useServerQuery } from "../../shared/hooks/useServerQuery";
 
 interface SimilarItemsSectionProps {
   currentPost: Post;
@@ -12,6 +14,7 @@ interface SimilarItemsSectionProps {
   favoriteIds?: string[];
   onFavoriteToggle?: (id: string) => void;
   onPostClick?: (id: string) => void;
+  onRequireAuth?: () => void;
 }
 
 export function SimilarItemsSection({
@@ -24,23 +27,51 @@ export function SimilarItemsSection({
   favoriteIds = [],
   onFavoriteToggle,
   onPostClick,
+  onRequireAuth,
 }: SimilarItemsSectionProps) {
-  const similarItems = useMemo(() => {
-    return allPosts
-      .filter(
-        (p) =>
-          p.id !== currentPost.id &&
-          p.status !== "SOLD" &&
-          p.status !== "DELETED" &&
-          (p.category === currentPost.category ||
-            p.location === currentPost.location),
-      )
-      .slice(0, 12);
-  }, [allPosts, currentPost]);
+  const { data: fallbackFeedPosts = [] } = useServerQuery<Post[]>({
+    key: "posts:feed",
+    tags: ["posts", "posts-feed"],
+    enabled: allPosts.length === 0,
+    staleTimeMs: 45_000,
+    retryCount: 1,
+    retryDelayMs: 700,
+    refetchOnReconnect: true,
+    queryFn: async ({ signal }) => {
+      const response = await api.posts.getPosts(undefined, {
+        signal,
+        throwOnAbort: true,
+      });
+
+      if (response.success && response.posts) {
+        return response.posts;
+      }
+
+      throw new Error(response.error?.message || "Failed to load posts");
+    },
+  });
+
+  const { data: sellerPosts = [] } = useServerQuery<Post[]>({
+    key: `posts:seller:${String(currentPost.sellerId || "").trim()}`,
+    tags: ["posts", "seller-posts"],
+    enabled: Boolean(currentPost.sellerId),
+    staleTimeMs: 45_000,
+    retryCount: 1,
+    retryDelayMs: 700,
+    refetchOnReconnect: true,
+    queryFn: async () =>
+      api.posts.getUserPosts(String(currentPost.sellerId || "").trim()),
+  });
+
+  const sourcePosts = allPosts.length > 0 ? allPosts : fallbackFeedPosts;
 
   const moreFromSeller = useMemo(() => {
     if (!currentPost.sellerId) return [];
-    return allPosts
+
+    const sellerPostPool =
+      sellerPosts.length > 0 ? sellerPosts : sourcePosts;
+
+    return sellerPostPool
       .filter(
         (p) =>
           p.id !== currentPost.id &&
@@ -49,9 +80,28 @@ export function SimilarItemsSection({
           p.status !== "DELETED",
       )
       .slice(0, 8);
-  }, [allPosts, currentPost]);
+  }, [currentPost, sellerPosts, sourcePosts]);
 
-  if (similarItems.length === 0 && moreFromSeller.length === 0) {
+  const moreFromSellerIds = useMemo(
+    () => new Set(moreFromSeller.map((post) => post.id)),
+    [moreFromSeller],
+  );
+
+  const similarPosts = useMemo(() => {
+    return sourcePosts
+      .filter(
+        (p) =>
+          p.id !== currentPost.id &&
+          !moreFromSellerIds.has(p.id) &&
+          p.status !== "SOLD" &&
+          p.status !== "DELETED" &&
+          (p.category === currentPost.category ||
+            p.location === currentPost.location),
+      )
+      .slice(0, 12);
+  }, [sourcePosts, currentPost, moreFromSellerIds]);
+
+  if (similarPosts.length === 0 && moreFromSeller.length === 0) {
     return null;
   }
 
@@ -70,18 +120,19 @@ export function SimilarItemsSection({
           favoriteIds={favoriteIds}
           onFavoriteToggle={onFavoriteToggle}
           onPostClick={(id: string) => onPostClick?.(id)}
+          onRequireAuth={onRequireAuth}
         />
       )}
 
-      {similarItems.length > 0 && (
+      {similarPosts.length > 0 && (
         <PostCarousel
-          title={language === "ar" ? "منتجات مشابهة" : "Similar Items"}
+          title={language === "ar" ? "منشورات مشابهة" : "Similar Posts"}
           subtitle={
             language === "ar"
               ? "بناءً على الفئة والموقع"
               : "Based on category and location"
           }
-          posts={similarItems}
+          posts={similarPosts}
           language={language}
           isAuthenticated={isAuthenticated}
           currentUserId={currentUserId}
@@ -89,6 +140,7 @@ export function SimilarItemsSection({
           favoriteIds={favoriteIds}
           onFavoriteToggle={onFavoriteToggle}
           onPostClick={(id: string) => onPostClick?.(id)}
+          onRequireAuth={onRequireAuth}
         />
       )}
     </div>

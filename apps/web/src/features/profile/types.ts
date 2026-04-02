@@ -1,3 +1,5 @@
+import type { Post } from "../../types";
+
 export interface ProfilePageUserProfile {
   id: string;
   name: string;
@@ -35,4 +37,29 @@ export interface EditProfileValidationErrors {
   phone?: string;
   city?: string;
   area?: string;
+}
+
+export type UnifiedProfileMode = "owner" | "public";
+
+export interface UnifiedProfileReview {
+  reviewID: number | string;
+  reviewerID: number;
+  reviewerName: string;
+  rating: number;
+  comment: string;
+  timestamp: string;
+}
+
+export interface UnifiedProfileViewModel {
+  mode: UnifiedProfileMode;
+  profileUserId: string;
+  profile: ProfilePageUserProfile;
+  canEditProfile: boolean;
+  canManageListings: boolean;
+  canChat: boolean;
+  canCall: boolean;
+  canReview: boolean;
+  activeListings: Post[];
+  soldListings: Post[];
+  reviews: UnifiedProfileReview[];
 }

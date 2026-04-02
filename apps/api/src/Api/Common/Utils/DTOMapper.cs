@@ -1,11 +1,40 @@
 using TijarahJo.Domain.Models;
 using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Api.Common.Configuration;
+using TijarahJo.Api.Common.Services;
 using TijarahJo.Api.Contracts.Responses;
 
 namespace TijarahJo.Api.Common.Utils;
 
 public static class DTOMapper
 {
+    private static string ResolveThumbnailAssetUrl(
+        string? imageUrl,
+        string? thumbnailImageUrl,
+        string? contentRootPath,
+        FileStorageOptions? fileStorageOptions)
+    {
+        if (!string.IsNullOrWhiteSpace(thumbnailImageUrl))
+        {
+            return thumbnailImageUrl;
+        }
+
+        if (string.IsNullOrWhiteSpace(imageUrl) ||
+            string.IsNullOrWhiteSpace(contentRootPath) ||
+            fileStorageOptions == null)
+        {
+            return string.Empty;
+        }
+
+        return LocalPostImageFileStorageService.TryResolveThumbnailPublicUrl(
+            imageUrl,
+            contentRootPath,
+            fileStorageOptions,
+            out string resolvedThumbnailUrl)
+            ? resolvedThumbnailUrl
+            : string.Empty;
+    }
+
     /// <summary>
     /// Converts a relative asset path (e.g. "/uploads/avatar.jpg") into an absolute URL
     /// using the current request's scheme and host. Already-absolute URLs are returned as-is.
@@ -107,14 +136,29 @@ public static class DTOMapper
         };
     }
 
-    public static PostImageResponseDTO ToPostImageResponseDTO(PostImageModel postImageModel)
+    public static PostImageResponseDTO ToPostImageResponseDTO(
+        PostImageModel postImageModel,
+        string? contentRootPath = null,
+        FileStorageOptions? fileStorageOptions = null)
     {
+        string thumbnailUrl =
+            !string.IsNullOrWhiteSpace(contentRootPath) &&
+            fileStorageOptions != null &&
+            LocalPostImageFileStorageService.TryResolveThumbnailPublicUrl(
+                postImageModel.PostImageURL ?? string.Empty,
+                contentRootPath,
+                fileStorageOptions,
+                out string resolvedThumbnailUrl)
+                ? resolvedThumbnailUrl
+                : string.Empty;
+
         return new PostImageResponseDTO
         {
             PostImageID = postImageModel.PostImageID ?? 0,
             Id = postImageModel.PostImageID?.ToString() ?? string.Empty,
             PostID = postImageModel.PostID,
             PostImageURL = postImageModel.PostImageURL ?? string.Empty,
+            ThumbnailPostImageURL = thumbnailUrl,
             UploadedAt = postImageModel.UploadedAt,
             IsDeleted = postImageModel.IsDeleted
         };
@@ -158,7 +202,10 @@ public static class DTOMapper
         return ToMessageResponseDTO(messageModel, receiverId, messageModel.PostId);
     }
 
-    public static SearchResponseDTO ToSearchResponseDTO(SearchReadResult readResult)
+    public static SearchResponseDTO ToSearchResponseDTO(
+        SearchReadResult readResult,
+        string? contentRootPath = null,
+        FileStorageOptions? fileStorageOptions = null)
     {
         return new SearchResponseDTO
         {
@@ -175,6 +222,11 @@ public static class DTOMapper
                 Category = post.Category,
                 CategoryId = post.CategoryId,
                 Image = post.Image ?? "",
+                ThumbnailImage = ResolveThumbnailAssetUrl(
+                    post.Image,
+                    post.ThumbnailImage,
+                    contentRootPath,
+                    fileStorageOptions),
                 Phone = post.Phone,
                 Description = post.Description,
                 CreatedAt = post.CreatedAt,
@@ -209,7 +261,11 @@ public static class DTOMapper
         };
     }
 
-    public static SellerProfileResponseDTO ToSellerProfileResponseDTO(SellerProfileReadModel profile, HttpRequest? request = null)
+    public static SellerProfileResponseDTO ToSellerProfileResponseDTO(
+        SellerProfileReadModel profile,
+        HttpRequest? request = null,
+        string? contentRootPath = null,
+        FileStorageOptions? fileStorageOptions = null)
     {
         return new SellerProfileResponseDTO
         {
@@ -239,6 +295,11 @@ public static class DTOMapper
                 Category = post.Category,
                 CategoryId = post.CategoryId,
                 Image = post.Image,
+                ThumbnailImage = ResolveThumbnailAssetUrl(
+                    post.Image,
+                    post.ThumbnailImage,
+                    contentRootPath,
+                    fileStorageOptions),
                 Images = [.. post.Images],
                 Phone = post.Phone,
                 Description = post.Description,

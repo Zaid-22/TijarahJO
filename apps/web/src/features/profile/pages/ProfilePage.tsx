@@ -1,17 +1,13 @@
-import { translations, Language } from "../../../translations";
-import { Post } from "../../../types";
-import { CreatePostInput } from "../../../app/routes/appRoutesUtils";
-import { UpdatePostInput } from "../../../app/routes/usePostActions";
-import type { ProfilePageUserProfile } from "../types";
-import { getProfileListings } from "../profileListings";
-import { ProfileHeaderSection } from "../components/ProfileHeaderSection";
-import { ProfileSidebarSection } from "../components/ProfileSidebarSection";
-import { ProfileListingsSection } from "../components/ProfileListingsSection";
-import { ProfileReviewsSection } from "../components/ProfileReviewsSection";
-import { SubpageHeader } from "../../../shared/ui/subpage-header";
-import { PageShell } from "../../../shared/ui/page-shell";
-import { Button } from "../../../shared/ui/button";
-import { Settings } from "lucide-react";
+import { translations, type Language } from "../../../translations";
+import type { Post } from "../../../types";
+import type { CreatePostInput } from "../../../app/routes/appRoutesUtils";
+import type { UpdatePostInput } from "../../../app/routes/usePostActions";
+import { UnifiedProfilePage } from "../components/UnifiedProfilePage";
+import { useSellerProfileData } from "../../seller-profile/hooks/useSellerProfileData";
+import type {
+  ProfilePageUserProfile,
+  UnifiedProfileViewModel,
+} from "../types";
 
 interface ProfilePageProps {
   onBackToMarketplace: () => void;
@@ -33,11 +29,11 @@ interface ProfilePageProps {
 
 export function ProfilePage({
   onBackToMarketplace,
-  posts = [],
+  posts: _posts = [],
   onPostClick,
   onDeletePost,
   onUpdatePost,
-  onAddPost,
+  onAddPost: _onAddPost,
   onAddPostClick,
   onSettingsClick,
   onEditProfileClick,
@@ -49,81 +45,55 @@ export function ProfilePage({
   currentUserDisplayName,
 }: ProfilePageProps) {
   const t = translations[language];
-  const isRTL = language === "ar";
+  const profileUserId = String(userProfile.id || "").trim();
+  const { activeListings, soldListings, reviews, isLoading, sellerProfile, reload } =
+    useSellerProfileData(profileUserId);
 
-  const { activeListings, soldListings, normalizedCurrentUserId } =
-    getProfileListings(posts, userProfile, currentUserDisplayName);
+  const resolvedProfile: ProfilePageUserProfile = {
+    ...userProfile,
+    name: sellerProfile?.name || userProfile.name,
+    phone: sellerProfile?.phone || userProfile.phone,
+    location: sellerProfile?.location || userProfile.location || userProfile.city || "",
+    bio: sellerProfile?.bio || userProfile.bio,
+    avatar: sellerProfile?.avatar || userProfile.avatar,
+    joinedDate: sellerProfile?.joinDate || userProfile.joinedDate,
+  };
+
+  const viewModel: UnifiedProfileViewModel = {
+    mode: "owner",
+    profileUserId,
+    profile: resolvedProfile,
+    canEditProfile: true,
+    canManageListings: true,
+    canChat: false,
+    canCall: true,
+    canReview: false,
+    activeListings,
+    soldListings,
+    reviews,
+  };
 
   return (
-    <PageShell tone="account">
-      <SubpageHeader
-        onBack={onBackToMarketplace}
-        isRTL={isRTL}
-        backLabel={t.backToMarketplace}
-        title={t.myProfile}
-        showLogo={false}
-        rightContent={
-          onSettingsClick ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onSettingsClick}
-              aria-label={language === "ar" ? "الإعدادات" : "Settings"}
-            >
-              <Settings className={`w-4 h-4 me-2`} />
-              <span className="hidden sm:inline">
-                {language === "ar" ? "الإعدادات" : "Settings"}
-              </span>
-            </Button>
-          ) : null
-        }
-      />
-      <ProfileHeaderSection
-        userProfile={userProfile}
-        isRTL={isRTL}
-        t={t}
-        activeListingsCount={activeListings.length}
-        onEditProfileClick={onEditProfileClick}
-      />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <ProfileSidebarSection userProfile={userProfile} t={t} />
-
-          <div className="lg:col-span-2">
-            <ProfileListingsSection
-              language={language}
-              isRTL={isRTL}
-              t={t}
-              userProfile={userProfile}
-              activeListings={activeListings}
-              soldListings={soldListings}
-              favoriteIds={favoriteIds}
-              isAuthenticated={isAuthenticated}
-              currentUserId={
-                isAuthenticated ? normalizedCurrentUserId || undefined : undefined
-              }
-              currentUserDisplayName={currentUserDisplayName}
-              onPostClick={onPostClick}
-              onDeletePost={onDeletePost}
-              onUpdatePost={onUpdatePost}
-              onAddPost={onAddPost}
-              onAddPostClick={onAddPostClick}
-              onFavoriteToggle={onFavoriteToggle}
-            />
-          </div>
-        </div>
-
-        {userProfile.id && (
-          <div className="mt-6">
-            <ProfileReviewsSection 
-              userId={userProfile.id} 
-              language={language} 
-              t={t} 
-            />
-          </div>
-        )}
-      </div>
-    </PageShell>
+    <UnifiedProfilePage
+      language={language}
+      isLoading={isLoading}
+      viewModel={viewModel}
+      isAuthenticated={isAuthenticated}
+      favoriteIds={favoriteIds}
+      currentUserId={profileUserId || undefined}
+      currentUserDisplayName={currentUserDisplayName}
+      onBack={onBackToMarketplace}
+      backLabel={t.backToMarketplace}
+      title={t.myProfile}
+      loadingLabel={language === "ar" ? "جارٍ تحميل ملفك..." : "Loading your profile..."}
+      onFavoriteToggle={onFavoriteToggle}
+      onPostClick={onPostClick}
+      onSettingsClick={onSettingsClick}
+      onEditProfileClick={onEditProfileClick}
+      onAddPostClick={onAddPostClick}
+      onDeletePost={onDeletePost}
+      onUpdatePost={onUpdatePost}
+      onReload={reload}
+    />
   );
 }

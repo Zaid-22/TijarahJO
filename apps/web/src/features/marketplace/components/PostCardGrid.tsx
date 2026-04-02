@@ -1,156 +1,114 @@
 import React from "react";
 import { CardContent } from "../../../shared/ui/card";
-import { Button } from "../../../shared/ui/button";
 import { Badge } from "../../../shared/ui/badge";
-import { Heart, MapPin, User, Eye, Phone, MessageCircle, Star } from "lucide-react";
+import { MapPin, Star } from "lucide-react";
 import { ImageWithFallback } from "./ImageWithFallback";
-import { cn } from "../../../shared/ui/utils";
+import { PostCardFavoriteButton } from "./PostCardFavoriteButton";
+import { PostCardPriceBadge } from "./PostCardPriceBadge";
+import { postCardMediaClass } from "./postCardMediaClass";
 import { usePostCardState, type PostCardSharedProps } from "./usePostCardState";
 
 export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardSharedProps) {
-  const { post, isFavorite = false, hideCategoryBadge } = props;
+  const { post, isFavorite = false } = props;
   const {
-    isRTL,
     labels,
     priceLocale,
     showFavoriteButton,
     handleFavoriteClick,
-    handleCallClick,
-    handleMessageClick,
     openPost,
   } = usePostCardState(props);
+  const sellerAverageRating =
+    typeof post.averageRating === "number" && post.averageRating > 0
+      ? post.averageRating
+      : null;
+  const sellerReviewCount =
+    typeof post.reviewCount === "number" && post.reviewCount > 0
+      ? post.reviewCount
+      : null;
+  const hasSellerRating =
+    sellerAverageRating !== null && sellerReviewCount !== null;
 
   return (
-    <div className="group relative flex h-full transform flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 animate-fade-in backdrop-blur-sm card-shadow-brand focus-within:ring-2 focus-within:ring-primary/50 hover:-translate-y-1 hover:shadow-lg">
+    <article className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-[24px] border border-border/60 bg-card transition-all duration-300 animate-fade-in shadow-[0_14px_34px_rgba(15,23,42,0.08)] hover:-translate-y-1 hover:shadow-[0_22px_48px_rgba(15,23,42,0.14)]">
       <button
         type="button"
         onClick={openPost}
         aria-label={labels.viewDetailsAria}
-        title={labels.viewDetails}
-        className="relative w-full overflow-hidden flex-shrink-0 aspect-[4/3] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-      >
-        <ImageWithFallback
-          src={post.image}
-          alt={post.name}
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-        />
+        className="absolute inset-0 z-10 rounded-[24px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+      />
 
-        {!hideCategoryBadge && (
-          <div className="absolute top-3 left-3 z-10">
-            <Badge className="backdrop-blur-md border border-border/60 bg-background/95 px-2.5 py-1 text-xs text-primary shadow-sm sm:px-3 sm:py-1 sm:text-sm">
-              <span className="line-clamp-1">{post.category}</span>
-            </Badge>
-          </div>
-        )}
-
-        {post.status === "SOLD" && (
-          <div
-            className={`absolute ${!hideCategoryBadge && showFavoriteButton ? "top-14" : "top-3"} right-3 z-10`}
-          >
-            <Badge className="backdrop-blur-md border border-border/60 bg-muted/95 px-2.5 py-1 text-xs text-muted-foreground shadow-sm font-semibold sm:px-3 sm:py-1 sm:text-sm">
-              {labels.soldOut}
-            </Badge>
-          </div>
-        )}
-
-        {post.condition && post.status !== "SOLD" && (
-          <div className="absolute bottom-3 left-3 z-10">
-            <Badge className="backdrop-blur-md border border-border/60 bg-background/95 px-2 py-0.5 text-xs text-foreground shadow-sm">
-              {post.condition}
-            </Badge>
-          </div>
-        )}
-      </button>
-
-      {showFavoriteButton && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleFavoriteClick}
-          className="absolute top-3 right-3 z-20 h-9 w-9 rounded-full bg-background/90 backdrop-blur-md transition-all duration-200 hover:bg-muted/80 sm:h-10 sm:w-10"
-          aria-label={labels.favoriteLabel}
-          title={labels.favoriteLabel}
+      <div className="px-3 pt-3">
+        <div
+          className={`${postCardMediaClass} pointer-events-none rounded-[20px] border border-border/40 bg-muted/30 aspect-[16/9] overflow-hidden`}
         >
-          <Heart
-            className={`w-4 h-4 sm:w-5 sm:h-5 transition-all duration-200 text-red-500 stroke-2 ${
-              isFavorite ? "fill-red-500" : "fill-none"
-            }`}
+          <ImageWithFallback
+            src={post.image}
+            alt={post.name}
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
-        </Button>
-      )}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/[0.02] via-transparent to-black/[0.18]" />
 
-      <CardContent className="p-3 sm:p-4 md:p-5 flex flex-col flex-grow">
-        <div className="mb-3 sm:mb-4 flex-grow">
-          <h3 className="min-h-10 line-clamp-2 mb-2 text-base text-foreground transition-colors group-hover:text-primary sm:mb-3 sm:min-h-12 sm:text-lg">
-            {post.name}
-          </h3>
-          <div className="space-y-1.5 sm:space-y-2">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground sm:gap-2 sm:text-sm">
-              <div className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-muted sm:h-5 sm:w-5">
-                <MapPin className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary" />
-              </div>
-              <span className="truncate">
-                {post.location}
-                {post.area ? `, ${post.area}` : ""}
-              </span>
+          {post.status === "SOLD" && (
+            <div className="absolute left-3 top-3 z-10">
+              <Badge className="border-white/35 bg-slate-950/55 px-2.5 py-1 text-xs font-semibold text-white shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-slate-950/40">
+                {labels.soldOut}
+              </Badge>
             </div>
-            <div className="flex items-center justify-between gap-1.5 text-xs text-muted-foreground sm:gap-2 sm:text-sm">
-              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                <div className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-muted sm:h-5 sm:w-5">
-                  <User className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary" />
-                </div>
-                <span className="truncate font-medium">{post.seller}</span>
-              </div>
-              <div className="flex items-center gap-1 text-xs font-medium text-amber-500 flex-shrink-0 bg-amber-500/10 px-1.5 py-0.5 rounded-full">
-                <Star className="w-3 h-3 fill-amber-500" />
-                <span>4.8 <span className="opacity-70 font-normal">(12)</span></span>
-              </div>
+          )}
+
+          {post.condition && post.status !== "SOLD" && (
+            <div className="absolute bottom-3 left-3 z-10">
+              <Badge className="border-white/35 bg-white/78 px-2 py-0.5 text-[11px] font-medium text-foreground shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-white/60">
+                {post.condition}
+              </Badge>
             </div>
+          )}
+
+          <div className="absolute bottom-3 right-3 z-10">
+            <PostCardPriceBadge
+              price={post.price}
+              currency={labels.currency}
+              locale={priceLocale}
+            />
           </div>
         </div>
+      </div>
 
-        <div className="mt-auto flex items-center justify-between border-t border-border pt-2 sm:pt-3">
-          <div className={cn("flex-1 min-w-0", "me-2")}>
-            <div className="flex flex-wrap items-baseline gap-1">
-              <span className="text-lg sm:text-xl md:text-2xl font-semibold text-foreground">
-                {post.price.toLocaleString(priceLocale)}
-              </span>
-              <span className="text-sm sm:text-base text-muted-foreground">
-                {labels.currency}
-              </span>
+      {showFavoriteButton && (
+        <PostCardFavoriteButton
+          isFavorite={isFavorite}
+          label={labels.favoriteLabel}
+          onClick={handleFavoriteClick}
+          className="absolute right-5 top-5 z-30 pointer-events-auto h-9 w-9"
+        />
+      )}
+
+      <CardContent className="pointer-events-none relative z-20 flex flex-grow flex-col px-4 pb-4 pt-3.5 sm:px-4.5 sm:pb-4.5 sm:pt-3.5">
+        <div className="flex-grow space-y-2.5">
+          <h3 className="line-clamp-2 min-h-[2.7rem] text-[1.08rem] font-semibold leading-[1.2] tracking-[-0.02em] text-foreground transition-colors group-hover:text-primary sm:min-h-[3rem] sm:text-[1.22rem]">
+            {post.name}
+          </h3>
+
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="inline-flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-primary/80" />
+              <span className="truncate">{post.area ? `${post.location}, ${post.area}` : post.location}</span>
             </div>
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <Button 
-              size="icon" 
-              variant="outline" 
-              className="h-8 w-8 sm:h-9 sm:w-9 rounded-full border-primary/20 text-primary hover:bg-primary/10 transition-colors" 
-              title={isRTL ? "اتصال" : "Call"} 
-              onClick={handleCallClick}
-            >
-              <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </Button>
-            <Button 
-              size="icon" 
-              variant="outline" 
-              className="h-8 w-8 sm:h-9 sm:w-9 rounded-full border-primary/20 text-primary hover:bg-primary/10 transition-colors" 
-              title={isRTL ? "مراسلة" : "Message"} 
-              onClick={handleMessageClick}
-            >
-              <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </Button>
-            <Button
-              size="sm"
-              className="flex-shrink-0 px-3 text-xs shadow-md transition-all duration-300 hover:opacity-90 hover:shadow-lg sm:px-4 sm:text-sm"
-              onClick={openPost}
-              title={labels.viewDetails}
-            >
-              <span className="hidden sm:inline">{labels.view}</span>
-              <Eye className="w-4 h-4 sm:hidden" />
-            </Button>
+
+            {hasSellerRating && (
+              <div className="flex flex-shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-2 py-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                <Star className="h-3 w-3 fill-current" />
+                <span>
+                  {sellerAverageRating?.toFixed(1)}
+                  <span className="ms-1 font-medium opacity-70">
+                    ({sellerReviewCount})
+                  </span>
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </CardContent>
-    </div>
+    </article>
   );
 });

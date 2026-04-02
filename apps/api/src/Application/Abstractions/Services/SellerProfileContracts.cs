@@ -39,6 +39,7 @@ public sealed class SellerPostReadModel
     public required string Category { get; init; }
     public required string CategoryId { get; init; }
     public required string Image { get; init; }
+    public string ThumbnailImage { get; init; } = string.Empty;
     public required IReadOnlyList<string> Images { get; init; }
     public required string Phone { get; init; }
     public required string Description { get; init; }

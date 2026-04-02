@@ -21,6 +21,7 @@ public sealed class RedisStartupResult
 
 public static class RedisExtensions
 {
+    private static readonly TimeSpan StartupConnectTimeout = TimeSpan.FromSeconds(3);
     public static async Task<RedisStartupResult> AddTijarahJoRedis(
         this IServiceCollection services,
         IConfiguration configuration,
@@ -45,7 +46,14 @@ public static class RedisExtensions
                 redisOptions.ConnectTimeout = Math.Min(redisOptions.ConnectTimeout <= 0 ? 2000 : redisOptions.ConnectTimeout, 2000);
                 redisOptions.SyncTimeout = Math.Min(redisOptions.SyncTimeout <= 0 ? 2000 : redisOptions.SyncTimeout, 2000);
 
-                redisConnection = await ConnectionMultiplexer.ConnectAsync(redisOptions);
+                Task<ConnectionMultiplexer> connectTask = ConnectionMultiplexer.ConnectAsync(redisOptions);
+                Task completedTask = await Task.WhenAny(connectTask, Task.Delay(StartupConnectTimeout));
+                if (completedTask != connectTask)
+                {
+                    throw new TimeoutException("Redis startup connection timed out after 3 seconds.");
+                }
+
+                redisConnection = await connectTask;
                 if (!redisConnection.IsConnected)
                 {
                     throw new RedisConnectionException(
@@ -93,11 +101,18 @@ public static class RedisExtensions
             signalRBuilder.AddStackExchangeRedis(redisConnectionString);
         }
 
-        services.AddStackExchangeRedisCache(options =>
+        if (redisConnection is not null)
         {
-            options.Configuration = configuration.GetConnectionString("Redis") ?? "localhost:6379";
-            options.InstanceName = "TijarahJo_";
-        });
+            services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = configuration.GetConnectionString("Redis") ?? "localhost:6379";
+                options.InstanceName = "TijarahJo_";
+            });
+        }
+        else
+        {
+            services.AddDistributedMemoryCache();
+        }
 
         return new RedisStartupResult
         {

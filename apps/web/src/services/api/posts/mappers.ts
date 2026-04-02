@@ -5,7 +5,25 @@ import { RawPost, RawUserLookup } from "./types";
 import { normalizePostStatus } from "./status";
 import { APP_CONFIG } from "../../../constants/appConfig";
 
+function normalizeImagePath(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return "";
+  }
 
+  if (trimmed.startsWith("/")) {
+    return `${APP_CONFIG.backendHostUrl}${trimmed}`;
+  }
+
+  if (trimmed.startsWith("uploads/")) {
+    const backendHost = APP_CONFIG.backendHostUrl.endsWith("/")
+      ? APP_CONFIG.backendHostUrl.slice(0, -1)
+      : APP_CONFIG.backendHostUrl;
+    return `${backendHost}/${trimmed}`;
+  }
+
+  return trimmed;
+}
 
 function normalizePostImages(rawImages: readonly unknown[]): string[] {
   const sanitized = rawImages
@@ -42,9 +60,7 @@ function normalizePostImages(rawImages: readonly unknown[]): string[] {
     }
 
     let normalizedPath = current;
-    if (normalizedPath.startsWith("/")) {
-      normalizedPath = `${APP_CONFIG.backendHostUrl}${normalizedPath}`;
-    }
+    normalizedPath = normalizeImagePath(normalizedPath);
     normalized.push(normalizedPath);
   }
 
@@ -119,12 +135,25 @@ export function transformPostModelToPost(
     postModel.Image,
     postModel.image,
   ];
+  const singleThumbnailImageCandidates = [
+    postModel.ThumbnailImage,
+    postModel.thumbnailImage,
+    postModel.thumbnailImageURL,
+    postModel.thumbnailImageUrl,
+  ];
   const singleImage = (
     singleImageCandidates.find(
       (value): value is string =>
         typeof value === "string" && value.trim().length > 0,
     ) ?? ""
   ).trim();
+  const singleThumbnailImage = (
+    singleThumbnailImageCandidates.find(
+      (value): value is string =>
+        typeof value === "string" && value.trim().length > 0,
+    ) ?? ""
+  ).trim();
+  const normalizedThumbnailImage = normalizeImagePath(singleThumbnailImage);
   const preferredImages = images.length > 0 ? images : backendImages;
   const normalizedImages = normalizePostImages(
     preferredImages.length > 0 ? preferredImages : [singleImage],
@@ -206,6 +235,26 @@ export function transformPostModelToPost(
         : postModel.categoryId !== undefined && postModel.categoryId !== null
           ? String(postModel.categoryId)
           : "";
+  const rawAverageRating =
+    typeof postModel.AverageRating === "number"
+      ? postModel.AverageRating
+      : typeof postModel.averageRating === "number"
+        ? postModel.averageRating
+        : Number(postModel.AverageRating ?? postModel.averageRating ?? 0);
+  const averageRating =
+    Number.isFinite(rawAverageRating) && rawAverageRating > 0
+      ? Math.min(5, Math.max(1, rawAverageRating))
+      : undefined;
+  const rawReviewCount =
+    typeof postModel.ReviewCount === "number"
+      ? postModel.ReviewCount
+      : typeof postModel.reviewCount === "number"
+        ? postModel.reviewCount
+        : Number(postModel.ReviewCount ?? postModel.reviewCount ?? 0);
+  const reviewCount =
+    Number.isFinite(rawReviewCount) && rawReviewCount > 0
+      ? Math.max(0, Math.trunc(rawReviewCount))
+      : undefined;
 
   return {
     id: uniqueId,
@@ -222,7 +271,7 @@ export function transformPostModelToPost(
     sellerId,
     category,
     categoryId,
-    image: postImages[0] ?? "",
+    image: normalizedThumbnailImage || postImages[0] || normalizeImagePath(singleImage),
     images: postImages,
     description,
     createdAt: toIsoStringOrNow(postModel.CreatedAt ?? postModel.createdAt),
@@ -232,6 +281,8 @@ export function transformPostModelToPost(
         : typeof postModel.views === "number"
           ? postModel.views
           : 0,
+    averageRating,
+    reviewCount,
     status: normalizePostStatus(postModel.Status ?? postModel.status),
   };
 }

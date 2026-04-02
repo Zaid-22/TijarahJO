@@ -6,9 +6,7 @@ import { Language } from "../../../translations";
 import { Post } from "../../../types";
 import { useCatalogCategories } from "../../../shared/hooks/useCatalogCategories";
 import {
-  resolveCategoryIcon,
   resolveCategoryName,
-  resolveCategoryTextClass,
 } from "../../../shared/lib/categoryVisuals";
 import {
   AdvancedSearchFilters,
@@ -69,8 +67,6 @@ export function CategoryPage({
   const currentCategory = categories.find(
     (category) => category.name.trim().toLowerCase() === normalizedCategoryName,
   );
-  const CategoryIcon = resolveCategoryIcon(currentCategory?.icon);
-  const categoryTextClass = resolveCategoryTextClass(currentCategory?.color);
   const displayCategoryName = currentCategory
     ? resolveCategoryName(currentCategory, language)
     : categoryName;
@@ -99,13 +95,6 @@ export function CategoryPage({
     if (searchFilters.maxPrice != null) {
       results = results.filter((p) => p.price <= searchFilters.maxPrice!);
     }
-    if (searchFilters.condition) {
-      results = results.filter(
-        (p) =>
-          p.condition?.toLowerCase() === searchFilters.condition?.toLowerCase(),
-      );
-    }
-
     return sortMarketplacePosts(results, sortBy, language);
   }, [filteredPosts, searchFilters, sortBy, language]);
 
@@ -133,11 +122,6 @@ export function CategoryPage({
           language === "ar"
             ? `تصفح جميع ${displayCategoryName}`
             : `Browse all ${categoryName.toLowerCase()}`
-        }
-        rightContent={
-          <div className="rounded-xl border border-border bg-muted/70 p-2">
-            <CategoryIcon className={`w-6 h-6 ${categoryTextClass}`} />
-          </div>
         }
       />
 

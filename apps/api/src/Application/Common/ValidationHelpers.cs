@@ -8,11 +8,21 @@ namespace TijarahJo.Application.Common;
 public static class ValidationHelpers
 {
     /// <summary>
-    /// Returns true if <paramref name="avatar"/> is a valid http or https URL.
+    /// Returns true if <paramref name="avatar"/> is a valid avatar URL.
+    /// Accepts absolute http/https URLs (e.g. Google avatar) and
+    /// server-relative upload paths (e.g. /uploads/user-avatars/img.jpg).
     /// </summary>
     public static bool IsValidAvatarUrl(string avatar)
     {
-        return Uri.TryCreate(avatar.Trim(), UriKind.Absolute, out Uri? uri)
+        string trimmed = avatar.Trim();
+
+        // Accept relative upload paths (local file storage)
+        if (trimmed.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri)
                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     }
 

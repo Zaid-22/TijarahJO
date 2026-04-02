@@ -6,6 +6,7 @@ import {
   toEditProfileFormProfile,
   toProfilePageUserProfile,
 } from "../appRoutesUtils";
+import { APP_ROUTE_BUILDERS, APP_ROUTE_PATHS } from "../routeConfig";
 import type {
   BaseAppRouteProps,
   MarketplaceRouteState,
@@ -77,17 +78,17 @@ export function renderAccountRouteGroup({
   return (
     <>
       <Route
-        path="/settings"
+        path={APP_ROUTE_PATHS.settings}
         element={requireAuth(
           <SettingsPage
-            onBackToMarketplace={() => navigate("/")}
+            onBackToMarketplace={() => navigate(APP_ROUTE_PATHS.home)}
             language={appProps.language}
             darkMode={appProps.darkMode}
             onDarkModeChange={appProps.setDarkMode}
             onLanguageChange={appProps.toggleLanguage}
             onLogout={async () => {
               await appProps.logout();
-              navigate("/");
+              navigate(APP_ROUTE_PATHS.home);
             }}
             userProfile={{
               name: appProps.userProfile.name,
@@ -95,9 +96,9 @@ export function renderAccountRouteGroup({
               phone: appProps.userProfile.phone,
               location: appProps.userProfile.location,
             }}
-            onEditProfileClick={() => navigate("/profile/edit")}
+            onEditProfileClick={() => navigate(APP_ROUTE_PATHS.profileEdit)}
             onOpenHelpCenter={() =>
-              navigate("/help", { state: { fromPath: "/settings" } })
+              navigate(APP_ROUTE_PATHS.help, { state: { fromPath: APP_ROUTE_PATHS.settings } })
             }
             onContactSupport={() =>
               openSupportEmail(
@@ -114,10 +115,10 @@ export function renderAccountRouteGroup({
               )
             }
             onOpenTerms={() =>
-              navigate("/terms", { state: { fromPath: "/settings" } })
+              navigate(APP_ROUTE_PATHS.terms, { state: { fromPath: APP_ROUTE_PATHS.settings } })
             }
             onOpenPrivacy={() =>
-              navigate("/privacy", { state: { fromPath: "/settings" } })
+              navigate(APP_ROUTE_PATHS.privacy, { state: { fromPath: APP_ROUTE_PATHS.settings } })
             }
             onDeleteAccount={async () => {
               const fallbackSupportSubject = appProps.language === "ar"
@@ -154,23 +155,25 @@ export function renderAccountRouteGroup({
                   ? "تم حذف الحساب بنجاح."
                   : "Account deleted successfully.",
               );
-              navigate("/login", { replace: true });
+              navigate(APP_ROUTE_PATHS.login, { replace: true });
             }}
           />,
         )}
       />
 
       <Route
-        path="/favorites"
+        path={APP_ROUTE_PATHS.favorites}
         element={requireAuth(
           <FavoritesPage
-            onBackToMarketplace={() => navigate("/")}
+            onBackToMarketplace={() => navigate(APP_ROUTE_PATHS.home)}
             language={appProps.language}
             favoriteIds={routeState.favoriteIds}
             posts={sharedPostRouteProps.availablePosts}
             onRemoveFavorite={routeState.toggleFavorite}
             onPostClick={(id) =>
-              navigate(`/post/${id}`, { state: { fromPath: "/favorites" } })
+              navigate(APP_ROUTE_BUILDERS.postDetails(id), {
+                state: { fromPath: APP_ROUTE_PATHS.favorites },
+              })
             }
             isAuthenticated={sharedUserRouteProps.isAuthenticated}
             currentUserId={sharedUserRouteProps.currentUserId}
@@ -180,11 +183,11 @@ export function renderAccountRouteGroup({
       />
 
       <Route
-        path="/sell"
+        path={APP_ROUTE_PATHS.sell}
         element={requireAuth(
           <SellItemPage
             language={appProps.language}
-            onBack={() => navigate("/")}
+            onBack={() => navigate(APP_ROUTE_PATHS.home)}
             onSubmit={async (post) => {
               try {
                 await postActions.createPost(post);
@@ -193,7 +196,7 @@ export function renderAccountRouteGroup({
                     ? "تم نشر المنشور!"
                     : "Post created!",
                 );
-                navigate("/");
+                navigate(APP_ROUTE_PATHS.home);
               } catch (error) {
                 deferredToast.error(
                   error instanceof Error ? error.message : "Error creating post",
@@ -207,13 +210,15 @@ export function renderAccountRouteGroup({
       />
 
       <Route
-        path="/profile"
+        path={APP_ROUTE_PATHS.profile}
         element={requireAuth(
           <ProfilePage
-            onBackToMarketplace={() => navigate("/")}
+            onBackToMarketplace={() => navigate(APP_ROUTE_PATHS.home)}
             posts={sharedPostRouteProps.availablePosts}
             onPostClick={(id) =>
-              navigate(`/post/${id}`, { state: { fromPath: "/profile" } })
+              navigate(APP_ROUTE_BUILDERS.postDetails(id), {
+                state: { fromPath: APP_ROUTE_PATHS.profile },
+              })
             }
             onDeletePost={async (postId) => {
               try {
@@ -241,9 +246,9 @@ export function renderAccountRouteGroup({
                 );
               }
             }}
-            onAddPostClick={() => navigate("/sell")}
-            onSettingsClick={() => navigate("/settings")}
-            onEditProfileClick={() => navigate("/profile/edit")}
+            onAddPostClick={() => navigate(APP_ROUTE_PATHS.sell)}
+            onSettingsClick={() => navigate(APP_ROUTE_PATHS.settings)}
+            onEditProfileClick={() => navigate(APP_ROUTE_PATHS.profileEdit)}
             language={appProps.language}
             userProfile={toProfilePageUserProfile(appProps.userProfile)}
             favoriteIds={sharedPostRouteProps.favoriteIds}
@@ -255,19 +260,19 @@ export function renderAccountRouteGroup({
       />
 
       <Route
-        path="/chat"
+        path={APP_ROUTE_PATHS.chat}
         element={requireAuth(<ChatPage language={appProps.language} />)}
       />
       <Route
-        path="/chat/:userId"
+        path={APP_ROUTE_PATHS.chatUser}
         element={requireAuth(<ChatPage language={appProps.language} />)}
       />
 
       <Route
-        path="/profile/edit"
+        path={APP_ROUTE_PATHS.profileEdit}
         element={requireAuth(
           <EditProfilePage
-            onBack={() => navigate("/profile")}
+            onBack={() => navigate(APP_ROUTE_PATHS.profile)}
             profile={toEditProfileFormProfile(appProps.userProfile)}
             onSave={saveProfile}
             language={appProps.language}

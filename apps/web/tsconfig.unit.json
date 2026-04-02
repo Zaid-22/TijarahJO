@@ -14,6 +14,7 @@
     "noUnusedParameters": true
   },
   "include": [
+    "src/app/routes/appRoutesUtils.ts",
     "src/services/api/posts/mappers.ts",
     "src/services/api/posts/types.ts",
     "src/services/api/normalizers.ts",

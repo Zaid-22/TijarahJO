@@ -46,6 +46,9 @@ public sealed class SearchPostResponseDTO
     [JsonPropertyName("image")]
     public required string Image { get; set; }
 
+    [JsonPropertyName("thumbnailImage")]
+    public string ThumbnailImage { get; init; } = string.Empty;
+
     [JsonPropertyName("phone")]
     public required string Phone { get; init; }
 

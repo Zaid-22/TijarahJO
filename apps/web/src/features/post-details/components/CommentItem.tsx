@@ -144,7 +144,7 @@ export function CommentItem({
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-foreground text-sm sm:text-base">{comment.authorName}</span>
               {comment.userId.toString() === postOwnerId && (
-                <span className="bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded-md font-bold border border-primary/20 uppercase tracking-tighter">
+                <span className="bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded-md font-bold border border-primary/20 uppercase tracking-tighter">
                   {isRTL ? "صاحب الإعلان" : "Seller"}
                 </span>
               )}
@@ -152,14 +152,14 @@ export function CommentItem({
                 {formatPostedAgo(comment.createdAt, nowTimestamp, language, "")}
               </span>
               {comment.isEdited && (
-                <span className="text-[10px] text-muted-foreground/70 italic">({labels.editComment}ED)</span>
+                <span className="text-xs text-muted-foreground/70 italic">({labels.editComment}ED)</span>
               )}
             </div>
 
             {(canEdit || canDelete) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-muted rounded-full">
+                  <Button variant="ghost" size="icon" aria-label={labels.options || "Options"} className="h-8 w-8 text-muted-foreground hover:bg-muted rounded-full">
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -184,7 +184,7 @@ export function CommentItem({
           {isEditing ? (
             <div className="mt-2 space-y-2">
               <Textarea
-                className="min-h-[80px] text-sm bg-muted/30 focus:bg-background transition-colors"
+                className="min-h-20 text-sm bg-muted/30 focus:bg-background transition-colors"
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
               />
@@ -241,7 +241,7 @@ export function CommentItem({
             <div className="mt-4 p-4 bg-muted/40 rounded-xl border border-primary/20 animate-in slide-in-from-top-2">
               <Textarea
                 placeholder={labels.commentPlaceholder}
-                className="mb-3 min-h-[80px] text-sm"
+                className="mb-3 min-h-20 text-sm"
                 value={replyContent}
                 onChange={(e) => setReplyContent(e.target.value)}
               />

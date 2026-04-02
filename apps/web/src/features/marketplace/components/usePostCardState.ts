@@ -1,9 +1,10 @@
 import { deferredToast } from "../../../utils/toast";
 import { resolveDocumentLanguage } from "../../../shared/lib/locale";
-import type { Language, Post } from "../../../types";
+import type { Language, Post, ViewMode } from "../../../types";
 
 export interface PostCardSharedProps {
   post: Post;
+  viewMode?: ViewMode;
   onPostClick?: (postId: string) => void;
   isFavorite?: boolean;
   onFavoriteToggle?: (postId: string) => void;
@@ -25,24 +26,22 @@ export function usePostCardState({
   onRequireAuth,
 }: PostCardSharedProps) {
   const resolvedLanguage = language || resolveDocumentLanguage();
-  const isRTL = resolvedLanguage === "ar";
   const labels = {
     loginRequiredTitle:
       resolvedLanguage === "ar"
-        ? "يرجى تسجيل الدخول لإضافة العناصر إلى المفضلة"
-        : "Please log in to add items to favorites",
+        ? "يرجى تسجيل الدخول لإضافة المنشورات إلى المفضلة"
+        : "Please log in to add posts to favorites",
     loginRequiredDescription:
       resolvedLanguage === "ar"
-        ? "تحتاج إلى تسجيل الدخول لحفظ العناصر المفضلة"
-        : "You need to be logged in to save your favorite items",
+        ? "تحتاج إلى تسجيل الدخول لحفظ منشوراتك المفضلة"
+        : "You need to be logged in to save your favorite posts",
     viewDetailsAria:
       resolvedLanguage === "ar"
         ? `عرض تفاصيل ${post.name}`
         : `View details for ${post.name}`,
     soldOut: resolvedLanguage === "ar" ? "تم البيع" : "SOLD OUT",
-    viewDetails: resolvedLanguage === "ar" ? "عرض التفاصيل" : "View Details",
-    view: resolvedLanguage === "ar" ? "عرض" : "View",
     currency: resolvedLanguage === "ar" ? "د.أ" : "JOD",
+    views: resolvedLanguage === "ar" ? "مشاهدة" : "views",
     favoriteLabel: isFavorite
       ? resolvedLanguage === "ar"
         ? `إزالة ${post.name} من المفضلة`
@@ -59,7 +58,7 @@ export function usePostCardState({
     normalizedCurrentUserId.length > 0 &&
     normalizedSellerId.length > 0 &&
     normalizedCurrentUserId === normalizedSellerId;
-  const showFavoriteButton = !isOwner;
+  const showFavoriteButton = !isOwner && Boolean(onFavoriteToggle);
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -82,41 +81,12 @@ export function usePostCardState({
     onPostClick?.(post.id);
   };
 
-  const handleCallClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isAuthenticated) {
-      onRequireAuth?.();
-      return;
-    }
-    if (post.phone) {
-      window.location.href = `tel:${post.phone}`;
-    }
-  };
-
-  const handleMessageClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isAuthenticated) {
-      onRequireAuth?.();
-      return;
-    }
-    // Instead of opening the post, navigate to chat
-    // Ensure we trigger a new chat or open the list
-    if (normalizedSellerId) {
-      window.location.href = `/chat/${normalizedSellerId}`;
-    } else {
-      window.location.href = `/chat`;
-    }
-  };
-
   return {
     resolvedLanguage,
-    isRTL,
     labels,
     priceLocale,
     showFavoriteButton,
     handleFavoriteClick,
-    handleCallClick,
-    handleMessageClick,
     openPost,
   };
 }

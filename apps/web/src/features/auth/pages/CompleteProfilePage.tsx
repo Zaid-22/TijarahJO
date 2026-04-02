@@ -34,6 +34,7 @@ export function CompleteProfilePage() {
   const [city, setCity] = useState(userProfile?.city || "");
   const [area, setArea] = useState(userProfile?.area || "");
   const [avatarPreview, setAvatarPreview] = useState<string>(initialAvatar);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Sync profile data when it loads asynchronously (e.g. Google avatar URL)
@@ -70,11 +71,11 @@ export function CompleteProfilePage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > 10 * 1024 * 1024) {
       setGeneralError(
         isRTL
-          ? "حجم الملف كبير جداً. الحد الأقصى هو 5 ميغابايت."
-          : "File size too large. Maximum size is 5MB.",
+          ? "حجم الملف كبير جداً. الحد الأقصى هو 10 ميغابايت."
+          : "File size too large. Maximum size is 10MB.",
       );
       return;
     }
@@ -88,6 +89,7 @@ export function CompleteProfilePage() {
       return;
     }
 
+    setAvatarFile(file);
     const reader = new FileReader();
     reader.onloadend = () => {
       setAvatarPreview(String(reader.result || ""));
@@ -146,10 +148,16 @@ export function CompleteProfilePage() {
         return;
       }
 
-      // Only send Avatar if it's a valid http/https URL (e.g. Google avatar).
-      // Base64 data URLs from local file uploads are too large for the API
-      // and will crash the server. They are only used for local preview.
+      // Upload the avatar file first if the user selected a local image.
+      // The endpoint saves the file and updates the user's avatar URL in DB.
+      if (avatarFile) {
+        await api.users.uploadAvatar(userProfile.id, avatarFile);
+      }
+
+      // Only send Avatar if it's a valid http/https URL (e.g. Google avatar)
+      // and the user did NOT upload a local file (which was already handled above).
       const isValidAvatarUrl =
+        !avatarFile &&
         avatarPreview &&
         (avatarPreview.startsWith("http://") || avatarPreview.startsWith("https://"));
 

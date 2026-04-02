@@ -123,7 +123,7 @@ export function EditProfileFormSections({
                 </Button>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
-                {t.photoRequirements || "JPG, PNG or GIF. Max size 5MB."}
+                {t.photoRequirements || "JPG, PNG or GIF. Max size 10MB."}
               </p>
             </div>
           </div>

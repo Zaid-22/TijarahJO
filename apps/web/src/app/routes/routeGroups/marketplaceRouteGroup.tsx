@@ -19,6 +19,7 @@ import {
   MarketplaceRouteContextProvider,
   type MarketplaceRouteContextValue,
 } from "./marketplaceRouteContext";
+import { APP_ROUTE_BUILDERS } from "../routeConfig";
 
 interface MarketplaceRouteGroupParams {
   appProps: BaseAppRouteProps;
@@ -57,7 +58,7 @@ export function renderMarketplaceRouteGroup({
         : fallbackFromPath;
     const fromPath = runtimePath || fallbackFromPath || "/";
 
-    navigate(`/post/${postId}`, {
+    navigate(APP_ROUTE_BUILDERS.postDetails(postId), {
       state: { fromPath },
     });
   };

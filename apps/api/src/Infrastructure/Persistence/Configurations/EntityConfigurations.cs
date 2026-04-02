@@ -81,9 +81,18 @@ public class UserConfiguration : IEntityTypeConfiguration<UserEntity>
         builder.Property(e => e.TwoFactorEnabled).HasDefaultValue(false);
         builder.Property(e => e.TwoFactorSecret).HasMaxLength(512);
         builder.Property(e => e.TwoFactorPendingSecret).HasMaxLength(512);
-        builder.Property(e => e.SearchFirstNameNormalized).ValueGeneratedOnAddOrUpdate().HasMaxLength(100);
-        builder.Property(e => e.SearchLastNameNormalized).ValueGeneratedOnAddOrUpdate().HasMaxLength(100);
-        builder.Property(e => e.SearchFullNameNormalized).ValueGeneratedOnAddOrUpdate().HasMaxLength(201);
+        builder.Property(e => e.SearchFirstNameNormalized)
+            .ValueGeneratedOnAddOrUpdate()
+            .HasMaxLength(100)
+            .Metadata.SetAfterSaveBehavior(Microsoft.EntityFrameworkCore.Metadata.PropertySaveBehavior.Ignore);
+        builder.Property(e => e.SearchLastNameNormalized)
+            .ValueGeneratedOnAddOrUpdate()
+            .HasMaxLength(100)
+            .Metadata.SetAfterSaveBehavior(Microsoft.EntityFrameworkCore.Metadata.PropertySaveBehavior.Ignore);
+        builder.Property(e => e.SearchFullNameNormalized)
+            .ValueGeneratedOnAddOrUpdate()
+            .HasMaxLength(201)
+            .Metadata.SetAfterSaveBehavior(Microsoft.EntityFrameworkCore.Metadata.PropertySaveBehavior.Ignore);
         
         builder.HasOne<RoleEntity>()
             .WithMany()

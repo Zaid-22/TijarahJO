@@ -6,7 +6,8 @@ using TijarahJo.Api.Common.Authorization;
 using TijarahJo.Api.Common.Utils;
 using TijarahJo.Api.Contracts.Requests;
 using TijarahJo.Api.Contracts.Responses;
-
+using TijarahJo.Api.Common.Services;
+using Microsoft.Extensions.Logging;
 namespace TijarahJo.Api.Features.Users;
 
 [ApiController]
@@ -149,6 +150,103 @@ public class UsersController(
         }
 
         return Ok(DTOMapper.ToUserResponseDTO(result.User, request: Request));
+    }
+
+    [Authorize]
+    [HttpPost("{id:int}/avatar")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<UserAvatarUploadResponseDTO>> UploadAvatar(
+        int id, 
+        [FromForm] UploadUserAvatarRequest request,
+        [FromServices] IPostImageFileStorageService fileStorage,
+        [FromServices] IImageModerationService imageModeration,
+        [FromServices] ILogger<UsersController> logger,
+        CancellationToken cancellationToken)
+    {
+        if (id < 1)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid user ID.");
+        }
+
+        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int currentUserId, out ActionResult? failureResult))
+        {
+            return failureResult!;
+        }
+
+        bool hasUsersManageAccess = (await _authorizationService.AuthorizeAsync(
+            User,
+            resource: null,
+            AuthorizationPolicies.UsersManage)).Succeeded;
+
+        if (currentUserId != id && !hasUsersManageAccess)
+        {
+            logger.LogWarning("User {UserId} attempted to upload avatar for UserID {TargetId}.", currentUserId, id);
+            return Forbid();
+        }
+
+        if (request.File == null)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Image file is required.");
+        }
+
+        try
+        {
+            fileStorage.ValidateFileOrThrow(request.File);
+        }
+        catch (ArgumentException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: ex.Message);
+        }
+
+        ModerationResult moderationResult = await imageModeration.CheckImageAsync(request.File);
+        if (moderationResult.IsUnavailable)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status503ServiceUnavailable, 
+                detail: moderationResult.FailureReason ?? "Image moderation service is unavailable."
+            );
+        }
+
+        if (moderationResult.IsFlagged)
+        {
+            logger.LogWarning("User {UserId} attempted to upload a flagged avatar.", currentUserId);
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Image rejected by moderation filters (inappropriate content detected).");
+        }
+
+        StoredPostImageFile storedFile;
+        try
+        {
+            storedFile = await fileStorage.SaveUserAvatarAsync(request.File, cancellationToken);
+        }
+        catch (ArgumentException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: ex.Message);
+        }
+
+        UserCommandResult result = await _userCommands.UpdateAsync(new UpdateUserCommand
+        {
+            ActorUserId = currentUserId,
+            ActorIsAdmin = hasUsersManageAccess,
+            TargetUserId = id,
+            Avatar = storedFile.PublicUrl
+        }, cancellationToken);
+
+        if (!result.Success || result.User == null)
+        {
+            await fileStorage.DeleteByPublicUrlAsync(storedFile.PublicUrl, cancellationToken);
+            return this.ToUserCommandProblem(result, "Avatar upload failed to save.");
+        }
+
+        UserResponseDTO userDto = DTOMapper.ToUserResponseDTO(result.User, request: Request);
+        return Ok(new UserAvatarUploadResponseDTO
+        {
+            AvatarUrl = userDto.Avatar ?? string.Empty,
+            User = userDto
+        });
     }
 
     [Authorize]

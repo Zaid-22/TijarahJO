@@ -6,6 +6,9 @@ interface UserProfileContextType {
   userProfile: UserProfile;
   setUserProfile: (profile: UserProfile) => void;
   currentUserDisplayName: string;
+  isLoading: boolean;
+  isProfileComplete: boolean;
+  refreshProfile: () => void;
 }
 
 const UserProfileContext = createContext<UserProfileContextType | undefined>(

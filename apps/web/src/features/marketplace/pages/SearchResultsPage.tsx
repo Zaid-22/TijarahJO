@@ -126,20 +126,6 @@ export function SearchResultsPage({
           },
         ]
       : []),
-    ...(searchFilters.condition
-      ? [
-          {
-            id: "condition",
-            label: `${language === "ar" ? "الحالة: " : "Condition: "}${searchFilters.condition}`,
-            removeLabel:
-              language === "ar"
-                ? "إزالة فلتر الحالة"
-                : "Remove condition filter",
-            onRemove: () =>
-              setSearchFilters((f) => ({ ...f, condition: undefined })),
-          },
-        ]
-      : []),
   ];
 
   const buildFallbackPosts = useCallback(
@@ -164,14 +150,6 @@ export function SearchResultsPage({
       if (searchFilters.maxPrice != null) {
         results = results.filter((p) => p.price <= searchFilters.maxPrice!);
       }
-      if (searchFilters.condition) {
-        results = results.filter(
-          (p) =>
-            p.condition?.toLowerCase() ===
-            searchFilters.condition?.toLowerCase(),
-        );
-      }
-
       if (query) {
         results = rankMarketplacePosts(results, query);
       }
