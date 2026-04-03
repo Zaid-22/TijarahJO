@@ -74,6 +74,11 @@ export function PostDetailsPage({
   const [sellerCity, setSellerCity] = useState<string | null>(null);
   const [sellerArea, setSellerArea] = useState<string | null>(null);
   const [sellerActiveListingsCount, setSellerActiveListingsCount] = useState<number | null>(null);
+  const [sellerAverageRating, setSellerAverageRating] = useState<number | null>(
+    null,
+  );
+  const [sellerReviewCount, setSellerReviewCount] = useState<number>(0);
+  const [isSellerLoading, setIsSellerLoading] = useState<boolean>(true);
   const [displayedViews, setDisplayedViews] = useState<number>(post.views ?? 0);
   const [nowTimestamp, setNowTimestamp] = useState<number>(() => Date.now());
 
@@ -123,6 +128,7 @@ export function PostDetailsPage({
     let cancelled = false;
 
     const fetchSellerData = async () => {
+      setIsSellerLoading(true);
       setSellerJoinDate(null);
       setSellerAvatar(null);
       setSellerPhone(null);
@@ -130,8 +136,11 @@ export function PostDetailsPage({
       setSellerCity(null);
       setSellerArea(null);
       setSellerActiveListingsCount(null);
+      setSellerAverageRating(null);
+      setSellerReviewCount(0);
 
       if (!post.sellerId) {
+        setIsSellerLoading(false);
         return;
       }
 
@@ -174,11 +183,33 @@ export function PostDetailsPage({
         }
 
         try {
+          const reviewList = await api.reviews.getUserReviews(String(post.sellerId));
+          if (!cancelled) {
+            const validRatings = reviewList
+              .map((review) => Number(review.Rating ?? review.rating ?? 0))
+              .filter((rating) => Number.isFinite(rating) && rating > 0);
+
+            if (validRatings.length > 0) {
+              const averageRating =
+                validRatings.reduce((sum, rating) => sum + rating, 0) /
+                validRatings.length;
+              setSellerAverageRating(averageRating);
+              setSellerReviewCount(validRatings.length);
+            }
+          }
+        } catch {
+          // Rating is supplementary seller metadata; ignore if the reviews call fails.
+        }
+
+        try {
           const sellerProfileResponse = await api.sellers.getSellerProfile(
             String(post.sellerId),
           );
           const sellerProfile = sellerProfileResponse?.seller;
           if (sellerProfile) {
+            if (!avatar && sellerProfile.avatar) {
+              setSellerAvatar(String(sellerProfile.avatar));
+            }
             if (!city) city = sellerProfile.city || city;
             if (!area) area = sellerProfile.area || area;
             if (typeof sellerProfile.activeListingsCount === "number" && !cancelled) {
@@ -198,6 +229,10 @@ export function PostDetailsPage({
         }
       } catch (error) {
         logger.warn("[PostDetailsPage] Failed to fetch seller data:", error);
+      } finally {
+        if (!cancelled) {
+          setIsSellerLoading(false);
+        }
       }
     };
 
@@ -323,11 +358,13 @@ export function PostDetailsPage({
             language={language}
             isRTL={isRTL}
             post={post}
+            isLoading={isSellerLoading}
             publicSellerName={publicSellerName}
             sellerAvatar={sellerAvatar}
             memberSinceLabel={memberSinceLabel}
             activeListingsCount={activeListingsCount}
-            displayLocationLabel={displayLocationLabel}
+            sellerAverageRating={sellerAverageRating}
+            sellerReviewCount={sellerReviewCount}
             onSellerClick={onSellerClick}
             onChatWithSeller={onChatWithSeller}
             onShowPhoneDialog={() => setActiveDialog("phone")}
@@ -345,8 +382,9 @@ export function PostDetailsPage({
               viewSellerProfile: t.viewSellerProfile,
               chatWithSeller: t.chatWithSeller,
               postSoldMessage: t.postSoldMessage,
-              locationTitle: t.locationTitle,
               editPost: t.editPost,
+              reviewCountWord: language === "ar" ? "تقييم" : "reviews",
+              noReviews: language === "ar" ? "لا توجد تقييمات بعد." : "No reviews yet.",
             }}
           />
         </div>

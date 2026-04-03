@@ -7,7 +7,7 @@ import {
   Settings,
   Star,
 } from "lucide-react";
-import { resolveAvatarSrc } from "../../../shared/lib/avatar";
+import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
 import { Button } from "../../../shared/ui/button";
 import type { UnifiedProfileViewModel } from "../types";
 import type { UnifiedProfileLabels } from "./unifiedProfileLabels";
@@ -41,11 +41,17 @@ export function UnifiedProfileHeaderCard({
         <div className="-mt-8 flex flex-col items-center gap-6 sm:-mt-10 md:flex-row md:items-end">
           <div className="relative">
             <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-background bg-card shadow-md sm:h-32 sm:w-32">
-              <img
-                src={resolveAvatarSrc(viewModel.profile.avatar)}
-                className="h-full w-full object-cover"
-                alt={viewModel.profile.name || labels.userLabel}
-              />
+              {resolveAvatarSrc(viewModel.profile.avatar) ? (
+                <img
+                  src={resolveAvatarSrc(viewModel.profile.avatar)!}
+                  className="h-full w-full object-cover"
+                  alt={viewModel.profile.name || labels.userLabel}
+                />
+              ) : (
+                <span className="text-3xl font-bold text-primary sm:text-4xl">
+                  {getAvatarInitial(viewModel.profile.name)}
+                </span>
+              )}
             </div>
           </div>
 
@@ -101,10 +107,10 @@ export function UnifiedProfileHeaderCard({
 
             {viewModel.canChat && onChatWithSeller ? (
               <Button
-                className="rounded-xl bg-primary shadow-sm hover:bg-primary/90"
+                className="h-12 rounded-[14px] bg-primary px-5 text-base font-semibold text-primary-foreground shadow-[0_12px_24px_rgba(37,99,235,0.18)] hover:bg-primary/92"
                 onClick={onChatWithSeller}
               >
-                <MessageSquare className="me-2 h-4 w-4" />
+                <MessageSquare className="me-2 h-4.5 w-4.5 text-primary-foreground/90" />
                 {labels.chatWithSeller}
               </Button>
             ) : null}
@@ -112,7 +118,7 @@ export function UnifiedProfileHeaderCard({
             {viewModel.canCall ? (
               <Button
                 variant="outline"
-                className="rounded-xl bg-background/90 shadow-sm backdrop-blur-sm"
+                className="h-12 rounded-[14px] border border-slate-300 bg-white px-5 text-base font-medium text-slate-700 shadow-[0_6px_16px_rgba(15,23,42,0.05)] backdrop-blur-sm hover:bg-slate-50 hover:text-slate-800 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                 disabled={!viewModel.profile.phone?.trim()}
                 onClick={() => {
                   if (!viewModel.profile.phone?.trim()) {
@@ -121,7 +127,7 @@ export function UnifiedProfileHeaderCard({
                   window.location.href = `tel:${viewModel.profile.phone}`;
                 }}
               >
-                <Phone className="me-2 h-4 w-4" />
+                <Phone className="me-2 h-4.5 w-4.5 text-slate-500 dark:text-slate-400" />
                 {viewModel.mode === "owner" ? labels.call : labels.callSeller}
               </Button>
             ) : null}

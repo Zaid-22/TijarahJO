@@ -124,6 +124,38 @@ cleanup() {
 
 trap cleanup SIGINT SIGTERM EXIT
 
+wait_for_http_endpoint() {
+  local endpoint="$1"
+  local expected_mode="$2"
+  local attempts="${3:-30}"
+  local sleep_seconds="${4:-2}"
+  local code=""
+
+  for ((attempt=1; attempt<=attempts; attempt++)); do
+    code="$(curl -s -o /tmp/tijarahjo_backend_health.json -w '%{http_code}' "$endpoint" || true)"
+
+    case "$expected_mode" in
+      any-success)
+        if [[ "$code" =~ ^[2-5] ]]; then
+          printf "%s" "$code"
+          return 0
+        fi
+        ;;
+      ok-only)
+        if [[ "$code" =~ ^2 ]]; then
+          printf "%s" "$code"
+          return 0
+        fi
+        ;;
+    esac
+
+    sleep "$sleep_seconds"
+  done
+
+  printf "%s" "$code"
+  return 1
+}
+
 echo "Starting Backend (ASP.NET Core) on http://localhost:5033..."
 (
   cd "$BACKEND_DIR"
@@ -134,14 +166,21 @@ echo "Starting Backend (ASP.NET Core) on http://localhost:5033..."
   dotnet run --no-launch-profile
 ) &
 BACKEND_PID=$!
-sleep 15
 
 PRIMARY_BACKEND_URL="$(resolve_primary_backend_url "$BACKEND_URL")"
+BACKEND_LIVE_ENDPOINT="${PRIMARY_BACKEND_URL}/health/live"
 BACKEND_HEALTH_ENDPOINT="${PRIMARY_BACKEND_URL}/api/v1/categories"
 
-BACKEND_HEALTH_CODE="$(curl -s -o /tmp/tijarahjo_backend_health.json -w '%{http_code}' "$BACKEND_HEALTH_ENDPOINT" || true)"
-if [[ "$BACKEND_HEALTH_CODE" == "000" ]]; then
+BACKEND_LIVE_CODE="$(wait_for_http_endpoint "$BACKEND_LIVE_ENDPOINT" "any-success" 30 2 || true)"
+if [[ "$BACKEND_LIVE_CODE" == "000" ]]; then
   echo "Error: backend did not respond on $BACKEND_URL."
+  echo "Check backend startup logs above."
+  exit 1
+fi
+
+BACKEND_HEALTH_CODE="$(wait_for_http_endpoint "$BACKEND_HEALTH_ENDPOINT" "any-success" 15 2 || true)"
+if [[ "$BACKEND_HEALTH_CODE" == "000" ]]; then
+  echo "Error: backend did not finish becoming ready on $BACKEND_HEALTH_ENDPOINT."
   echo "Check backend startup logs above."
   exit 1
 fi

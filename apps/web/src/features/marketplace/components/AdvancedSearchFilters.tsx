@@ -22,6 +22,8 @@ interface AdvancedSearchFiltersProps {
   onFiltersChange: (filters: SearchFilters) => void;
   onApply: () => void;
   onClear: () => void;
+  categoryDisabled?: boolean;
+  hideCategory?: boolean;
 }
 
 const JORDAN_CITIES = [
@@ -76,6 +78,8 @@ export function AdvancedSearchFilters({
   onFiltersChange,
   onApply,
   onClear,
+  categoryDisabled = false,
+  hideCategory = false,
 }: AdvancedSearchFiltersProps) {
   const { categories } = useCatalogCategories();
   const isRTL = language === "ar";
@@ -131,26 +135,33 @@ export function AdvancedSearchFilters({
         )}
       </div>
 
-      {/* Category Filter */}
-      <FilterGroup label={labels.category}>
-        <div className="relative">
-          <select
-            value={filters.category || ""}
-            onChange={(e) => updateFilter("category", e.target.value)}
-            className="w-full appearance-none rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none transition-colors"
-          >
-            <option value="">{labels.allCategories}</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.name}>
-                {resolveCategoryName(cat, language)}
-              </option>
-            ))}
-          </select>
-          <ChevronDown
-            className={`absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none ${isRTL ? "left-3" : "right-3"}`}
-          />
-        </div>
-      </FilterGroup>
+      {!hideCategory ? (
+        <FilterGroup label={labels.category}>
+          {categoryDisabled ? (
+            <div className="w-full rounded-xl border border-border bg-muted/40 px-4 py-2.5 text-sm text-foreground">
+              {filters.category || labels.allCategories}
+            </div>
+          ) : (
+            <div className="relative">
+              <select
+                value={filters.category || ""}
+                onChange={(e) => updateFilter("category", e.target.value)}
+                className="w-full appearance-none rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none transition-colors"
+              >
+                <option value="">{labels.allCategories}</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.name}>
+                    {resolveCategoryName(cat, language)}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                className={`absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none ${isRTL ? "left-3" : "right-3"}`}
+              />
+            </div>
+          )}
+        </FilterGroup>
+      ) : null}
 
       {/* City Filter */}
       <FilterGroup label={labels.city}>

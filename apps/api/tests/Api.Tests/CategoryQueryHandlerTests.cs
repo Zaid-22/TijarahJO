@@ -1,6 +1,7 @@
 using TijarahJo.Domain.Models;
 using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Application.Services;
+using TijarahJo.Application;
 using TijarahJo.Application.Common;
 
 namespace TijarahJo.Api.Tests;
@@ -42,12 +43,12 @@ public sealed class CategoryQueryHandlerTests
         DateTime now = DateTime.UtcNow;
         var service = new FakeCategoryService
         {
-            Categories = new List<CategoryModel>
-            {
+            Categories =
+            [
                 CreateCategory(1, "Electronics", now, isDeleted: false),
                 CreateCategory(2, "", now, isDeleted: false),
                 CreateCategory(3, "Cars", now, isDeleted: true)
-            }
+            ]
         };
         var handler = new CategoryQueryHandler(service);
 
@@ -80,15 +81,13 @@ public sealed class CategoryQueryHandlerTests
             createdat: createdAt,
             isdeleted: isDeleted,
             namear: null,
-            icon: null,
-            color: null,
             image: null
         );
     }
 
     private sealed class FakeCategoryService : ICategoryService
     {
-        public IReadOnlyList<CategoryModel> Categories { get; set; } = Array.Empty<CategoryModel>();
+        public IReadOnlyList<CategoryModel> Categories { get; set; } = [];
         public Category? NextFindResult { get; set; } = new Category(CreateCategory(1, "Default", DateTime.UtcNow, isDeleted: false), Category.ModeType.Update);
         public bool NextExists { get; set; } = true;
 

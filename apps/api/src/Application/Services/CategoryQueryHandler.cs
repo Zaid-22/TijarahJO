@@ -1,25 +1,18 @@
 using TijarahJo.Domain.Models;
 using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Application;
 using TijarahJo.Application.Common;
 
 namespace TijarahJo.Application.Services;
 
-public sealed class CategoryQueryHandler : ICategoryQueryHandler
+public sealed class CategoryQueryHandler(ICategoryService categories) : ICategoryQueryHandler
 {
-    private readonly ICategoryService _categories;
-
-    public CategoryQueryHandler(ICategoryService categories)
-    {
-        _categories = categories;
-    }
-
     public async Task<CategoryListQueryResult> GetAllAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
     {
-        IReadOnlyList<CategoryModel> categories = await _categories.GetAllCategoriesAsync(pageNumber, pageSize, cancellationToken);
-        List<CategoryModel> visible = categories
+        IReadOnlyList<CategoryModel> allCategories = await categories.GetAllCategoriesAsync(pageNumber, pageSize, cancellationToken);
+        List<CategoryModel> visible = [.. allCategories
             .Where(category => !category.IsDeleted && !string.IsNullOrWhiteSpace(category.CategoryName))
-            .Select(CloneCategoryModel)
-            .ToList();
+            .Select(CloneCategoryModel)];
 
         return new CategoryListQueryResult
         {
@@ -41,7 +34,7 @@ public sealed class CategoryQueryHandler : ICategoryQueryHandler
             };
         }
 
-        Category? category = await _categories.FindAsync(categoryId, cancellationToken);
+        Category? category = await categories.FindAsync(categoryId, cancellationToken);
         if (category == null)
         {
             return new CategoryByIdQueryResult
@@ -72,7 +65,7 @@ public sealed class CategoryQueryHandler : ICategoryQueryHandler
             };
         }
 
-        bool exists = await _categories.DoesCategoryExistAsync(categoryId, cancellationToken);
+        bool exists = await categories.DoesCategoryExistAsync(categoryId, cancellationToken);
         return new CategoryExistsQueryResult
         {
             Success = true,
@@ -89,8 +82,6 @@ public sealed class CategoryQueryHandler : ICategoryQueryHandler
             source.CreatedAt,
             source.IsDeleted,
             source.NameAr,
-            source.Icon,
-            source.Color,
             source.Image
         );
     }

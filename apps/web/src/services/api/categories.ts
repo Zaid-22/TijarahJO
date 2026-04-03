@@ -1,7 +1,6 @@
 import { CategoriesResponse, Category } from "../../types/api";
 import { toPositiveIntegerId } from "../../utils/idValidation";
 import { apiRequest } from "./client";
-import { COLORS } from "../../constants/colors";
 import {
   parseCategoryCollectionPayload,
   parseCategoryExistsPayload,
@@ -56,8 +55,6 @@ export const categoriesApi = {
   createCategory: async (data: {
     name: string;
     nameAr: string;
-    icon?: string;
-    color?: string;
     image?: string;
   }): Promise<{ success: boolean; category?: Category; message?: string }> => {
     const name = data.name.trim();
@@ -71,8 +68,6 @@ export const categoriesApi = {
     const backendCategory = {
       CategoryName: name,
       NameAr: data.nameAr.trim() || name,
-      Icon: data.icon || "box",
-      Color: data.color || COLORS.PRIMARY,
       Image: data.image || "",
     };
 
@@ -119,8 +114,6 @@ export const categoriesApi = {
     data: {
       name?: string;
       nameAr?: string;
-      icon?: string;
-      color?: string;
       image?: string;
     },
   ): Promise<{ success: boolean; category?: Category; message?: string }> => {
@@ -136,8 +129,6 @@ export const categoriesApi = {
       CategoryID: normalizedCategoryId,
       CategoryName: data.name?.trim() || undefined,
       NameAr: data.nameAr?.trim() || undefined,
-      Icon: data.icon,
-      Color: data.color,
       Image: data.image,
     };
 

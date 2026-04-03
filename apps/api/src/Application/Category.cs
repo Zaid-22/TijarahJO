@@ -1,49 +1,31 @@
 using TijarahJo.Domain.Models;
 
-namespace TijarahJo.Application.Common
+namespace TijarahJo.Application;
+
+public class Category(CategoryModel categoryModel, Category.ModeType mode = Category.ModeType.AddNew)
 {
-    public class Category
+    public enum ModeType
     {
-        public enum ModeType
-        {
-            AddNew = 0,
-            Update = 1
-        }
-
-        public ModeType Mode { get; set; } = ModeType.AddNew;
-
-        public CategoryModel CategoryModel =>
-            new(
-                this.CategoryID,
-                this.CategoryName,
-                this.CreatedAt,
-                this.IsDeleted,
-                this.NameAr,
-                this.Icon,
-                this.Color,
-                this.Image
-            );
-
-        public int? CategoryID { get; set; }
-        public string CategoryName { get; set; }
-        public string? NameAr { get; set; }
-        public string? Icon { get; set; }
-        public string? Color { get; set; }
-        public string? Image { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public bool IsDeleted { get; set; }
-
-        public Category(CategoryModel categoryModel, ModeType mode = ModeType.AddNew)
-        {
-            this.CategoryID = categoryModel.CategoryID;
-            this.CategoryName = categoryModel.CategoryName;
-            this.NameAr = categoryModel.NameAr;
-            this.Icon = categoryModel.Icon;
-            this.Color = categoryModel.Color;
-            this.Image = categoryModel.Image;
-            this.CreatedAt = categoryModel.CreatedAt;
-            this.IsDeleted = categoryModel.IsDeleted;
-            this.Mode = mode;
-        }
+        AddNew = 0,
+        Update = 1
     }
+
+    public ModeType Mode { get; set; } = mode;
+
+    public CategoryModel CategoryModel =>
+        new(
+            this.CategoryID,
+            this.CategoryName,
+            this.CreatedAt,
+            this.IsDeleted,
+            this.NameAr,
+            this.Image
+        );
+
+    public int? CategoryID { get; set; } = categoryModel.CategoryID;
+    public string CategoryName { get; set; } = categoryModel.CategoryName;
+    public string? NameAr { get; set; } = categoryModel.NameAr;
+    public string? Image { get; set; } = categoryModel.Image;
+    public DateTime CreatedAt { get; set; } = categoryModel.CreatedAt;
+    public bool IsDeleted { get; set; } = categoryModel.IsDeleted;
 }

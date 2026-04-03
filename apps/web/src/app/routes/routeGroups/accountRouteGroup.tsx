@@ -201,6 +201,7 @@ export function renderAccountRouteGroup({
                 deferredToast.error(
                   error instanceof Error ? error.message : "Error creating post",
                 );
+                throw error;
               }
             }}
             userProfile={appProps.userProfile}
@@ -244,6 +245,7 @@ export function renderAccountRouteGroup({
                 deferredToast.error(
                   error instanceof Error ? error.message : "Error creating post",
                 );
+                throw error;
               }
             }}
             onAddPostClick={() => navigate(APP_ROUTE_PATHS.sell)}

@@ -206,6 +206,12 @@ export function transformPostModelToPost(
       : typeof postModel.seller === "string"
         ? postModel.seller
         : "Unknown";
+  const phone =
+    typeof postModel.Phone === "string"
+      ? postModel.Phone
+      : typeof postModel.phone === "string"
+        ? postModel.phone
+        : "";
   const sellerId =
     postModel.UserID !== undefined && postModel.UserID !== null
       ? String(postModel.UserID)
@@ -269,6 +275,7 @@ export function transformPostModelToPost(
     area,
     seller,
     sellerId,
+    phone,
     category,
     categoryId,
     image: normalizedThumbnailImage || postImages[0] || normalizeImagePath(singleImage),

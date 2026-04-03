@@ -1,6 +1,7 @@
 using TijarahJo.Domain.Models;
 using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Application.Services;
+using TijarahJo.Application;
 using TijarahJo.Application.Common;
 
 namespace TijarahJo.Api.Tests;
@@ -46,8 +47,6 @@ public sealed class CategoryCommandServiceTests
         {
             CategoryName = "Electronics",
             NameAr = "إلكترونيات",
-            Icon = "📱",
-            Color = "#3B82F6",
             Image = "https://example.com/electronics.png"
         });
 
@@ -166,37 +165,28 @@ public sealed class CategoryCommandServiceTests
     // Fakes
     // -------------------------------------------------------------------------
 
-    private sealed class FakeCategoryService : ICategoryService
+    private sealed class FakeCategoryService(bool findReturnsNull, bool saveFails) : ICategoryService
     {
-        private readonly bool _findReturnsNull;
-        private readonly bool _saveFails;
-
-        public FakeCategoryService(bool findReturnsNull, bool saveFails)
-        {
-            _findReturnsNull = findReturnsNull;
-            _saveFails = saveFails;
-        }
-
         public Task<IReadOnlyList<CategoryModel>> GetAllCategoriesAsync(int page = 1, int size = 50, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<CategoryModel>>(Array.Empty<CategoryModel>());
+            => Task.FromResult<IReadOnlyList<CategoryModel>>([]);
 
         public Task<Category?> FindAsync(int? categoryId, CancellationToken ct = default)
         {
-            if (_findReturnsNull) return Task.FromResult<Category?>(null);
+            if (findReturnsNull) return Task.FromResult<Category?>(null);
 
-            var model = new CategoryModel(categoryId ?? 1, "Existing", DateTime.UtcNow, false, null, null, null, null);
+            var model = new CategoryModel(categoryId ?? 1, "Existing", DateTime.UtcNow, false, null, null);
             return Task.FromResult<Category?>(new Category(model, Category.ModeType.Update));
         }
 
         public Category Create(CategoryModel model) => new(model);
 
         public Task<bool> SaveAsync(Category category, CancellationToken ct = default)
-            => Task.FromResult(!_saveFails);
+            => Task.FromResult(!saveFails);
 
         public Task<bool> DeleteCategoryAsync(int? categoryId, CancellationToken ct = default)
             => Task.FromResult(true);
 
         public Task<bool> DoesCategoryExistAsync(int? categoryId, CancellationToken ct = default)
-            => Task.FromResult(!_findReturnsNull);
+            => Task.FromResult(!findReturnsNull);
     }
 }

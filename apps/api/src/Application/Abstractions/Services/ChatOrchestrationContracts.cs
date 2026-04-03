@@ -56,7 +56,7 @@ public sealed class ChatPresenceSnapshot
     public required int UserId { get; init; }
     public required bool IsOnline { get; init; }
     public DateTime? LastSeenAtUtc { get; init; }
-    public required string StatusText { get; init; }
+    public string? StatusText { get; init; }
 }
 
 public interface IChatPresenceLookup

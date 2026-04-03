@@ -271,17 +271,12 @@ public class ChatController(
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DownloadImage(
+    [AllowAnonymous]
+    public IActionResult DownloadImage(
         [FromQuery] int conversationId,
         [FromQuery] string url,
-        [FromQuery] string sig,
-        CancellationToken cancellationToken)
+        [FromQuery] string sig)
     {
-        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int currentUserId, out ActionResult? failureResult))
-        {
-            return failureResult!;
-        }
-
         if (conversationId < 1 || string.IsNullOrWhiteSpace(url))
         {
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Conversation ID and URL are required.");
@@ -317,11 +312,6 @@ public class ChatController(
             if (!IsValidChatImageSignature(candidatePath, conversationId, sig))
             {
                 return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid image signature.");
-            }
-
-            if (!await _messages.CanAccessConversationAsync(currentUserId, conversationId, cancellationToken))
-            {
-                return Forbid();
             }
 
             string uploadsRoot = LocalPostImageFileStorageService.ResolveAbsoluteUploadsRootPath(

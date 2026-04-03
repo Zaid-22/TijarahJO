@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { MoreVertical, Reply, Trash2, Edit2, ChevronDown, ChevronUp, User as UserIcon } from "lucide-react";
+import { MoreVertical, Reply, Trash2, Edit2, ChevronDown, ChevronUp } from "lucide-react";
 import { api } from "../../../services/api";
 import { logger } from "../../../shared/lib/logger";
 import { PostComment, User } from "../../../types";
 import { Button } from "../../../shared/ui/button";
 import { Textarea } from "../../../shared/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "../../../shared/ui/avatar";
-import { resolveAvatarSrc } from "../../../shared/lib/avatar";
+import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -133,9 +133,9 @@ export function CommentItem({
     <div className={cn("group animate-in fade-in slide-in-from-bottom-2 duration-300", isReply ? "ms-12 mt-4" : "")}>
       <div className="flex gap-3">
         <Avatar className="w-10 h-10 border-2 border-background shadow-sm ring-1 ring-muted">
-          <AvatarImage src={resolveAvatarSrc(comment.authorAvatar)} />
-          <AvatarFallback className="bg-primary/10 text-primary">
-            <UserIcon className="w-5 h-5" />
+          <AvatarImage src={resolveAvatarSrc(comment.authorAvatar) || undefined} />
+          <AvatarFallback className="bg-primary/10 text-primary font-bold">
+            {getAvatarInitial(comment.authorName)}
           </AvatarFallback>
         </Avatar>
 

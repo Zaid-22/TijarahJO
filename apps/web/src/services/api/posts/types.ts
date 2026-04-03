@@ -71,6 +71,8 @@ export interface RawPost {
   cityId?: unknown;
   Area?: unknown;
   area?: unknown;
+  Phone?: unknown;
+  phone?: unknown;
   AreaId?: unknown;
   areaId?: unknown;
   PostImageURL?: unknown;

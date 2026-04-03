@@ -37,18 +37,20 @@ export function usePostCardState({
         : "You need to be logged in to save your favorite posts",
     viewDetailsAria:
       resolvedLanguage === "ar"
-        ? `عرض تفاصيل ${post.name}`
-        : `View details for ${post.name}`,
+        ? "عرض تفاصيل " + post.name
+        : "View details for " + post.name,
     soldOut: resolvedLanguage === "ar" ? "تم البيع" : "SOLD OUT",
     currency: resolvedLanguage === "ar" ? "د.أ" : "JOD",
     views: resolvedLanguage === "ar" ? "مشاهدة" : "views",
     favoriteLabel: isFavorite
       ? resolvedLanguage === "ar"
-        ? `إزالة ${post.name} من المفضلة`
-        : `Remove ${post.name} from favorites`
+        ? "إزالة " + post.name + " من المفضلة"
+        : "Remove " + post.name + " from favorites"
       : resolvedLanguage === "ar"
-        ? `إضافة ${post.name} إلى المفضلة`
-        : `Add ${post.name} to favorites`,
+        ? "إضافة " + post.name + " إلى المفضلة"
+        : "Add " + post.name + " to favorites",
+    chatButton: resolvedLanguage === "ar" ? "دردشة" : "Chat",
+    callButton: resolvedLanguage === "ar" ? "اتصال" : "Call",
   };
   const priceLocale = resolvedLanguage === "ar" ? "ar-JO" : "en-US";
 
@@ -58,20 +60,29 @@ export function usePostCardState({
     normalizedCurrentUserId.length > 0 &&
     normalizedSellerId.length > 0 &&
     normalizedCurrentUserId === normalizedSellerId;
-  const showFavoriteButton = !isOwner && Boolean(onFavoriteToggle);
+  const showFavoriteButton = isOwner ? false : Boolean(onFavoriteToggle);
+
+  const requireAuthForProtectedAction = () => {
+    if (isAuthenticated) {
+      return true;
+    }
+
+    if (onRequireAuth) {
+      onRequireAuth();
+    } else {
+      deferredToast.error(labels.loginRequiredTitle, {
+        description: labels.loginRequiredDescription,
+        duration: 3000,
+      });
+    }
+
+    return false;
+  };
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    if (!isAuthenticated) {
-      if (onRequireAuth) {
-        onRequireAuth();
-      } else {
-        deferredToast.error(labels.loginRequiredTitle, {
-          description: labels.loginRequiredDescription,
-          duration: 3000,
-        });
-      }
+    if (requireAuthForProtectedAction() === false) {
       return;
     }
     onFavoriteToggle?.(post.id);
@@ -87,6 +98,7 @@ export function usePostCardState({
     priceLocale,
     showFavoriteButton,
     handleFavoriteClick,
+    requireAuthForProtectedAction,
     openPost,
   };
 }

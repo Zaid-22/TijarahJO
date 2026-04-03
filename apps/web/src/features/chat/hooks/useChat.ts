@@ -130,6 +130,7 @@ export function useChat(otherUserId?: number) {
         return false;
       }
 
+
       return sendMessage(serializeChatImageMessage(imageUrl, caption), postId);
     } catch (err) {
       logger.warn("[useChat] Failed to upload image", err);

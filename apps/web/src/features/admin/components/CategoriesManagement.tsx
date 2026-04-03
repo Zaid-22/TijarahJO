@@ -90,8 +90,6 @@ export function CategoriesManagement() {
         const response = await api.categories.updateCategory(selectedCategory.id, {
           name: trimmedName,
           nameAr: formData.nameAr.trim(),
-          color: formData.color,
-          icon: formData.icon.trim(),
           image: formData.image.trim(),
         });
 
@@ -115,8 +113,6 @@ export function CategoriesManagement() {
       const response = await api.categories.createCategory({
         name: trimmedName,
         nameAr: formData.nameAr.trim(),
-        color: formData.color,
-        icon: formData.icon.trim(),
         image: formData.image.trim(),
       });
 
@@ -154,8 +150,6 @@ export function CategoriesManagement() {
     setFormData({
       name: sourceCategory.name,
       nameAr: sourceCategory.nameAr || "",
-      color: sourceCategory.color,
-      icon: sourceCategory.icon || "box",
       image: sourceCategory.image || "",
     });
     setIsEditOpen(true);

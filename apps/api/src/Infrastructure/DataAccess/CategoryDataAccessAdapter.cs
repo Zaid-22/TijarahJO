@@ -50,8 +50,6 @@ public sealed class CategoryDataAccessAdapter : ICategoryDataAccess
         {
             CategoryName = category.CategoryName,
             NameAr = category.NameAr,
-            Icon = category.Icon,
-            Color = category.Color,
             Image = category.Image,
             CreatedAt = category.CreatedAt == default ? DateTime.UtcNow : category.CreatedAt,
             IsDeleted = category.IsDeleted
@@ -79,8 +77,6 @@ public sealed class CategoryDataAccessAdapter : ICategoryDataAccess
 
         entity.CategoryName = category.CategoryName;
         entity.NameAr = category.NameAr;
-        entity.Icon = category.Icon;
-        entity.Color = category.Color;
         entity.Image = category.Image;
         entity.CreatedAt = category.CreatedAt == default ? entity.CreatedAt : category.CreatedAt;
         entity.IsDeleted = category.IsDeleted;
@@ -164,8 +160,6 @@ public sealed class CategoryDataAccessAdapter : ICategoryDataAccess
             entity.CreatedAt,
             entity.IsDeleted,
             entity.NameAr,
-            entity.Icon,
-            entity.Color,
             entity.Image
         );
     }

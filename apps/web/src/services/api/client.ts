@@ -130,10 +130,16 @@ async function attemptTokenRefresh(): Promise<boolean> {
 
   refreshPromise = (async () => {
     try {
+      const headers = new Headers({ "Content-Type": "application/json" });
+      const csrfToken = await resolveCsrfToken("POST", headers);
+      if (csrfToken) {
+        headers.set("X-CSRF-Token", csrfToken);
+      }
+
       const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers,
       });
       return response.ok;
     } catch {
@@ -372,11 +378,10 @@ export async function apiRequest<T>(
     // Handle specific error types
     if (error instanceof Error) {
       if (error.name === "AbortError") {
-        if (callerSignal?.aborted && !didTimeout && throwOnAbort) {
-          throw createAbortError();
-        }
-
         if (callerSignal?.aborted && !didTimeout) {
+          if (throwOnAbort) {
+            throw createAbortError();
+          }
           return {
             success: false,
             error: {

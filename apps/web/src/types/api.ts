@@ -79,6 +79,11 @@ export interface UpdatePostStatusRequest {
   status: "ACTIVE" | "SOLD" | "DELETED" | "BLOCKED" | "INACTIVE";
 }
 
+export interface ChatImageUploadResponse {
+  url: string;
+  Url?: string; // Support both cases for robustness
+}
+
 export interface PostResponse {
   success: boolean;
   post?: Post;
@@ -108,8 +113,6 @@ export interface Category {
   id: string;
   name: string;
   nameAr: string; // Arabic translation
-  icon: string; // Icon identifier
-  color: string; // Hex color
   image: string; // Category image URL
   postCount: number;
 }

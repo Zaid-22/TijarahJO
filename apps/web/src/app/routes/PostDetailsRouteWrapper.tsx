@@ -3,6 +3,7 @@ import { PostDetailsPage } from "../../features/post-details/pages/PostDetailsPa
 import { Language, Post, UserProfile } from "../../types";
 import { deferredToast } from "../../utils/toast";
 import { resolveCurrentUserId } from "./appRoutesUtils";
+import { PageShell } from "../../shared/ui/page-shell";
 import { usePostDetailsRouteData } from "./usePostDetailsRouteData";
 import { UpdatePostInput, UpdatePostStatusInput } from "./usePostActions";
 import { Button } from "../../shared/ui/button";
@@ -99,10 +100,13 @@ export function PostDetailsRouteWrapper({
 
   if (isLoadingRoutePost) {
     return (
-      <LoadingState
-        label={labels.loadingPost}
-        minHeightClassName="min-h-[40vh]"
-      />
+      <PageShell>
+        <div className="h-16 w-full border-b border-border bg-card" />
+        <LoadingState
+          label={labels.loadingPost}
+          minHeightClassName="min-h-[80vh]"
+        />
+      </PageShell>
     );
   }
 

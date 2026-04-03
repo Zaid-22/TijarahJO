@@ -96,8 +96,6 @@ Each category has:
 - `id`: Unique category identifier
 - `name`: Display name
 - `slug`: URL-friendly slug
-- `icon`: Icon name (Lucide React)
-- `color`: Brand color hex code
 - `image`: Hero image URL
 - `description`: Category description
 

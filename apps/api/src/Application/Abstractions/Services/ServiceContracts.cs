@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using TijarahJo.Domain.Models;
+using TijarahJo.Application;
 using TijarahJo.Application.Common;
 
 namespace TijarahJo.Application.Abstractions.Services;

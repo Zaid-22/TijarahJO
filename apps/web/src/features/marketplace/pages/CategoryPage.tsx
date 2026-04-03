@@ -15,13 +15,7 @@ import {
 import { SubpageHeader } from "../../../shared/ui/subpage-header";
 import { MarketplaceDiscoveryControls } from "../components/MarketplaceDiscoveryControls";
 import { MarketplaceResultsPagination } from "../components/MarketplaceResultsPagination";
-import { useMemo, useState } from "react";
-import {
-  sortMarketplacePosts,
-  type PostSortMode,
-} from "../../../shared/lib/postSorting";
-import { getCategorySortOptions } from "../../../shared/lib/marketplaceControls";
-import { MarketplaceSortSelect } from "../components/MarketplaceSortSelect";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useMarketplaceDiscoveryState } from "../../../shared/hooks/useMarketplaceDiscoveryState";
 
 interface CategoryPageProps {
@@ -55,13 +49,11 @@ export function CategoryPage({
 }: CategoryPageProps) {
   const isRTL = language === "ar";
   const { categories } = useCatalogCategories();
-  const categorySortOptions = useMemo(
-    () => getCategorySortOptions(language),
-    [language],
-  );
 
-  const [sortBy, setSortBy] = useState<PostSortMode>("newest");
-  const [searchFilters, setSearchFilters] = useState<SearchFilters>({});
+  const [appliedSearchFilters, setAppliedSearchFilters] = useState<SearchFilters>(
+    {},
+  );
+  const [draftSearchFilters, setDraftSearchFilters] = useState<SearchFilters>({});
 
   const normalizedCategoryName = categoryName.trim().toLowerCase();
   const currentCategory = categories.find(
@@ -84,19 +76,44 @@ export function CategoryPage({
   const sortedPosts = useMemo(() => {
     let results = [...filteredPosts];
 
-    if (searchFilters.city) {
+    if (appliedSearchFilters.city) {
       results = results.filter((p) =>
-        p.location?.toLowerCase().includes(searchFilters.city!.toLowerCase()),
+        p.location?.toLowerCase().includes(
+          appliedSearchFilters.city!.toLowerCase(),
+        ),
       );
     }
-    if (searchFilters.minPrice != null) {
-      results = results.filter((p) => p.price >= searchFilters.minPrice!);
+    if (appliedSearchFilters.minPrice != null) {
+      results = results.filter((p) => p.price >= appliedSearchFilters.minPrice!);
     }
-    if (searchFilters.maxPrice != null) {
-      results = results.filter((p) => p.price <= searchFilters.maxPrice!);
+    if (appliedSearchFilters.maxPrice != null) {
+      results = results.filter((p) => p.price <= appliedSearchFilters.maxPrice!);
     }
-    return sortMarketplacePosts(results, sortBy, language);
-  }, [filteredPosts, searchFilters, sortBy, language]);
+      if (appliedSearchFilters.sortBy) {
+        const order = appliedSearchFilters.sortOrder === "asc" ? 1 : -1;
+        results = [...results].sort((a, b) => {
+          if (appliedSearchFilters.sortBy === "price") {
+            return (a.price - b.price) * order;
+          }
+          if (appliedSearchFilters.sortBy === "views") {
+            return ((a.views ?? 0) - (b.views ?? 0)) * order;
+          }
+          // date
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return (dateA - dateB) * order;
+        });
+      }
+      return results;
+  }, [filteredPosts, appliedSearchFilters]);
+
+  useEffect(() => {
+    setDraftSearchFilters(appliedSearchFilters);
+  }, [appliedSearchFilters]);
+
+  const applySearchFilters = useCallback(() => {
+    setAppliedSearchFilters(draftSearchFilters);
+  }, [draftSearchFilters]);
 
   const {
     viewMode,
@@ -133,16 +150,14 @@ export function CategoryPage({
             <div className="sticky top-24">
               <AdvancedSearchFilters
                 language={language}
-                filters={{ ...searchFilters, category: displayCategoryName }}
-                onFiltersChange={(f) => {
-                  // Ignore category changes here, it's fixed
-                  const { category: _c, ...rest } = f;
-                  setSearchFilters(rest);
+                filters={{ ...draftSearchFilters, category: displayCategoryName }}
+                onFiltersChange={setDraftSearchFilters}
+                onApply={applySearchFilters}
+                onClear={() => {
+                  setDraftSearchFilters({});
+                  setAppliedSearchFilters({});
                 }}
-                onApply={() => {
-                  /* filters apply reactively */
-                }}
-                onClear={() => setSearchFilters({})}
+                hideCategory
               />
             </div>
           </aside>
@@ -154,14 +169,6 @@ export function CategoryPage({
               language={language}
               toolbarClassName="flex-none"
               leftSlotClassName="gap-2 flex-1 sm:flex-initial"
-              leftControls={
-                <MarketplaceSortSelect
-                  value={sortBy}
-                  options={categorySortOptions}
-                  onValueChange={(value) => setSortBy(value as typeof sortBy)}
-                  placeholder={language === "ar" ? "ترتيب حسب" : "Sort by"}
-                />
-              }
             />
 
             {isLoading ? (

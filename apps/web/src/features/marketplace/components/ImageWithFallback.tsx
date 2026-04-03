@@ -34,10 +34,10 @@ export const ImageWithFallback = forwardRef<
     typeof className === "string" &&
     /\bobject-(contain|cover|fill|none|scale-down)\b/.test(className);
   const resolvedImageClassName = hasObjectFitClass
-    ? className
-    : `${className || ""} object-cover`.trim();
+    ? `block ${className}`.trim()
+    : `${className || ""} block object-cover`.trim();
   const placeholderClassName = `inline-flex items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.14),transparent_38%),linear-gradient(135deg,rgba(15,23,42,0.06),rgba(15,23,42,0.12))] text-center align-middle ${className ?? ""}`;
-  const placeholderIconClassName = "h-12 w-12 text-white/80 drop-shadow-[0_8px_18px_rgba(15,23,42,0.18)]";
+  const placeholderIconClassName = "h-12 w-12 text-white/80 drop-shadow-lg";
 
   // If src is empty or invalid, show placeholder immediately
   if (!currentSrc || currentSrc.trim() === "") {

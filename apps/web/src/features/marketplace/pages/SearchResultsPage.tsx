@@ -54,7 +54,10 @@ export function SearchResultsPage({
     initialSearchQuery.trim(),
   );
   const [showFilters, setShowFilters] = useState(false);
-  const [searchFilters, setSearchFilters] = useState<SearchFilters>({});
+  const [appliedSearchFilters, setAppliedSearchFilters] = useState<SearchFilters>(
+    {},
+  );
+  const [draftSearchFilters, setDraftSearchFilters] = useState<SearchFilters>({});
 
   const {
     normalizedSearchQuery,
@@ -86,39 +89,39 @@ export function SearchResultsPage({
       ...item,
       onRemove: clearSearch,
     })),
-    ...(searchFilters.category
+    ...(appliedSearchFilters.category
       ? [
           {
             id: "category",
-            label: `${language === "ar" ? "الفئة: " : "Category: "}${searchFilters.category}`,
+            label: `${language === "ar" ? "الفئة: " : "Category: "}${appliedSearchFilters.category}`,
             removeLabel:
               language === "ar" ? "إزالة فلتر الفئة" : "Remove category filter",
             onRemove: () =>
-              setSearchFilters((f) => ({ ...f, category: undefined })),
+              setAppliedSearchFilters((f) => ({ ...f, category: undefined })),
           },
         ]
       : []),
-    ...(searchFilters.city
+    ...(appliedSearchFilters.city
       ? [
           {
             id: "city",
-            label: `${language === "ar" ? "المدينة: " : "City: "}${searchFilters.city}`,
+            label: `${language === "ar" ? "المدينة: " : "City: "}${appliedSearchFilters.city}`,
             removeLabel:
               language === "ar" ? "إزالة فلتر المدينة" : "Remove city filter",
             onRemove: () =>
-              setSearchFilters((f) => ({ ...f, city: undefined })),
+              setAppliedSearchFilters((f) => ({ ...f, city: undefined })),
           },
         ]
       : []),
-    ...(searchFilters.minPrice || searchFilters.maxPrice
+    ...(appliedSearchFilters.minPrice || appliedSearchFilters.maxPrice
       ? [
           {
             id: "price",
-            label: `${language === "ar" ? "السعر: " : "Price: "}${searchFilters.minPrice ?? 0} - ${searchFilters.maxPrice ?? "∞"} ${language === "ar" ? "د.أ" : "JOD"}`,
+            label: `${language === "ar" ? "السعر: " : "Price: "}${appliedSearchFilters.minPrice ?? 0} - ${appliedSearchFilters.maxPrice ?? "∞"} ${language === "ar" ? "د.أ" : "JOD"}`,
             removeLabel:
               language === "ar" ? "إزالة فلتر السعر" : "Remove price filter",
             onRemove: () =>
-              setSearchFilters((f) => ({
+              setAppliedSearchFilters((f) => ({
                 ...f,
                 minPrice: undefined,
                 maxPrice: undefined,
@@ -133,35 +136,38 @@ export function SearchResultsPage({
       let results = activePosts;
 
       // Apply local filters
-      if (searchFilters.category) {
+      if (appliedSearchFilters.category) {
         results = results.filter(
           (p) =>
-            p.category?.toLowerCase() === searchFilters.category?.toLowerCase(),
+            p.category?.toLowerCase() ===
+            appliedSearchFilters.category?.toLowerCase(),
         );
       }
-      if (searchFilters.city) {
+      if (appliedSearchFilters.city) {
         results = results.filter((p) =>
-          p.location?.toLowerCase().includes(searchFilters.city!.toLowerCase()),
+          p.location?.toLowerCase().includes(
+            appliedSearchFilters.city!.toLowerCase(),
+          ),
         );
       }
-      if (searchFilters.minPrice != null) {
-        results = results.filter((p) => p.price >= searchFilters.minPrice!);
+      if (appliedSearchFilters.minPrice != null) {
+        results = results.filter((p) => p.price >= appliedSearchFilters.minPrice!);
       }
-      if (searchFilters.maxPrice != null) {
-        results = results.filter((p) => p.price <= searchFilters.maxPrice!);
+      if (appliedSearchFilters.maxPrice != null) {
+        results = results.filter((p) => p.price <= appliedSearchFilters.maxPrice!);
       }
       if (query) {
         results = rankMarketplacePosts(results, query);
       }
 
       // Apply sorting
-      if (searchFilters.sortBy) {
-        const order = searchFilters.sortOrder === "asc" ? 1 : -1;
+      if (appliedSearchFilters.sortBy) {
+        const order = appliedSearchFilters.sortOrder === "asc" ? 1 : -1;
         results = [...results].sort((a, b) => {
-          if (searchFilters.sortBy === "price") {
+          if (appliedSearchFilters.sortBy === "price") {
             return (a.price - b.price) * order;
           }
-          if (searchFilters.sortBy === "views") {
+          if (appliedSearchFilters.sortBy === "views") {
             return ((a.views ?? 0) - (b.views ?? 0)) * order;
           }
           // date
@@ -173,7 +179,7 @@ export function SearchResultsPage({
 
       return results;
     },
-    [searchFilters],
+    [appliedSearchFilters],
   );
 
   const transformRemotePosts = useCallback(
@@ -190,10 +196,10 @@ export function SearchResultsPage({
     query: normalizedSearchQuery,
     sourcePosts: posts,
     page: 1,
-    sortBy: searchFilters.sortBy || "date",
-    sortOrder: searchFilters.sortOrder || "desc",
-    minPrice: searchFilters.minPrice,
-    maxPrice: searchFilters.maxPrice,
+    sortBy: appliedSearchFilters.sortBy || "date",
+    sortOrder: appliedSearchFilters.sortOrder || "desc",
+    minPrice: appliedSearchFilters.minPrice,
+    maxPrice: appliedSearchFilters.maxPrice,
     fallbackErrorMessage: "Search failed",
     buildFallbackPosts,
     transformRemotePosts,
@@ -216,8 +222,18 @@ export function SearchResultsPage({
     setAppliedSearchQuery(normalizedInitialQuery);
   }, [initialSearchQuery]);
 
+  useEffect(() => {
+    setDraftSearchFilters(appliedSearchFilters);
+  }, [appliedSearchFilters]);
+
+  const applySearchFilters = useCallback(() => {
+    setAppliedSearchFilters(draftSearchFilters);
+    setShowFilters(false);
+  }, [draftSearchFilters]);
+
   const clearAllFilters = useCallback(() => {
-    setSearchFilters({});
+    setDraftSearchFilters({});
+    setAppliedSearchFilters({});
     clearSearch();
   }, [clearSearch]);
 
@@ -247,12 +263,13 @@ export function SearchResultsPage({
             <div className="sticky top-24">
               <AdvancedSearchFilters
                 language={language}
-                filters={searchFilters}
-                onFiltersChange={setSearchFilters}
-                onApply={() => {
-                  /* filters apply reactively */
+                filters={draftSearchFilters}
+                onFiltersChange={setDraftSearchFilters}
+                onApply={applySearchFilters}
+                onClear={() => {
+                  setDraftSearchFilters({});
+                  setAppliedSearchFilters({});
                 }}
-                onClear={() => setSearchFilters({})}
               />
             </div>
           </aside>
@@ -286,11 +303,12 @@ export function SearchResultsPage({
                 content: (
                   <AdvancedSearchFilters
                     language={language}
-                    filters={searchFilters}
-                    onFiltersChange={setSearchFilters}
-                    onApply={() => setShowFilters(false)}
+                    filters={draftSearchFilters}
+                    onFiltersChange={setDraftSearchFilters}
+                    onApply={applySearchFilters}
                     onClear={() => {
-                      setSearchFilters({});
+                      setDraftSearchFilters({});
+                      setAppliedSearchFilters({});
                       setShowFilters(false);
                     }}
                   />

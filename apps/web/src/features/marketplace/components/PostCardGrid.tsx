@@ -1,7 +1,7 @@
 import React from "react";
 import { CardContent } from "../../../shared/ui/card";
 import { Badge } from "../../../shared/ui/badge";
-import { MapPin, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import { ImageWithFallback } from "./ImageWithFallback";
 import { PostCardFavoriteButton } from "./PostCardFavoriteButton";
 import { PostCardPriceBadge } from "./PostCardPriceBadge";
@@ -27,9 +27,12 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
       : null;
   const hasSellerRating =
     sellerAverageRating !== null && sellerReviewCount !== null;
+  const detailLocation = post.area
+    ? post.location + ", " + post.area
+    : post.location;
 
   return (
-    <article className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-[24px] border border-border/60 bg-card transition-all duration-300 animate-fade-in shadow-[0_14px_34px_rgba(15,23,42,0.08)] hover:-translate-y-1 hover:shadow-[0_22px_48px_rgba(15,23,42,0.14)]">
+    <article className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-[24px] border border-border/60 bg-card animate-fade-in shadow-sm sm:shadow-md">
       <button
         type="button"
         onClick={openPost}
@@ -39,12 +42,12 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
 
       <div className="px-3 pt-3">
         <div
-          className={`${postCardMediaClass} pointer-events-none rounded-[20px] border border-border/40 bg-muted/30 aspect-[16/9] overflow-hidden`}
+          className={`${postCardMediaClass} pointer-events-none rounded-[20px] border border-border/40 bg-muted/30 aspect-[16/9] overflow-hidden shadow-[0_10px_24px_rgba(15,23,42,0.10)]`}
         >
           <ImageWithFallback
             src={post.image}
             alt={post.name}
-            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="absolute inset-0 block h-full min-h-full w-full min-w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/[0.02] via-transparent to-black/[0.18]" />
 
@@ -58,13 +61,13 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
 
           {post.condition && post.status !== "SOLD" && (
             <div className="absolute bottom-3 left-3 z-10">
-              <Badge className="border-white/35 bg-white/78 px-2 py-0.5 text-[11px] font-medium text-foreground shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-white/60">
+              <Badge className="border-white/35 bg-white/78 px-2 py-0.5 text-xs font-medium text-foreground shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-white/60">
                 {post.condition}
               </Badge>
             </div>
           )}
 
-          <div className="absolute bottom-3 right-3 z-10">
+          <div className="absolute bottom-2.5 right-2.5 z-10">
             <PostCardPriceBadge
               price={post.price}
               currency={labels.currency}
@@ -84,19 +87,21 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
       )}
 
       <CardContent className="pointer-events-none relative z-20 flex flex-grow flex-col px-4 pb-4 pt-3.5 sm:px-4.5 sm:pb-4.5 sm:pt-3.5">
-        <div className="flex-grow space-y-2.5">
-          <h3 className="line-clamp-2 min-h-[2.7rem] text-[1.08rem] font-semibold leading-[1.2] tracking-[-0.02em] text-foreground transition-colors group-hover:text-primary sm:min-h-[3rem] sm:text-[1.22rem]">
+        <div className="flex-grow space-y-1">
+          <h3 className="line-clamp-1 text-[1.02rem] font-semibold leading-[1.2] tracking-[-0.015em] text-foreground transition-colors group-hover:text-primary sm:text-[1.12rem]">
             {post.name}
           </h3>
+          {detailLocation ? (
+            <p className="line-clamp-1 text-sm font-medium text-slate-600 dark:text-slate-300">
+              {detailLocation}
+            </p>
+          ) : (
+            <div className="h-5" />
+          )}
 
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="inline-flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-primary/80" />
-              <span className="truncate">{post.area ? `${post.location}, ${post.area}` : post.location}</span>
-            </div>
-
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5">
             {hasSellerRating && (
-              <div className="flex flex-shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-2 py-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+              <div className="flex flex-shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
                 <Star className="h-3 w-3 fill-current" />
                 <span>
                   {sellerAverageRating?.toFixed(1)}

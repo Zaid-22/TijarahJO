@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { UserProfile } from "../../../types";
 import { useAuth } from "../../../contexts/AuthContext";
 import { api } from "../../../services/api";
 import { logger } from "../../../shared/lib/logger";
-import { DEFAULT_AVATAR_SRC } from "../../../shared/lib/avatar";
+// DEFAULT_AVATAR_SRC removed - resolveAvatarSrc now handles null by returning null for letter fallbacks
 
 function formatJoinedDate(value: unknown, fallback: string): string {
   if (value !== null && value !== undefined && value !== "") {
@@ -35,10 +35,11 @@ export function useUserProfile() {
     area: "",
     location: "",
     bio: "",
-    avatar: DEFAULT_AVATAR_SRC,
+    avatar: null,
     joinedDate: "Jan 2024",
   });
   const [isLoading, setIsLoading] = useState(true);
+  const fetchedForUserRef = useRef<string>("");
 
   useEffect(() => {
     if (user && isAuthenticated) {
@@ -54,7 +55,7 @@ export function useUserProfile() {
         firstName: user.firstName || prev.firstName || "",
         lastName: user.lastName || prev.lastName || "",
         email: user.email || prev.email || "",
-        avatar: user.avatar || prev.avatar || DEFAULT_AVATAR_SRC,
+        avatar: user.avatar || prev.avatar || null,
       }));
     }
   }, [user, isAuthenticated]);
@@ -62,6 +63,7 @@ export function useUserProfile() {
   const fetchProfileData = useCallback(async () => {
     const userId = String(user?.id || "").trim();
     if (!isAuthenticated || !userId) {
+      fetchedForUserRef.current = "";
       setIsLoading(false);
       return;
     }
@@ -94,7 +96,7 @@ export function useUserProfile() {
         email: backendUser.email || prev.email,
         phone: backendUser.phone || prev.phone || "",
         bio: backendUser.bio || prev.bio || "",
-        avatar: backendUser.avatar || prev.avatar || DEFAULT_AVATAR_SRC,
+        avatar: backendUser.avatar || prev.avatar || null,
         city,
         area,
         location: area ? `${city}, ${area}` : city,
@@ -106,6 +108,7 @@ export function useUserProfile() {
     } catch (error) {
       logger.warn("[useUserProfile] Failed to fetch extended profile:", error);
     } finally {
+      fetchedForUserRef.current = userId;
       setIsLoading(false);
     }
   }, [isAuthenticated, user?.id, user?.firstName, user?.lastName, user?.name, user?.email]);
@@ -118,11 +121,17 @@ export function useUserProfile() {
     userProfile.phone && userProfile.city && userProfile.area
   );
 
+  // Guard against the render gap between auth state changing to authenticated
+  // and the profile fetch effect starting. Without this, shouldShowProfileCompletion
+  // in AppRoutes can briefly evaluate true and redirect to /complete-profile.
+  const pendingFetchForNewUser =
+    isAuthenticated && !!CURRENT_USER_ID && fetchedForUserRef.current !== CURRENT_USER_ID;
+
   return {
     userProfile,
     setUserProfile,
     currentUserDisplayName: CURRENT_USER_DISPLAY_NAME,
-    isLoading,
+    isLoading: isLoading || pendingFetchForNewUser,
     isProfileComplete,
     refreshProfile: fetchProfileData,
   };

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Loader2, MapPin, Phone, User } from "lucide-react";
 import { api } from "../../../services/api";
@@ -7,7 +7,7 @@ import { useAppSettings } from "../../../contexts/AppSettingsContext";
 import { useUserProfileContext } from "../../../contexts/UserProfileContext";
 import { useLocationOptions } from "../../../shared/hooks/useLocationOptions";
 import { normalizeJordanPhone } from "../../../utils/phone";
-import { DEFAULT_AVATAR_SRC } from "../../../shared/lib/avatar";
+import { resolveAvatarSrc } from "../../../shared/lib/avatar";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { AuthInputField } from "../AuthInputField";
 import { AuthPhoneField } from "../AuthPhoneField";
@@ -18,16 +18,17 @@ import { AlertCircle } from "lucide-react";
 
 /** Returns true when the avatar is empty or is just the local default placeholder. */
 function isPlaceholderAvatar(src: string | undefined | null): boolean {
-  return !src || src === DEFAULT_AVATAR_SRC;
+  return !resolveAvatarSrc(src);
 }
 
 export function CompleteProfilePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { language } = useAppSettings();
   const { userProfile, refreshProfile } = useUserProfileContext();
   const isRTL = language === "ar";
 
-  const initialAvatar = isPlaceholderAvatar(userProfile?.avatar) ? "" : userProfile!.avatar;
+  const initialAvatar = isPlaceholderAvatar(userProfile?.avatar) ? "" : (userProfile?.avatar || "");
   const [firstName, setFirstName] = useState(userProfile?.firstName || "");
   const [lastName, setLastName] = useState(userProfile?.lastName || "");
   const [phone, setPhone] = useState(userProfile?.phone || "");
@@ -46,7 +47,7 @@ export function CompleteProfilePage() {
       if (!city && userProfile.city) setCity(userProfile.city);
       if (!area && userProfile.area) setArea(userProfile.area);
       if (isPlaceholderAvatar(avatarPreview) && !isPlaceholderAvatar(userProfile.avatar)) {
-        setAvatarPreview(userProfile.avatar);
+        setAvatarPreview(userProfile.avatar || "");
       }
     }
   }, [userProfile, firstName, lastName, phone, city, area, avatarPreview]);
@@ -172,7 +173,8 @@ export function CompleteProfilePage() {
       });
 
       refreshProfile();
-      navigate("/", { replace: true });
+      const fromPath = location.state?.fromPath || "/";
+      navigate(fromPath, { replace: true });
     } catch (error) {
       setGeneralError(
         error instanceof Error

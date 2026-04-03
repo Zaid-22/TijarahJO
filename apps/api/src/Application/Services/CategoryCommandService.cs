@@ -1,19 +1,15 @@
 using TijarahJo.Domain.Models;
 using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Application;
 using TijarahJo.Application.Common;
 
 namespace TijarahJo.Application.Services;
 
-public sealed class CategoryCommandService : ICategoryCommandService
+public sealed class CategoryCommandService(ICategoryService categories) : ICategoryCommandService
 {
     private static readonly DateTime SqlDateTimeMinUtc = new(1753, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-    private readonly ICategoryService _categories;
-
-    public CategoryCommandService(ICategoryService categories)
-    {
-        _categories = categories;
-    }
+    private readonly ICategoryService _categories = categories;
 
     public async Task<CategoryCommandResult> CreateAsync(CreateCategoryCommand command, CancellationToken cancellationToken = default)
     {
@@ -28,8 +24,6 @@ public sealed class CategoryCommandService : ICategoryCommandService
             NormalizeSqlDateTime(DateTime.UtcNow),
             false,
             NormalizeOptionalText(command.NameAr),
-            NormalizeOptionalText(command.Icon),
-            NormalizeOptionalText(command.Color),
             NormalizeOptionalText(command.Image)
         ));
 
@@ -63,16 +57,6 @@ public sealed class CategoryCommandService : ICategoryCommandService
         if (command.NameAr != null)
         {
             category.NameAr = NormalizeOptionalText(command.NameAr);
-        }
-
-        if (command.Icon != null)
-        {
-            category.Icon = NormalizeOptionalText(command.Icon);
-        }
-
-        if (command.Color != null)
-        {
-            category.Color = NormalizeOptionalText(command.Color);
         }
 
         if (command.Image != null)

@@ -61,7 +61,7 @@ export function AppRoutes() {
     );
 
   return (
-    <Suspense fallback={<LoadingState minHeightClassName="min-h-[40vh]" />}>
+    <Suspense fallback={<LoadingState minHeightClassName="min-h-[80vh]" />}>
       <Routes>
         {renderAppRouteElements({
           language,

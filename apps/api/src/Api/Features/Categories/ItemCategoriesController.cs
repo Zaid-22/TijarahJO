@@ -66,8 +66,6 @@ public class ItemCategoriesController(ICategoryQueryHandler categoryQueries, ICa
             {
                 CategoryName = request.CategoryName,
                 NameAr = request.NameAr,
-                Icon = request.Icon,
-                Color = request.Color,
                 Image = request.Image
             },
             HttpContext.RequestAborted
@@ -97,8 +95,6 @@ public class ItemCategoriesController(ICategoryQueryHandler categoryQueries, ICa
                 CategoryId = id,
                 CategoryName = request.CategoryName,
                 NameAr = request.NameAr,
-                Icon = request.Icon,
-                Color = request.Color,
                 Image = request.Image
             },
             HttpContext.RequestAborted
