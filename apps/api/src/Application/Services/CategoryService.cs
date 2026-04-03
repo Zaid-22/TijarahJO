@@ -1,6 +1,7 @@
 using TijarahJo.Domain.Models;
 using TijarahJo.Application.Abstractions.DataAccess;
 using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Application;
 using TijarahJo.Application.Common;
 
 namespace TijarahJo.Application.Services;

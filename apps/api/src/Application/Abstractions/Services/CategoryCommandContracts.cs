@@ -1,3 +1,4 @@
+using TijarahJo.Application;
 using TijarahJo.Application.Common;
 
 namespace TijarahJo.Application.Abstractions.Services;
@@ -21,8 +22,6 @@ public sealed class CreateCategoryCommand
 {
     public string? CategoryName { get; init; }
     public string? NameAr { get; init; }
-    public string? Icon { get; init; }
-    public string? Color { get; init; }
     public string? Image { get; init; }
 }
 
@@ -31,8 +30,6 @@ public sealed class UpdateCategoryCommand
     public int CategoryId { get; init; }
     public string? CategoryName { get; init; }
     public string? NameAr { get; init; }
-    public string? Icon { get; init; }
-    public string? Color { get; init; }
     public string? Image { get; init; }
 }
 

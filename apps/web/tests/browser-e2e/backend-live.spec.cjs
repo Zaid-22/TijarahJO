@@ -126,7 +126,29 @@ async function registerUser(page, user) {
   await page.locator("#confirmPassword").fill(user.password);
 
   await page.getByRole("button", { name: /create account/i }).click();
-  await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
+
+  // After signup, expect home page OR the complete-profile page (race-condition safety net).
+  await expect(page).toHaveURL(/\/(complete-profile)?$/, { timeout: 30_000 });
+
+  if (page.url().includes("/complete-profile")) {
+    // Profile completion form – fill any empty required fields and submit.
+    const phoneField = page.locator("#phone");
+    if (await phoneField.inputValue().then((v) => !v.trim())) {
+      await phoneField.fill(user.phone);
+    }
+    const citySelect = page.locator("#city");
+    if (await citySelect.inputValue().then((v) => !v.trim()).catch(() => true)) {
+      await citySelect.selectOption("Amman");
+    }
+    const areaSelect = page.locator("#area");
+    await expect(areaSelect).toBeEnabled({ timeout: 20_000 });
+    if (await areaSelect.inputValue().then((v) => !v.trim()).catch(() => true)) {
+      await areaSelect.selectOption("Sweifieh");
+    }
+    await page.getByRole("button", { name: /save and continue/i }).click();
+    await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
+  }
+
   await expect(
     page.getByRole("button", {
       name: /^create post$/i,
@@ -267,11 +289,16 @@ test("backend live journey: auth, search, favorites, and post CRUD", async ({
   await selectRadixOption(page, "#category", "Electronics");
   await selectRadixOption(page, "#location", "Amman");
   await page.locator("#description").fill("Playwright backend live post creation");
-  await page.locator("input#image-upload").last().setInputFiles({
+  
+  // Wait a small moment to ensure the "Area" fetch resulting from "Amman" doesn't clobber the input
+  await page.waitForTimeout(1000);
+  
+  await page.setInputFiles("#image-upload", {
     name: "post.png",
     mimeType: "image/png",
     buffer: Buffer.from(PNG_ONE_BY_ONE_BASE64, "base64"),
   });
+  
   await expect(page.getByText(/1\/5 images uploaded/i)).toBeVisible({
     timeout: 15_000,
   });

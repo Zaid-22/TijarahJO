@@ -38,7 +38,7 @@ export interface UserProfile {
   location: string;
   locationId?: string; // Link to location entity
   bio: string;
-  avatar: string;
+  avatar: string | null;
   joinedDate: string;
 }
 
@@ -48,7 +48,7 @@ export interface User {
   firstName?: string;
   lastName?: string;
   name: string;
-  avatar?: string;
+  avatar?: string | null;
   role: "user" | "admin";
   roleName?: string;
   hasAdminAccess?: boolean;
@@ -107,7 +107,7 @@ export interface PostComment {
   createdAt: string;
   updatedAt: string;
   authorName?: string;
-  authorAvatar?: string;
+  authorAvatar?: string | null;
   replyCount: number;
   isEdited: boolean;
 }

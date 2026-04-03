@@ -174,7 +174,7 @@ function AppContent() {
         language={language}
         isAuthenticated={isAuthenticated}
         currentUserDisplayName={userProfile.name}
-        userAvatar={userProfile.avatar}
+        userAvatar={userProfile.avatar ?? undefined}
         showBackButton={false}
         showLogo={true}
         showSearch={true}
@@ -238,26 +238,27 @@ function AppContent() {
       </a>
       {globalHeader}
 
-      <main id="main-content" className="flex-1">
-        <Suspense
-          fallback={
-            <div className="min-h-[40vh] flex items-center justify-center">
-              <span
-                aria-hidden="true"
-                className="h-7 w-7 rounded-full border-2 border-primary/20 border-t-primary animate-spin"
-              />
-            </div>
-          }
-        >
+      <Suspense
+        fallback={
+          <main
+            id="main-content"
+            className="flex-1 min-h-[80vh] flex items-center justify-center"
+          >
+            <span
+              aria-hidden="true"
+              className="h-7 w-7 rounded-full border-2 border-primary/20 border-t-primary animate-spin"
+            />
+          </main>
+        }
+      >
+        <main id="main-content" className="flex-1">
           <AppRoutes />
-        </Suspense>
-      </main>
+        </main>
 
-      {!isAuthRoute && (
-        <Suspense fallback={null}>
+        {!isAuthRoute && (
           <Footer language={language} />
-        </Suspense>
-      )}
+        )}
+      </Suspense>
       <ScrollToTop />
     </div>
   );

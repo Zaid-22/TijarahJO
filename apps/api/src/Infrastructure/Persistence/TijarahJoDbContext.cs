@@ -4,20 +4,8 @@ using TijarahJo.Domain.Entities;
 
 namespace TijarahJo.Infrastructure.Persistence;
 
-public sealed class TijarahJoDbContext : DbContext
+public sealed class TijarahJoDbContext(DbContextOptions<TijarahJoDbContext> options, TotpEncryptionKey? totpKey = null) : DbContext(options)
 {
-    private readonly TotpEncryptionKey? _totpKey;
-
-    public TijarahJoDbContext(DbContextOptions<TijarahJoDbContext> options)
-        : base(options)
-    {
-    }
-
-    public TijarahJoDbContext(DbContextOptions<TijarahJoDbContext> options, TotpEncryptionKey? totpKey)
-        : base(options)
-    {
-        _totpKey = totpKey;
-    }
 
     public DbSet<UserEntity> Users => Set<UserEntity>();
     public DbSet<RoleEntity> Roles => Set<RoleEntity>();
@@ -55,9 +43,9 @@ public sealed class TijarahJoDbContext : DbContext
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(TijarahJoDbContext).Assembly);
 
         // Apply at-rest encryption to TOTP secret columns
-        if (_totpKey is not null)
+        if (totpKey is not null)
         {
-            var converter = new AesGcmStringConverter(_totpKey.Key);
+            var converter = new AesGcmStringConverter(totpKey.Key);
             modelBuilder.Entity<UserEntity>(builder =>
             {
                 builder.Property(e => e.TwoFactorSecret)
@@ -74,14 +62,14 @@ public sealed class TijarahJoDbContext : DbContext
     // AuditLogEntity entries in the SAME transaction as the primary change.
     // -------------------------------------------------------------------------
 
-    private static readonly HashSet<Type> _auditedTypes = new()
-    {
+    private static readonly HashSet<Type> _auditedTypes =
+    [
         typeof(UserEntity),
         typeof(PostEntity),
         typeof(ReviewEntity),
         typeof(CategoryEntity),
         typeof(RoleEntity)
-    };
+    ];
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

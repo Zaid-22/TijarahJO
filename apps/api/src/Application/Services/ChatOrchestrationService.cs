@@ -3,27 +3,20 @@ using TijarahJo.Application.Abstractions.Services;
 
 namespace TijarahJo.Application.Services;
 
-public sealed class ChatOrchestrationService : IChatOrchestrationService
+public sealed class ChatOrchestrationService(
+    IMessageService messages,
+    INotificationService notifications,
+    IChatPresenceLookup presenceLookup,
+    IUserQueryHandler userQueryHandler)
+    : IChatOrchestrationService
 {
     private const int MaxMessageContentLength = 4000;
     private const string ChatImagePrefix = "[chat-image]";
 
-    private readonly IMessageService _messages;
-    private readonly INotificationService _notifications;
-    private readonly IChatPresenceLookup _presenceLookup;
-    private readonly IUserQueryHandler _userQueryHandler;
-
-    public ChatOrchestrationService(
-        IMessageService messages,
-        INotificationService notifications,
-        IChatPresenceLookup presenceLookup,
-        IUserQueryHandler userQueryHandler)
-    {
-        _messages = messages;
-        _notifications = notifications;
-        _presenceLookup = presenceLookup;
-        _userQueryHandler = userQueryHandler;
-    }
+    private readonly IMessageService _messages = messages;
+    private readonly INotificationService _notifications = notifications;
+    private readonly IChatPresenceLookup _presenceLookup = presenceLookup;
+    private readonly IUserQueryHandler _userQueryHandler = userQueryHandler;
 
     public async Task<ChatServiceResult<IReadOnlyList<ChatMessageEnvelope>>> GetHistoryAsync(
         int currentUserId,
@@ -42,7 +35,7 @@ public sealed class ChatOrchestrationService : IChatOrchestrationService
             return new ChatServiceResult<IReadOnlyList<ChatMessageEnvelope>>
             {
                 Success = true,
-                Value = Array.Empty<ChatMessageEnvelope>()
+                Value = []
             };
         }
 
@@ -54,14 +47,13 @@ public sealed class ChatOrchestrationService : IChatOrchestrationService
         await _messages.MarkAsReadAsync(conversationId.Value, currentUserId, cancellationToken);
         await _notifications.MarkConversationAsReadAsync(currentUserId, conversationId.Value, cancellationToken);
 
-        IReadOnlyList<ChatMessageEnvelope> history = (await _messages.GetChatHistoryAsync(conversationId.Value, cancellationToken: cancellationToken))
+        IReadOnlyList<ChatMessageEnvelope> history = [.. (await _messages.GetChatHistoryAsync(conversationId.Value, cancellationToken: cancellationToken))
             .Select(message => new ChatMessageEnvelope
             {
                 Message = message,
                 ReceiverId = message.SenderId == currentUserId ? otherUserId : currentUserId,
                 PostId = message.PostId
-            })
-            .ToList();
+            })];
 
         return new ChatServiceResult<IReadOnlyList<ChatMessageEnvelope>>
         {
@@ -80,7 +72,7 @@ public sealed class ChatOrchestrationService : IChatOrchestrationService
             return Failure<IReadOnlyList<ChatMessageEnvelope>>(ChatFailureReason.InvalidRequest, "Invalid user identifier.");
         }
 
-        IReadOnlyList<MessageModel> recentMessages = await _messages.GetRecentChatsAsync(currentUserId, cancellationToken);
+        List<MessageModel> recentMessages = await _messages.GetRecentChatsAsync(currentUserId, cancellationToken);
         var recent = new List<ChatMessageEnvelope>(recentMessages.Count);
         foreach (MessageModel message in recentMessages)
         {
@@ -130,14 +122,14 @@ public sealed class ChatOrchestrationService : IChatOrchestrationService
                     UserId = otherUserId,
                     IsOnline = true,
                     LastSeenAtUtc = DateTime.UtcNow,
-                    StatusText = "Online"
+                    StatusText = string.Empty
                 }
             };
         }
 
         bool isOnline = await _presenceLookup.IsUserOnlineAsync(otherUserId, cancellationToken);
         DateTime? lastSeenAtUtc = isOnline
-            ? null
+            ? (DateTime?)null
             : await _presenceLookup.GetLastSeenUtcAsync(otherUserId, cancellationToken);
 
         if (!isOnline && lastSeenAtUtc == null)
@@ -157,7 +149,7 @@ public sealed class ChatOrchestrationService : IChatOrchestrationService
                 UserId = otherUserId,
                 IsOnline = isOnline,
                 LastSeenAtUtc = lastSeenAtUtc,
-                StatusText = isOnline ? "Online" : "Offline"
+                StatusText = string.Empty
             }
         };
     }

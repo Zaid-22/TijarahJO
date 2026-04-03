@@ -1,5 +1,5 @@
 import type { ChangeEvent, RefObject } from "react";
-import { Save, Camera, Upload, User, X } from "lucide-react";
+import { Save, Camera, Upload, X } from "lucide-react";
 import { translations, type Language } from "../../../translations";
 import { Button } from "../../../shared/ui/button";
 import {
@@ -13,7 +13,7 @@ import { Input } from "../../../shared/ui/input";
 import { Label } from "../../../shared/ui/label";
 import { Textarea } from "../../../shared/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "../../../shared/ui/avatar";
-import { resolveAvatarSrc } from "../../../shared/lib/avatar";
+import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
 import {
   Select,
   SelectContent,
@@ -83,11 +83,11 @@ export function EditProfileFormSections({
             <div className="relative">
               <Avatar className="w-24 h-24">
                 <AvatarImage
-                  src={resolveAvatarSrc(formData.avatar)}
+                  src={resolveAvatarSrc(formData.avatar) || undefined}
                   className="object-cover object-center"
                 />
-                <AvatarFallback className="bg-muted text-muted-foreground">
-                  <User className="h-9 w-9" />
+                <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
+                  {getAvatarInitial(formData.firstName || formData.lastName)}
                 </AvatarFallback>
               </Avatar>
               <Button

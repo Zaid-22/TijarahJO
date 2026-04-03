@@ -117,8 +117,6 @@ erDiagram
         int CategoryID PK "IDENTITY"
         nvarchar CategoryName "UNIQUE"
         nvarchar NameAr
-        nvarchar Icon
-        nvarchar Color
         nvarchar Image
         datetime2 CreatedAt
         bit IsDeleted

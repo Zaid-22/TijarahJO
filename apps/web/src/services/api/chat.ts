@@ -1,4 +1,5 @@
 import { ChatPresence, Message } from "../../types";
+import { ChatImageUploadResponse } from "../../types/api";
 import { toPositiveIntegerId } from "../../utils/idValidation";
 import { apiRequest } from "./client";
 import { normalizeChatMessage, RawChatMessage } from "./chatNormalization";
@@ -8,7 +9,6 @@ import {
   parsePresencePayload,
   parseSentChatMessagePayload,
 } from "./schemas/chatSchema";
-import { asRecord, readString } from "./normalizers";
 
 function normalizeChatUserId(userId: unknown): number | undefined {
   return toPositiveIntegerId(userId);
@@ -106,8 +106,7 @@ export const chatApi = {
       return null;
     }
 
-    const normalizedPostId =
-      postId === undefined ? undefined : normalizeChatUserId(postId);
+    const normalizedPostId = postId ? Number(postId) : null;
 
     const response = await apiRequest<unknown>("/chat/send", {
       method: "POST",
@@ -150,17 +149,15 @@ export const chatApi = {
       formData.append("PostId", String(normalizedPostId));
     }
 
-    const response = await apiRequest<unknown>("/chat/upload-image", {
+    const response = await apiRequest<ChatImageUploadResponse>("/chat/upload-image", {
       method: "POST",
       body: formData,
     });
 
-    if (!response.success) {
-      return null;
+    if (response.success && response.data) {
+      return response.data.url || response.data.Url || null;
     }
 
-    const payload = asRecord(response.data);
-    const uploadUrl = readString(payload?.url ?? payload?.Url);
-    return uploadUrl || null;
+    return null;
   },
 };

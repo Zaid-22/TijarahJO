@@ -31,7 +31,7 @@ public sealed class PresenceResponseDTO
     [JsonPropertyName("lastSeenAtUtc")]
     public DateTime? LastSeenAtUtc { get; set; }
     [JsonPropertyName("statusText")]
-    public string StatusText { get; set; } = string.Empty;
+    public string? StatusText { get; set; }
 }
 
 public sealed class CityResponseDTO

@@ -77,35 +77,6 @@ export function CategoryFormFields({
       </div>
 
       <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor={`${idPrefix}-color`} className="text-right">
-          Color
-        </Label>
-        <div className="col-span-3 flex items-center gap-2">
-          <Input
-            id={`${idPrefix}-color`}
-            type="color"
-            value={formData.color}
-            onChange={(e) => onChange({ ...formData, color: e.target.value })}
-            className="w-12 p-1 h-10"
-          />
-          <span className="text-sm text-muted-foreground">{formData.color}</span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor={`${idPrefix}-icon`} className="text-right">
-          Icon Name
-        </Label>
-        <Input
-          id={`${idPrefix}-icon`}
-          value={formData.icon}
-          onChange={(e) => onChange({ ...formData, icon: e.target.value })}
-          className="col-span-3"
-          placeholder="box"
-        />
-      </div>
-
-      <div className="grid grid-cols-4 items-center gap-4">
         <Label htmlFor={`${idPrefix}-image`} className="text-right">
           Image Upload
         </Label>

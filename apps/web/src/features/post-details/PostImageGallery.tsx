@@ -51,9 +51,9 @@ export function PostImageGallery({ post }: PostImageGalleryProps) {
 
   return (
     <>
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden shadow-[0_18px_42px_rgba(15,23,42,0.08)]">
         <div className="relative w-full bg-muted">
-          <div className="relative w-full aspect-[4/3] sm:aspect-[16/10] min-h-72 sm:min-h-96 overflow-hidden">
+          <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] min-h-72 sm:min-h-[22rem] lg:min-h-[24rem] overflow-hidden">
             {hasMultipleImages &&
               displayImages.map((img, idx) => {
                 const isAdjacent =

@@ -22,6 +22,46 @@ export type SearchPipelineResult = {
   error: string | null;
 };
 
+function getPostIdentity(post: Post, index: number): string {
+  const normalizedId = String(post.id || "").trim();
+  if (normalizedId) {
+    return `id:${normalizedId}`;
+  }
+
+  const normalizedName = String(post.name || "").trim().toLowerCase();
+  const normalizedSellerId = String(post.sellerId || "")
+    .trim()
+    .toLowerCase();
+  const normalizedCreatedAt = String(post.createdAt || "")
+    .trim()
+    .toLowerCase();
+
+  return `fallback:${normalizedName}:${normalizedSellerId}:${normalizedCreatedAt}:${index}`;
+}
+
+function mergeSearchPosts(remotePosts: Post[], fallbackPosts: Post[]): Post[] {
+  if (fallbackPosts.length === 0) {
+    return remotePosts;
+  }
+
+  const mergedPosts = [...remotePosts];
+  const seen = new Set(
+    remotePosts.map((post, index) => getPostIdentity(post, index)),
+  );
+
+  fallbackPosts.forEach((post, index) => {
+    const identity = getPostIdentity(post, index);
+    if (seen.has(identity)) {
+      return;
+    }
+
+    seen.add(identity);
+    mergedPosts.push(post);
+  });
+
+  return mergedPosts;
+}
+
 function resolveErrorMessage(error: unknown, fallbackMessage: string): string {
   return error instanceof Error && error.message
     ? error.message
@@ -41,12 +81,13 @@ export async function runSearchPipeline({
   try {
     const response = await request();
     if (response.success) {
-      const posts = transformRemotePosts
+      const remotePosts = transformRemotePosts
         ? transformRemotePosts(response.posts)
         : response.posts;
+      const fallbackPosts = buildFallbackPosts();
 
       return {
-        posts,
+        posts: mergeSearchPosts(remotePosts, fallbackPosts),
         error: null,
       };
     }

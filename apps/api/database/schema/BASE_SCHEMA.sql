@@ -190,8 +190,6 @@ BEGIN
         CategoryID   INT           IDENTITY(1,1) CONSTRAINT PK_Categories PRIMARY KEY,
         CategoryName NVARCHAR(100) NOT NULL,
         NameAr       NVARCHAR(100) NULL,
-        Icon         NVARCHAR(100) NULL,
-        Color        NVARCHAR(20)  NULL,
         Image        NVARCHAR(1000) NULL,
         CreatedAt    DATETIME2     NOT NULL CONSTRAINT DF_Categories_CreatedAt DEFAULT SYSUTCDATETIME(),
         IsDeleted    BIT           NOT NULL CONSTRAINT DF_Categories_IsDeleted DEFAULT 0,

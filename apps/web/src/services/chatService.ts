@@ -251,7 +251,7 @@ class ChatService {
         "SendMessage",
         normalizedReceiverId.toString(),
         trimmedContent,
-        normalizedPostId,
+        normalizedPostId ?? null,
       );
       return localEchoMessage;
     } catch (err) {

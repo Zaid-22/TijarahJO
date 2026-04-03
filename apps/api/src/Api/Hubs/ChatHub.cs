@@ -10,24 +10,17 @@ using TijarahJo.Api.Contracts.Responses;
 namespace TijarahJo.Api.Hubs
 {
     [Authorize]
-    public class ChatHub : Hub
+    public class ChatHub(
+        IChatOrchestrationService chat,
+        IChatPresenceService presence,
+        IChatRealtimeDeliveryService realtimeDelivery,
+        ILogger<ChatHub> logger)
+        : Hub
     {
-        private readonly IChatOrchestrationService _chat;
-        private readonly IChatPresenceService _presence;
-        private readonly IChatRealtimeDeliveryService _realtimeDelivery;
-        private readonly ILogger<ChatHub> _logger;
-
-        public ChatHub(
-            IChatOrchestrationService chat,
-            IChatPresenceService presence,
-            IChatRealtimeDeliveryService realtimeDelivery,
-            ILogger<ChatHub> logger)
-        {
-            _chat = chat;
-            _presence = presence;
-            _realtimeDelivery = realtimeDelivery;
-            _logger = logger;
-        }
+        private readonly IChatOrchestrationService _chat = chat;
+        private readonly IChatPresenceService _presence = presence;
+        private readonly IChatRealtimeDeliveryService _realtimeDelivery = realtimeDelivery;
+        private readonly ILogger<ChatHub> _logger = logger;
 
         public override async Task OnConnectedAsync()
         {
@@ -60,7 +53,7 @@ namespace TijarahJo.Api.Hubs
         ///
         /// Parameters conform to the conversation-centric schema introduced in V202602191110.
         /// </summary>
-        public async Task SendMessage(string receiverIdStr, string content, int? postId)
+        public async Task SendMessage(string receiverIdStr, string content, int? postId = null)
         {
             if (!TryGetCurrentUserId(out int senderId))
             {

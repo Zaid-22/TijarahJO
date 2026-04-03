@@ -193,8 +193,6 @@ public class CategoryConfiguration : IEntityTypeConfiguration<CategoryEntity>
         builder.Property(e => e.CategoryID).ValueGeneratedOnAdd();
         builder.Property(e => e.CategoryName).HasMaxLength(100);
         builder.Property(e => e.NameAr).HasMaxLength(100);
-        builder.Property(e => e.Icon).HasMaxLength(100);
-        builder.Property(e => e.Color).HasMaxLength(20);
         builder.Property(e => e.Image).HasMaxLength(1000);
         builder.Property(e => e.CreatedAt).HasColumnType("datetime2");
         builder.Property(e => e.SearchCategoryNameNormalized).ValueGeneratedOnAddOrUpdate().HasMaxLength(100);

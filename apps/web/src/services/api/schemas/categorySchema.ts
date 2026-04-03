@@ -1,7 +1,6 @@
 import type { Category } from "../../../types/api";
 import { asRecord, readString } from "../normalizers";
 import { toPositiveIntegerId } from "../../../utils/idValidation";
-import { COLORS } from "../../../constants/colors";
 import { APP_CONFIG } from "../../../constants/appConfig";
 
 type RawCategory = {
@@ -14,15 +13,9 @@ type RawCategory = {
   NameAr?: unknown;
   nameAr?: unknown;
   categoryNameAr?: unknown;
-  Icon?: unknown;
-  icon?: unknown;
-  Color?: unknown;
-  color?: unknown;
   Image?: unknown;
   image?: unknown;
 };
-
-const DEFAULT_CATEGORY_COLOR = COLORS.PRIMARY;
 
 function parseRawCategory(value: unknown): RawCategory | null {
   const record = asRecord(value);
@@ -51,10 +44,6 @@ function parseRawCategory(value: unknown): RawCategory | null {
     NameAr: record.NameAr,
     nameAr: record.nameAr,
     categoryNameAr: record.categoryNameAr,
-    Icon: record.Icon,
-    icon: record.icon,
-    Color: record.Color,
-    color: record.color,
     Image: record.Image,
     image: record.image,
   };
@@ -159,10 +148,6 @@ export function normalizeCategory(
     id: uniqueId,
     name,
     nameAr,
-    icon: readString(categoryModel.Icon ?? categoryModel.icon) || "box",
-    color:
-      readString(categoryModel.Color ?? categoryModel.color) ||
-      DEFAULT_CATEGORY_COLOR,
     image: (() => {
       const img = readString(categoryModel.Image ?? categoryModel.image) || "";
       if (img.startsWith("/")) {

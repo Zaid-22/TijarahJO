@@ -10,8 +10,6 @@ namespace TijarahJo.Domain.Models
 	            DateTime createdat,
 	            bool isdeleted,
 	            string? namear = null,
-	            string? icon = null,
-	            string? color = null,
 	            string? image = null)
 	        {
 	            this.CategoryID = categoryid;
@@ -19,16 +17,12 @@ namespace TijarahJo.Domain.Models
 	            this.CreatedAt = createdat;
 	            this.IsDeleted = isdeleted;
 	            this.NameAr = namear;
-	            this.Icon = icon;
-	            this.Color = color;
 	            this.Image = image;
 	        }
 
 	        public int? CategoryID { get; init; }
 	        public string CategoryName { get; init; }
 	        public string? NameAr { get; init; }
-	        public string? Icon { get; init; }
-	        public string? Color { get; init; }
 	        public string? Image { get; init; }
 	        public DateTime CreatedAt { get; init; }
 	        public bool IsDeleted { get; init; }

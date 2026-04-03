@@ -97,8 +97,6 @@ public static class DTOMapper
             Id = categoryModel.CategoryID?.ToString() ?? string.Empty,
             CategoryName = categoryModel.CategoryName ?? string.Empty,
             NameAr = categoryModel.NameAr,
-            Icon = categoryModel.Icon,
-            Color = categoryModel.Color,
             Image = categoryModel.Image,
             CreatedAt = categoryModel.CreatedAt,
             IsDeleted = categoryModel.IsDeleted

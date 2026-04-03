@@ -102,33 +102,6 @@ export async function createPost(
     const expectedImageCount = sanitizedImageInputs.length;
     const savedImageCount = savedImageUrls.length;
 
-    if (expectedImageCount > 0 && savedImageCount !== expectedImageCount) {
-      if (savedImageCount > 0) {
-        await replacePostImages(postId, []);
-      }
-
-      const rollbackResponse = await apiRequest(`/posts/${postId}`, {
-        method: "DELETE",
-      });
-      if (!rollbackResponse.success) {
-        debugError(
-          "[createPost] Image upload failed and rollback could not delete post:",
-          rollbackResponse.error?.message || "Unknown error",
-        );
-        return {
-          success: false,
-          message:
-            "Image upload failed and the incomplete listing could not be rolled back automatically. Please delete the listing and try again.",
-        };
-      }
-
-      return {
-        success: false,
-        message:
-          "Image upload failed, so the listing was not saved. Please try again.",
-      };
-    }
-
     const enrichedPost = await enrichPostsWithCategoryAndSeller([createdPost]);
     const enrichedPostData = enrichedPost[0] || createdPost;
 
@@ -139,9 +112,17 @@ export async function createPost(
       enrichedPostData,
       savedImageUrls.length > 0 ? savedImageUrls : fallbackImageUrls,
     );
+    const imageUploadMessage =
+      expectedImageCount > 0 && savedImageCount === 0
+        ? "Post created, but the image upload did not finish. You can edit the listing to add images again."
+        : expectedImageCount > 0 && savedImageCount < expectedImageCount
+          ? "Post created, but some images did not finish uploading. You can edit the listing to add them again."
+          : undefined;
+
     return {
       success: true,
       post: post,
+      message: imageUploadMessage,
     };
   }
 

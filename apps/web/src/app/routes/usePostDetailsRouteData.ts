@@ -20,20 +20,20 @@ export const usePostDetailsRouteData = ({
 }: UsePostDetailsRouteDataParams) => {
   const post = availablePosts.find((item) => item.id === id);
   const [fallbackPost, setFallbackPost] = useState<Post | null>(null);
-  const [isLoadingFallbackPost, setIsLoadingFallbackPost] =
-    useState(false);
+  const [fallbackState, setFallbackState] = useState<{ id: string; status: "idle" | "loading" | "done" }>({
+    id: "",
+    status: "idle",
+  });
 
   useEffect(() => {
     let isCancelled = false;
 
-    setFallbackPost(null);
-
     if (!id || isLoadingPosts || post) {
-      setIsLoadingFallbackPost(false);
       return;
     }
 
-    setIsLoadingFallbackPost(true);
+    setFallbackState({ id, status: "loading" });
+    setFallbackPost(null);
 
     (async () => {
       try {
@@ -42,13 +42,11 @@ export const usePostDetailsRouteData = ({
           return;
         }
         setFallbackPost(fetchedPost);
+        setFallbackState({ id, status: "done" });
       } catch {
         if (!isCancelled) {
           setFallbackPost(null);
-        }
-      } finally {
-        if (!isCancelled) {
-          setIsLoadingFallbackPost(false);
+          setFallbackState({ id, status: "done" });
         }
       }
     })();
@@ -59,8 +57,8 @@ export const usePostDetailsRouteData = ({
   }, [id, isLoadingPosts, post]);
 
   const resolvedPost = post || fallbackPost;
-  const isLoadingRoutePost =
-    (isLoadingPosts || isLoadingFallbackPost) && !resolvedPost;
+  const isFallbackDoneForId = fallbackState.id === id && fallbackState.status === "done";
+  const isLoadingRoutePost = !!id && !resolvedPost && (isLoadingPosts || !isFallbackDoneForId);
 
   const isOwnPost = useMemo(
     () =>
