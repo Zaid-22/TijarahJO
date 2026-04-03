@@ -68,6 +68,13 @@ export function useUserProfile() {
       return;
     }
 
+    // Skip re-fetch if we already fetched for this user.
+    // refreshProfile() callers bypass this by resetting the ref first.
+    if (fetchedForUserRef.current === userId) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const backendUser = await api.users.getUser(userId);
@@ -111,7 +118,11 @@ export function useUserProfile() {
       fetchedForUserRef.current = userId;
       setIsLoading(false);
     }
-  }, [isAuthenticated, user?.id, user?.firstName, user?.lastName, user?.name, user?.email]);
+  // Only re-create when auth state or user identity changes, NOT on every
+  // user field update (firstName, email, etc.), which caused infinite loops
+  // and spurious redirects to /complete-profile.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user?.id]);
 
   useEffect(() => {
     fetchProfileData();
@@ -127,12 +138,18 @@ export function useUserProfile() {
   const pendingFetchForNewUser =
     isAuthenticated && !!CURRENT_USER_ID && fetchedForUserRef.current !== CURRENT_USER_ID;
 
+  const refreshProfile = useCallback(() => {
+    // Reset the ref so fetchProfileData will actually re-fetch.
+    fetchedForUserRef.current = "";
+    return fetchProfileData();
+  }, [fetchProfileData]);
+
   return {
     userProfile,
     setUserProfile,
     currentUserDisplayName: CURRENT_USER_DISPLAY_NAME,
     isLoading: isLoading || pendingFetchForNewUser,
     isProfileComplete,
-    refreshProfile: fetchProfileData,
+    refreshProfile,
   };
 }

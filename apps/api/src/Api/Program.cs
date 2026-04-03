@@ -273,6 +273,10 @@ else
 if (!app.Environment.IsDevelopment())
     app.UseHsts();
 
+// CORS must be registered before static files so uploaded images get
+// Access-Control-Allow-Origin headers (static files short-circuit the pipeline).
+app.UseCors("AllowAll");
+
 // Static files (uploads root: post images, chat images, user avatars)
 var fileStorageOptions = app.Services.GetRequiredService<IOptions<FileStorageOptions>>().Value;
 string uploadsRootPath = LocalPostImageFileStorageService.ResolveAbsoluteUploadsRootPath(
@@ -298,8 +302,6 @@ if (app.Environment.IsDevelopment())
 var urls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS") ?? "";
 if (urls.Contains("https", StringComparison.OrdinalIgnoreCase))
     app.UseHttpsRedirection();
-
-app.UseCors("AllowAll");
 
 if (enableRateLimiting)
     app.UseRateLimiter();
