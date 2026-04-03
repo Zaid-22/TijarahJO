@@ -244,7 +244,7 @@ public sealed class PostReadResult
 public sealed class PostReadCollectionResult
 {
     public bool Success { get; init; }
-    public IReadOnlyList<PostModel> Posts { get; init; } = Array.Empty<PostModel>();
+    public IReadOnlyList<PostModel> Posts { get; init; } = [];
     public PostReadFailureReason? FailureReason { get; init; }
     public string? Message { get; init; }
 }
@@ -298,7 +298,7 @@ public sealed class PostCommentResult
 public sealed class PostCommentListResult
 {
     public bool Success { get; init; }
-    public IReadOnlyList<PostCommentModel> Comments { get; init; } = Array.Empty<PostCommentModel>();
+    public IReadOnlyList<PostCommentModel> Comments { get; init; } = [];
     public int TotalCount { get; init; }
     public PostCommentFailureReason? FailureReason { get; init; }
     public string? Message { get; init; }

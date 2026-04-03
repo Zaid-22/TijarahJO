@@ -6,14 +6,9 @@ using TijarahJo.Application.Common;
 
 namespace TijarahJo.Application.Services;
 
-public sealed class CategoryService : ICategoryService
+public sealed class CategoryService(ICategoryDataAccess categories) : ICategoryService
 {
-    private readonly ICategoryDataAccess _categories;
-
-    public CategoryService(ICategoryDataAccess categories)
-    {
-        _categories = categories;
-    }
+    private readonly ICategoryDataAccess _categories = categories;
 
     public Task<IReadOnlyList<CategoryModel>> GetAllCategoriesAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
         => _categories.GetAllCategoriesAsync(pageNumber, pageSize, cancellationToken);
