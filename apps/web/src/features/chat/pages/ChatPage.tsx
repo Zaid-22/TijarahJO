@@ -25,6 +25,7 @@ import {
 interface ChatSummary {
   userId: number;
   displayName: string;
+  avatar?: string;
   lastMessage: string;
   timestamp: string;
   isRead: boolean;
@@ -156,6 +157,7 @@ export function ChatPage({ language }: ChatPageProps) {
           Array.from(chatsByUser.values()).map((chat) => ({
             ...chat,
             displayName: namesById[chat.userId] || chat.displayName,
+            avatar: avatarsById[chat.userId],
           })),
         );
       } catch (error) {
@@ -197,6 +199,7 @@ export function ChatPage({ language }: ChatPageProps) {
           userId: otherUserId,
           displayName:
             existingChat?.displayName || `${labels.userPrefix} ${otherUserId}`,
+          avatar: existingChat?.avatar || userAvatarsById[otherUserId],
           lastMessage: formatChatPreviewText(message.content, resolvedLanguage),
           timestamp: message.timestamp,
           isRead:
@@ -216,6 +219,7 @@ export function ChatPage({ language }: ChatPageProps) {
     user?.id,
     selectedUserId,
     resolvedLanguage,
+    userAvatarsById,
   ]);
 
   useEffect(() => {

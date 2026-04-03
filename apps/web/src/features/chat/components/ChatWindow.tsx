@@ -2,13 +2,14 @@ import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import { useChat } from "../hooks/useChat";
 import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
-import { ImagePlus, Loader2, Send, User, X, Download, Flag } from "lucide-react";
+import { ImagePlus, Loader2, Send, X, Download, Flag } from "lucide-react";
 import { ScrollArea } from "../../../shared/ui/scroll-area";
 import { cn } from "@/shared/ui/utils";
 import { api } from "../../../services/api";
 import type { ChatPresence, Language } from "../../../types";
 import { usePrefersReducedMotion } from "../../../shared/hooks/usePrefersReducedMotion";
 import { parseChatMessageContent } from "../chatMessageContent";
+import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
 
 interface ChatWindowProps {
   otherUserId: number;
@@ -192,18 +193,21 @@ export function ChatWindow({
           </Button>
           <div
             className={cn(
-              "flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-primary/10 text-primary overflow-hidden",
+              "flex h-11 w-11 items-center justify-center rounded-full border border-border/60 overflow-hidden",
+              resolveAvatarSrc(otherUserAvatar) 
+                ? "bg-transparent text-foreground" 
+                : "bg-primary/10 text-primary font-medium text-lg",
               "me-3",
             )}
           >
-            {otherUserAvatar ? (
+            {resolveAvatarSrc(otherUserAvatar) ? (
               <img 
-                src={otherUserAvatar} 
+                src={resolveAvatarSrc(otherUserAvatar)!} 
                 alt={otherDisplayName} 
                 className="h-full w-full object-cover" 
               />
             ) : (
-              <User className="h-6 w-6" />
+              getAvatarInitial(otherDisplayName)
             )}
           </div>
           <div>

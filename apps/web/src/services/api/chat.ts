@@ -152,6 +152,7 @@ export const chatApi = {
     const response = await apiRequest<ChatImageUploadResponse>("/chat/upload-image", {
       method: "POST",
       body: formData,
+      timeoutMs: 60000, // 60 seconds
     });
 
     if (response.success && response.data) {
