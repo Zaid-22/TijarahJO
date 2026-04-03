@@ -330,12 +330,15 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
         }
 
         string publicUrl = publicUrlBuilder(fileName);
-        _logger.LogInformation(
-            "Stored image file {FileName} ({SizeBytes} bytes) at {Path}.",
-            fileName,
-            file.Length,
-            absoluteFilePath
-        );
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Stored image file {FileName} ({SizeBytes} bytes) at {Path}.",
+                fileName,
+                file.Length,
+                absoluteFilePath
+            );
+        }
 
         return new StoredPostImageFile(
             PublicUrl: publicUrl,
@@ -398,13 +401,16 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
             long optimizedSize = optimizedBuffer.Length;
             string contentType = ResolveContentType(optimizedExtension);
 
-            _logger.LogInformation(
-                "Optimized image file {FileName} from {OriginalSizeBytes} bytes to {OptimizedSizeBytes} bytes at {Path}.",
-                fileName,
-                file.Length,
-                optimizedSize,
-                absoluteFilePath
-            );
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Optimized image file {FileName} from {OriginalSizeBytes} bytes to {OptimizedSizeBytes} bytes at {Path}.",
+                    fileName,
+                    file.Length,
+                    optimizedSize,
+                    absoluteFilePath
+                );
+            }
 
             return new StoredPostImageFile(
                 PublicUrl: publicUrl,
@@ -444,7 +450,7 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
         return originalExtension;
     }
 
-    private IImageEncoder CreateEncoder(string extension)
+    private WebpEncoder CreateEncoder(string extension)
         => extension switch
         {
             ".webp" => new WebpEncoder
