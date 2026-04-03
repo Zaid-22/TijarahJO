@@ -1,11 +1,12 @@
-import { User } from "lucide-react";
 import { cn } from "@/shared/ui/utils";
 import type { Language } from "../../../types";
+import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
 
 interface ChatListProps {
   chats: {
     userId: number;
     displayName: string;
+    avatar?: string;
     lastMessage: string;
     timestamp: string;
     isRead: boolean;
@@ -59,11 +60,22 @@ export function ChatList({
             >
               <div
                 className={cn(
-                  "flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border/60 bg-muted text-muted-foreground transition-colors group-hover:text-foreground",
+                  "flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border/60 overflow-hidden",
+                  resolveAvatarSrc(chat.avatar)
+                    ? "bg-transparent text-foreground"
+                    : "bg-muted text-muted-foreground font-medium text-lg transition-colors group-hover:text-foreground",
                   "me-3",
                 )}
               >
-                <User className="h-6 w-6" />
+                {resolveAvatarSrc(chat.avatar) ? (
+                  <img
+                    src={resolveAvatarSrc(chat.avatar)!}
+                    alt={chat.displayName}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  getAvatarInitial(chat.displayName)
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="mb-1 flex items-baseline justify-between gap-2">
