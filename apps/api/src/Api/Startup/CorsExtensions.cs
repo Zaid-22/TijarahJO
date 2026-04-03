@@ -40,14 +40,14 @@ public static class CorsExtensions
             {
                 var allowedOrigins = configuration["CORS:AllowedOrigins"]?
                         .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    ?? Array.Empty<string>();
+                    ?? [];
 
                 if (allowedOrigins.Length == 0)
                 {
                     string? frontendUrl = configuration["FrontendUrl"]?.Trim();
                     if (!string.IsNullOrWhiteSpace(frontendUrl))
                     {
-                        allowedOrigins = new[] { frontendUrl };
+                        allowedOrigins = [frontendUrl];
                     }
                 }
 
