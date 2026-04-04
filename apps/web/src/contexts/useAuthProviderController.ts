@@ -483,5 +483,6 @@ export function useAuthProviderController(): AuthContextType {
     loading,
     authError,
     clearAuthError,
+    setSession: persistAuthenticatedSession,
   };
 }

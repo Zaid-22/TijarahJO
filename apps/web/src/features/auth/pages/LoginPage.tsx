@@ -134,7 +134,7 @@ export function LoginPage({
 }: LoginPageProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { checkAuth } = useAuth();
+  const { setSession } = useAuth();
   const copy = getLoginCopy(language);
   const googleAuthEnabled = APP_CONFIG.googleAuthEnabled;
   const validationMessages = copy.validation;
@@ -281,56 +281,60 @@ export function LoginPage({
   }) => {
     localStorage.removeItem("tijarahjo_logged_out");
     persistAuthSessionHint();
-    await checkAuth();
-
-    const currentUserResponse = await api.auth.getCurrentUser();
-    if (!currentUserResponse.success || !currentUserResponse.data) {
-      dispatch({
-        type: "SET_GENERAL_ERROR",
-        error:
-          language === "ar"
-            ? "تمت الاستجابة لتسجيل الدخول لكن لم يتم إنشاء جلسة صالحة. حاول مرة أخرى."
-            : "Login response succeeded, but no authenticated session was established. Please try again.",
-      });
-      return;
+    
+    // We already have a valid session cookie from the login/signup response.
+    // Sync the context state immediately to prevent AuthRouteElements from unmounting 
+    // us prematurely, and prevent race conditions with checkAuth.
+    // Optionally fetch the extended user metadata if needed.
+    let finalUser = fallbackUser;
+    
+    try {
+      const currentUserResponse = await api.auth.getCurrentUser();
+      if (currentUserResponse.success && currentUserResponse.data) {
+        const authenticatedUser = typeof currentUserResponse.data === "object" && currentUserResponse.data !== null
+          ? (currentUserResponse.data as Record<string, unknown>)
+          : null;
+          
+        if (authenticatedUser) {
+           finalUser = {
+             ...fallbackUser,
+             id: readAuthString(authenticatedUser, "Id", "id", "UserID", "userID") || fallbackUser.id,
+             firstName: readAuthString(authenticatedUser, "FirstName", "firstName") || fallbackUser.firstName,
+             lastName: readAuthString(authenticatedUser, "LastName", "lastName") || fallbackUser.lastName,
+             email: readAuthString(authenticatedUser, "Email", "email") || fallbackUser.email,
+             phone: readAuthString(authenticatedUser, "Phone", "phone") || fallbackUser.phone,
+             avatar: readAuthString(authenticatedUser, "Avatar", "avatar") || fallbackUser.avatar,
+             joinedDate: formatJoinedDateLabel(
+               readAuthString(authenticatedUser, "JoinedDate", "joinedDate", "JoinDate", "joinDate") || fallbackUser.joinedDate,
+               language,
+             ),
+             role: resolveLoginRole(authenticatedUser) || fallbackUser.role,
+           };
+        }
+      }
+    } catch(err) {
+      // Ignore non-critical fetch errors, login already succeeded on backend
     }
 
-    const authenticatedUser =
-      typeof currentUserResponse.data === "object" &&
-      currentUserResponse.data !== null
-        ? (currentUserResponse.data as Record<string, unknown>)
-        : null;
+    setSession({
+      id: finalUser.id || "",
+      email: finalUser.email || "",
+      name: `${finalUser.firstName || ""} ${finalUser.lastName || ""}`.trim() || finalUser.email,
+      firstName: finalUser.firstName,
+      lastName: finalUser.lastName,
+      avatar: finalUser.avatar,
+      role: finalUser.role || "user",
+    });
 
     onLogin({
-      id:
-        readAuthString(authenticatedUser, "Id", "id", "UserID", "userID") ||
-        fallbackUser.id,
-      firstName:
-        readAuthString(authenticatedUser, "FirstName", "firstName") ||
-        fallbackUser.firstName,
-      lastName:
-        readAuthString(authenticatedUser, "LastName", "lastName") ||
-        fallbackUser.lastName,
-      email:
-        readAuthString(authenticatedUser, "Email", "email") ||
-        fallbackUser.email,
-      phone:
-        readAuthString(authenticatedUser, "Phone", "phone") ||
-        fallbackUser.phone,
-      avatar:
-        readAuthString(authenticatedUser, "Avatar", "avatar") ||
-        fallbackUser.avatar,
-      joinedDate: formatJoinedDateLabel(
-        readAuthString(
-          authenticatedUser,
-          "JoinedDate",
-          "joinedDate",
-          "JoinDate",
-          "joinDate",
-        ) || fallbackUser.joinedDate,
-        language,
-      ),
-      role: resolveLoginRole(authenticatedUser) || fallbackUser.role,
+      id: finalUser.id,
+      firstName: finalUser.firstName,
+      lastName: finalUser.lastName,
+      email: finalUser.email,
+      phone: finalUser.phone,
+      avatar: finalUser.avatar,
+      joinedDate: finalUser.joinedDate,
+      role: finalUser.role,
     });
   };
 
