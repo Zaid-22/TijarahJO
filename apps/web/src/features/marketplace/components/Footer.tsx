@@ -139,9 +139,9 @@ export function Footer({ language }: FooterProps) {
                       aria-label={
                         language === "ar" ? link.labelAr : link.labelEn
                       }
-                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/12 bg-white/5 text-slate-300 transition-colors hover:border-primary/45 hover:bg-primary/15 hover:text-primary focus-visible:text-primary"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/12 bg-white/5 text-slate-300 transition-colors hover:border-primary/45 hover:bg-primary/15 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 focus-visible:text-primary"
                     >
-                      <Icon className="h-4 w-4" />
+                      <Icon aria-hidden="true" className="h-4 w-4" />
                     </a>
                   );
                 })}
@@ -158,7 +158,7 @@ export function Footer({ language }: FooterProps) {
                 <Link
                   to="/terms"
                   state={{ fromPath: currentPath }}
-                  className="text-slate-300 transition-colors hover:text-primary"
+                  className="rounded-sm text-slate-300 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                 >
                   {content.termsConditions}
                 </Link>
@@ -167,7 +167,7 @@ export function Footer({ language }: FooterProps) {
                 <Link
                   to="/privacy"
                   state={{ fromPath: currentPath }}
-                  className="text-slate-300 transition-colors hover:text-primary"
+                  className="rounded-sm text-slate-300 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                 >
                   {content.privacyPolicy}
                 </Link>
@@ -176,7 +176,7 @@ export function Footer({ language }: FooterProps) {
                 <Link
                   to="/faq"
                   state={{ fromPath: currentPath }}
-                  className="text-slate-300 transition-colors hover:text-primary"
+                  className="rounded-sm text-slate-300 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                 >
                   {content.faq}
                 </Link>
@@ -185,7 +185,7 @@ export function Footer({ language }: FooterProps) {
                 <Link
                   to="/help"
                   state={{ fromPath: currentPath }}
-                  className="text-slate-300 transition-colors hover:text-primary"
+                  className="rounded-sm text-slate-300 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                 >
                   {content.helpCenter}
                 </Link>
@@ -202,7 +202,7 @@ export function Footer({ language }: FooterProps) {
                 <li key={String(category.id || category.name)}>
                   <Link
                     to={`/category/${encodeURIComponent(category.name)}`}
-                    className="text-slate-300 transition-colors hover:text-primary"
+                    className="rounded-sm text-slate-300 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                   >
                     {resolveCategoryName(category, language)}
                   </Link>
@@ -224,7 +224,7 @@ export function Footer({ language }: FooterProps) {
                 <Mail className="mt-0.5 h-4 w-4 shrink-0 text-primary/80" />
                 <a
                   href={`mailto:${content.email}`}
-                  className="transition-colors hover:text-primary"
+                  className="rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                 >
                   {content.email}
                 </a>

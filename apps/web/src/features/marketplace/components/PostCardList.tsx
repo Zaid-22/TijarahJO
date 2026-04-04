@@ -139,6 +139,7 @@ export const PostCardList = React.memo(function PostCardList(
         >
           <ImageWithFallback
             src={toThumbnailUrl(post.image) || post.image}
+            fallbackSrc={post.image}
             alt={post.name}
             className="absolute inset-0 block h-full min-h-full w-full min-w-full object-cover object-center"
           />

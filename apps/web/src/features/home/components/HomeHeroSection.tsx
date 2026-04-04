@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useId, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Language } from "../../../types";
 import { type HeroBanner } from "./heroBannerData";
@@ -35,6 +35,7 @@ export function HomeHeroSection({
   isRTL,
   onNavigate,
 }: HomeHeroSectionProps) {
+  const titleId = useId();
   const [banners, setBanners] = useState<HeroBanner[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -137,37 +138,31 @@ export function HomeHeroSection({
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       aria-roledescription="carousel"
-      aria-label={language === "ar" ? "إعلانات مميزة" : "Featured banners"}
+      aria-labelledby={titleId}
     >
+      <h2 id={titleId} className="sr-only">
+        {language === "ar" ? "إعلانات مميزة" : "Featured banners"}
+      </h2>
       {/* Slides Container */}
       <div className="relative w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 pt-4 sm:pt-6 pb-2">
         <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl">
           {/* Aspect ratio wrapper — responsive for mobile, taller or aspect based */}
           <div className="relative w-full min-h-96 sm:min-h-80 md:min-h-0 md:aspect-[21/8]">
-            {banners.map((banner, index) => (
-              <button
-                key={banner.id}
-                type="button"
-                onClick={() => handleBannerClick(banner)}
-                className={`absolute inset-0 w-full h-full transition-all duration-500 ease-in-out focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/50 overflow-hidden ${
-                  banner.linkUrl ? "cursor-pointer" : "cursor-default"
-                } ${
-                  index === currentIndex
-                    ? "opacity-100 scale-100 z-10"
-                    : "opacity-0 scale-105 z-0"
-                } ${banner.bgClass} ${banner.textClass}`}
-                aria-roledescription="slide"
-                aria-label={
-                  resolveLocalizedBannerCopy(
-                    language,
-                    banner.altTextAr,
-                    banner.altText,
-                  )
-                }
-                aria-hidden={index !== currentIndex}
-                tabIndex={index === currentIndex ? 0 : -1}
-                disabled={index !== currentIndex}
-              >
+            {banners.map((banner, index) => {
+              const isActive = index === currentIndex;
+              const slideLabel = `${language === "ar" ? "الشريحة" : "Slide"} ${index + 1} ${language === "ar" ? "من" : "of"} ${totalSlides}: ${resolveLocalizedBannerCopy(
+                language,
+                banner.altTextAr,
+                banner.altText,
+              )}`;
+              const slideClassName = `absolute inset-0 h-full w-full overflow-hidden transition-all duration-500 ease-in-out ${
+                banner.linkUrl ? "cursor-pointer" : "cursor-default"
+              } ${
+                isActive
+                  ? "opacity-100 scale-100 z-10"
+                  : "opacity-0 scale-105 z-0"
+              } ${banner.bgClass} ${banner.textClass}`;
+              const slideContent = (
                 <div className={`relative w-full h-full flex flex-col md:flex-row items-center justify-center md:justify-between px-6 sm:px-12 lg:px-24 py-6 md:py-0 gap-4 md:gap-0 ${isRTL ? 'md:flex-row-reverse' : ''}`}>
                   {/* Text Content Area */}
                   <div className={`flex flex-col items-center md:items-start text-center md:text-start space-y-3 sm:space-y-4 max-w-lg z-10 ${isRTL ? 'md:items-end md:text-end' : ''}`}>
@@ -206,23 +201,47 @@ export function HomeHeroSection({
                       )}
                       <img
                         src={banner.pngFallbackUrl || banner.imageUrl}
-                        alt={resolveLocalizedBannerCopy(
-                          language,
-                          banner.altTextAr,
-                          banner.altText,
-                        )}
+                        alt=""
+                        aria-hidden="true"
                         width={640}
                         height={640}
                         className="absolute inset-0 w-full h-full object-contain filter drop-shadow-2xl"
                         loading={index === 0 ? "eager" : "lazy"}
-                        fetchPriority={index === 0 ? "high" : "auto"}
+                        {...{ fetchpriority: index === 0 ? "high" : "auto" }}
                         draggable={false}
                       />
                     </picture>
                   </div>
                 </div>
-              </button>
-            ))}
+              );
+
+              return banner.linkUrl ? (
+                <button
+                  key={banner.id}
+                  type="button"
+                  onClick={() => handleBannerClick(banner)}
+                  className={`${slideClassName} focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary focus-visible:ring-offset-2`}
+                  aria-roledescription="slide"
+                  aria-label={slideLabel}
+                  aria-hidden={!isActive}
+                  tabIndex={isActive ? 0 : -1}
+                  disabled={!isActive}
+                >
+                  {slideContent}
+                </button>
+              ) : (
+                <div
+                  key={banner.id}
+                  className={slideClassName}
+                  role="group"
+                  aria-roledescription="slide"
+                  aria-label={slideLabel}
+                  aria-hidden={!isActive}
+                >
+                  {slideContent}
+                </div>
+              );
+            })}
           </div>
 
           {/* Navigation Arrows */}
@@ -231,7 +250,7 @@ export function HomeHeroSection({
               <button
                 type="button"
                 onClick={goPrev}
-                className={`absolute top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg text-foreground hover:bg-background hover:scale-110 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                className={`absolute top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-border/60 bg-background/95 backdrop-blur-sm shadow-lg text-foreground transition-all duration-200 hover:scale-110 hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
                   isRTL ? "right-2 sm:right-3" : "left-2 sm:left-3"
                 }`}
                 aria-label={language === "ar" ? "السابق" : "Previous"}
@@ -245,7 +264,7 @@ export function HomeHeroSection({
               <button
                 type="button"
                 onClick={goNext}
-                className={`absolute top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg text-foreground hover:bg-background hover:scale-110 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                className={`absolute top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-border/60 bg-background/95 backdrop-blur-sm shadow-lg text-foreground transition-all duration-200 hover:scale-110 hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
                   isRTL ? "left-2 sm:left-3" : "right-2 sm:right-3"
                 }`}
                 aria-label={language === "ar" ? "التالي" : "Next"}
@@ -264,18 +283,16 @@ export function HomeHeroSection({
         {totalSlides > 1 && (
           <div
             className="flex items-center justify-center gap-2 mt-3 sm:mt-4 pb-2"
-            role="tablist"
             aria-label={language === "ar" ? "شرائح الإعلانات" : "Banner slides"}
           >
             {banners.map((banner, index) => (
               <button
                 key={banner.id}
                 type="button"
-                role="tab"
-                aria-selected={index === currentIndex}
-                aria-label={`${language === "ar" ? "الشريحة" : "Slide"} ${index + 1}`}
+                aria-current={index === currentIndex ? "true" : undefined}
+                aria-label={`${language === "ar" ? "الانتقال إلى الشريحة" : "Go to slide"} ${index + 1}`}
                 onClick={() => goToSlide(index)}
-                className="group flex items-center justify-center p-1 sm:p-2 transition-all duration-300 focus-visible:outline-none"
+                className="group flex items-center justify-center rounded-full p-1 sm:p-2 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               >
                 <span
                   className={`block rounded-full flex-shrink-0 transition-all duration-300 group-focus-visible:ring-2 group-focus-visible:ring-primary group-focus-visible:ring-offset-2 ${

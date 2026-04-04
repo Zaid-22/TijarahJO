@@ -305,8 +305,9 @@ export function HomePage({
       />
 
       {/* 7. Main Content - All Posts Grid */}
-      <main
+      <section
         id="home-marketplace-content"
+        aria-label={language === "ar" ? "محتوى السوق" : "Marketplace content"}
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
       >
         {isLoadingPosts ? (
@@ -381,7 +382,7 @@ export function HomePage({
             onAction={searchQuery ? () => setSearchQuery("") : undefined}
           />
         ) : null}
-      </main>
+      </section>
     </PageShell>
   );
 }

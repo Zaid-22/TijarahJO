@@ -269,22 +269,23 @@ export function useAuthProviderController(): AuthContextType {
     }
 
     const guestMode = localStorage.getItem(AUTH_GUEST_KEY);
-    const currentPathname =
-      typeof window !== "undefined" ? window.location.pathname : "";
-    const isAuthScreen =
-      currentPathname === "/login" || currentPathname === "/forgot-password";
-    const shouldSkipLoggedOutProbeInDev =
-      import.meta.env.DEV &&
-      isAuthScreen &&
+    const hasAnySessionHint = hasStoredAuthSessionHint() || AUTH_LEGACY_KEYS.some((k) => localStorage.getItem(k) !== null);
+
+    const shouldSkipLoggedOutProbe =
       !authState.isAuthenticated &&
       !authState.user &&
-      guestMode !== "true" &&
-      !hasStoredAuthSessionHint() &&
-      !AUTH_LEGACY_KEYS.some((k) => localStorage.getItem(k) !== null);
+      !hasAnySessionHint;
 
-    if (shouldSkipLoggedOutProbeInDev) {
-      clearAuthStorage();
-      setSignedOutState();
+    if (shouldSkipLoggedOutProbe) {
+      if (guestMode === "true") {
+        consecutiveNetworkFailuresRef.current = 0;
+        setIsGuest(true);
+        setAuthState({ isAuthenticated: false, user: null });
+        setAuthError(null);
+      } else {
+        clearAuthStorage();
+        setSignedOutState();
+      }
       authCheckInitializedRef.current = true;
       setLoading(false);
       return;

@@ -53,11 +53,29 @@ export function useChat(otherUserId?: number) {
         otherUserId &&
         (msg.senderId === otherUserId || msg.receiverId === otherUserId)
       ) {
-        setMessages((prev) => [...prev, msg]);
+        setMessages((prev) => {
+          // Deduplicate the sender's own optimistic messages
+          const currentUserIdNum = toPositiveIntegerId(user?.id);
+          if (currentUserIdNum && msg.senderId === currentUserIdNum) {
+            const existingOptIdx = prev.findIndex(
+              (m) => m.messageId === undefined && m.content === msg.content
+            );
+            if (existingOptIdx !== -1) {
+              const newArr = [...prev];
+              newArr[existingOptIdx] = msg;
+              return newArr;
+            }
+          }
+          // Default: check if we already have it to avoid extreme edge case dupes, otherwise append
+          if (msg.messageId && prev.some((m) => m.messageId === msg.messageId)) {
+            return prev;
+          }
+          return [...prev, msg];
+        });
       }
     });
     return unsub;
-  }, [otherUserId]);
+  }, [otherUserId, user?.id]);
 
   // Fetch history
   const loadHistory = useCallback(async () => {

@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { Language } from "../../../types";
 import type { Category } from "../../../types/api";
 import { toThumbnailUrl } from "../../../shared/lib/thumbnail";
@@ -20,14 +21,27 @@ export function HomeCategoriesSection({
   getCategoryTranslation,
   setSelectedCategoryForPage,
 }: HomeCategoriesSectionProps) {
+  const headingId = useId();
+  const descriptionId = useId();
+
   return (
-    <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+    <section
+      aria-labelledby={headingId}
+      aria-describedby={descriptionId}
+      className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14"
+    >
       {/* Section Header */}
       <div className="text-center mb-10">
-        <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+        <h2
+          id={headingId}
+          className="text-2xl sm:text-3xl font-bold text-foreground mb-2"
+        >
           {t.categoriesTitle}
         </h2>
-        <p className="text-muted-foreground">
+        <p
+          id={descriptionId}
+          className="text-muted-foreground"
+        >
           {t.categoriesSubtitle}
         </p>
       </div>
@@ -66,8 +80,9 @@ export function HomeCategoriesSection({
                 <button
                   key={`category-${String(category.id || category.name).toLowerCase()}`}
                   type="button"
+                  aria-label={categoryLabel}
                   onClick={() => setSelectedCategoryForPage(category.name)}
-                  className={`group relative overflow-hidden rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 animate-fade-in-up aspect-[4/3] ${delayClass}`}
+                  className={`group relative overflow-hidden rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 animate-fade-in-up aspect-[4/3] ${delayClass}`}
                 >
                   {hasImage ? (
                     /* Database image */
@@ -81,8 +96,13 @@ export function HomeCategoriesSection({
                         loading="lazy"
                         decoding="async"
                         sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 20vw"
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        style={{ height: "100%", maxWidth: "none" }}
+                        className="absolute inset-0 block h-full min-h-full w-full min-w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        onError={(e) => {
+                          const img = e.currentTarget;
+                          if (img.src !== category.image) {
+                            img.src = category.image;
+                          }
+                        }}
                       />
                       {/* Label over image */}
                       <div className="absolute inset-x-0 bottom-3 z-10 flex justify-center px-3">
