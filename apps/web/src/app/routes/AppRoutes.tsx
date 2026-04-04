@@ -10,7 +10,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useAppSettings } from "../../contexts/AppSettingsContext";
 import { useUserProfileContext } from "../../contexts/UserProfileContext";
 import { LoginPromptModal } from "../../features/auth/components/LoginPromptModal";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { applyLoginUserDataToProfile } from "./appRoutesUtils";
 
 export function AppRoutes() {
@@ -18,7 +18,7 @@ export function AppRoutes() {
   const location = useLocation();
 
   const { language, darkMode, setDarkMode, toggleLanguage } = useAppSettings();
-  const { isAuthenticated, logout, loading: isAuthLoading } = useAuth();
+  const { isAuthenticated, logout, loading: isAuthLoading, user } = useAuth();
   const { userProfile, setUserProfile, currentUserDisplayName, isLoading: isProfileLoading, isProfileComplete } =
     useUserProfileContext();
   const { activeSearchQuery } = useSearch();
@@ -45,6 +45,25 @@ export function AppRoutes() {
   const promptLoginModal = () => setShowAuthModal(true);
 
   const shouldShowProfileCompletion = isAuthenticated && !isAuthLoading && !isProfileLoading && !isProfileComplete;
+
+  useEffect(() => {
+    if (
+      isAuthenticated &&
+      !isAuthLoading &&
+      !isProfileLoading &&
+      user?.role === "admin" &&
+      (location.pathname === "/" || location.pathname === "/login")
+    ) {
+      navigate("/admin", { replace: true });
+    }
+  }, [
+    isAuthenticated,
+    isAuthLoading,
+    isProfileLoading,
+    user?.role,
+    location.pathname,
+    navigate,
+  ]);
 
   const redirectToLogin = () => navigate("/login");
   const requireAuth = (element: ReactElement) =>
