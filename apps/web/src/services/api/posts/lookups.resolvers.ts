@@ -1,4 +1,8 @@
-import { apiRequest } from "../client";
+import {
+  apiRequest,
+  hasLikelyAdminSession,
+  hasLikelyAuthenticatedSession,
+} from "../client";
 import { locationsApi } from "../locations";
 import { parseRawReviewsCollection } from "../schemas/reviewSchema";
 import { toPositiveIntegerId } from "../../../utils/idValidation";
@@ -153,7 +157,11 @@ async function ensureUsersCache(
     !isCacheFresh(usersCacheUpdatedAt) ||
     Object.keys(usersCache).length === 0;
 
-  if (shouldRefreshAllUsersCache && usersAllEndpointAccessible !== false) {
+  let canQueryUserProfiles = hasLikelyAuthenticatedSession();
+  let canQueryUsersListEndpoint =
+    hasLikelyAdminSession() && usersAllEndpointAccessible !== false;
+
+  if (shouldRefreshAllUsersCache && canQueryUsersListEndpoint) {
     const usersResponse = await apiRequest<RawUserLookup[]>(USERS_ENDPOINT, {
       method: "GET",
     });
@@ -176,6 +184,7 @@ async function ensureUsersCache(
       const errorCode = usersResponse.error?.code || "";
       if (errorCode === "HTTP_401" || errorCode === "HTTP_403") {
         usersAllEndpointAccessible = false;
+        canQueryUsersListEndpoint = false;
       }
     }
   }
@@ -183,6 +192,14 @@ async function ensureUsersCache(
   const missingUserIds = requestedUserIds.filter((id) => !usersCache?.[id]);
 
   if (missingUserIds.length > 0) {
+    if (!canQueryUserProfiles) {
+      missingUserIds.forEach((userId) => {
+        usersCache![userId] = `User ${userId}`;
+      });
+      usersCacheUpdatedAt = Date.now();
+      return usersCache;
+    }
+
     await Promise.all(
       missingUserIds.map(async (userId) => {
         const userResponse = await apiRequest<RawUserLookup>(`/users/${userId}`, {
@@ -199,6 +216,13 @@ async function ensureUsersCache(
           usersCache![resolvedUserId] = displayName;
           usersCache![userId] = displayName;
           return;
+        }
+
+        if (!userResponse.success) {
+          const errorCode = userResponse.error?.code || "";
+          if (errorCode === "HTTP_401" || errorCode === "HTTP_403") {
+            canQueryUserProfiles = false;
+          }
         }
 
         usersCache![userId] = `User ${userId}`;

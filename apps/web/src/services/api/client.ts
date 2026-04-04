@@ -1,6 +1,7 @@
 import { APP_CONFIG } from "../../constants/appConfig";
 import { ApiResponse } from "../../types/api";
 import { logger } from "../../shared/lib/logger";
+import { shouldPrimeCsrfForEndpoint } from "./csrfPolicy";
 
 // Vite uses import.meta.env instead of process.env
 const API_BASE_URL = APP_CONFIG.apiBaseUrl;
@@ -18,6 +19,15 @@ export type ApiRequestOptions = RequestInit & {
   timeoutMs?: number;
   throwOnAbort?: boolean;
 };
+
+const AUTH_LOGOUT_KEY = "tijarahjo_logged_out";
+const AUTH_SESSION_HINT_KEY = "tijarahjo_has_authenticated";
+const AUTH_ADMIN_ACCESS_HINT_KEY = "tijarahjo_has_admin_access";
+const AUTH_LEGACY_KEYS = [
+  "tijarahjo_token",
+  "tijarahjo_auth",
+  "tijarahjo_user",
+];
 
 function getCookieValue(name: string): string | null {
   if (typeof document === "undefined") {
@@ -70,7 +80,32 @@ function hasAuthorizationHeader(headers?: HeadersInit): boolean {
   );
 }
 
+export function hasLikelyAuthenticatedSession(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  if (localStorage.getItem(AUTH_LOGOUT_KEY) === "true") {
+    return false;
+  }
+
+  if (localStorage.getItem(AUTH_SESSION_HINT_KEY) === "true") {
+    return true;
+  }
+
+  return AUTH_LEGACY_KEYS.some((key) => localStorage.getItem(key) !== null);
+}
+
+export function hasLikelyAdminSession(): boolean {
+  if (!hasLikelyAuthenticatedSession() || typeof window === "undefined") {
+    return false;
+  }
+
+  return localStorage.getItem(AUTH_ADMIN_ACCESS_HINT_KEY) === "true";
+}
+
 async function resolveCsrfToken(
+  endpoint: string | undefined,
   method: string,
   headers?: HeadersInit,
   options: { forceRefresh?: boolean } = {},
@@ -83,6 +118,10 @@ async function resolveCsrfToken(
   const existingToken = getCookieValue("XSRF-TOKEN");
   if (existingToken && !forceRefresh) {
     return existingToken;
+  }
+
+  if (!forceRefresh && !shouldPrimeCsrfForEndpoint(endpoint)) {
+    return null;
   }
 
   // Prime XSRF-TOKEN for cookie-authenticated write requests.
@@ -119,7 +158,18 @@ const AUTH_ENDPOINTS_NO_RETRY = [
   "/auth/2fa/verify-login",
 ];
 
-function shouldAttemptRefresh(endpoint: string): boolean {
+function shouldAttemptRefresh(
+  endpoint: string,
+  headers?: HeadersInit,
+): boolean {
+  if (hasAuthorizationHeader(headers)) {
+    return false;
+  }
+
+  if (!hasLikelyAuthenticatedSession()) {
+    return false;
+  }
+
   return !AUTH_ENDPOINTS_NO_RETRY.some((path) => endpoint.startsWith(path));
 }
 
@@ -131,7 +181,7 @@ async function attemptTokenRefresh(): Promise<boolean> {
   refreshPromise = (async () => {
     try {
       const headers = new Headers({ "Content-Type": "application/json" });
-      const csrfToken = await resolveCsrfToken("POST", headers);
+      const csrfToken = await resolveCsrfToken("/auth/refresh", "POST", headers);
       if (csrfToken) {
         headers.set("X-CSRF-Token", csrfToken);
       }
@@ -207,7 +257,11 @@ export async function apiRequest<T>(
 
   try {
     const method = (requestOptions.method || "GET").toUpperCase();
-    const csrfToken = await resolveCsrfToken(method, requestOptions.headers);
+    const csrfToken = await resolveCsrfToken(
+      endpoint,
+      method,
+      requestOptions.headers,
+    );
     const requestHeaders = new Headers(requestOptions.headers);
     const isFormDataBody =
       typeof FormData !== "undefined" &&
@@ -241,11 +295,15 @@ export async function apiRequest<T>(
     });
 
     // Auto-retry on 401 by refreshing the JWT cookie (one attempt only).
-    if (response.status === 401 && shouldAttemptRefresh(endpoint)) {
+    if (
+      response.status === 401 &&
+      shouldAttemptRefresh(endpoint, requestOptions.headers)
+    ) {
       const refreshed = await attemptTokenRefresh();
       if (refreshed) {
         // Re-resolve CSRF token since the cookie changed.
         const freshCsrfToken = await resolveCsrfToken(
+          endpoint,
           method,
           requestOptions.headers,
         );
@@ -269,9 +327,14 @@ export async function apiRequest<T>(
       isUnsafeMethod(method) &&
       !hasAuthorizationHeader(requestOptions.headers)
     ) {
-      const freshCsrfToken = await resolveCsrfToken(method, requestOptions.headers, {
-        forceRefresh: true,
-      });
+      const freshCsrfToken = await resolveCsrfToken(
+        endpoint,
+        method,
+        requestOptions.headers,
+        {
+          forceRefresh: true,
+        },
+      );
       if (freshCsrfToken) {
         const retryHeaders = new Headers(requestHeaders);
         retryHeaders.set("X-CSRF-Token", freshCsrfToken);
