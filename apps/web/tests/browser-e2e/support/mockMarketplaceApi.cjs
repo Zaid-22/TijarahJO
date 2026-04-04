@@ -93,6 +93,22 @@ function createMarketplaceApiMock(options = {}) {
       IsDeleted: false,
     },
   ];
+  const reviewsByUserId = new Map([
+    [
+      "5",
+      [
+        {
+          ReviewID: 9001,
+          ReviewerID: authUser.Id,
+          ReviewerName: authUser.Name,
+          Rating: 5,
+          Comment: "Excellent seller",
+          Timestamp: "2026-02-20T10:00:00.000Z",
+        },
+      ],
+    ],
+    [String(authUser.Id), []],
+  ]);
   const categories = [
     {
       CategoryID: 1,
@@ -201,6 +217,30 @@ function createMarketplaceApiMock(options = {}) {
       Status: post.status,
       Images: [...post.images],
       PostImageURL: post.images[0] || "",
+    };
+  }
+
+  function sellerToPayload(user) {
+    const sellerPosts = posts.filter(
+      (post) => String(post.userId) === String(user.Id) && post.status !== 2,
+    );
+    const soldPosts = sellerPosts.filter((post) => post.status === 1);
+
+    return {
+      success: true,
+      seller: {
+        id: String(user.Id),
+        name: user.Name || `${user.FirstName || ""} ${user.LastName || ""}`.trim(),
+        phone: user.Phone || "",
+        city: user.City || "",
+        area: user.Area || "",
+        bio: user.Bio || "",
+        avatar: user.Avatar || "",
+        joinedDate: user.JoinedDate || nowIso(),
+        activeListingsCount: sellerPosts.filter((post) => post.status === 0).length,
+        totalSalesCount: soldPosts.length,
+      },
+      posts: sellerPosts.map((post) => postToPayload(post)),
     };
   }
 
@@ -334,6 +374,8 @@ function createMarketplaceApiMock(options = {}) {
         apiPath.startsWith("/favorites") ||
         apiPath.startsWith("/categories") ||
         apiPath.startsWith("/users") ||
+        apiPath.startsWith("/reviews") ||
+        apiPath.startsWith("/sellers") ||
         apiPath.startsWith("/post-images") ||
         apiPath.startsWith("/notifications");
 
@@ -409,6 +451,12 @@ function createMarketplaceApiMock(options = {}) {
         return;
       }
 
+      if (apiPath.startsWith("/reviews/user/") && method === "GET") {
+        const userId = normalizeString(apiPath.split("/").pop());
+        await fulfillJson(route, 200, reviewsByUserId.get(userId) || []);
+        return;
+      }
+
       if (apiPath === "/users" && method === "GET") {
         await fulfillJson(route, 200, users);
         return;
@@ -423,6 +471,44 @@ function createMarketplaceApiMock(options = {}) {
         }
 
         await fulfillJson(route, 200, user);
+        return;
+      }
+
+      if (apiPath === "/sellers/top" && method === "GET") {
+        const take = toInteger(url.searchParams.get("take"), 6);
+        const topSellers = users
+          .filter((user) => String(user.Id) !== String(authUser.Id))
+          .slice(0, Math.max(1, take))
+          .map((user) => {
+            const sellerPosts = posts.filter(
+              (post) => String(post.userId) === String(user.Id) && post.status !== 2,
+            );
+            return {
+              id: String(user.Id),
+              name: user.Name || `${user.FirstName || ""} ${user.LastName || ""}`.trim(),
+              phone: user.Phone || "",
+              city: user.City || "",
+              area: user.Area || "",
+              avatar: user.Avatar || "",
+              joinedDate: user.JoinedDate || nowIso(),
+              activeListingsCount: sellerPosts.filter((post) => post.status === 0).length,
+              totalSalesCount: sellerPosts.filter((post) => post.status === 1).length,
+              totalViews: sellerPosts.reduce((sum, post) => sum + post.views, 0),
+            };
+          });
+        await fulfillJson(route, 200, topSellers);
+        return;
+      }
+
+      if (apiPath.startsWith("/sellers/") && method === "GET") {
+        const sellerId = normalizeString(apiPath.split("/").pop());
+        const seller = findUserById(sellerId);
+        if (!seller) {
+          await fulfillJson(route, 404, { Message: "Seller not found" });
+          return;
+        }
+
+        await fulfillJson(route, 200, sellerToPayload(seller));
         return;
       }
 
@@ -568,6 +654,15 @@ function createMarketplaceApiMock(options = {}) {
         }
 
         await fulfillJson(route, 200, postToPayload(post));
+        return;
+      }
+
+      if (apiPath.startsWith("/posts/user/") && method === "GET") {
+        const userId = normalizeString(apiPath.split("/").pop());
+        const userPosts = posts
+          .filter((post) => String(post.userId) === userId && post.status !== 2)
+          .map((post) => postToPayload(post));
+        await fulfillJson(route, 200, userPosts);
         return;
       }
 
