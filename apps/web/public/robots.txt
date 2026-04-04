@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /api/
+Disallow: /messages
+Disallow: /profile
+Disallow: /settings
+Disallow: /sell
+
+Sitemap: https://tijarahjo.com/sitemap.xml

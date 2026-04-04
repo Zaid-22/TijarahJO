@@ -303,7 +303,7 @@ public class ChatController(
         try
         {
             string candidatePath = url.Trim();
-            if (Uri.TryCreate(candidatePath, UriKind.Absolute, out Uri? absoluteUri))
+            if (candidatePath.Contains("://") && Uri.TryCreate(candidatePath, UriKind.Absolute, out Uri? absoluteUri))
             {
                 bool isHttpScheme =
                     absoluteUri.Scheme == Uri.UriSchemeHttp ||

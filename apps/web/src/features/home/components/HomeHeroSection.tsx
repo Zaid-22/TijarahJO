@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Language } from "../../../types";
 import { type HeroBanner } from "./heroBannerData";
+import { bannersApi } from "../../../services/api/banners";
 
 type HomeHeroSectionProps = {
   language: Language;
@@ -38,35 +39,33 @@ export function HomeHeroSection({
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    import("../../../services/api/banners").then(({ bannersApi }) => {
-      bannersApi.getActiveBanners().then((apiBanners) => {
-        if (apiBanners && apiBanners.length > 0) {
-          // Map API models to HeroBanner frontend models
-          setBanners(apiBanners.map((b) => ({
-            id: `api-banner-${b.bannerID}`,
-            title: b.title,
-            titleAr: b.titleAr,
-            subtitle: b.subtitle,
-            subtitleAr: b.subtitleAr,
-            buttonText: b.buttonText,
-            buttonTextAr: b.buttonTextAr,
-            imageUrl: b.imageUrl,
-            bgClass: b.bgClass,
-            textClass: b.textClass,
-            altText: b.altText,
-            altTextAr: b.altTextAr,
-            linkUrl: b.linkUrl || undefined,
-            isActive: b.isActive,
-            order: b.displayOrder,
-          })));
-        } else {
-          setBanners([]);
-        }
-        setIsLoading(false);
-      }).catch((_error) => {
+    bannersApi.getActiveBanners().then((apiBanners) => {
+      if (apiBanners && apiBanners.length > 0) {
+        // Map API models to HeroBanner frontend models
+        setBanners(apiBanners.map((b) => ({
+          id: `api-banner-${b.bannerID}`,
+          title: b.title,
+          titleAr: b.titleAr,
+          subtitle: b.subtitle,
+          subtitleAr: b.subtitleAr,
+          buttonText: b.buttonText,
+          buttonTextAr: b.buttonTextAr,
+          imageUrl: b.imageUrl,
+          bgClass: b.bgClass,
+          textClass: b.textClass,
+          altText: b.altText,
+          altTextAr: b.altTextAr,
+          linkUrl: b.linkUrl || undefined,
+          isActive: b.isActive,
+          order: b.displayOrder,
+        })));
+      } else {
         setBanners([]);
-        setIsLoading(false);
-      });
+      }
+      setIsLoading(false);
+    }).catch((_error) => {
+      setBanners([]);
+      setIsLoading(false);
     });
   }, []);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -114,9 +113,17 @@ export function HomeHeroSection({
 
   if (isLoading) {
     return (
-      <section className="relative w-full overflow-hidden bg-gradient-to-b from-muted/30 to-background py-4 sm:py-6">
-        <div className="relative w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
-          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl bg-muted animate-pulse h-96 sm:h-80 md:h-auto md:aspect-[21/8] w-full" />
+      <section className="relative w-full overflow-hidden bg-gradient-to-b from-muted/30 to-background">
+        <div className="relative w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 pt-4 sm:pt-6 pb-2">
+          {/* Main banner skeleton matching exact dimensions */}
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl bg-muted animate-pulse w-full min-h-96 sm:min-h-80 md:min-h-0 md:aspect-[21/8]" />
+          
+          {/* Pagination dots skeleton matching exact margin/padding */}
+          <div className="flex items-center justify-center gap-2 mt-3 sm:mt-4 pb-2">
+            <div className="w-8 h-2.5 rounded-full bg-muted animate-pulse" />
+            <div className="w-2.5 h-2.5 rounded-full bg-muted animate-pulse" />
+            <div className="w-2.5 h-2.5 rounded-full bg-muted animate-pulse" />
+          </div>
         </div>
       </section>
     );

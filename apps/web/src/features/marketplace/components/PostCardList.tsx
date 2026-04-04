@@ -15,6 +15,7 @@ import { APP_ROUTE_BUILDERS } from "../../../app/routes/routeConfig";
 import { buildCurrentPath } from "../../../shared/lib/backNavigation";
 import { formatPostedAgo } from "../../post-details/postDetailsUtils";
 import { ImageWithFallback } from "./ImageWithFallback";
+import { toThumbnailUrl } from "../../../shared/lib/thumbnail";
 import { PostCardPriceBadge } from "./PostCardPriceBadge";
 import { postCardMediaClass } from "./postCardMediaClass";
 import { usePostCardState, type PostCardSharedProps } from "./usePostCardState";
@@ -137,7 +138,7 @@ export const PostCardList = React.memo(function PostCardList(
           }
         >
           <ImageWithFallback
-            src={post.image}
+            src={toThumbnailUrl(post.image) || post.image}
             alt={post.name}
             className="absolute inset-0 block h-full min-h-full w-full min-w-full object-cover object-center"
           />

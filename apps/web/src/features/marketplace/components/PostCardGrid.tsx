@@ -3,6 +3,7 @@ import { CardContent } from "../../../shared/ui/card";
 import { Badge } from "../../../shared/ui/badge";
 import { Star } from "lucide-react";
 import { ImageWithFallback } from "./ImageWithFallback";
+import { toThumbnailUrl } from "../../../shared/lib/thumbnail";
 import { PostCardFavoriteButton } from "./PostCardFavoriteButton";
 import { PostCardPriceBadge } from "./PostCardPriceBadge";
 import { postCardMediaClass } from "./postCardMediaClass";
@@ -45,7 +46,7 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
           className={`${postCardMediaClass} pointer-events-none rounded-[20px] border border-border/40 bg-muted/30 aspect-[16/9] overflow-hidden shadow-lg`}
         >
           <ImageWithFallback
-            src={post.image}
+            src={toThumbnailUrl(post.image) || post.image}
             alt={post.name}
             className="absolute inset-0 block h-full min-h-full w-full min-w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
           />

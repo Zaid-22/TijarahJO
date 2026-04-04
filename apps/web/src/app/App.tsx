@@ -1,6 +1,4 @@
 import {
-  Suspense,
-  lazy,
   useEffect,
   useRef,
   useState,
@@ -27,19 +25,9 @@ import { useNotificationPolling } from "./hooks/useNotificationPolling";
 import { MaintenanceScreen } from "./components/MaintenanceScreen";
 import type { PublicSystemStatus } from "../services/api/system";
 
-const Header = lazy(() =>
-  import("../features/marketplace/components/Header").then((m) => ({
-    default: m.Header,
-  })),
-);
-const Footer = lazy(() =>
-  import("../features/marketplace/components/Footer").then((m) => ({
-    default: m.Footer,
-  })),
-);
-const AppRoutes = lazy(() =>
-  import("./routes/AppRoutes").then((m) => ({ default: m.AppRoutes })),
-);
+import { Header } from "../features/marketplace/components/Header";
+import { Footer } from "../features/marketplace/components/Footer";
+import { AppRoutes } from "./routes/AppRoutes";
 
 const ROUTES_WITH_LOCAL_HEADER = new Set([
   "admin",
@@ -169,52 +157,37 @@ function AppContent() {
   }, [normalizedPathname]);
 
   const globalHeader = shouldRenderGlobalHeader ? (
-    <Suspense fallback={null}>
-      <Header
-        language={language}
-        isAuthenticated={isAuthenticated}
-        currentUserDisplayName={userProfile.name}
-        userAvatar={userProfile.avatar ?? undefined}
-        showBackButton={false}
-        showLogo={true}
-        showSearch={true}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onSearchSubmit={submitSearch}
-        onShowFavorites={() => navigate("/favorites")}
-        onShowMessages={() => navigate("/chat")}
-        onShowProfile={() => {
-          if (isAuthenticated) navigate("/profile");
-          else navigate("/login");
-        }}
-        onShowSettings={() => navigate("/settings")}
-        onShowAdminDashboard={() => navigate("/admin")}
-        onShowSellItem={() => navigate("/sell")}
-        onLogout={logout}
-        onCategoryClick={(cat) =>
-          navigate(`/category/${encodeURIComponent(cat)}`)
-        }
-        onNotificationsNavigate={(url) => navigate(url)}
-        darkMode={darkMode}
-        isAdmin={user?.role === "admin"}
-        unreadMessagesCount={unreadNotificationsCount}
-        authLoading={authLoading}
-      />
-    </Suspense>
+    <Header
+      language={language}
+      isAuthenticated={isAuthenticated}
+      currentUserDisplayName={userProfile.name}
+      userAvatar={userProfile.avatar ?? undefined}
+      showBackButton={false}
+      showLogo={true}
+      showSearch={true}
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+      onSearchSubmit={submitSearch}
+      onShowFavorites={() => navigate("/favorites")}
+      onShowMessages={() => navigate("/chat")}
+      onShowProfile={() => {
+        if (isAuthenticated) navigate("/profile");
+        else navigate("/login");
+      }}
+      onShowSettings={() => navigate("/settings")}
+      onShowAdminDashboard={() => navigate("/admin")}
+      onShowSellItem={() => navigate("/sell")}
+      onLogout={logout}
+      onCategoryClick={(cat) =>
+        navigate(`/category/${encodeURIComponent(cat)}`)
+      }
+      onNotificationsNavigate={(url) => navigate(url)}
+      darkMode={darkMode}
+      isAdmin={user?.role === "admin"}
+      unreadMessagesCount={unreadNotificationsCount}
+      authLoading={authLoading}
+    />
   ) : null;
-
-  if (!hasLoadedMaintenanceStatus && !isAuthRoute) {
-    return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col">
-        <div className="flex-1 flex items-center justify-center">
-          <span
-            aria-hidden="true"
-            className="h-8 w-8 rounded-full border-2 border-primary/20 border-t-primary animate-spin"
-          />
-        </div>
-      </div>
-    );
-  }
 
   if (maintenanceStatus?.maintenanceMode && !isAuthRoute) {
     return (
@@ -225,6 +198,18 @@ function AppContent() {
       />
     );
   }
+
+  // Determine main content: show spinner while maintenance status loads, else show routes
+  const mainContent = !hasLoadedMaintenanceStatus && !isAuthRoute ? (
+    <div className="flex justify-center pt-32 sm:pt-40">
+      <span
+        aria-hidden="true"
+        className="h-7 w-7 rounded-full border-2 border-primary/20 border-t-primary animate-spin"
+      />
+    </div>
+  ) : (
+    <AppRoutes />
+  );
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -238,27 +223,13 @@ function AppContent() {
       </a>
       {globalHeader}
 
-      <Suspense
-        fallback={
-          <main
-            id="main-content"
-            className="flex-1 min-h-[80vh] flex items-center justify-center"
-          >
-            <span
-              aria-hidden="true"
-              className="h-7 w-7 rounded-full border-2 border-primary/20 border-t-primary animate-spin"
-            />
-          </main>
-        }
-      >
-        <main id="main-content" className="flex-1">
-          <AppRoutes />
-        </main>
+      <main id="main-content" className="flex-1">
+        {mainContent}
+      </main>
 
-        {!isAuthRoute && (
-          <Footer language={language} />
-        )}
-      </Suspense>
+      {!isAuthRoute && (
+        <Footer language={language} />
+      )}
       <ScrollToTop />
     </div>
   );
