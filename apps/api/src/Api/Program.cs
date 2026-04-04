@@ -290,6 +290,8 @@ app.UseStaticFiles(new StaticFileOptions
     {
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
+        // Cache uploaded images for 30 days; files are content-addressed by unique names
+        ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=2592000, immutable");
     }
 });
 

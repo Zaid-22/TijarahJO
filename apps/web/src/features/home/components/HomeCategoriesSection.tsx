@@ -1,5 +1,6 @@
 import type { Language } from "../../../types";
 import type { Category } from "../../../types/api";
+import { toThumbnailUrl } from "../../../shared/lib/thumbnail";
 
 type HomeCategoriesSectionProps = {
   language: Language;
@@ -66,24 +67,29 @@ export function HomeCategoriesSection({
                   key={`category-${String(category.id || category.name).toLowerCase()}`}
                   type="button"
                   onClick={() => setSelectedCategoryForPage(category.name)}
-                  className={`group relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 animate-fade-in-up aspect-[4/3] ${delayClass}`}
+                  className={`group relative overflow-hidden rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 animate-fade-in-up aspect-[4/3] ${delayClass}`}
                 >
                   {hasImage ? (
                     /* Database image */
                     <>
                       <img
-                        src={category.image}
-                        alt={categoryLabel}
+                        src={toThumbnailUrl(category.image) || category.image}
+                        alt=""
+                        aria-hidden="true"
+                        width={320}
+                        height={240}
                         loading="lazy"
                         decoding="async"
+                        sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 20vw"
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        style={{ height: "100%", maxWidth: "none" }}
                       />
-                      {/* Dark overlay for text readability */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/10 group-hover:from-black/80 transition-all duration-300" />
                       {/* Label over image */}
-                      <span className="relative z-10 mt-auto pb-3 px-2 text-sm sm:text-base font-bold text-white text-center line-clamp-2 leading-tight drop-shadow-lg">
-                        {categoryLabel}
-                      </span>
+                      <div className="absolute inset-x-0 bottom-3 z-10 flex justify-center px-3">
+                        <span className="max-w-full rounded-full bg-black/55 px-4 py-2 text-sm sm:text-base font-bold text-white text-center leading-tight shadow-lg backdrop-blur-[2px]">
+                          {categoryLabel}
+                        </span>
+                      </div>
                     </>
                   ) : (
                     /* Fallback: icon-based card */

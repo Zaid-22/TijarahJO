@@ -20,9 +20,9 @@ public sealed class FileStorageOptions
 
     public bool ConvertImagesToWebp { get; set; } = true;
 
-    public int MaxImageWidth { get; set; } = 2048;
+    public int MaxImageWidth { get; set; } = 1280;
 
-    public int MaxImageHeight { get; set; } = 2048;
+    public int MaxImageHeight { get; set; } = 1280;
 
     public int WebpQuality { get; set; } = 75;
 
