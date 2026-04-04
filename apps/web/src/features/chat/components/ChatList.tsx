@@ -71,6 +71,8 @@ export function ChatList({
                   <img
                     src={resolveAvatarSrc(chat.avatar)!}
                     alt={chat.displayName}
+                    loading="lazy"
+                    decoding="async"
                     className="h-full w-full object-cover"
                   />
                 ) : (

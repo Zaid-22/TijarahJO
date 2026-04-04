@@ -159,7 +159,7 @@ function buildCspPolicy(isProduction: boolean): string {
     "default-src 'self'",
     "base-uri 'self'",
     "object-src 'none'",
-    "script-src 'self'",
+    "script-src 'self' 'sha256-O1bNQKJh8URhQqcUBWRAukbQDDV3EluEojBj0bb7ApA='",
     styleSrc,
     imgSrc,
     "font-src 'self' data: https://fonts.gstatic.com",

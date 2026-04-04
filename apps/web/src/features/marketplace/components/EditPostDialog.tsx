@@ -216,11 +216,12 @@ export function EditPostDialog({
 
       <form onSubmit={handleSubmit} className="space-y-6 mt-4">
         <div className="space-y-2">
-          <Label htmlFor="edit-name" className="text-start block">
+          <Label id="edit-name-label" htmlFor="edit-name" className="text-start block">
             {language === "ar" ? "اسم المنشور" : "Post Name"} *
           </Label>
           <Input
             id="edit-name"
+            name="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={
@@ -232,11 +233,12 @@ export function EditPostDialog({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="edit-price" className="text-start block">
+          <Label id="edit-price-label" htmlFor="edit-price" className="text-start block">
             {language === "ar" ? "السعر (دينار أردني)" : "Price (JOD)"} *
           </Label>
           <Input
             id="edit-price"
+            name="price"
             type="number"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
@@ -249,10 +251,10 @@ export function EditPostDialog({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="edit-category" className="text-start block">
+          <Label id="edit-category-label" htmlFor="edit-category" className="text-start block">
             {language === "ar" ? "الفئة" : "Category"} *
           </Label>
-          <Select value={category} onValueChange={setCategory} required>
+          <Select name="category" value={category} onValueChange={setCategory} required>
             <SelectTrigger id="edit-category" className="text-start">
               <SelectValue
                 placeholder={
@@ -271,10 +273,10 @@ export function EditPostDialog({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="edit-location" className="text-start block">
+          <Label id="edit-location-label" htmlFor="edit-location" className="text-start block">
             {language === "ar" ? "المدينة" : "City"} *
           </Label>
-          <Select value={location} onValueChange={(value) => { setLocation(value); setArea(""); }} required>
+          <Select name="location" value={location} onValueChange={(value) => { setLocation(value); setArea(""); }} required>
             <SelectTrigger id="edit-location" className="text-start">
               <SelectValue
                 placeholder={language === "ar" ? "اختر المدينة" : "Select city"}
@@ -299,10 +301,11 @@ export function EditPostDialog({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="edit-area" className="text-start block">
+          <Label id="edit-area-label" htmlFor="edit-area" className="text-start block">
             {language === "ar" ? "المنطقة" : "Area"}
           </Label>
           <Select
+            name="area"
             value={area}
             onValueChange={setArea}
             disabled={!location || isLoadingAreas}
@@ -403,6 +406,8 @@ export function EditPostDialog({
               </div>
               <input
                 id="edit-image-upload"
+                name="images"
+                aria-label={language === "ar" ? "تحميل صور المنشور" : "Upload post images"}
                 type="file"
                 accept="image/*"
                 multiple

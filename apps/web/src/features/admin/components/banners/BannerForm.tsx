@@ -201,6 +201,9 @@ export function BannerForm({
                 {bannerForm.imageUrl ? "Change Image" : "Upload Image"}
               </Button>
               <input
+                id="banner-image-file"
+                name="image"
+                aria-label="Upload banner image"
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"

@@ -99,6 +99,8 @@ export function SellItemImagePicker({
             </div>
             <input
               id="image-upload"
+              name="images"
+              aria-label={uploadLabel}
               type="file"
               accept="image/*"
               multiple

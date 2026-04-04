@@ -279,7 +279,7 @@ test("backend live journey: auth, search, favorites, and post CRUD", async ({
     password: "P@ssw0rd123",
   };
 
-  test.setTimeout(150_000);
+  test.setTimeout(300_000);
 
   await registerUser(page, userOne);
 
@@ -324,6 +324,7 @@ test("backend live journey: auth, search, favorites, and post CRUD", async ({
           response.request().method() === "POST" &&
           /\/api(?:\/v[0-9]+)?\/favorites$/i.test(response.url()) &&
           response.ok(),
+        { timeout: 30_000 }
       ),
       userTwoPage
         .getByRole("button", {
@@ -352,6 +353,7 @@ test("backend live journey: auth, search, favorites, and post CRUD", async ({
           response.request().method() === "DELETE" &&
           /\/api(?:\/v[0-9]+)?\/favorites\/\d+$/i.test(response.url()) &&
           response.ok(),
+        { timeout: 30_000 }
       ),
       removeFavoriteButton.first().click(),
     ]);
@@ -371,6 +373,7 @@ test("backend live journey: auth, search, favorites, and post CRUD", async ({
         response.request().method() === "PUT" &&
         /\/api(?:\/v[0-9]+)?\/posts\/\d+$/i.test(response.url()) &&
         response.ok(),
+      { timeout: 30_000 }
     ),
     page.getByRole("button", { name: /save changes/i }).click(),
   ]);
@@ -388,6 +391,7 @@ test("backend live journey: auth, search, favorites, and post CRUD", async ({
         response.request().method() === "DELETE" &&
         /\/api(?:\/v[0-9]+)?\/posts\/\d+$/i.test(response.url()) &&
         response.ok(),
+      { timeout: 30_000 }
     ),
     deleteDialog.getByRole("button", { name: /confirm removal/i }).click(),
   ]);

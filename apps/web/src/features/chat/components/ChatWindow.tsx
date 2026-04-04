@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import { useChat } from "../hooks/useChat";
 import { Button } from "../../../shared/ui/button";
@@ -66,6 +67,11 @@ export function ChatWindow({
   const dateTimeLocale = language === "ar" ? "ar-JO" : "en-US";
 
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState(false);
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [otherUserAvatar]);
 
   const clearSelectedImage = () => {
     if (selectedImagePreview.startsWith("blob:")) {
@@ -194,17 +200,20 @@ export function ChatWindow({
           <div
             className={cn(
               "flex h-11 w-11 items-center justify-center rounded-full border border-border/60 overflow-hidden",
-              resolveAvatarSrc(otherUserAvatar) 
+              resolveAvatarSrc(otherUserAvatar) && !avatarError
                 ? "bg-transparent text-foreground" 
                 : "bg-primary/10 text-primary font-medium text-lg",
               "me-3",
             )}
           >
-            {resolveAvatarSrc(otherUserAvatar) ? (
+            {resolveAvatarSrc(otherUserAvatar) && !avatarError ? (
               <img 
                 src={resolveAvatarSrc(otherUserAvatar)!} 
                 alt={otherDisplayName} 
+                loading="lazy"
+                decoding="async"
                 className="h-full w-full object-cover" 
+                onError={() => setAvatarError(true)}
               />
             ) : (
               getAvatarInitial(otherDisplayName)
@@ -276,6 +285,7 @@ export function ChatWindow({
                               alt={parsedContent.caption || labels.imageMessage}
                               className="max-h-72 w-full object-cover"
                               loading="lazy"
+                              decoding="async"
                             />
                           </button>
                           {parsedContent.caption && (
@@ -345,6 +355,9 @@ export function ChatWindow({
 
           <div className="flex items-center gap-2">
             <input
+              id="chat-image-upload"
+              name="chatImage"
+              aria-label={labels.attachImage}
               ref={fileInputRef}
               type="file"
               accept="image/*"
@@ -361,6 +374,10 @@ export function ChatWindow({
               <ImagePlus className="h-5 w-5" />
             </Button>
             <Input
+              id="chatMessage"
+              name="chatMessage"
+              autoComplete="off"
+              aria-label={labels.typeMessage}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={(e) => {

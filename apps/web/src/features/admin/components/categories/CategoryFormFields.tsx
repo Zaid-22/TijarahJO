@@ -96,6 +96,9 @@ export function CategoryFormFields({
             {isUploading ? "Uploading..." : formData.image.trim() ? "Change Image" : "Upload Image"}
           </Button>
           <input
+            id={`${idPrefix}-image-file`}
+            name={`${idPrefix}-image`}
+            aria-label="Upload category image"
             ref={fileInputRef}
             type="file"
             accept="image/*"

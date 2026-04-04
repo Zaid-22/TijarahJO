@@ -176,13 +176,17 @@ export function ReportsQueue() {
       <div className="flex flex-wrap gap-3">
         <div className="w-40">
           <Select
+            name="reportStatusFilter"
             value={statusFilter}
             onValueChange={(v) => {
               setStatusFilter(v);
               setPage(1);
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger
+              id="report-status-filter"
+              aria-label="Filter reports by status"
+            >
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -196,13 +200,17 @@ export function ReportsQueue() {
         </div>
         <div className="w-40">
           <Select
+            name="reportTypeFilter"
             value={typeFilter}
             onValueChange={(v) => {
               setTypeFilter(v);
               setPage(1);
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger
+              id="report-type-filter"
+              aria-label="Filter reports by type"
+            >
               <SelectValue placeholder="Type" />
             </SelectTrigger>
             <SelectContent>
@@ -367,14 +375,22 @@ export function ReportsQueue() {
                 </div>
               )}
               <div>
-                <div className="text-sm font-medium text-foreground mb-1.5">
+                <div
+                  id="report-status-update-label"
+                  className="text-sm font-medium text-foreground mb-1.5"
+                >
                   Update Status
                 </div>
                 <Select
+                  name="reportStatusUpdate"
                   value={String(newStatus)}
                   onValueChange={(v) => setNewStatus(Number(v))}
                 >
-                  <SelectTrigger className="mt-1.5">
+                  <SelectTrigger
+                    id="report-status-update"
+                    className="mt-1.5"
+                    aria-labelledby="report-status-update-label"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

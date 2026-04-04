@@ -220,9 +220,10 @@ export function SellItemDialogContent({
   return (
     <div className="space-y-4 py-4">
       <div className="space-y-2">
-        <Label htmlFor="title">{t.itemTitle}</Label>
+        <Label id="title-label" htmlFor="title">{t.itemTitle}</Label>
         <Input
           id="title"
+          name="title"
           placeholder={t.itemTitlePlaceholder}
           value={formData.title}
           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -236,9 +237,10 @@ export function SellItemDialogContent({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="price">{t.price}</Label>
+          <Label id="price-label" htmlFor="price">{t.price}</Label>
           <Input
             id="price"
+            name="price"
             type="number"
             min="0.01"
             step="0.01"
@@ -268,8 +270,9 @@ export function SellItemDialogContent({
           )}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="category">{t.category}</Label>
+          <Label id="category-label" htmlFor="category">{t.category}</Label>
           <Select
+            name="category"
             value={formData.category}
             onValueChange={(value) =>
               setFormData({ ...formData, category: value })
@@ -307,8 +310,9 @@ export function SellItemDialogContent({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="location">{t.location}</Label>
+        <Label id="location-label" htmlFor="location">{t.location}</Label>
         <Select
+          name="location"
           value={formData.location}
           onValueChange={(value) =>
             setFormData({ ...formData, location: value, area: "" })
@@ -345,12 +349,13 @@ export function SellItemDialogContent({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="area">
+        <Label id="area-label" htmlFor="area">
           {language === "ar"
             ? "المنطقة / الحي (اختياري)"
             : "Area / Neighborhood (Optional)"}
         </Label>
         <Select
+          name="area"
           value={formData.area}
           onValueChange={(value) => setFormData({ ...formData, area: value })}
           disabled={!formData.location || isLoadingAreas}
@@ -405,6 +410,7 @@ export function SellItemDialogContent({
         <Label htmlFor="description">{t.description}</Label>
         <Textarea
           id="description"
+          name="description"
           placeholder={t.descriptionPlaceholder}
           rows={4}
           value={formData.description}

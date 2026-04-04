@@ -254,6 +254,9 @@ export function CompleteProfilePage() {
             <form onSubmit={handleSubmit} className="space-y-5" noValidate>
               {/* Avatar Upload */}
               <input
+                id="complete-profile-avatar-upload"
+                name="avatar"
+                aria-label={labels.uploadPhotoOptional}
                 type="file"
                 ref={fileInputRef}
                 className="hidden"
@@ -317,6 +320,7 @@ export function CompleteProfilePage() {
                 value={phone}
                 error={errors.phone}
                 disabled={isLoading}
+                autoComplete="tel"
                 icon={Phone}
                 focused={focusedField === "phone"}
                 onChange={setPhone}
@@ -331,6 +335,7 @@ export function CompleteProfilePage() {
                 name="city"
                 label={labels.city}
                 required
+                autoComplete="address-level2"
                 icon={MapPin}
                 focused={focusedField === "city"}
                 onFocus={() => setFocusedField("city")}
@@ -352,6 +357,7 @@ export function CompleteProfilePage() {
                 name="area"
                 label={labels.area}
                 required
+                autoComplete="address-level3"
                 icon={MapPin}
                 focused={focusedField === "area"}
                 onFocus={() => setFocusedField("area")}

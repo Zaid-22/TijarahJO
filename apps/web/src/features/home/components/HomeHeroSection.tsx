@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Language } from "../../../types";
-import { getHeroBanners, type HeroBanner } from "./heroBannerData";
+import { type HeroBanner } from "./heroBannerData";
 
 type HomeHeroSectionProps = {
   language: Language;
@@ -60,9 +60,11 @@ export function HomeHeroSection({
             order: b.displayOrder,
           })));
         } else {
-          // Fallback
-          setBanners(getHeroBanners());
+          setBanners([]);
         }
+        setIsLoading(false);
+      }).catch((_error) => {
+        setBanners([]);
         setIsLoading(false);
       });
     });
@@ -187,17 +189,29 @@ export function HomeHeroSection({
                   
                   {/* Image Area - Square Asset */}
                   <div className="relative w-[180px] h-[180px] sm:w-[220px] sm:h-[220px] md:w-[280px] md:h-[280px] lg:w-[350px] lg:h-[350px] flex-shrink-0 z-0">
-                    <img
-                      src={banner.imageUrl}
-                      alt={resolveLocalizedBannerCopy(
-                        language,
-                        banner.altTextAr,
-                        banner.altText,
+                    <picture>
+                      {banner.imageSrcSet && (
+                        <source
+                          type="image/webp"
+                          srcSet={banner.imageSrcSet}
+                          sizes="(max-width: 639px) 180px, (max-width: 767px) 220px, (max-width: 1023px) 280px, 350px"
+                        />
                       )}
-                      className="absolute inset-0 w-full h-full object-contain filter drop-shadow-2xl"
-                      loading={index === 0 ? "eager" : "lazy"}
-                      draggable={false}
-                    />
+                      <img
+                        src={banner.pngFallbackUrl || banner.imageUrl}
+                        alt={resolveLocalizedBannerCopy(
+                          language,
+                          banner.altTextAr,
+                          banner.altText,
+                        )}
+                        width={640}
+                        height={640}
+                        className="absolute inset-0 w-full h-full object-contain filter drop-shadow-2xl"
+                        loading={index === 0 ? "eager" : "lazy"}
+                        fetchPriority={index === 0 ? "high" : "auto"}
+                        draggable={false}
+                      />
+                    </picture>
                   </div>
                 </div>
               </button>
@@ -254,12 +268,16 @@ export function HomeHeroSection({
                 aria-selected={index === currentIndex}
                 aria-label={`${language === "ar" ? "الشريحة" : "Slide"} ${index + 1}`}
                 onClick={() => goToSlide(index)}
-                className={`rounded-full flex-shrink-0 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
-                  index === currentIndex
-                    ? "w-8 h-2.5 bg-primary shadow-md"
-                    : "w-2.5 h-2.5 bg-muted-foreground/30 hover:bg-muted-foreground/50"
-                }`}
-              />
+                className="group flex items-center justify-center p-1 sm:p-2 transition-all duration-300 focus-visible:outline-none"
+              >
+                <span
+                  className={`block rounded-full flex-shrink-0 transition-all duration-300 group-focus-visible:ring-2 group-focus-visible:ring-primary group-focus-visible:ring-offset-2 ${
+                    index === currentIndex
+                      ? "w-8 h-2.5 bg-primary shadow-md"
+                      : "w-2.5 h-2.5 bg-muted-foreground/30 group-hover:bg-muted-foreground/50"
+                  }`}
+                />
+              </button>
             ))}
           </div>
         )}

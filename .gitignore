@@ -68,6 +68,8 @@ apps/web/test-results/
 *.pid
 parse_and_test.sh
 apps/api/src/Api/uploads/post-images/
+apps/api/src/Api/uploads/chat-images/
+apps/api/src/Api/uploads/user-avatars/
 
 # Database
 *.db

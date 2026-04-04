@@ -188,7 +188,7 @@ export const toProfilePageUserProfile = (
   city: userProfile.city,
   area: userProfile.area,
   bio: userProfile.bio,
-  avatar: userProfile.avatar,
+  avatar: userProfile.avatar || undefined,
   joinedDate: userProfile.joinedDate,
 });
 
@@ -206,7 +206,7 @@ export const toEditProfileFormProfile = (
   area: userProfile.area || "",
   location: userProfile.location,
   bio: userProfile.bio,
-  avatar: userProfile.avatar,
+  avatar: userProfile.avatar || undefined,
   joinedDate: userProfile.joinedDate,
 });
 

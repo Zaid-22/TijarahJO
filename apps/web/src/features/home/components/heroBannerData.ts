@@ -8,7 +8,11 @@ export interface HeroBanner {
   subtitleAr: string;
   buttonText: string;
   buttonTextAr: string;
-  imageUrl: string; 
+  imageUrl: string;
+  /** WebP srcSet for responsive delivery (e.g. "url-360w.webp 360w, url.webp 640w") */
+  imageSrcSet?: string;
+  /** PNG fallback for browsers that don't support WebP */
+  pngFallbackUrl?: string;
   bgClass: string;
   textClass: string;
   altText: string;
@@ -27,7 +31,9 @@ const DEFAULT_BANNERS: HeroBanner[] = [
     subtitleAr: "انضم إلى أكبر سوق إلكتروني في الأردن اليوم.",
     buttonText: "Start Now",
     buttonTextAr: "ابدأ الآن",
-    imageUrl: "/banners/asset-slide-1.png",
+    imageUrl: "/banners/asset-slide-1.webp",
+    imageSrcSet: "/banners/asset-slide-1-360w.webp 360w, /banners/asset-slide-1.webp 640w",
+    pngFallbackUrl: "/banners/asset-slide-1.png",
     bgClass: "bg-sky-50",
     textClass: "text-slate-900",
     altText: "Buy and Sell Easily in Jordan",
@@ -44,7 +50,9 @@ const DEFAULT_BANNERS: HeroBanner[] = [
     subtitleAr: "خصومات تصل إلى 50٪ على أفضل العلامات التجارية.",
     buttonText: "Shop Deals",
     buttonTextAr: "تسوق العروض",
-    imageUrl: "/banners/asset-slide-2.png",
+    imageUrl: "/banners/asset-slide-2.webp",
+    imageSrcSet: "/banners/asset-slide-2-360w.webp 360w, /banners/asset-slide-2.webp 640w",
+    pngFallbackUrl: "/banners/asset-slide-2.png",
     bgClass: "bg-slate-900",
     textClass: "text-white",
     altText: "Electronics Deals",
@@ -61,7 +69,9 @@ const DEFAULT_BANNERS: HeroBanner[] = [
     subtitleAr: "أثاث عصري لكل غرفة.",
     buttonText: "Explore Furniture",
     buttonTextAr: "استكشف الأثاث",
-    imageUrl: "/banners/asset-slide-3.png",
+    imageUrl: "/banners/asset-slide-3.webp",
+    imageSrcSet: "/banners/asset-slide-3-360w.webp 360w, /banners/asset-slide-3.webp 640w",
+    pngFallbackUrl: "/banners/asset-slide-3.png",
     bgClass: "bg-amber-50",
     textClass: "text-amber-950",
     altText: "Home and Furniture",
@@ -76,32 +86,9 @@ const DEFAULT_BANNERS: HeroBanner[] = [
 const BANNERS_STORAGE_KEY =
   STORAGE_KEYS.SETTINGS_PREFERENCES.replace("settings", "hero-banners-v2");
 
-const VALID_LINK_PREFIXES = ["/posts", "/search", "/category/", "/post/", "/sell", "/favorites", "/faq", "/help", "/terms", "/privacy"];
 
-function isValidBannerLink(url: string | undefined): boolean {
-  if (!url) return true; // no link is fine
-  return VALID_LINK_PREFIXES.some((prefix) => url.startsWith(prefix));
-}
 
-export function getHeroBanners(): HeroBanner[] {
-  try {
-    const stored = localStorage.getItem(BANNERS_STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored) as HeroBanner[];
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed
-          .filter((b) => b.isActive && isValidBannerLink(b.linkUrl))
-          .sort((a, b) => a.order - b.order);
-      }
-    }
-  } catch {
-    // fall through to defaults
-  }
 
-  return DEFAULT_BANNERS.filter((b) => b.isActive).sort(
-    (a, b) => a.order - b.order,
-  );
-}
 
 export function getAllHeroBanners(): HeroBanner[] {
   try {
@@ -119,10 +106,4 @@ export function getAllHeroBanners(): HeroBanner[] {
   return [...DEFAULT_BANNERS];
 }
 
-export function saveHeroBanners(banners: HeroBanner[]): void {
-  localStorage.setItem(BANNERS_STORAGE_KEY, JSON.stringify(banners));
-}
 
-export function resetHeroBannersToDefaults(): void {
-  localStorage.removeItem(BANNERS_STORAGE_KEY);
-}

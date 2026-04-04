@@ -144,6 +144,8 @@ export function AdvancedSearchFilters({
           ) : (
             <div className="relative">
               <select
+                name="category"
+                aria-label={labels.category}
                 value={filters.category || ""}
                 onChange={(e) => updateFilter("category", e.target.value)}
                 className="w-full appearance-none rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none transition-colors"
@@ -167,6 +169,8 @@ export function AdvancedSearchFilters({
       <FilterGroup label={labels.city}>
         <div className="relative">
           <select
+            name="city"
+            aria-label={labels.city}
             value={filters.city || ""}
             onChange={(e) => updateFilter("city", e.target.value)}
             className="w-full appearance-none rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none transition-colors"
@@ -190,6 +194,8 @@ export function AdvancedSearchFilters({
           <div className="flex-1">
             <Input
               type="number"
+              name="minPrice"
+              aria-label={labels.min}
               placeholder={labels.min}
               value={filters.minPrice ?? ""}
               onChange={(e) =>
@@ -206,6 +212,8 @@ export function AdvancedSearchFilters({
           <div className="flex-1">
             <Input
               type="number"
+              name="maxPrice"
+              aria-label={labels.max}
               placeholder={labels.max}
               value={filters.maxPrice ?? ""}
               onChange={(e) =>
@@ -225,6 +233,8 @@ export function AdvancedSearchFilters({
       <FilterGroup label={labels.sortBy}>
         <div className="relative">
           <select
+            name="sortBy"
+            aria-label={labels.sortBy}
             value={currentSort}
             onChange={(e) => {
               const [sortBy, sortOrder] = e.target.value.split("-") as [

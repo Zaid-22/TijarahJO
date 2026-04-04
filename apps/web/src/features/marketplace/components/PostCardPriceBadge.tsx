@@ -16,7 +16,7 @@ export function PostCardPriceBadge({
   return (
     <div
       className={cn(
-        "inline-flex items-end gap-1.5 rounded-full border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(255,255,255,0.84))] px-3 py-1.5 text-slate-950 shadow-[0_10px_22px_rgba(15,23,42,0.16),0_1px_0_rgba(255,255,255,0.88)_inset] backdrop-blur-xl supports-[backdrop-filter]:bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(255,255,255,0.72))]",
+        "inline-flex items-end gap-1.5 rounded-full border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(255,255,255,0.84))] px-3 py-1.5 text-slate-950 shadow-xl backdrop-blur-xl supports-[backdrop-filter]:bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(255,255,255,0.72))]",
         className,
       )}
     >
