@@ -17,4 +17,5 @@ export interface AuthContextType extends AuthState {
   loading: boolean;
   authError: string | null;
   clearAuthError: () => void;
+  setSession: (user: import("../types").User) => void;
 }
