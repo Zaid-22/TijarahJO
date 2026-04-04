@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { type LucideIcon } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
 
@@ -31,10 +32,14 @@ export function HomePromotionalBanner({
   variant = "primary",
   className = "",
 }: HomePromotionalBannerProps) {
+  const titleId = useId();
+  const descriptionId = useId();
   const isGradient = variant === "gradient";
 
   return (
     <section
+      aria-labelledby={titleId}
+      aria-describedby={descriptionId}
       className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 ${className}`}
     >
       <div
@@ -60,6 +65,7 @@ export function HomePromotionalBanner({
                 }`}
               >
                 <Icon
+                  aria-hidden="true"
                   className={`h-6 w-6 ${
                     isGradient ? "text-primary-foreground" : "text-primary"
                   }`}
@@ -68,6 +74,7 @@ export function HomePromotionalBanner({
             )}
             <div>
               <h3
+                id={titleId}
                 className={`text-lg sm:text-xl font-bold ${
                   isGradient ? "text-primary-foreground" : "text-foreground"
                 }`}
@@ -75,9 +82,10 @@ export function HomePromotionalBanner({
                 {title}
               </h3>
               <p
+                id={descriptionId}
                 className={`text-sm sm:text-base ${
                   isGradient
-                    ? "text-primary-foreground/80"
+                    ? "text-primary-foreground/90"
                     : "text-muted-foreground"
                 }`}
               >

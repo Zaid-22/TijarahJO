@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, useId } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { PostCard } from "../../marketplace/components/PostCard";
 import type { Language, Post } from "../../../types";
@@ -47,6 +47,8 @@ export function PostCarousel({
   onTagClick,
 }: PostCarouselProps) {
   const isRTL = language === "ar";
+  const headingId = useId();
+  const descriptionId = useId();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -94,22 +96,34 @@ export function PostCarousel({
   if (posts.length === 0) return null;
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+    <section
+      aria-labelledby={headingId}
+      aria-describedby={subtitle ? descriptionId : undefined}
+      className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10"
+    >
       {/* Section Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-foreground">
+          <h2
+            id={headingId}
+            className="text-xl sm:text-2xl font-bold text-foreground"
+          >
             {title}
           </h2>
           {subtitle && (
-            <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
+            <p
+              id={descriptionId}
+              className="text-sm text-muted-foreground mt-1"
+            >
+              {subtitle}
+            </p>
           )}
         </div>
         {onViewAll && viewAllLabel && (
           <button
             type="button"
             onClick={onViewAll}
-            className="group text-sm font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+            className="group flex items-center gap-1 text-sm font-medium text-primary transition-colors hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md"
           >
             <span>{viewAllLabel}</span>
             <svg
@@ -137,7 +151,7 @@ export function PostCarousel({
               type="button"
               onClick={() => onTagClick?.(tag.id)}
               className={cn(
-                "px-5 py-2.5 rounded-xl whitespace-nowrap text-sm sm:text-base font-semibold transition-all duration-200 border",
+                "px-5 py-2.5 rounded-xl whitespace-nowrap text-sm sm:text-base font-semibold transition-all duration-200 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                 activeTagId === tag.id
                   ? "bg-muted text-foreground border-transparent shadow-sm"
                   : "bg-transparent text-muted-foreground hover:bg-muted/50 border-transparent shadow-none"
@@ -156,7 +170,7 @@ export function PostCarousel({
           <button
             type="button"
             onClick={() => scroll("left")}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-card border border-border shadow-lg flex items-center justify-center text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all opacity-0 group-hover/carousel:opacity-100 -translate-x-1/2"
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-lg transition-all opacity-100 sm:opacity-0 sm:group-hover/carousel:opacity-100 hover:bg-primary hover:text-primary-foreground hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:opacity-100"
             aria-label={language === "ar" ? "التمرير لليسار" : "Scroll left"}
           >
             <ChevronLeft className="h-5 w-5" />
@@ -168,7 +182,7 @@ export function PostCarousel({
           <button
             type="button"
             onClick={() => scroll("right")}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-card border border-border shadow-lg flex items-center justify-center text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all opacity-0 group-hover/carousel:opacity-100 translate-x-1/2"
+            className="absolute right-0 top-1/2 z-10 flex h-10 w-10 translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-lg transition-all opacity-100 sm:opacity-0 sm:group-hover/carousel:opacity-100 hover:bg-primary hover:text-primary-foreground hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:opacity-100"
             aria-label={language === "ar" ? "التمرير لليمين" : "Scroll right"}
           >
             <ChevronRight className="h-5 w-5" />

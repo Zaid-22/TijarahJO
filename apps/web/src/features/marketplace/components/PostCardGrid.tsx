@@ -47,6 +47,7 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
         >
           <ImageWithFallback
             src={toThumbnailUrl(post.image) || post.image}
+            fallbackSrc={post.image}
             alt={post.name}
             className="absolute inset-0 block h-full min-h-full w-full min-w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
           />

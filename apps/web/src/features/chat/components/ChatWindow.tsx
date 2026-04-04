@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import { useState, useEffect, useRef, type ChangeEvent } from "react";
+import { useState, useEffect, useRef, useCallback, type ChangeEvent } from "react";
 import { useChat } from "../hooks/useChat";
 import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
@@ -86,7 +86,7 @@ export function ChatWindow({
   };
 
   // Auto-scroll inside the chat viewport only (prevents window/page jump).
-  useEffect(() => {
+  const scrollToBottom = useCallback(() => {
     const viewport = chatBodyRef.current?.querySelector(
       '[data-slot="scroll-area-viewport"]',
     ) as HTMLDivElement | null;
@@ -96,7 +96,11 @@ export function ChatWindow({
       top: viewport.scrollHeight,
       behavior: prefersReducedMotion ? "auto" : "smooth",
     });
-  }, [messages, prefersReducedMotion]);
+  }, [prefersReducedMotion]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
 
   useEffect(() => {
     return () => {
@@ -286,6 +290,7 @@ export function ChatWindow({
                               className="max-h-72 w-full object-cover"
                               loading="lazy"
                               decoding="async"
+                              onLoad={scrollToBottom}
                             />
                           </button>
                           {parsedContent.caption && (
