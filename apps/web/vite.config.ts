@@ -200,9 +200,8 @@ export default defineConfig(({ mode }) => {
               return "signalr-vendor";
             }
 
-            if (normalizedId.includes("/node_modules/framer-motion/")) {
-              return "motion-vendor";
-            }
+
+
 
             if (
               normalizedId.includes("/node_modules/react-router/") ||
