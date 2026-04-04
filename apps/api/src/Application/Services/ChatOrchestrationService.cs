@@ -122,7 +122,7 @@ public sealed class ChatOrchestrationService(
                     UserId = otherUserId,
                     IsOnline = true,
                     LastSeenAtUtc = DateTime.UtcNow,
-                    StatusText = string.Empty
+                    StatusText = "Online"
                 }
             };
         }
@@ -149,7 +149,7 @@ public sealed class ChatOrchestrationService(
                 UserId = otherUserId,
                 IsOnline = isOnline,
                 LastSeenAtUtc = lastSeenAtUtc,
-                StatusText = string.Empty
+                StatusText = isOnline ? "Online" : "Offline"
             }
         };
     }
