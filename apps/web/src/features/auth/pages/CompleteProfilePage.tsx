@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
+
 import { Loader2, MapPin, Phone, User } from "lucide-react";
 import { api } from "../../../services/api";
 import { useAppSettings } from "../../../contexts/AppSettingsContext";
@@ -207,22 +207,16 @@ export function CompleteProfilePage() {
   return (
     <PageShell tone="account">
       <div className="min-h-screen flex items-center justify-center px-4 py-8 sm:py-12">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="w-full max-w-lg"
+        <div
+          className="w-full max-w-lg animate-fade-in-up"
         >
           {/* Header */}
           <div className="text-center mb-8">
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.1, duration: 0.4 }}
-              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4"
+            <div
+              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4 animate-fade-in-up animation-delay-100"
             >
               <User className="w-8 h-8 text-primary" />
-            </motion.div>
+            </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
               {title}
             </h1>
@@ -232,11 +226,8 @@ export function CompleteProfilePage() {
           </div>
 
           {/* Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.4 }}
-            className="bg-card border border-border rounded-2xl shadow-xl p-6 sm:p-8"
+          <div
+            className="bg-card border border-border rounded-2xl shadow-xl p-6 sm:p-8 animate-fade-in-up animation-delay-200"
           >
             {generalError && (
               <Alert
@@ -374,34 +365,33 @@ export function CompleteProfilePage() {
               />
 
               {/* Submit */}
-              <motion.button
+              <button
                 type="submit"
                 disabled={isLoading}
-                whileHover={{ scale: isLoading ? 1 : 1.01 }}
-                whileTap={{ scale: isLoading ? 1 : 0.98 }}
-                className="w-full h-12 sm:h-14 rounded-xl bg-primary text-primary-foreground font-semibold text-sm sm:text-base transition-all duration-300 hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-primary/20 mt-2"
+                aria-label={isLoading ? labels.saveAndContinue : undefined}
+                className="w-full h-12 sm:h-14 rounded-xl bg-primary text-primary-foreground font-semibold text-sm sm:text-base transition-all duration-300 hover:bg-primary/90 hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-primary/20 mt-2"
               >
                 {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                  <Loader2
+                    aria-hidden="true"
+                    className="w-5 h-5 animate-spin mx-auto"
+                  />
                 ) : (
                   labels.saveAndContinue
                 )}
-              </motion.button>
+              </button>
             </form>
-          </motion.div>
+          </div>
 
           {/* Footer hint */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="text-center text-xs text-muted-foreground mt-6"
+          <p
+            className="text-center text-xs text-muted-foreground mt-6 animate-fade-in-up animation-delay-500"
           >
             {isRTL
               ? "هذه المعلومات مطلوبة لتفعيل حسابك بالكامل."
               : "This information is required to fully activate your account."}
-          </motion.p>
-        </motion.div>
+          </p>
+        </div>
       </div>
     </PageShell>
   );

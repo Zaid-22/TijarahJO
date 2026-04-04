@@ -1,5 +1,4 @@
-import type { ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useRef, type ReactNode } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import type { Language } from "../../../types";
 import { Button } from "../../../shared/ui/button";
@@ -44,6 +43,7 @@ export function MarketplaceDiscoveryControls({
   leftSlotClassName,
 }: MarketplaceDiscoveryControlsProps) {
   const isRTL = language === "ar";
+  const filterRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
@@ -78,21 +78,19 @@ export function MarketplaceDiscoveryControls({
       </MarketplaceDiscoveryToolbar>
 
       {mobileFilters ? (
-        <AnimatePresence>
-          {mobileFilters.isOpen ? (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="lg:hidden overflow-hidden"
-            >
-              <div className="flex flex-col gap-3 border-t border-border pt-3">
-                {mobileFilters.content}
-              </div>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
+        <div
+          ref={filterRef}
+          className={cn(
+            "lg:hidden overflow-hidden transition-all duration-300 ease-in-out",
+            mobileFilters.isOpen
+              ? "max-h-screen opacity-100"
+              : "max-h-0 opacity-0",
+          )}
+        >
+          <div className="flex flex-col gap-3 border-t border-border pt-3">
+            {mobileFilters.content}
+          </div>
+        </div>
       ) : null}
 
       {activeFilters}

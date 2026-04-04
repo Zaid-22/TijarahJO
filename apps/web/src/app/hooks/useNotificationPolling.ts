@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { api } from "../../services/api";
-import { chatService } from "../../services/chatService";
 import { logger } from "../../shared/lib/logger";
 import { deferredToast } from "../../utils/toast";
 import { toPositiveIntegerId } from "../../utils/idValidation";
@@ -13,12 +12,14 @@ const UNREAD_COUNT_REFRESH_MS = 30_000;
 /**
  * Manages unread notification count via polling, SignalR realtime updates,
  * and chat-route refresh. Returns the current count.
+ * Uses dynamic import for chatService to defer SignalR loading.
  */
 export function useNotificationPolling() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const subscriptionCleanupRef = useRef<(() => void) | null>(null);
 
   const normalizedPathname = location.pathname
     .toLowerCase()
@@ -60,58 +61,75 @@ export function useNotificationPolling() {
     };
   }, [isAuthenticated]);
 
-  // Realtime notifications via SignalR
+  // Realtime notifications via SignalR (dynamically loaded)
   useEffect(() => {
     if (!isAuthenticated) {
+      subscriptionCleanupRef.current?.();
+      subscriptionCleanupRef.current = null;
       return;
     }
 
-    return chatService.onNotificationReceived((notification) => {
-      const routeConversationId = toPositiveIntegerId(
-        new URLSearchParams(location.search).get("conversationId"),
-      );
-      const inChatWithSender =
-        isChatRoute &&
-        typeof notification.senderUserId === "number" &&
-        normalizedPathname.endsWith(`/${notification.senderUserId}`);
-      const inSameConversation =
-        !notification.conversationId ||
-        !routeConversationId ||
-        notification.conversationId === routeConversationId;
+    let isDisposed = false;
 
-      if (!inChatWithSender || !inSameConversation) {
-        deferredToast.info(`${notification.title}: ${notification.body}`);
+    import("../../services/chatService").then((mod) => {
+      if (isDisposed) {
+        return;
       }
 
-      if (
-        typeof window !== "undefined" &&
-        "Notification" in window &&
-        Notification.permission === "granted" &&
-        document.visibilityState !== "visible"
-      ) {
-        const nativeNotification = new Notification(notification.title, {
-          body: notification.body,
-          tag: `notif-${notification.notificationId}`,
-        });
-        nativeNotification.onclick = () => {
-          window.focus();
-          navigate(notification.routeUrl || "/chat");
-          nativeNotification.close();
-        };
-      }
+      subscriptionCleanupRef.current?.();
+      subscriptionCleanupRef.current = mod.chatService.onNotificationReceived((notification) => {
+        const routeConversationId = toPositiveIntegerId(
+          new URLSearchParams(location.search).get("conversationId"),
+        );
+        const inChatWithSender =
+          isChatRoute &&
+          typeof notification.senderUserId === "number" &&
+          normalizedPathname.endsWith(`/${notification.senderUserId}`);
+        const inSameConversation =
+          !notification.conversationId ||
+          !routeConversationId ||
+          notification.conversationId === routeConversationId;
 
-      void api.notifications
-        .getUnreadCount()
-        .then((count) => {
-          setUnreadNotificationsCount(count);
-        })
-        .catch((error) => {
-          logger.warn(
-            "[App] Failed to refresh unread count after realtime notification:",
-            error,
-          );
-        });
+        if (!inChatWithSender || !inSameConversation) {
+          deferredToast.info(`${notification.title}: ${notification.body}`);
+        }
+
+        if (
+          typeof window !== "undefined" &&
+          "Notification" in window &&
+          Notification.permission === "granted" &&
+          document.visibilityState !== "visible"
+        ) {
+          const nativeNotification = new Notification(notification.title, {
+            body: notification.body,
+            tag: `notif-${notification.notificationId}`,
+          });
+          nativeNotification.onclick = () => {
+            window.focus();
+            navigate(notification.routeUrl || "/chat");
+            nativeNotification.close();
+          };
+        }
+
+        void api.notifications
+          .getUnreadCount()
+          .then((count) => {
+            setUnreadNotificationsCount(count);
+          })
+          .catch((error) => {
+            logger.warn(
+              "[App] Failed to refresh unread count after realtime notification:",
+              error,
+            );
+          });
+      });
     });
+
+    return () => {
+      isDisposed = true;
+      subscriptionCleanupRef.current?.();
+      subscriptionCleanupRef.current = null;
+    };
   }, [
     isAuthenticated,
     isChatRoute,
