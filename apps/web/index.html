@@ -9,7 +9,10 @@
       content="TijarahJo — Jordan's trusted marketplace for buying and selling new and used items with confidence. Browse thousands of listings across all governorates."
     />
     <meta http-equiv="Content-Security-Policy" content="__CSP_POLICY__" />
-    <script src="/theme-init.js"></script>
+    <script>
+      // Inline theme init — prevents FOUC while avoiding render-blocking network request
+      try{var r=localStorage.getItem("tijarahjo_dark_mode"),v=r===null?null:JSON.parse(r),d=v===true||v==="dark";document.documentElement.classList.toggle("dark",d);document.documentElement.style.colorScheme=d?"dark":"light"}catch(e){document.documentElement.classList.remove("dark");document.documentElement.style.colorScheme="light"}
+    </script>
     <title>TijarahJo - Jordan's Marketplace</title>
   </head>
   <body>

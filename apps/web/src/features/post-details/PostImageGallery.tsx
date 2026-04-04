@@ -51,7 +51,7 @@ export function PostImageGallery({ post }: PostImageGalleryProps) {
 
   return (
     <>
-      <Card className="overflow-hidden shadow-[0_18px_42px_rgba(15,23,42,0.08)]">
+      <Card className="overflow-hidden shadow-2xl">
         <div className="relative w-full bg-muted">
           <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] min-h-72 sm:min-h-[22rem] lg:min-h-[24rem] overflow-hidden">
             {hasMultipleImages &&
@@ -69,6 +69,7 @@ export function PostImageGallery({ post }: PostImageGalleryProps) {
                     alt=""
                     className="hidden"
                     loading="eager"
+                    decoding="async"
                     onLoad={() => {}}
                   />
                 ) : null;

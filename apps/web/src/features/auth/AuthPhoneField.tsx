@@ -11,6 +11,7 @@ interface AuthPhoneFieldProps {
   value: string;
   error?: string;
   disabled?: boolean;
+  autoComplete?: string;
   icon: LucideIcon;
   focused: boolean;
   onChange: (value: string) => void;
@@ -39,8 +40,10 @@ export function AuthPhoneField({
   onChange,
   onFocus,
   onBlur,
+  autoComplete,
   isRTL = false,
 }: AuthPhoneFieldProps) {
+  const labelId = `${id}-label`;
   const isActive = focused || value.length > 0;
   const iconContainerClassName = "";
   const iconClassName = isActive ? "text-primary" : "text-muted-foreground";
@@ -73,6 +76,7 @@ export function AuthPhoneField({
   return (
     <div className="space-y-2">
       <label
+        id={labelId}
         htmlFor={id}
         className={`text-sm text-foreground block w-full ${isRTL ? "text-right" : "text-left"}`}
       >
@@ -103,7 +107,9 @@ export function AuthPhoneField({
         <Input
           id={id}
           name={name}
+          aria-labelledby={labelId}
           type="tel"
+          autoComplete={autoComplete || "tel"}
           dir="ltr"
           placeholder={cleanPlaceholder}
           value={value}

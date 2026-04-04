@@ -40,6 +40,16 @@ public class ChatController(
     private readonly ILogger<ChatController> _logger = logger;
     private readonly byte[] _chatImageSigningKey = SHA256.HashData(Encoding.UTF8.GetBytes($"{jwtOptions.SigningKey}::chat-image-download"));
     private static readonly FileExtensionContentTypeProvider ContentTypeProvider = new();
+    private static readonly Dictionary<string, string> KnownImageContentTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [".jpg"] = "image/jpeg",
+        [".jpeg"] = "image/jpeg",
+        [".png"] = "image/png",
+        [".webp"] = "image/webp",
+        [".gif"] = "image/gif",
+        [".bmp"] = "image/bmp",
+        [".svg"] = "image/svg+xml"
+    };
 
     private string BuildChatImageDownloadUrl(string storedPath, int conversationId)
     {
@@ -74,6 +84,14 @@ public class ChatController(
         byte[] expectedSignature = ComputeChatImageSignature(storedPath, conversationId);
         return providedSignature.Length == expectedSignature.Length &&
                CryptographicOperations.FixedTimeEquals(providedSignature, expectedSignature);
+    }
+
+    private static string NormalizeChatImageRequestPath(string value)
+    {
+        string normalized = Uri.UnescapeDataString(value.Trim());
+        normalized = normalized.Replace("\\", "/", StringComparison.Ordinal);
+        normalized = "/" + normalized.TrimStart('/');
+        return normalized.TrimEnd('/');
     }
 
     [HttpGet("history/{otherUserId}")]
@@ -284,7 +302,8 @@ public class ChatController(
 
         try
         {
-            if (Uri.TryCreate(url, UriKind.Absolute, out Uri? absoluteUri))
+            string candidatePath = url.Trim();
+            if (Uri.TryCreate(candidatePath, UriKind.Absolute, out Uri? absoluteUri))
             {
                 bool isHttpScheme =
                     absoluteUri.Scheme == Uri.UriSchemeHttp ||
@@ -294,17 +313,21 @@ public class ChatController(
                 {
                     return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Unsupported image URL.");
                 }
+
+                candidatePath = absoluteUri.AbsolutePath;
             }
 
-            string candidatePath = url.Trim();
-            if (Uri.TryCreate(candidatePath, UriKind.Absolute, out Uri? candidateUri))
-            {
-                candidatePath = candidateUri.AbsolutePath;
-            }
+            candidatePath = NormalizeChatImageRequestPath(candidatePath);
 
             string normalizedPublicBasePath = LocalPostImageFileStorageService.NormalizeRequestPath(_fileStorageOptions.PublicBasePath);
-            string normalizedChatPrefix = $"{normalizedPublicBasePath}/{_fileStorageOptions.ChatImagesPath.Trim('/')}";
-            if (!candidatePath.StartsWith(normalizedChatPrefix, StringComparison.OrdinalIgnoreCase))
+            string normalizedChatSegment = string.IsNullOrWhiteSpace(_fileStorageOptions.ChatImagesPath)
+                ? "chat-images"
+                : _fileStorageOptions.ChatImagesPath.Trim().Replace("\\", "/", StringComparison.Ordinal).Trim('/');
+            string normalizedChatPrefix = $"{normalizedPublicBasePath}/{normalizedChatSegment}";
+            bool isUnderChatPrefix =
+                candidatePath.Equals(normalizedChatPrefix, StringComparison.OrdinalIgnoreCase) ||
+                candidatePath.StartsWith($"{normalizedChatPrefix}/", StringComparison.OrdinalIgnoreCase);
+            if (!isUnderChatPrefix)
             {
                 return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Unsupported image URL.");
             }
@@ -317,16 +340,16 @@ public class ChatController(
             string uploadsRoot = LocalPostImageFileStorageService.ResolveAbsoluteUploadsRootPath(
                 _environment.ContentRootPath,
                 _fileStorageOptions);
-            string relativePath = candidatePath[normalizedPublicBasePath.Length..].TrimStart('/');
+            string relativePath = candidatePath[normalizedPublicBasePath.Length..]
+                .TrimStart('/')
+                .Replace("/", Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal);
             string absoluteFilePath = Path.GetFullPath(Path.Combine(uploadsRoot, relativePath));
             string chatRoot = LocalPostImageFileStorageService.ResolveAbsoluteChatImagesRootPath(
                 _environment.ContentRootPath,
                 _fileStorageOptions);
-            string normalizedChatRoot = chatRoot.EndsWith(Path.DirectorySeparatorChar)
-                ? chatRoot
-                : chatRoot + Path.DirectorySeparatorChar;
-
-            if (!absoluteFilePath.StartsWith(normalizedChatRoot, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            string relativeToChatRoot = Path.GetRelativePath(chatRoot, absoluteFilePath);
+            if (Path.IsPathRooted(relativeToChatRoot) ||
+                relativeToChatRoot.StartsWith("..", OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
             {
                 return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Unsupported image URL.");
             }
@@ -337,18 +360,16 @@ public class ChatController(
             }
 
             string fileName = Path.GetFileName(absoluteFilePath);
-            if (string.IsNullOrWhiteSpace(fileName))
-            {
-                fileName = "chat-image.jpg";
-            }
-
-            if (!ContentTypeProvider.TryGetContentType(fileName, out string? contentType))
+            string fileExtension = Path.GetExtension(fileName);
+            if (!KnownImageContentTypes.TryGetValue(fileExtension, out string? contentType) &&
+                !ContentTypeProvider.TryGetContentType(fileName, out contentType))
             {
                 contentType = "application/octet-stream";
             }
 
+            Response.Headers.CacheControl = "private, max-age=300";
             var stream = new FileStream(absoluteFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true);
-            return File(stream, contentType, fileName);
+            return File(stream, contentType);
         }
         catch (Exception)
         {

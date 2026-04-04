@@ -125,16 +125,12 @@ export function useChat(otherUserId?: number) {
 
     try {
       const imageUrl = await api.chat.uploadImage(file, otherUserId, postId);
-      if (!imageUrl) {
-        setError("Failed to upload image.");
-        return false;
-      }
-
-
       return sendMessage(serializeChatImageMessage(imageUrl, caption), postId);
     } catch (err) {
       logger.warn("[useChat] Failed to upload image", err);
-      setError("Failed to upload image.");
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to upload image.";
+      setError(errorMessage);
       return false;
     }
   };

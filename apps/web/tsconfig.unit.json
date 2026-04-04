@@ -24,6 +24,7 @@
     "src/services/api/schemas/commentsSchema.ts",
     "src/services/api/schemas/userSchema.ts",
     "src/services/api/shared.ts",
+    "src/services/api/csrfPolicy.ts",
     "src/services/api/chatNormalization.ts",
     "src/constants/appConfig.ts",
     "src/utils/idValidation.ts",

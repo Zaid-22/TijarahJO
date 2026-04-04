@@ -42,7 +42,7 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
 
       <div className="px-3 pt-3">
         <div
-          className={`${postCardMediaClass} pointer-events-none rounded-[20px] border border-border/40 bg-muted/30 aspect-[16/9] overflow-hidden shadow-[0_10px_24px_rgba(15,23,42,0.10)]`}
+          className={`${postCardMediaClass} pointer-events-none rounded-[20px] border border-border/40 bg-muted/30 aspect-[16/9] overflow-hidden shadow-lg`}
         >
           <ImageWithFallback
             src={post.image}
@@ -88,7 +88,7 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
 
       <CardContent className="pointer-events-none relative z-20 flex flex-grow flex-col px-4 pb-4 pt-3.5 sm:px-4.5 sm:pb-4.5 sm:pt-3.5">
         <div className="flex-grow space-y-1">
-          <h3 className="line-clamp-1 text-[1.02rem] font-semibold leading-[1.2] tracking-[-0.015em] text-foreground transition-colors group-hover:text-primary sm:text-[1.12rem]">
+          <h3 className="line-clamp-1 text-base font-semibold leading-[1.2] tracking-[-0.015em] text-foreground transition-colors group-hover:text-primary sm:text-lg">
             {post.name}
           </h3>
           {detailLocation ? (

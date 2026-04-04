@@ -133,7 +133,7 @@ export const PostCardList = React.memo(function PostCardList(
         <div
           className={
             postCardMediaClass +
-            " pointer-events-none rounded-[20px] border border-border/40 bg-muted/30 aspect-[16/9] overflow-hidden shadow-[0_10px_24px_rgba(15,23,42,0.10)] sm:h-full sm:min-h-[13.5rem]"
+            " pointer-events-none rounded-[20px] border border-border/40 bg-muted/30 aspect-[16/9] overflow-hidden shadow-lg sm:h-full sm:min-h-[13.5rem]"
           }
         >
           <ImageWithFallback
@@ -164,13 +164,13 @@ export const PostCardList = React.memo(function PostCardList(
       <div className="pointer-events-none relative z-20 flex flex-1 flex-col justify-between px-4 pb-4 pt-4 sm:px-5 sm:pb-5 sm:pt-5">
         <div>
           <div className="mb-3 flex items-start justify-between gap-4">
-            <h3 className="line-clamp-1 text-[1.12rem] font-semibold leading-[1.15] tracking-[-0.015em] text-foreground sm:text-[1.26rem]">
+            <h3 className="line-clamp-1 text-lg font-semibold leading-[1.15] tracking-[-0.015em] text-foreground sm:text-xl">
               {post.name}
             </h3>
           </div>
 
           {hasDescription && (
-            <p className="mb-3 line-clamp-2 max-w-3xl text-sm leading-6 text-muted-foreground sm:text-[0.98rem]">
+            <p className="mb-3 line-clamp-2 max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">
               {post.description}
             </p>
           )}
@@ -204,7 +204,7 @@ export const PostCardList = React.memo(function PostCardList(
             )}
 
             {hasSellerRating && (
-              <div className="flex flex-shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-2 py-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+              <div className="flex flex-shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
                 <Star className="h-3 w-3 fill-current" />
                 <span>
                   {sellerAverageRating?.toFixed(1)}
@@ -219,7 +219,7 @@ export const PostCardList = React.memo(function PostCardList(
 
         <div className="pointer-events-auto relative z-30 mt-4 flex items-stretch gap-2.5 sm:gap-3">
           <Button
-            className="h-11 min-w-0 flex-[1.15] rounded-xl bg-primary px-3 sm:px-4 text-[0.95rem] font-bold text-primary-foreground shadow-sm hover:bg-primary/90 flex items-center justify-center gap-1.5 transition-colors"
+            className="h-11 min-w-0 flex-[1.15] rounded-xl bg-primary px-3 sm:px-4 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary/90 flex items-center justify-center gap-1.5 transition-colors"
             onClick={handleChatClick}
           >
             <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-200" />
@@ -228,7 +228,7 @@ export const PostCardList = React.memo(function PostCardList(
 
           <Button
             variant="outline"
-            className="h-11 min-w-0 flex-[0.95] rounded-xl border-[1.5px] border-slate-300 bg-white px-3 sm:px-4 text-[0.92rem] font-semibold text-slate-700 shadow-none hover:bg-slate-50 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-colors"
+            className="h-11 min-w-0 flex-[0.95] rounded-xl border-[1.5px] border-slate-300 bg-white px-3 sm:px-4 text-sm font-semibold text-slate-700 shadow-none hover:bg-slate-50 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-colors"
             onClick={handleCallClick}
             disabled={hasPhone === false}
           >

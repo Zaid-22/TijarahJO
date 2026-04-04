@@ -128,6 +128,9 @@ export function EditProfileFormSections({
             </div>
           </div>
           <input
+            id="profile-photo-upload"
+            name="photo"
+            aria-label={t.uploadPhoto || "Upload profile photo"}
             type="file"
             ref={fileInputRef}
             className="hidden"
@@ -152,6 +155,8 @@ export function EditProfileFormSections({
               </Label>
               <Input
                 id="firstName"
+                name="firstName"
+                autoComplete="given-name"
                 value={formData.firstName}
                 onChange={(e) => onFieldChange("firstName", e.target.value)}
                 placeholder={t.enterFirstName || "Enter your first name"}
@@ -171,6 +176,8 @@ export function EditProfileFormSections({
               </Label>
               <Input
                 id="middleName"
+                name="middleName"
+                autoComplete="additional-name"
                 value={formData.middleName || ""}
                 onChange={(e) => onFieldChange("middleName", e.target.value)}
                 placeholder={t.enterMiddleName || "Enter your middle name"}
@@ -183,6 +190,8 @@ export function EditProfileFormSections({
               </Label>
               <Input
                 id="lastName"
+                name="lastName"
+                autoComplete="family-name"
                 value={formData.lastName}
                 onChange={(e) => onFieldChange("lastName", e.target.value)}
                 placeholder={t.enterLastName || "Enter your last name"}
@@ -200,7 +209,9 @@ export function EditProfileFormSections({
             </Label>
             <Input
               id="phone"
+              name="phone"
               type="tel"
+              autoComplete="tel"
               value={formData.phone}
               onChange={(e) => onPhoneChange(e.target.value)}
               placeholder={t.enterPhone || "+962"}
@@ -210,10 +221,10 @@ export function EditProfileFormSections({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="city">
+            <Label id="city-label" htmlFor="city">
               {t.city || "City"}
             </Label>
-            <Select value={formData.city} onValueChange={(value) => onFieldChange("city", value)}>
+            <Select name="city" autoComplete="address-level2" value={formData.city} onValueChange={(value) => onFieldChange("city", value)}>
               <SelectTrigger id="city" className={errors.city ? "border-destructive" : ""}>
                 <SelectValue placeholder={t.selectCity || "Select your city"} />
               </SelectTrigger>
@@ -241,10 +252,12 @@ export function EditProfileFormSections({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="area">
+            <Label id="area-label" htmlFor="area">
               {t.area || "Area"}
             </Label>
             <Select
+              name="area"
+              autoComplete="address-level3"
               value={formData.area}
               onValueChange={(value) => onFieldChange("area", value)}
               disabled={!formData.city || isLoadingAreas}

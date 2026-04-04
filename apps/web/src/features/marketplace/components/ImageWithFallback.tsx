@@ -85,6 +85,8 @@ export const ImageWithFallback = forwardRef<
       ref={ref}
       src={currentSrc}
       alt={alt}
+      loading="lazy"
+      decoding="async"
       className={resolvedImageClassName}
       {...rest}
       onError={handleError}

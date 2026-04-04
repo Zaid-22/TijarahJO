@@ -263,6 +263,7 @@ export function LoginForm({
                 disabled={isLoading}
                 icon={Phone}
                 focused={focusedField === "phone"}
+                autoComplete="tel"
                 onChange={(value) => onFieldChange("phone", value)}
                 onFocus={() => onFieldFocus("phone")}
                 onBlur={() => onFieldBlur("phone")}
@@ -281,6 +282,7 @@ export function LoginForm({
                   options={cityOptions}
                   error={errors.city}
                   disabled={isLoading}
+                  autoComplete="address-level2"
                   icon={MapPin}
                   focused={focusedField === "city"}
                   onChange={(value) => onFieldChange("city", value)}
@@ -298,6 +300,7 @@ export function LoginForm({
                   options={areaOptions}
                   error={errors.area}
                   disabled={isLoading || isAreaDisabled}
+                  autoComplete="address-level3"
                   icon={MapPin}
                   focused={focusedField === "area"}
                   onChange={(value) => onFieldChange("area", value)}
@@ -319,7 +322,7 @@ export function LoginForm({
                 error={errors.identifier}
                 disabled={isLoading}
                 type="text"
-                autoComplete="off"
+                autoComplete="username"
                 icon={Mail}
                 focused={focusedField === "identifier"}
                 onChange={(value) => onFieldChange("identifier", value)}

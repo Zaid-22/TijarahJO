@@ -97,7 +97,7 @@ export function PostSellerSidebar({
 
   return (
     <div className="space-y-3 lg:sticky lg:top-24">
-      <Card className="rounded-2xl border-slate-200/80 bg-gradient-to-b from-white to-slate-50/70 shadow-[0_22px_44px_rgba(15,23,42,0.09)]">
+      <Card className="rounded-2xl border-slate-200/80 bg-gradient-to-b from-white to-slate-50/70 shadow-2xl">
         <CardContent className="pt-5 pb-5">
           {onSellerClick ? (
             <button
@@ -202,7 +202,7 @@ export function PostSellerSidebar({
                 ) : (
                   <>
                     <Button
-                      className="w-full h-10 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_8px_20px_rgba(37,99,235,0.16)] transition-all hover:bg-primary/92"
+                      className="w-full h-10 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/92"
                       onClick={onChatWithSeller}
                     >
                       <MessageSquare className="h-4 w-4 me-2 text-primary-foreground/90" />
@@ -211,7 +211,7 @@ export function PostSellerSidebar({
 
                     <Button
                       variant="outline"
-                      className="w-full h-10 rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 shadow-[0_4px_12px_rgba(15,23,42,0.04)] transition-all hover:bg-slate-50 hover:text-slate-800 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                      className="w-full h-10 rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 shadow-md transition-all hover:bg-slate-50 hover:text-slate-800 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                       type="button"
                       onClick={onShowPhoneDialog}
                     >

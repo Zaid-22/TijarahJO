@@ -107,7 +107,7 @@ export function UnifiedProfileHeaderCard({
 
             {viewModel.canChat && onChatWithSeller ? (
               <Button
-                className="h-12 rounded-[14px] bg-primary px-5 text-base font-semibold text-primary-foreground shadow-[0_12px_24px_rgba(37,99,235,0.18)] hover:bg-primary/92"
+                className="h-12 rounded-[14px] bg-primary px-5 text-base font-semibold text-primary-foreground shadow-xl hover:bg-primary/92"
                 onClick={onChatWithSeller}
               >
                 <MessageSquare className="me-2 h-4.5 w-4.5 text-primary-foreground/90" />
@@ -118,7 +118,7 @@ export function UnifiedProfileHeaderCard({
             {viewModel.canCall ? (
               <Button
                 variant="outline"
-                className="h-12 rounded-[14px] border border-slate-300 bg-white px-5 text-base font-medium text-slate-700 shadow-[0_6px_16px_rgba(15,23,42,0.05)] backdrop-blur-sm hover:bg-slate-50 hover:text-slate-800 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                className="h-12 rounded-[14px] border border-slate-300 bg-white px-5 text-base font-medium text-slate-700 shadow-md backdrop-blur-sm hover:bg-slate-50 hover:text-slate-800 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                 disabled={!viewModel.profile.phone?.trim()}
                 onClick={() => {
                   if (!viewModel.profile.phone?.trim()) {

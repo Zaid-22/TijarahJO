@@ -57,6 +57,7 @@ export function AuthInputField({
   hideValueLabel = "Hide password",
   isRTL = false,
 }: AuthInputFieldProps) {
+  const labelId = `${id}-label`;
   const isActive = focused || value.length > 0;
   const iconContainerClassName = "";
   const iconClassName = isActive ? "text-primary" : "text-muted-foreground";
@@ -80,6 +81,7 @@ export function AuthInputField({
   return (
     <div className="space-y-2">
       <label
+        id={labelId}
         htmlFor={id}
         className={`text-sm text-foreground text-start`}
       >
@@ -94,6 +96,7 @@ export function AuthInputField({
         <Input
           id={id}
           name={name}
+          aria-labelledby={labelId}
           type={inputType}
           autoComplete={autoComplete}
           placeholder={placeholder}

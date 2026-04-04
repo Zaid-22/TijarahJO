@@ -657,6 +657,9 @@ export function LoginPage({
   const formComponent = (
     <>
       <input
+        id="auth-avatar-upload"
+        name="avatar"
+        aria-label={copy.form.uploadPhotoOptional}
         type="file"
         ref={fileInputRef}
         className="hidden"

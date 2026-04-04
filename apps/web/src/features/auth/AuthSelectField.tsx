@@ -15,6 +15,7 @@ interface AuthSelectFieldProps {
   options: Option[];
   error?: string;
   disabled?: boolean;
+  autoComplete?: string;
   icon: LucideIcon;
   focused: boolean;
   onChange: (value: string) => void;
@@ -43,8 +44,10 @@ export function AuthSelectField({
   onChange,
   onFocus,
   onBlur,
+  autoComplete,
   isRTL = false,
 }: AuthSelectFieldProps) {
+  const labelId = `${id}-label`;
   const isActive = focused || value.length > 0;
   const iconContainerClassName = "";
   const iconClassName = isActive ? "text-primary" : "text-muted-foreground";
@@ -71,6 +74,7 @@ export function AuthSelectField({
   return (
     <div className="space-y-2">
       <label
+        id={labelId}
         htmlFor={id}
         className={`text-sm text-foreground block w-full text-start`}
       >
@@ -89,6 +93,8 @@ export function AuthSelectField({
         <select
           id={id}
           name={name}
+          aria-labelledby={labelId}
+          autoComplete={autoComplete}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onFocus={onFocus}

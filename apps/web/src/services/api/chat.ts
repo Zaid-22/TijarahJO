@@ -10,6 +10,15 @@ import {
   parseSentChatMessagePayload,
 } from "./schemas/chatSchema";
 
+const MAX_CHAT_IMAGE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_CHAT_IMAGE_EXTENSIONS = new Set([
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+  ".gif",
+]);
+
 function normalizeChatUserId(userId: unknown): number | undefined {
   return toPositiveIntegerId(userId);
 }
@@ -129,14 +138,28 @@ export const chatApi = {
     file: File,
     receiverId: number,
     postId?: number,
-  ): Promise<string | null> => {
+  ): Promise<string> => {
     if (!(file instanceof File) || file.size <= 0) {
-      return null;
+      throw new Error("Please choose a valid image file.");
+    }
+
+    const fileName = file.name.trim().toLowerCase();
+    const extensionIndex = fileName.lastIndexOf(".");
+    const extension =
+      extensionIndex >= 0 ? fileName.slice(extensionIndex) : "";
+    if (!ALLOWED_CHAT_IMAGE_EXTENSIONS.has(extension)) {
+      throw new Error(
+        "Unsupported image format. Use JPG, JPEG, PNG, WEBP, or GIF.",
+      );
+    }
+
+    if (file.size > MAX_CHAT_IMAGE_BYTES) {
+      throw new Error("Image file exceeds the 10 MB size limit.");
     }
 
     const normalizedReceiverId = normalizeChatUserId(receiverId);
     if (!normalizedReceiverId) {
-      return null;
+      throw new Error("A valid receiver is required.");
     }
 
     const normalizedPostId =
@@ -155,10 +178,15 @@ export const chatApi = {
       timeoutMs: 60000, // 60 seconds
     });
 
-    if (response.success && response.data) {
-      return response.data.url || response.data.Url || null;
+    if (!response.success) {
+      throw new Error(response.error?.message || "Failed to upload image.");
     }
 
-    return null;
+    const imageUrl = response.data?.url || response.data?.Url;
+    if (!imageUrl) {
+      throw new Error("Upload failed because the server returned no image URL.");
+    }
+
+    return imageUrl;
   },
 };

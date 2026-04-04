@@ -163,6 +163,16 @@ class ChatService {
       }
     });
 
+    // Confirmation sent back to the caller after a successful SendMessage invocation.
+    // Without this handler SignalR logs a "No client method with the name 'messagesent' found" warning.
+    connection.on("MessageSent", (...args: unknown[]) => {
+      const payload = this.mapRealtimePayload(args);
+      const normalizedMessage = normalizeChatMessage(payload);
+      if (normalizedMessage) {
+        this.notifyListeners(normalizedMessage);
+      }
+    });
+
     connection.on("ReceiveNotification", (...args: unknown[]) => {
       const notification = this.mapNotificationPayload(args);
       if (notification) {

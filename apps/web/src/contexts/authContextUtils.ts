@@ -25,6 +25,7 @@ export const debugAuthError = (...args: unknown[]) => {
 export const AUTH_GUEST_KEY = "guestMode";
 export const AUTH_LOGOUT_KEY = "tijarahjo_logged_out";
 export const AUTH_SESSION_HINT_KEY = "tijarahjo_has_authenticated";
+export const AUTH_ADMIN_ACCESS_HINT_KEY = "tijarahjo_has_admin_access";
 export const AUTH_LEGACY_KEYS = [
   "tijarahjo_token",
   "tijarahjo_auth",
@@ -94,12 +95,21 @@ export const persistAuthSessionHint = (): void => {
   localStorage.setItem(AUTH_SESSION_HINT_KEY, "true");
 };
 
+export const persistAdminAccessHint = (hasAdminAccess: boolean): void => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  localStorage.setItem(AUTH_ADMIN_ACCESS_HINT_KEY, hasAdminAccess ? "true" : "false");
+};
+
 export const clearAuthSessionHint = (): void => {
   if (typeof window === "undefined") {
     return;
   }
 
   localStorage.removeItem(AUTH_SESSION_HINT_KEY);
+  localStorage.removeItem(AUTH_ADMIN_ACCESS_HINT_KEY);
 };
 
 export type AuthFallbackUser = {

@@ -28,6 +28,7 @@ import {
   isRetryableAuthError,
   normalizeMessage,
   pause,
+  persistAdminAccessHint,
   persistAuthSessionHint,
   SESSION_EXPIRED_MESSAGE,
 } from "./authContextUtils";
@@ -125,6 +126,11 @@ export function useAuthProviderController(): AuthContextType {
     localStorage.removeItem(AUTH_GUEST_KEY);
     localStorage.removeItem(AUTH_LOGOUT_KEY);
     persistAuthSessionHint();
+    persistAdminAccessHint(
+      user.role === "admin" ||
+        user.hasAdminAccess === true ||
+        (user.permissions?.length ?? 0) > 0,
+    );
     setIsGuest(false);
     setAuthError(null);
     setAuthState({
@@ -302,6 +308,12 @@ export function useAuthProviderController(): AuthContextType {
       if (guestMode === "true") {
         localStorage.removeItem(AUTH_GUEST_KEY);
       }
+      persistAuthSessionHint();
+      persistAdminAccessHint(
+        currentUserResult.user.role === "admin" ||
+          currentUserResult.user.hasAdminAccess === true ||
+          (currentUserResult.user.permissions?.length ?? 0) > 0,
+      );
       setIsGuest(false);
       setAuthState({
         isAuthenticated: true,

@@ -10,6 +10,9 @@ interface MarketplaceSearchFieldProps {
   clearLabel: string;
   onChange: (value: string) => void;
   onSubmit?: (value: string) => void;
+  id?: string;
+  name?: string;
+  autoComplete?: string;
   isRTL?: boolean;
   size?: "default" | "compact";
   className?: string;
@@ -32,6 +35,9 @@ export function MarketplaceSearchField({
   clearLabel,
   onChange,
   onSubmit,
+  id,
+  name,
+  autoComplete,
   isRTL = false,
   size = "default",
   className,
@@ -69,6 +75,10 @@ export function MarketplaceSearchField({
       />
 
       <Input
+        id={id}
+        name={name || "search"}
+        autoComplete={autoComplete || "off"}
+        aria-label={placeholder}
         placeholder={placeholder}
         value={value}
         onChange={(event) => onChange(event.target.value)}
