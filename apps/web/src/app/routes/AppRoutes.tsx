@@ -52,7 +52,7 @@ export function AppRoutes() {
       !isAuthLoading &&
       !isProfileLoading &&
       user?.role === "admin" &&
-      (location.pathname === "/" || location.pathname === "/login")
+      location.pathname === "/login"
     ) {
       navigate("/admin", { replace: true });
     }

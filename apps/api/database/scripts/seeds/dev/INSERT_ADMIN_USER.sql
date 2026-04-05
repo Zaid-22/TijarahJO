@@ -6,7 +6,7 @@ MERGE dbo.Users AS target
 USING
 (
     SELECT
-        'PBKDF2_SHA256$100000$4IVh016LywSFAR2xrkIA/A==$hL3YTmKQbHp+Efo+qJj7CFM0YgkA3O2o6DNh+R4XkB8=' AS HashedPassword,
+        'PBKDF2_SHA256$100000$fyQpso6qnOiDKHSIHUSP4A==$VI9qIEp2EMOo7RFhl7nt5NxEAxWWtEtRfFe5Pi6vggM=' AS HashedPassword,
         'admin@tijarahjo.local' AS Email,
         'Admin' AS FirstName,
         'User' AS LastName,
