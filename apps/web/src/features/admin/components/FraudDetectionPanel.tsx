@@ -22,6 +22,7 @@ import type {
   FraudSignalsResult,
   FraudSignal,
 } from "../../../services/api/admin";
+import { formatCompactTime } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
 
 const SIGNAL_META: Record<
@@ -162,7 +163,7 @@ export function FraudDetectionPanel() {
         <div className="flex items-center gap-3">
           {result && (
             <span className="text-xs text-muted-foreground">
-              Last checked: {new Date(result.checkedAt).toLocaleTimeString()}
+              Last checked: {formatCompactTime(result.checkedAt)}
             </span>
           )}
           <Button

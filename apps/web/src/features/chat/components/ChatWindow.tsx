@@ -3,7 +3,16 @@ import { useState, useEffect, useRef, useCallback, type ChangeEvent } from "reac
 import { useChat } from "../hooks/useChat";
 import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
-import { ImagePlus, Loader2, Send, X, Download, Flag } from "lucide-react";
+import {
+  ImagePlus,
+  Loader2,
+  Send,
+  X,
+  Download,
+  Flag,
+  Check,
+  CheckCheck,
+} from "lucide-react";
 import { ScrollArea } from "../../../shared/ui/scroll-area";
 import { cn } from "@/shared/ui/utils";
 import { api } from "../../../services/api";
@@ -11,6 +20,7 @@ import type { ChatPresence, Language } from "../../../types";
 import { usePrefersReducedMotion } from "../../../shared/hooks/usePrefersReducedMotion";
 import { parseChatMessageContent } from "../chatMessageContent";
 import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
+import { formatCompactTime } from "../../../shared/lib/dateTime";
 
 interface ChatWindowProps {
   otherUserId: number;
@@ -42,7 +52,7 @@ export function ChatWindow({
   const prefersReducedMotion = usePrefersReducedMotion();
   const labels = {
     back: language === "ar" ? "العودة" : "Back",
-    online: language === "ar" ? "متصل" : "Online",
+    online: language === "ar" ? "متصل الآن" : "Active now",
     offline: language === "ar" ? "غير متصل" : "Offline",
     lastSeen: language === "ar" ? "آخر ظهور" : "Last seen",
     loadingMessages:
@@ -63,6 +73,10 @@ export function ChatWindow({
       language === "ar" ? "صورة" : "Image",
     sending:
       language === "ar" ? "جارٍ الإرسال..." : "Sending...",
+    sent:
+      language === "ar" ? "تم الإرسال" : "Sent",
+    seen:
+      language === "ar" ? "تمت المشاهدة" : "Seen",
   };
   const dateTimeLocale = language === "ar" ? "ar-JO" : "en-US";
 
@@ -183,9 +197,20 @@ export function ChatWindow({
   const presenceLabel = presence.isOnline
     ? labels.online
     : presence.lastSeenAtUtc
-      ? `${labels.lastSeen} ${new Date(presence.lastSeenAtUtc).toLocaleString(dateTimeLocale)}`
+      ? `${labels.lastSeen} ${formatCompactTime(presence.lastSeenAtUtc, dateTimeLocale)}`
       : labels.offline;
   const canSend = (inputText.trim().length > 0 || Boolean(selectedImageFile)) && !isSending;
+
+  const getDeliveryState = (isRead: boolean) =>
+    isRead
+      ? {
+          Icon: CheckCheck,
+          label: labels.seen,
+        }
+      : {
+          Icon: Check,
+          label: labels.sent,
+        };
 
   return (
     <>
@@ -229,13 +254,16 @@ export function ChatWindow({
             </h3>
             <p
               className={cn(
-                "text-sm",
+                "flex items-center gap-2 text-sm",
                 presence.isOnline
                   ? "text-primary"
                   : "text-muted-foreground",
               )}
             >
-              {presence.statusText || presenceLabel}
+              {presence.isOnline && (
+                <span className="h-2 w-2 rounded-full bg-primary" />
+              )}
+              {presenceLabel}
             </p>
           </div>
         </div>
@@ -255,6 +283,7 @@ export function ChatWindow({
               {messages.map((msg) => {
                 const parsedContent = parseChatMessageContent(msg.content);
                 const isMe = msg.senderId.toString() === currentUser.id;
+                const deliveryState = getDeliveryState(msg.isRead);
                 const messageKey =
                   typeof msg.messageId === "number"
                     ? `msg-${msg.messageId}`
@@ -270,50 +299,92 @@ export function ChatWindow({
                   >
                     <div
                       className={cn(
-                        "max-w-[78%] rounded-2xl px-3 py-2 text-sm shadow-sm",
+                        parsedContent.type === "image"
+                          ? "max-w-[17rem] sm:max-w-[21rem] rounded-[1.4rem] p-1.5 text-sm shadow-sm"
+                          : "max-w-[78%] rounded-2xl px-3 py-2 text-sm shadow-sm",
                         isMe
                           ? "rounded-tr-md bg-primary text-primary-foreground"
                           : "rounded-tl-md border border-border/60 bg-muted/65 text-foreground",
                       )}
                     >
                       {parsedContent.type === "image" ? (
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                           <button
                             type="button"
                             onClick={() => setFullscreenImage(parsedContent.imageUrl)}
-                            className="block w-full cursor-zoom-in overflow-hidden transition-opacity hover:opacity-90 rounded-xl"
+                            className="block w-full cursor-zoom-in overflow-hidden rounded-[1.05rem] transition-opacity hover:opacity-90"
                             title={language === "ar" ? "اضغط لعرض الصورة" : "Click to view full image"}
                           >
                             <img
                               src={parsedContent.imageUrl}
                               alt={parsedContent.caption || labels.imageMessage}
-                              className="max-h-72 w-full object-cover"
+                              className="h-auto max-h-80 w-full rounded-[1.05rem] object-cover"
                               loading="lazy"
                               decoding="async"
                               onLoad={scrollToBottom}
                             />
                           </button>
-                          {parsedContent.caption && (
-                            <p className="whitespace-pre-wrap break-words">{parsedContent.caption}</p>
-                          )}
+                          <div
+                            className={cn(
+                              "flex items-end justify-between gap-3 px-2 pb-1 pt-0.5",
+                              parsedContent.caption ? "" : "min-h-7",
+                            )}
+                          >
+                            {parsedContent.caption ? (
+                              <p className="whitespace-pre-wrap break-words text-[13px] leading-5">
+                                {parsedContent.caption}
+                              </p>
+                            ) : (
+                              <span />
+                            )}
+                            <span className="flex shrink-0 items-center gap-1.5 text-[11px] opacity-75">
+                              <span
+                                className={cn(
+                                  isMe
+                                    ? "text-primary-foreground/90"
+                                    : "text-muted-foreground",
+                                )}
+                              >
+                                {formatCompactTime(msg.timestamp, dateTimeLocale)}
+                              </span>
+                              {isMe && (
+                                <span
+                                  className="inline-flex items-center gap-1 text-primary-foreground/90"
+                                  title={deliveryState.label}
+                                  aria-label={deliveryState.label}
+                                >
+                                  <deliveryState.Icon className="h-3.5 w-3.5" />
+                                  <span>{deliveryState.label}</span>
+                                </span>
+                              )}
+                            </span>
+                          </div>
                         </div>
                       ) : (
-                        <p className="whitespace-pre-wrap break-words">{parsedContent.text}</p>
+                        <>
+                          <p className="whitespace-pre-wrap break-words">{parsedContent.text}</p>
+                          <span
+                            className={cn(
+                              "mt-1 flex items-center justify-end gap-1.5 text-xs opacity-75",
+                              isMe
+                                ? "text-primary-foreground/90"
+                                : "text-muted-foreground",
+                            )}
+                          >
+                            <span>{formatCompactTime(msg.timestamp, dateTimeLocale)}</span>
+                            {isMe && (
+                              <span
+                                className="inline-flex items-center gap-1"
+                                title={deliveryState.label}
+                                aria-label={deliveryState.label}
+                              >
+                                <deliveryState.Icon className="h-3.5 w-3.5" />
+                                <span>{deliveryState.label}</span>
+                              </span>
+                            )}
+                          </span>
+                        </>
                       )}
-                      <span
-                        className={cn(
-                          "mt-1 block text-xs opacity-75",
-                          isMe
-                            ? "text-primary-foreground/90"
-                            : "text-muted-foreground",
-                        )}
-                      >
-                        {new Date(msg.timestamp).toLocaleTimeString(dateTimeLocale, {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: language !== "ar",
-                        })}
-                      </span>
                     </div>
                   </div>
                 );

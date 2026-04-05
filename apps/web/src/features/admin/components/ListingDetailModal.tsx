@@ -8,6 +8,7 @@ import { Badge } from "../../../shared/ui/badge";
 import { Button } from "../../../shared/ui/button";
 import { Ban, CheckCircle, Eye, ExternalLink } from "lucide-react";
 import type { AdminPostItem } from "../../../services/api/admin.types";
+import { formatCompactDate } from "../../../shared/lib/dateTime";
 
 type ListingDetailModalProps = {
   post: AdminPostItem | null;
@@ -79,7 +80,7 @@ export function ListingDetailModal({
             <div>
               <span className="text-muted-foreground">Posted</span>
               <p className="font-medium">
-                {new Date(post.createdAt).toLocaleDateString()}
+                {formatCompactDate(post.createdAt)}
               </p>
             </div>
           </div>

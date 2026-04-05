@@ -10,6 +10,7 @@ import {
   AdminConversationListResult,
   AdminConversationDetail,
 } from "../../../services/api/admin";
+import { formatCompactDateTime } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
 
 export function ChatInspection() {
@@ -129,7 +130,7 @@ export function ChatInspection() {
                             : "text-primary-foreground/70"
                         }`}
                       >
-                        {new Date(msg.createdAt).toLocaleString()}
+                        {formatCompactDateTime(msg.createdAt)}
                         {msg.isRead ? " · Read" : ""}
                       </p>
                     </div>
@@ -231,7 +232,7 @@ export function ChatInspection() {
                     </td>
                     <td className="px-6 py-4 text-muted-foreground text-xs">
                       {conv.lastMessageAt
-                        ? new Date(conv.lastMessageAt).toLocaleString()
+                        ? formatCompactDateTime(conv.lastMessageAt)
                         : "–"}
                     </td>
                     <td className="px-6 py-4 text-right">

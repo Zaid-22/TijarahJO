@@ -18,6 +18,7 @@ import {
 import { Badge } from "../../../shared/ui/badge";
 import { api } from "../../../services/api";
 import { AdminDashboardStats } from "../../../services/api/admin";
+import { formatCompactDateTime } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
 import { LoadingState } from "../../../shared/ui/loading-state";
 import {
@@ -343,7 +344,7 @@ export function AdminDashboard() {
                       </span>
                     </div>
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {new Date(action.changedAt).toLocaleString()}
+                      {formatCompactDateTime(action.changedAt)}
                     </span>
                   </div>
                 ))}

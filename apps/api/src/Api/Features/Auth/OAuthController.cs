@@ -14,33 +14,25 @@ namespace TijarahJo.Api.Features.Auth;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/auth/google")]
-public class OAuthController : ControllerBase
+public class OAuthController(
+    GoogleAuthService googleAuthService,
+    IAuthCommandService authCommands,
+    TwoFactorService twoFactorService,
+    ITokenService tokenService,
+    IUserPermissionService userPermissionService,
+    IEmailTwoFactorSender emailSender,
+    ILogger<OAuthController> logger) : ControllerBase
 {
     private const string GoogleStateCookieName = "tj-google-oauth-state";
     private const string GoogleNonceCookieName = "tj-google-oauth-nonce";
 
-    private readonly GoogleAuthService _googleAuthService;
-    private readonly IAuthCommandService _authCommands;
-    private readonly TwoFactorService _twoFactorService;
-    private readonly ITokenService _tokenService;
-    private readonly IUserPermissionService _userPermissionService;
-    private readonly ILogger<OAuthController> _logger;
-
-    public OAuthController(
-        GoogleAuthService googleAuthService,
-        IAuthCommandService authCommands,
-        TwoFactorService twoFactorService,
-        ITokenService tokenService,
-        IUserPermissionService userPermissionService,
-        ILogger<OAuthController> logger)
-    {
-        _googleAuthService = googleAuthService;
-        _authCommands = authCommands;
-        _twoFactorService = twoFactorService;
-        _tokenService = tokenService;
-        _userPermissionService = userPermissionService;
-        _logger = logger;
-    }
+    private readonly GoogleAuthService _googleAuthService = googleAuthService;
+    private readonly IAuthCommandService _authCommands = authCommands;
+    private readonly TwoFactorService _twoFactorService = twoFactorService;
+    private readonly ITokenService _tokenService = tokenService;
+    private readonly IUserPermissionService _userPermissionService = userPermissionService;
+    private readonly IEmailTwoFactorSender _emailSender = emailSender;
+    private readonly ILogger<OAuthController> _logger = logger;
 
     [HttpGet("start")]
     [AllowAnonymous]
@@ -149,6 +141,41 @@ public class OAuthController : ControllerBase
                 ));
             }
 
+            string loginCode = await _twoFactorService.GenerateAndStoreLoginCodeAsync(
+                result.User.UserID.Value,
+                cancellationToken
+            );
+
+            EmailTwoFactorSendResult sendResult = await _emailSender.SendTwoFactorCodeAsync(
+                result.User.Email,
+                result.User.FirstName,
+                loginCode,
+                TimeSpan.FromSeconds(900),
+                cancellationToken
+            );
+
+            if (!sendResult.Delivered)
+            {
+                _logger.LogWarning(
+                    "Two-factor Google login code delivery failed for user {UserId}: {FailureMessage}",
+                    result.User.UserID.Value,
+                    sendResult.FailureMessage
+                );
+
+                return Redirect(BuildGoogleFailureRedirectUri(
+                    sendResult.FailureMessage ?? "Two-factor email could not be sent."
+                ));
+            }
+
+            if (sendResult.DebugCode is { Length: > 0 } && _logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Two-factor Google login debug code issued for user {UserId}: {DebugCode}",
+                    result.User.UserID.Value,
+                    sendResult.DebugCode
+                );
+            }
+
             string challengeToken = _twoFactorService.IssueLoginChallengeToken(
                 result.User.UserID.Value,
                 DateTimeOffset.UtcNow
@@ -159,6 +186,14 @@ public class OAuthController : ControllerBase
             string challengeRedirect = QueryHelpers.AddQueryString(
                 _googleAuthService.GetFrontendFailureUrl(),
                 "twoFactorRequired", "1"
+            );
+            challengeRedirect = QueryHelpers.AddQueryString(
+                challengeRedirect,
+                "twoFactorMessage",
+                BuildTwoFactorPromptMessage(
+                    "Two-factor verification is required. Enter the code sent to your email.",
+                    sendResult.DebugCode
+                )
             );
             return Redirect(challengeRedirect);
         }
@@ -179,5 +214,15 @@ public class OAuthController : ControllerBase
     {
         string frontendFailureUrl = _googleAuthService.GetFrontendFailureUrl();
         return QueryHelpers.AddQueryString(frontendFailureUrl, "googleError", message);
+    }
+
+    private static string BuildTwoFactorPromptMessage(string message, string? debugCode)
+    {
+        if (string.IsNullOrWhiteSpace(debugCode))
+        {
+            return message;
+        }
+
+        return $"{message} Development code: {debugCode}.";
     }
 }

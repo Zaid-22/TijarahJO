@@ -6,6 +6,7 @@ import { Badge } from "../../../shared/ui/badge";
 import { Switch } from "../../../shared/ui/switch";
 import { api } from "../../../services/api";
 import { SystemSettingItem } from "../../../services/api/admin";
+import { formatCompactDateTime } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
 
 export function SystemSettingsPanel() {
@@ -123,7 +124,7 @@ export function SystemSettingsPanel() {
                 )}
                 <p className="text-xs text-muted-foreground">
                   Key: <code className="text-xs">{setting.settingKey}</code> ·
-                  Last updated: {new Date(setting.updatedAt).toLocaleString()}
+                  Last updated: {formatCompactDateTime(setting.updatedAt)}
                 </p>
               </div>
 

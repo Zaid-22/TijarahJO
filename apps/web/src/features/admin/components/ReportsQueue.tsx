@@ -33,6 +33,7 @@ import {
 import { Textarea } from "../../../shared/ui/textarea";
 import { api } from "../../../services/api";
 import { AdminReportItem } from "../../../services/api/admin";
+import { formatCompactDateTime } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
 
 const STATUS_LABELS: Record<number, string> = {
@@ -296,7 +297,7 @@ export function ReportsQueue() {
                   )}
                   <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
                     <span>
-                      Filed: {new Date(report.createdAt).toLocaleString()}
+                      Filed: {formatCompactDateTime(report.createdAt)}
                     </span>
                     {report.resolvedByName && (
                       <span>Resolved by: {report.resolvedByName}</span>

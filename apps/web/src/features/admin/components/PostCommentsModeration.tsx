@@ -13,6 +13,7 @@ import { logger } from "../../../shared/lib/logger";
 import { Button } from "../../../shared/ui/button";
 import { ConfirmActionDialog } from "../../../shared/ui/confirm-action-dialog";
 import { Input } from "../../../shared/ui/input";
+import { formatCompactDate } from "../../../shared/lib/dateTime";
 import { ADMIN_PERMISSIONS } from "../adminPermissions";
 
 export function PostCommentsModeration() {
@@ -200,7 +201,7 @@ export function PostCommentsModeration() {
                       {comment.replyCount}
                     </td>
                     <td className="px-6 py-4 text-xs text-muted-foreground">
-                      {new Date(comment.createdAt).toLocaleDateString()}
+                      {formatCompactDate(comment.createdAt)}
                     </td>
                     <td className="px-6 py-4 text-right">
                       {canModerate ? (

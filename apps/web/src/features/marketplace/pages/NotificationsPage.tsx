@@ -14,6 +14,7 @@ import { SubpageHeader } from "../../../shared/ui/subpage-header";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { InfoPageIntroCard } from "../../../shared/ui/info-page";
 import { api } from "../../../services/api";
+import { formatRelativeTime } from "../../../shared/lib/dateTime";
 import type { AppNotification, Language } from "../../../types";
 
 interface NotificationsPageProps {
@@ -38,10 +39,6 @@ const COPY = {
     loading: "Loading notifications...",
     error: "Failed to load notifications",
     retry: "Retry",
-    justNow: "Just now",
-    minutesAgo: (n: number) => `${n}m ago`,
-    hoursAgo: (n: number) => `${n}h ago`,
-    daysAgo: (n: number) => `${n}d ago`,
   },
   ar: {
     title: "الإشعارات",
@@ -56,27 +53,8 @@ const COPY = {
     loading: "جاري تحميل الإشعارات...",
     error: "فشل تحميل الإشعارات",
     retry: "إعادة المحاولة",
-    justNow: "الآن",
-    minutesAgo: (n: number) => `منذ ${n} دقيقة`,
-    hoursAgo: (n: number) => `منذ ${n} ساعة`,
-    daysAgo: (n: number) => `منذ ${n} يوم`,
   },
 };
-
-function formatTimeAgo(dateStr: string, lang: Language): string {
-  const copy = COPY[lang];
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diff = Math.max(0, now - then);
-  const minutes = Math.floor(diff / 60000);
-
-  if (minutes < 1) return copy.justNow;
-  if (minutes < 60) return copy.minutesAgo(minutes);
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return copy.hoursAgo(hours);
-  const days = Math.floor(hours / 24);
-  return copy.daysAgo(days);
-}
 
 function getNotificationType(
   notificationType: string,
@@ -113,6 +91,7 @@ export function NotificationsPage({
 }: NotificationsPageProps) {
   const isRTL = language === "ar";
   const copy = COPY[language];
+  const dateTimeLocale = language === "ar" ? "ar-JO" : "en-US";
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -281,7 +260,7 @@ export function NotificationsPage({
                         {notification.title}
                       </h4>
                       <span className="text-xs text-muted-foreground flex-shrink-0">
-                        {formatTimeAgo(notification.createdAt, language)}
+                        {formatRelativeTime(notification.createdAt, dateTimeLocale)}
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">

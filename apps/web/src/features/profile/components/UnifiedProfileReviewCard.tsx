@@ -1,6 +1,8 @@
 import { Star, User } from "lucide-react";
 import type { UnifiedProfileReview } from "../types";
 import type { UnifiedProfileLabels } from "./unifiedProfileLabels";
+import { formatCompactDateTime } from "../../../shared/lib/dateTime";
+import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
 
 interface UnifiedProfileReviewCardProps {
   review: UnifiedProfileReview;
@@ -13,12 +15,28 @@ export function UnifiedProfileReviewCard({
   labels,
   dateLocale,
 }: UnifiedProfileReviewCardProps) {
+  const formattedTimestamp = formatCompactDateTime(review.timestamp, dateLocale);
+
   return (
     <div className="rounded-2xl border border-border bg-background/80 p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
-            <User className="h-4 w-4 text-primary" />
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10">
+            {resolveAvatarSrc(review.reviewerAvatar) ? (
+              <img
+                src={resolveAvatarSrc(review.reviewerAvatar)!}
+                alt={review.reviewerName || `${labels.userLabel} ${review.reviewerID}`}
+                loading="lazy"
+                decoding="async"
+                className="h-full w-full object-cover"
+              />
+            ) : review.reviewerName ? (
+              <span className="text-sm font-semibold text-primary">
+                {getAvatarInitial(review.reviewerName)}
+              </span>
+            ) : (
+              <User className="h-4 w-4 text-primary" />
+            )}
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-foreground">
@@ -44,7 +62,7 @@ export function UnifiedProfileReviewCard({
           </div>
         </div>
         <span className="text-xs text-muted-foreground">
-          {new Date(review.timestamp).toLocaleDateString(dateLocale)}
+          {formattedTimestamp}
         </span>
       </div>
       <p className="mt-3 text-sm leading-6 text-muted-foreground">
