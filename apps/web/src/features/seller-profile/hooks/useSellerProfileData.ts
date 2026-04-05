@@ -144,6 +144,10 @@ export function useSellerProfileData(userId: string | undefined) {
             },
             reviewerId,
           ),
+          reviewerAvatar:
+            typeof (reviewRow.ReviewerAvatar ?? reviewRow.reviewerAvatar) === "string"
+              ? String(reviewRow.ReviewerAvatar ?? reviewRow.reviewerAvatar).trim() || undefined
+              : undefined,
           rating: safeRating,
           comment: String(reviewRow.Comment ?? reviewRow.comment ?? ""),
           timestamp,

@@ -338,19 +338,20 @@ export function ChatPage({ language }: ChatPageProps) {
   }
 
   return (
-    <PageShell tone="account">
-      <SubpageHeader
-        onBack={handlePageBack}
-        isRTL={isRTL}
-        backLabel={labels.back}
-        title={labels.messages}
-        showLogo={false}
-      />
-      <div className="max-w-7xl mx-auto px-4 py-4 h-full min-h-content-70vh">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+    <PageShell tone="account" className="h-[100dvh] overflow-hidden">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
+        <SubpageHeader
+          onBack={handlePageBack}
+          isRTL={isRTL}
+          backLabel={labels.back}
+          title={labels.messages}
+          showLogo={false}
+        />
+        <div className="mx-auto flex w-full max-w-7xl flex-1 min-h-0 overflow-hidden px-4 py-4">
+          <div className="grid h-full w-full min-h-0 grid-cols-1 gap-4 md:grid-cols-3">
           {/* Chat List - Hidden on mobile if chat selected */}
           <div
-            className={`h-full ${isMobile && selectedUserId ? "hidden" : "block"} md:col-span-1`}
+            className={`min-h-0 ${isMobile && selectedUserId ? "hidden" : "block"} md:col-span-1`}
           >
             {isLoadingChats ? (
               <LoadingState
@@ -373,7 +374,7 @@ export function ChatPage({ language }: ChatPageProps) {
 
           {/* Chat Window - Hidden on mobile if no chat selected */}
           <div
-            className={`h-full ${isMobile && !selectedUserId ? "hidden" : "block"} md:col-span-2`}
+            className={`min-h-0 ${isMobile && !selectedUserId ? "hidden" : "block"} md:col-span-2`}
           >
             {selectedUserId ? (
               <ChatWindow
@@ -413,6 +414,7 @@ export function ChatPage({ language }: ChatPageProps) {
               </div>
             )}
           </div>
+        </div>
         </div>
       </div>
     </PageShell>

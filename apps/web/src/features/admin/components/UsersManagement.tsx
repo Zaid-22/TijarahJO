@@ -8,6 +8,7 @@ import { AdminUserRecord } from "../../../services/api/users";
 import { CreateUserDialog } from "./users/CreateUserDialog";
 import { UsersTable } from "./users/UsersTable";
 import { CreateUserForm, initialCreateUserForm } from "./users/types";
+import { formatCompactDate } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
 import { useNavigate } from "react-router-dom";
 import { TypeToConfirmDialog } from "../../../shared/ui/type-to-confirm-dialog";
@@ -16,13 +17,7 @@ function formatJoinedDate(dateValue?: string): string {
   if (!dateValue) {
     return "N/A";
   }
-
-  const parsedDate = new Date(dateValue);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return dateValue;
-  }
-
-  return parsedDate.toLocaleDateString();
+  return formatCompactDate(dateValue) || dateValue;
 }
 
 export function UsersManagement() {

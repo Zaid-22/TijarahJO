@@ -45,6 +45,7 @@ export interface UnifiedProfileReview {
   reviewID: number | string;
   reviewerID: number;
   reviewerName: string;
+  reviewerAvatar?: string;
   rating: number;
   comment: string;
   timestamp: string;

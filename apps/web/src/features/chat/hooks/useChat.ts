@@ -7,6 +7,24 @@ import { toPositiveIntegerId } from "../../../utils/idValidation";
 import { logger } from "../../../shared/lib/logger";
 import { serializeChatImageMessage } from "../chatMessageContent";
 
+function isSameChatMessage(left: Message, right: Message): boolean {
+  if (
+    left.messageId !== undefined &&
+    right.messageId !== undefined &&
+    left.messageId === right.messageId
+  ) {
+    return true;
+  }
+
+  return (
+    left.senderId === right.senderId &&
+    left.receiverId === right.receiverId &&
+    (left.postId ?? undefined) === (right.postId ?? undefined) &&
+    left.content === right.content &&
+    left.timestamp === right.timestamp
+  );
+}
+
 export function useChat(otherUserId?: number) {
   const { user, isAuthenticated } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -54,22 +72,10 @@ export function useChat(otherUserId?: number) {
         (msg.senderId === otherUserId || msg.receiverId === otherUserId)
       ) {
         setMessages((prev) => {
-          // Deduplicate the sender's own optimistic messages
-          const currentUserIdNum = toPositiveIntegerId(user?.id);
-          if (currentUserIdNum && msg.senderId === currentUserIdNum) {
-            const existingOptIdx = prev.findIndex(
-              (m) => m.messageId === undefined && m.content === msg.content
-            );
-            if (existingOptIdx !== -1) {
-              const newArr = [...prev];
-              newArr[existingOptIdx] = msg;
-              return newArr;
-            }
-          }
-          // Default: check if we already have it to avoid extreme edge case dupes, otherwise append
-          if (msg.messageId && prev.some((m) => m.messageId === msg.messageId)) {
+          if (prev.some((existingMessage) => isSameChatMessage(existingMessage, msg))) {
             return prev;
           }
+
           return [...prev, msg];
         });
       }
@@ -121,7 +127,15 @@ export function useChat(otherUserId?: number) {
         trimmedContent,
         normalizedPostId,
       );
-      setMessages((prev) => [...prev, sentMessage]);
+      if (sentMessage) {
+        setMessages((prev) => {
+          if (prev.some((existingMessage) => isSameChatMessage(existingMessage, sentMessage))) {
+            return prev;
+          }
+
+          return [...prev, sentMessage];
+        });
+      }
       setError(null);
       return true;
     } catch (err) {

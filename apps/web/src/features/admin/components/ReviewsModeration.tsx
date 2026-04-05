@@ -10,6 +10,7 @@ import {
   AdminReviewListResult,
 } from "../../../services/api/admin";
 import { ConfirmActionDialog } from "../../../shared/ui/confirm-action-dialog";
+import { formatCompactDate } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
 
 export function ReviewsModeration() {
@@ -172,7 +173,7 @@ export function ReviewsModeration() {
                       {review.comment || "No comment"}
                     </td>
                     <td className="px-6 py-4 text-muted-foreground text-xs">
-                      {new Date(review.createdAt).toLocaleDateString()}
+                      {formatCompactDate(review.createdAt)}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <Button

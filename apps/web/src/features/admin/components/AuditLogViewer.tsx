@@ -7,6 +7,7 @@ import { Input } from "../../../shared/ui/input";
 import { Badge } from "../../../shared/ui/badge";
 import { api } from "../../../services/api";
 import { AdminAuditLogResult } from "../../../services/api/admin";
+import { formatCompactDateTime } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
 
 const TABLE_OPTIONS = ["", "Users", "Posts", "Reviews", "Categories", "Roles"];
@@ -207,7 +208,7 @@ export function AuditLogViewer() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground text-xs">
-                        {new Date(entry.changedAt).toLocaleString()}
+                        {formatCompactDateTime(entry.changedAt)}
                       </td>
                     </tr>
                     {expandedRow === entry.auditLogID && (

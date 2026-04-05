@@ -39,7 +39,7 @@ export function PageShell({
           <div className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-secondary/10 blur-3xl will-change-transform" />
         </>
       )}
-      <div className="relative">{children}</div>
+      <div className="relative min-h-0 h-full">{children}</div>
     </div>
   );
 }

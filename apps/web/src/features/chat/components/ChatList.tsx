@@ -1,6 +1,7 @@
 import { cn } from "@/shared/ui/utils";
 import type { Language } from "../../../types";
 import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
+import { formatCompactTime } from "../../../shared/lib/dateTime";
 
 interface ChatListProps {
   chats: {
@@ -97,11 +98,7 @@ export function ChatList({
                       "ms-2",
                     )}
                   >
-                    {new Date(chat.timestamp).toLocaleTimeString(dateLocale, {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: language !== "ar",
-                    })}
+                    {formatCompactTime(chat.timestamp, dateLocale)}
                   </span>
                 </div>
                 <p

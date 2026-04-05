@@ -12,6 +12,8 @@ export type RawReview = {
   reviewerID?: unknown;
   ReviewerName?: unknown;
   reviewerName?: unknown;
+  ReviewerAvatar?: unknown;
+  reviewerAvatar?: unknown;
   reviewer?: { name?: string };
   Reviewer?: { Name?: string };
   ReviewedUserID?: unknown;

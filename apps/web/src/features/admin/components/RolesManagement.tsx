@@ -24,6 +24,7 @@ import { Label } from "../../../shared/ui/label";
 import { toast } from "sonner";
 import { api } from "../../../services/api";
 import { ConfirmActionDialog } from "../../../shared/ui/confirm-action-dialog";
+import { formatCompactDate } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
 import { PermissionsDialog } from "./PermissionsDialog";
 
@@ -61,11 +62,7 @@ function formatDate(value: string): string {
   if (!value) {
     return "N/A";
   }
-  const parsedDate = new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return value;
-  }
-  return parsedDate.toLocaleDateString();
+  return formatCompactDate(value) || value;
 }
 
 function isSystemRoleId(roleId: string): boolean {

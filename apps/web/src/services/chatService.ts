@@ -213,7 +213,7 @@ class ChatService {
     receiverId: number,
     content: string,
     postId?: number,
-  ): Promise<Message> {
+  ): Promise<Message | null> {
     const normalizedReceiverId = toPositiveIntegerId(receiverId);
     if (!normalizedReceiverId) {
       throw new Error("Invalid receiver ID");
@@ -230,16 +230,6 @@ class ChatService {
     if (!this.currentUserId) {
       throw new Error("Current user is not connected");
     }
-
-    const localEchoMessage: Message = {
-      senderId: this.currentUserId,
-      receiverId: normalizedReceiverId,
-      conversationId: undefined,
-      content: trimmedContent,
-      postId: normalizedPostId,
-      timestamp: new Date().toISOString(),
-      isRead: false,
-    };
 
     if (
       !this.connection ||
@@ -263,7 +253,10 @@ class ChatService {
         trimmedContent,
         normalizedPostId ?? null,
       );
-      return localEchoMessage;
+      // Realtime success is reflected through hub callbacks (`MessageSent` /
+      // `ReceiveMessage`), so returning null here avoids appending a duplicate
+      // local echo in the chat hook.
+      return null;
     } catch (err) {
       logger.warn("SendMessage Error. Falling back to REST:", err);
       const fallbackMessage = await chatApi.sendMessage(

@@ -97,15 +97,16 @@ public class AuthController(
             if (sendResult.DebugCode is { Length: > 0 } && _logger.IsEnabled(LogLevel.Information))
             {
                 _logger.LogInformation(
-                    "Two-factor login debug code issued for user {UserId}.",
-                    result.User.UserID.Value
+                    "Two-factor login debug code issued for user {UserId}: {DebugCode}",
+                    result.User.UserID.Value,
+                    sendResult.DebugCode
                 );
             }
 
             return Ok(AuthShared.BuildTwoFactorChallengeResponse(
                 _twoFactorService,
                 result.User.UserID.Value,
-                "Two-factor verification is required."
+                BuildTwoFactorPromptMessage("Two-factor verification is required.", sendResult.DebugCode)
             ));
         }
 
@@ -298,5 +299,15 @@ public class AuthController(
         Response.Cookies.Delete("XSRF-TOKEN", csrfDeleteOptions);
 
         return Ok(new ApiMessageResponse { Message = "Logged out successfully" });
+    }
+
+    private static string BuildTwoFactorPromptMessage(string message, string? debugCode)
+    {
+        if (string.IsNullOrWhiteSpace(debugCode))
+        {
+            return message;
+        }
+
+        return $"{message} Development code: {debugCode}.";
     }
 }

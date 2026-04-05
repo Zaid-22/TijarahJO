@@ -178,7 +178,7 @@ public class TwoFactorController(
             _logger.LogInformation("[2FA] Disable code email sent to {Email}", user.Email);
             if (sendResult.DebugCode is { Length: > 0 })
             {
-                _logger.LogInformation("[2FA] Disable code debug fallback active for {Email}", user.Email);
+                _logger.LogInformation("[2FA] Disable code debug fallback active for {Email}: {DebugCode}", user.Email, sendResult.DebugCode);
             }
 
             return Ok(new TwoFactorSetupStartResponse
@@ -186,7 +186,10 @@ public class TwoFactorController(
                 Success = true,
                 SecretKey = "",
                 OtpAuthUri = "",
-                Message = "A verification code has been sent to your email to confirm this action."
+                Message = BuildTwoFactorPromptMessage(
+                    "A verification code has been sent to your email to confirm this action.",
+                    sendResult.DebugCode
+                )
             });
         }
 
@@ -216,7 +219,7 @@ public class TwoFactorController(
         _logger.LogInformation("[2FA] Setup code email sent to {Email}", user.Email);
         if (setupSendResult.DebugCode is { Length: > 0 })
         {
-            _logger.LogInformation("[2FA] Setup code debug fallback active for {Email}", user.Email);
+            _logger.LogInformation("[2FA] Setup code debug fallback active for {Email}: {DebugCode}", user.Email, setupSendResult.DebugCode);
         }
 
         user = user with { TwoFactorPendingSecret = "PENDING_EMAIL_SETUP" }; // Just a marker
@@ -231,7 +234,10 @@ public class TwoFactorController(
             Success = true,
             SecretKey = "",
             OtpAuthUri = "",
-            Message = "A verification code has been sent to your email. Please enter it to confirm."
+            Message = BuildTwoFactorPromptMessage(
+                "A verification code has been sent to your email. Please enter it to confirm.",
+                setupSendResult.DebugCode
+            )
         });
     }
 
@@ -332,5 +338,15 @@ public class TwoFactorController(
         {
             Message = "Two-factor authentication has been disabled."
         });
+    }
+
+    private static string BuildTwoFactorPromptMessage(string message, string? debugCode)
+    {
+        if (string.IsNullOrWhiteSpace(debugCode))
+        {
+            return message;
+        }
+
+        return $"{message} Development code: {debugCode}.";
     }
 }

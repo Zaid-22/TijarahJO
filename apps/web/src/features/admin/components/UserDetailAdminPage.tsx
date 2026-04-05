@@ -13,6 +13,7 @@ import { api } from "../../../services/api";
 import { AdminUserDetails } from "../../../services/api/admin";
 import { LoadingState } from "../../../shared/ui/loading-state";
 import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
+import { formatCompactDate } from "../../../shared/lib/dateTime";
 
 export function UserDetailAdminPage() {
   const { id } = useParams<{ id: string }>();
@@ -144,9 +145,9 @@ export function UserDetailAdminPage() {
                 <Calendar className="w-4 h-4 text-muted-foreground" />
                 <span>
                   Joined{" "}
-                  {new Date(
-                    String(user.joinDate || user.joinedDate || new Date().toISOString())
-                  ).toLocaleDateString()}
+                  {formatCompactDate(
+                    String(user.joinDate || user.joinedDate || new Date().toISOString()),
+                  )}
                 </span>
               </div>
             </div>
@@ -197,7 +198,7 @@ export function UserDetailAdminPage() {
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">
                           {post.categoryName} • {post.price ?? 0} JOD •{" "}
-                          {new Date(post.createdAt).toLocaleDateString()}
+                          {formatCompactDate(post.createdAt)}
                         </div>
                       </div>
                       <Badge variant="outline">
@@ -235,7 +236,7 @@ export function UserDetailAdminPage() {
                           {"☆".repeat(Math.max(0, 5 - (review.rating || 0)))}
                         </div>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(review.createdAt || new Date()).toLocaleDateString()}
+                          {formatCompactDate(review.createdAt || new Date().toISOString())}
                         </span>
                       </div>
                       <p className="text-sm italic">

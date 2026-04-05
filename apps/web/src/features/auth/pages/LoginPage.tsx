@@ -164,6 +164,7 @@ export function LoginPage({
     const googleError = params.get("googleError");
     const twoFactorRequired = params.get("twoFactorRequired");
     const queryTwoFactorToken = params.get("twoFactorToken");
+    const queryTwoFactorMessage = params.get("twoFactorMessage");
 
     if (googleError) {
       const normalizedMessage =
@@ -176,7 +177,7 @@ export function LoginPage({
         dispatch({
           type: "ENTER_TWO_FACTOR",
           token: queryTwoFactorToken.trim(),
-          message: copy.errors.twoFactorRequiredPrompt,
+          message: queryTwoFactorMessage?.trim() || copy.errors.twoFactorRequiredPrompt,
         });
       } else {
         api.auth.getTwoFactorChallenge().then((res) => {
@@ -184,7 +185,10 @@ export function LoginPage({
             dispatch({
               type: "ENTER_TWO_FACTOR",
               token: res.twoFactorToken,
-              message: res.message || copy.errors.twoFactorRequiredPrompt,
+              message:
+                queryTwoFactorMessage?.trim() ||
+                res.message ||
+                copy.errors.twoFactorRequiredPrompt,
             });
           } else {
             dispatch({
@@ -203,6 +207,7 @@ export function LoginPage({
     params.delete("googleError");
     params.delete("twoFactorRequired");
     params.delete("twoFactorToken");
+    params.delete("twoFactorMessage");
     const nextQuery = params.toString();
     const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash}`;
     window.history.replaceState(window.history.state, "", nextUrl);
