@@ -12,6 +12,7 @@ import { Badge } from "../../../shared/ui/badge";
 import { api } from "../../../services/api";
 import { AdminUserDetails } from "../../../services/api/admin";
 import { LoadingState } from "../../../shared/ui/loading-state";
+import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
 
 export function UserDetailAdminPage() {
   const { id } = useParams<{ id: string }>();
@@ -100,15 +101,16 @@ export function UserDetailAdminPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex justify-center mb-6">
-              <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center overflow-hidden border border-border">
-                {user.avatar ? (
+              <div className="w-24 h-24 rounded-full bg-primary/10 text-primary flex items-center justify-center overflow-hidden border border-border text-3xl font-semibold">
+                {resolveAvatarSrc(user.avatar as string | undefined) ? (
                   <img
-                    src={String(user.avatar)}
+                    src={resolveAvatarSrc(user.avatar as string | undefined)!}
                     alt="User avatar"
                     className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <User className="w-12 h-12 text-muted-foreground" />
+                  <span>{getAvatarInitial((user.firstName || user.email || "") as string)}</span>
                 )}
               </div>
             </div>

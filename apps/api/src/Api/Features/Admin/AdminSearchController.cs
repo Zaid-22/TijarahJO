@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TijarahJo.Infrastructure.Persistence;
 using TijarahJo.Api.Common.Authorization;
+using System.Text.Json.Serialization;
 
 namespace TijarahJo.Api.Features.Admin;
 
@@ -11,14 +12,9 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/search")]
 [Authorize(Policy = AuthorizationPolicies.AdminAccess)]
-public class AdminSearchController : ControllerBase
+public class AdminSearchController(TijarahJoDbContext dbContext) : ControllerBase
 {
-    private readonly TijarahJoDbContext _dbContext;
-
-    public AdminSearchController(TijarahJoDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
+    private readonly TijarahJoDbContext _dbContext = dbContext;
 
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -34,9 +30,9 @@ public class AdminSearchController : ControllerBase
         var users = await _dbContext.Users
             .AsNoTracking()
             .Where(u => !u.IsDeleted &&
-                (u.FirstName.Contains(term, StringComparison.CurrentCultureIgnoreCase) ||
-                 (u.LastName != null && u.LastName.Contains(term, StringComparison.CurrentCultureIgnoreCase)) ||
-                 u.Email.Contains(term, StringComparison.CurrentCultureIgnoreCase)))
+                (EF.Functions.Like(u.FirstName, $"%{term}%") ||
+                 (u.LastName != null && EF.Functions.Like(u.LastName, $"%{term}%")) ||
+                 EF.Functions.Like(u.Email, $"%{term}%")))
             .OrderBy(u => u.FirstName)
             .Take(maxResults)
             .Select(u => new SearchResultItem
@@ -51,7 +47,7 @@ public class AdminSearchController : ControllerBase
         // Search Posts
         var posts = await _dbContext.Posts
             .AsNoTracking()
-            .Where(p => !p.IsDeleted && p.PostTitle.Contains(term, StringComparison.CurrentCultureIgnoreCase))
+            .Where(p => !p.IsDeleted && EF.Functions.Like(p.PostTitle, $"%{term}%"))
             .OrderByDescending(p => p.CreatedAt)
             .Take(maxResults)
             .Select(p => new SearchResultItem
@@ -66,7 +62,7 @@ public class AdminSearchController : ControllerBase
         // Search Categories
         var categories = await _dbContext.Categories
             .AsNoTracking()
-            .Where(c => !c.IsDeleted && c.CategoryName.Contains(term, StringComparison.CurrentCultureIgnoreCase))
+            .Where(c => !c.IsDeleted && EF.Functions.Like(c.CategoryName, $"%{term}%"))
             .OrderBy(c => c.CategoryName)
             .Take(maxResults)
             .Select(c => new SearchResultItem
@@ -87,17 +83,30 @@ public class AdminSearchController : ControllerBase
     }
 }
 
+
 public sealed class AdminSearchResult
 {
-    public List<SearchResultItem> Users { get; set; } = new();
-    public List<SearchResultItem> Posts { get; set; } = new();
-    public List<SearchResultItem> Categories { get; set; } = new();
+    [JsonPropertyName("users")]
+    public List<SearchResultItem> Users { get; set; } = [];
+    
+    [JsonPropertyName("posts")]
+    public List<SearchResultItem> Posts { get; set; } = [];
+    
+    [JsonPropertyName("categories")]
+    public List<SearchResultItem> Categories { get; set; } = [];
 }
 
 public sealed class SearchResultItem
 {
+    [JsonPropertyName("id")]
     public int Id { get; set; }
+    
+    [JsonPropertyName("type")]
     public string Type { get; set; } = string.Empty;
+    
+    [JsonPropertyName("title")]
     public string Title { get; set; } = string.Empty;
+    
+    [JsonPropertyName("subtitle")]
     public string Subtitle { get; set; } = string.Empty;
 }
