@@ -1,5 +1,6 @@
 import { User, Camera, Upload } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../../shared/ui/avatar";
+import { resolveAvatarSrc } from "../../shared/lib/avatar";
 
 interface AuthAvatarUploadProps {
   avatarPreview?: string;
@@ -14,6 +15,8 @@ export function AuthAvatarUpload({
   tapToUploadText,
   uploadPhotoOptionalText,
 }: AuthAvatarUploadProps) {
+  const resolvedAvatarSrc = resolveAvatarSrc(avatarPreview);
+
   return (
     <div className="flex flex-col items-center justify-center mb-6">
       <button
@@ -24,7 +27,7 @@ export function AuthAvatarUpload({
       >
         <Avatar className="w-24 h-24 border border-border">
           <AvatarImage
-            src={avatarPreview}
+            src={resolvedAvatarSrc || undefined}
             className="object-cover object-center"
           />
           <AvatarFallback className="bg-muted text-muted-foreground">

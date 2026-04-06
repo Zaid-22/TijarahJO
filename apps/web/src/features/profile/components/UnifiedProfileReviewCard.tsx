@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Star, User } from "lucide-react";
 import type { UnifiedProfileReview } from "../types";
 import type { UnifiedProfileLabels } from "./unifiedProfileLabels";
@@ -15,20 +16,27 @@ export function UnifiedProfileReviewCard({
   labels,
   dateLocale,
 }: UnifiedProfileReviewCardProps) {
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   const formattedTimestamp = formatCompactDateTime(review.timestamp, dateLocale);
+  const reviewerAvatarSrc = resolveAvatarSrc(review.reviewerAvatar);
+
+  useEffect(() => {
+    setAvatarLoadFailed(false);
+  }, [review.reviewerAvatar]);
 
   return (
     <div className="rounded-2xl border border-border bg-background/80 p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10">
-            {resolveAvatarSrc(review.reviewerAvatar) ? (
+            {reviewerAvatarSrc && !avatarLoadFailed ? (
               <img
-                src={resolveAvatarSrc(review.reviewerAvatar)!}
+                src={reviewerAvatarSrc}
                 alt={review.reviewerName || `${labels.userLabel} ${review.reviewerID}`}
                 loading="lazy"
                 decoding="async"
                 className="h-full w-full object-cover"
+                onError={() => setAvatarLoadFailed(true)}
               />
             ) : review.reviewerName ? (
               <span className="text-sm font-semibold text-primary">

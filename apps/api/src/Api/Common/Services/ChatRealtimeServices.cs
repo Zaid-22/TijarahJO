@@ -20,6 +20,13 @@ public interface IChatRealtimeDeliveryService
         MessageResponseDTO messagePayload,
         NotificationResponseDTO? notificationPayload,
         CancellationToken cancellationToken = default);
+
+    Task DeliverReadReceiptAsync(
+        int senderUserId,
+        int conversationId,
+        int readerUserId,
+        int lastReadMessageId,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class InMemoryChatPresenceService : IChatPresenceService
@@ -158,6 +165,38 @@ public sealed class ChatRealtimeDeliveryService : IChatRealtimeDeliveryService
 
             return tasks;
         });
+
+        await Task.WhenAll(sendTasks);
+    }
+
+    public async Task DeliverReadReceiptAsync(
+        int senderUserId,
+        int conversationId,
+        int readerUserId,
+        int lastReadMessageId,
+        CancellationToken cancellationToken = default)
+    {
+        if (lastReadMessageId < 1)
+        {
+            return;
+        }
+
+        IReadOnlyCollection<string> senderConnections = await _presence.GetUserConnectionIdsAsync(senderUserId, cancellationToken);
+        if (senderConnections.Count == 0)
+        {
+            return;
+        }
+
+        IEnumerable<Task> sendTasks = senderConnections.Select(connectionId =>
+            _hubContext.Clients.Client(connectionId).SendAsync(
+                "MessagesRead",
+                new
+                {
+                    ConversationId = conversationId,
+                    ReaderUserId = readerUserId,
+                    LastReadMessageId = lastReadMessageId
+                },
+                cancellationToken));
 
         await Task.WhenAll(sendTasks);
     }

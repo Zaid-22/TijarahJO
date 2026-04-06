@@ -14,6 +14,7 @@ import { AuthPhoneField } from "../AuthPhoneField";
 import { AuthSelectField } from "../AuthSelectField";
 import { AuthAvatarUpload } from "../AuthAvatarUpload";
 import { Alert, AlertDescription } from "../../../shared/ui/alert";
+import { Button } from "../../../shared/ui/button";
 import { AlertCircle } from "lucide-react";
 
 /** Returns true when the avatar is empty or is just the local default placeholder. */
@@ -192,6 +193,19 @@ export function CompleteProfilePage() {
   const subtitle = isRTL
     ? "الرجاء إكمال المعلومات التالية للمتابعة استخدام المنصة."
     : "Please complete the following information to continue using the platform.";
+  const normalizedPhone = normalizeJordanPhone(phone);
+  const canSubmit = Boolean(
+    firstName.trim() &&
+    lastName.trim() &&
+    normalizedPhone &&
+    normalizedPhone.length >= 12 &&
+    city &&
+    area,
+  );
+  const canInteract = canSubmit && !isLoading;
+  const submitButtonClassName = canInteract
+    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+    : "bg-muted text-muted-foreground cursor-not-allowed opacity-70 hover:bg-muted";
 
   const labels = {
     firstName: isRTL ? "الاسم الأول" : "First Name",
@@ -201,6 +215,7 @@ export function CompleteProfilePage() {
     area: isRTL ? "المنطقة" : "Area",
     tapToUpload: isRTL ? "انقر لتحميل صورة" : "Tap to upload photo",
     uploadPhotoOptional: isRTL ? "صورة الملف الشخصي (اختياري)" : "Profile Photo (Optional)",
+    saving: isRTL ? "جارٍ الحفظ..." : "Saving...",
     saveAndContinue: isRTL ? "حفظ ومتابعة" : "Save and Continue",
   };
 
@@ -212,11 +227,6 @@ export function CompleteProfilePage() {
         >
           {/* Header */}
           <div className="text-center mb-8">
-            <div
-              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4 animate-fade-in-up animation-delay-100"
-            >
-              <User className="w-8 h-8 text-primary" />
-            </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
               {title}
             </h1>
@@ -365,21 +375,21 @@ export function CompleteProfilePage() {
               />
 
               {/* Submit */}
-              <button
+              <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={!canSubmit || isLoading}
                 aria-label={isLoading ? labels.saveAndContinue : undefined}
-                className="w-full h-12 sm:h-14 rounded-xl bg-primary text-primary-foreground font-semibold text-sm sm:text-base transition-all duration-300 hover:bg-primary/90 hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-primary/20 mt-2"
+                className={`mt-2 h-14 w-full text-base transition-all duration-300 ${submitButtonClassName}`}
               >
                 {isLoading ? (
-                  <Loader2
-                    aria-hidden="true"
-                    className="w-5 h-5 animate-spin mx-auto"
-                  />
+                  <div className="flex items-center gap-2">
+                    <Loader2 aria-hidden="true" className="h-5 w-5 animate-spin" />
+                    <span>{labels.saving}</span>
+                  </div>
                 ) : (
                   labels.saveAndContinue
                 )}
-              </button>
+              </Button>
             </form>
           </div>
 

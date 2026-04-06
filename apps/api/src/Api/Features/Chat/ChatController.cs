@@ -114,6 +114,30 @@ public class ChatController(
 
         List<MessageResponseDTO> response = [.. result.Value
             .Select(item => DTOMapper.ToMessageResponseDTO(item.Message, item.ReceiverId, item.PostId))];
+
+        if (response.Count > 0)
+        {
+            int conversationId = response[0].ConversationId;
+            int lastReadMessageId = response
+                .Where(message =>
+                    message.SenderId == otherUserId &&
+                    message.ReceiverId == currentUserId &&
+                    message.IsRead)
+                .Select(message => message.MessageId)
+                .DefaultIfEmpty(0)
+                .Max();
+
+            if (conversationId > 0 && lastReadMessageId > 0)
+            {
+                await _realtimeDelivery.DeliverReadReceiptAsync(
+                    otherUserId,
+                    conversationId,
+                    currentUserId,
+                    lastReadMessageId,
+                    cancellationToken);
+            }
+        }
+
         return Ok(response);
     }
 

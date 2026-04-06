@@ -76,7 +76,7 @@ public class AuthController(
                 result.User.Email,
                 result.User.FirstName,
                 code,
-                TimeSpan.FromSeconds(900),
+                _twoFactorService.LoginChallengeLifetime,
                 cancellationToken
             );
 

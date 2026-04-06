@@ -83,6 +83,12 @@ export interface ChatPresence {
   statusText?: string;
 }
 
+export interface ChatReadReceipt {
+  conversationId: number;
+  readerUserId: number;
+  lastReadMessageId: number;
+}
+
 export interface AppNotification {
   notificationId: number;
   notificationType: string;

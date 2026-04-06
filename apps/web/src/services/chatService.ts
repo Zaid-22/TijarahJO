@@ -4,7 +4,7 @@ import {
   HubConnectionState,
   LogLevel,
 } from "@microsoft/signalr";
-import { AppNotification, Message } from "../types";
+import { AppNotification, ChatReadReceipt, Message } from "../types";
 import { APP_CONFIG } from "../constants/appConfig";
 import { toPositiveIntegerId } from "../utils/idValidation";
 import { chatApi } from "./api/chat";
@@ -26,6 +26,7 @@ class ChatService {
   private connection: HubConnection | null = null;
   private currentUserId: number | null = null;
   private messageCallbacks: ((message: Message) => void)[] = [];
+  private readReceiptCallbacks: ((receipt: ChatReadReceipt) => void)[] = [];
   private notificationCallbacks: ((notification: AppNotification) => void)[] = [];
   private disconnectCallbacks: (() => void)[] = [];
   private reconnectAttempt = 0;
@@ -122,6 +123,36 @@ class ChatService {
     };
   }
 
+  private mapReadReceiptPayload(args: unknown[]): ChatReadReceipt | null {
+    const payload = args.length === 1 && args[0] && typeof args[0] === "object"
+      ? (args[0] as Record<string, unknown>)
+      : null;
+
+    if (!payload) {
+      return null;
+    }
+
+    const conversationId = toPositiveIntegerId(
+      payload.ConversationId ?? payload.conversationId,
+    );
+    const readerUserId = toPositiveIntegerId(
+      payload.ReaderUserId ?? payload.readerUserId,
+    );
+    const lastReadMessageId = toPositiveIntegerId(
+      payload.LastReadMessageId ?? payload.lastReadMessageId,
+    );
+
+    if (!conversationId || !readerUserId || !lastReadMessageId) {
+      return null;
+    }
+
+    return {
+      conversationId,
+      readerUserId,
+      lastReadMessageId,
+    };
+  }
+
   public async connect(currentUserId: number) {
     const normalizedCurrentUserId = toPositiveIntegerId(currentUserId);
     if (!normalizedCurrentUserId) {
@@ -177,6 +208,13 @@ class ChatService {
       const notification = this.mapNotificationPayload(args);
       if (notification) {
         this.notifyNotificationListeners(notification);
+      }
+    });
+
+    connection.on("MessagesRead", (...args: unknown[]) => {
+      const receipt = this.mapReadReceiptPayload(args);
+      if (receipt) {
+        this.notifyReadReceiptListeners(receipt);
       }
     });
 
@@ -284,6 +322,19 @@ class ChatService {
 
   private notifyListeners(message: Message) {
     this.messageCallbacks.forEach((cb) => cb(message));
+  }
+
+  public onMessagesRead(callback: (receipt: ChatReadReceipt) => void) {
+    this.readReceiptCallbacks.push(callback);
+    return () => {
+      this.readReceiptCallbacks = this.readReceiptCallbacks.filter(
+        (cb) => cb !== callback,
+      );
+    };
+  }
+
+  private notifyReadReceiptListeners(receipt: ChatReadReceipt) {
+    this.readReceiptCallbacks.forEach((cb) => cb(receipt));
   }
 
   public onNotificationReceived(callback: (notification: AppNotification) => void) {

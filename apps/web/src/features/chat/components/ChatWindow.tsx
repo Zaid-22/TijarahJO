@@ -331,13 +331,13 @@ export function ChatWindow({
                             )}
                           >
                             {parsedContent.caption ? (
-                              <p className="whitespace-pre-wrap break-words text-[13px] leading-5">
+                              <p className="whitespace-pre-wrap break-words text-sm leading-5">
                                 {parsedContent.caption}
                               </p>
                             ) : (
                               <span />
                             )}
-                            <span className="flex shrink-0 items-center gap-1.5 text-[11px] opacity-75">
+                            <span className="flex shrink-0 items-center gap-1.5 text-xs opacity-75">
                               <span
                                 className={cn(
                                   isMe
