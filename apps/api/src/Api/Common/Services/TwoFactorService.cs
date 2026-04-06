@@ -83,6 +83,7 @@ public sealed class TwoFactorService
     }
 
     public string Issuer => _options.Issuer;
+    public TimeSpan LoginChallengeLifetime => TimeSpan.FromSeconds(_options.LoginChallengeLifetimeSeconds);
 
     public string IssueLoginChallengeToken(int userId, DateTimeOffset utcNow)
     {

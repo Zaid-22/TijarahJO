@@ -66,6 +66,8 @@ export function useChat(otherUserId?: number) {
 
   // Listen for messages
   useEffect(() => {
+    const currentUserId = toPositiveIntegerId(user?.id);
+
     const unsub = chatService.onMessageReceived((msg) => {
       if (
         otherUserId &&
@@ -78,8 +80,54 @@ export function useChat(otherUserId?: number) {
 
           return [...prev, msg];
         });
+
+        if (
+          currentUserId &&
+          msg.senderId === otherUserId &&
+          msg.receiverId === currentUserId
+        ) {
+          void api.chat.getChatHistory(otherUserId).catch((refreshError) => {
+            logger.warn("[useChat] Failed to refresh history for read receipt", refreshError);
+          });
+        }
       }
     });
+    return unsub;
+  }, [otherUserId, user?.id]);
+
+  useEffect(() => {
+    const currentUserId = toPositiveIntegerId(user?.id);
+    if (!otherUserId || !currentUserId) {
+      return;
+    }
+
+    const unsub = chatService.onMessagesRead((receipt) => {
+      if (receipt.readerUserId !== otherUserId) {
+        return;
+      }
+
+      setMessages((prev) =>
+        prev.map((message) => {
+          const belongsToConversation = message.conversationId === receipt.conversationId;
+
+          if (
+            message.senderId !== currentUserId ||
+            !belongsToConversation ||
+            message.isRead ||
+            message.messageId === undefined ||
+            message.messageId > receipt.lastReadMessageId
+          ) {
+            return message;
+          }
+
+          return {
+            ...message,
+            isRead: true,
+          };
+        }),
+      );
+    });
+
     return unsub;
   }, [otherUserId, user?.id]);
 

@@ -150,7 +150,7 @@ public class OAuthController(
                 result.User.Email,
                 result.User.FirstName,
                 loginCode,
-                TimeSpan.FromSeconds(900),
+                _twoFactorService.LoginChallengeLifetime,
                 cancellationToken
             );
 
@@ -181,7 +181,12 @@ public class OAuthController(
                 DateTimeOffset.UtcNow
             );
 
-            AuthShared.SetShortLivedAuthCookie(Response, "tj-2fa-challenge", challengeToken, TimeSpan.FromMinutes(5));
+            AuthShared.SetShortLivedAuthCookie(
+                Response,
+                "tj-2fa-challenge",
+                challengeToken,
+                _twoFactorService.LoginChallengeLifetime
+            );
 
             string challengeRedirect = QueryHelpers.AddQueryString(
                 _googleAuthService.GetFrontendFailureUrl(),
