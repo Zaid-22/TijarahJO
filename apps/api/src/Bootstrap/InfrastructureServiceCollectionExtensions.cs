@@ -123,6 +123,10 @@ public static class InfrastructureServiceCollectionExtensions
 
         services.AddScoped<ITokenBlacklistService, TijarahJo.Infrastructure.Services.DatabaseTokenBlacklistService>();
 
+        // Data lifecycle: hygiene detection engine + periodic cleanup (DBRE Phase 2)
+        services.AddScoped<IDataHygieneService, DataHygieneService>();
+        services.AddHostedService<DataCleanupBackgroundService>();
+
         return services;
     }
 }

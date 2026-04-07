@@ -3,6 +3,8 @@ import { useInfiniteScroll } from "./useInfiniteScroll";
 interface UsePaginatedResultsParams<T> {
   items: T[];
   itemsPerPage?: number;
+  initialPage?: number;
+  onPageChange?: (page: number) => void;
 }
 
 interface PaginatedResultsState {
@@ -22,6 +24,8 @@ interface UsePaginatedResultsReturn<T> {
 export function usePaginatedResults<T>({
   items,
   itemsPerPage = 12,
+  initialPage = 1,
+  onPageChange,
 }: UsePaginatedResultsParams<T>): UsePaginatedResultsReturn<T> {
   const {
     displayedItems,
@@ -33,6 +37,8 @@ export function usePaginatedResults<T>({
   } = useInfiniteScroll({
     items,
     itemsPerPage,
+    initialPage,
+    onPageChange,
   });
 
   return {

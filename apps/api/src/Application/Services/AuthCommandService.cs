@@ -517,7 +517,7 @@ public sealed class AuthCommandService : IAuthCommandService
             changed = true;
         }
 
-        if (string.IsNullOrWhiteSpace(user.Avatar) &&
+        if (ValidationHelpers.IsDefaultAvatarPlaceholder(user.Avatar) &&
             !string.IsNullOrWhiteSpace(avatar) &&
             ValidationHelpers.IsValidAvatarUrl(avatar))
         {

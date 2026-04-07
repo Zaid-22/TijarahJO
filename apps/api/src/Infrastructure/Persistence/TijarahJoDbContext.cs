@@ -32,6 +32,7 @@ public sealed class TijarahJoDbContext(DbContextOptions<TijarahJoDbContext> opti
     public DbSet<VerificationChallengeEntity> VerificationChallenges => Set<VerificationChallengeEntity>();
     public DbSet<HeroBannerEntity> HeroBanners => Set<HeroBannerEntity>();
     public DbSet<PostCommentEntity> PostComments => Set<PostCommentEntity>();
+    public DbSet<DataHygieneLogEntity> DataHygieneLogs => Set<DataHygieneLogEntity>();
 
     // Set this to the current actor's UserID before calling SaveChangesAsync on a
     // mutating operation so that AuditLog entries carry the correct ChangedByUserID.

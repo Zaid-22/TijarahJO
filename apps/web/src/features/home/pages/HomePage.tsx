@@ -346,6 +346,8 @@ export function HomePage({
             favoriteIds={favoriteIds}
             onFavoriteToggle={toggleFavorite}
             onPostClick={(id) => onPostClick(id, "marketplace")}
+            onViewAll={() => setShowAllPosts(true)}
+            viewAllLabel={language === "ar" ? "عرض الكل" : "View All"}
             onRequireAuth={() => setShowLoginPrompt(true)}
           />
         ) : null}

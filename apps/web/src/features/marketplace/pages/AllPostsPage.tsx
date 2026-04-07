@@ -21,6 +21,7 @@ import { MarketplaceSortSelect } from "../components/MarketplaceSortSelect";
 import { useMarketplaceDiscoveryState } from "../../../shared/hooks/useMarketplaceDiscoveryState";
 import { useMarketplaceSearchFilter } from "../../../shared/hooks/useMarketplaceSearchFilter";
 import { useCallback, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 interface AllPostsPageProps {
   onBack: () => void;
@@ -94,6 +95,22 @@ export function AllPostsPage({
 }: AllPostsPageProps) {
   const t = translations[language];
   const isRTL = language === "ar";
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedPage = Number.parseInt(searchParams.get("page") || "1", 10);
+  const initialPage =
+    Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const syncPageToUrl = useCallback(
+    (page: number) => {
+      const nextParams = new URLSearchParams(searchParams);
+      if (page <= 1) {
+        nextParams.delete("page");
+      } else {
+        nextParams.set("page", String(page));
+      }
+      setSearchParams(nextParams, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
   const [searchInputValue, setSearchInputValue] = useState("");
   const [appliedSearchQuery, setAppliedSearchQuery] = useState("");
   const {
@@ -120,6 +137,8 @@ export function AllPostsPage({
     items: filteredPosts,
     itemsPerPage: 12,
     defaultViewMode: "list",
+    initialPage,
+    onPageChange: syncPageToUrl,
     storageKey: "tijarahjo_view_mode_all_posts",
   });
   const {

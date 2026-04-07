@@ -35,7 +35,7 @@ public sealed class ReportEntity
     /// <summary>Admin notes on the resolution.</summary>
     public string? ResolutionNotes { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; }
     public DateTime? ResolvedAt { get; set; }
 
     // Navigation

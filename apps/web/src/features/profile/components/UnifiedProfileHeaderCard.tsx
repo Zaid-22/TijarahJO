@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Calendar,
   Edit,
@@ -8,6 +9,7 @@ import {
   Star,
 } from "lucide-react";
 import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "../../../shared/ui/avatar";
 import { Button } from "../../../shared/ui/button";
 import type { UnifiedProfileViewModel } from "../types";
 import type { UnifiedProfileLabels } from "./unifiedProfileLabels";
@@ -31,6 +33,10 @@ export function UnifiedProfileHeaderCard({
   onEditProfileClick,
   onChatWithSeller,
 }: UnifiedProfileHeaderCardProps) {
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
+  const avatarSrc = resolveAvatarSrc(viewModel.profile.avatar);
+  const shouldShowAvatarImage = Boolean(avatarSrc) && !avatarLoadFailed;
+
   return (
     <div className="mb-8 overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
       <div className="relative h-32 w-full bg-gradient-to-br from-primary to-secondary sm:h-48">
@@ -40,19 +46,19 @@ export function UnifiedProfileHeaderCard({
       <div className="relative px-6 pb-6">
         <div className="-mt-8 flex flex-col items-center gap-6 sm:-mt-10 md:flex-row md:items-end">
           <div className="relative">
-            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-background bg-card shadow-md sm:h-32 sm:w-32">
-              {resolveAvatarSrc(viewModel.profile.avatar) ? (
-                <img
-                  src={resolveAvatarSrc(viewModel.profile.avatar)!}
-                  className="h-full w-full object-cover"
+            <Avatar className="h-24 w-24 border-4 border-background bg-card shadow-md sm:h-32 sm:w-32">
+              {shouldShowAvatarImage ? (
+                <AvatarImage
+                  src={avatarSrc || undefined}
+                  className="object-cover object-center"
                   alt={viewModel.profile.name || labels.userLabel}
+                  onError={() => setAvatarLoadFailed(true)}
                 />
-              ) : (
-                <span className="text-3xl font-bold text-primary sm:text-4xl">
-                  {getAvatarInitial(viewModel.profile.name)}
-                </span>
-              )}
-            </div>
+              ) : null}
+              <AvatarFallback className="bg-card text-3xl font-bold text-primary sm:text-4xl">
+                {getAvatarInitial(viewModel.profile.name)}
+              </AvatarFallback>
+            </Avatar>
           </div>
 
           <div className="mb-2 flex-1 text-center md:text-left">

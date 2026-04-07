@@ -8,6 +8,23 @@ namespace TijarahJo.Application.Common;
 public static class ValidationHelpers
 {
     /// <summary>
+    /// Returns true when the stored avatar is effectively the app's generic placeholder
+    /// rather than a user-specific profile image.
+    /// </summary>
+    public static bool IsDefaultAvatarPlaceholder(string? avatar)
+    {
+        string trimmed = avatar?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            return true;
+        }
+
+        return trimmed.Equals("/default-avatar.svg", StringComparison.OrdinalIgnoreCase) ||
+               trimmed.Equals("default-avatar.svg", StringComparison.OrdinalIgnoreCase) ||
+               trimmed.EndsWith("/default-avatar.svg", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
     /// Returns true if <paramref name="avatar"/> is a valid avatar URL.
     /// Accepts absolute http/https URLs (e.g. Google avatar) and
     /// server-relative upload paths (e.g. /uploads/user-avatars/img.jpg).
