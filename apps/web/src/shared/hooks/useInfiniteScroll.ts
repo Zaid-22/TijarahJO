@@ -4,6 +4,8 @@ import { usePrefersReducedMotion } from './usePrefersReducedMotion';
 interface UseInfiniteScrollProps<T> {
   items: T[];
   itemsPerPage?: number;
+  initialPage?: number;
+  onPageChange?: (page: number) => void;
 }
 
 interface UseInfiniteScrollReturn<T> {
@@ -19,7 +21,12 @@ interface UseInfiniteScrollReturn<T> {
   goToPreviousPage: () => void;
 }
 
-export function useInfiniteScroll<T>({ items, itemsPerPage = 12 }: UseInfiniteScrollProps<T>): UseInfiniteScrollReturn<T> {
+export function useInfiniteScroll<T>({
+  items,
+  itemsPerPage = 12,
+  initialPage = 1,
+  onPageChange,
+}: UseInfiniteScrollProps<T>): UseInfiniteScrollReturn<T> {
   const prefersReducedMotion = usePrefersReducedMotion();
   const [displayedItems, setDisplayedItems] = useState<T[]>([]);
   const [page, setPage] = useState(1);
@@ -28,6 +35,7 @@ export function useInfiniteScroll<T>({ items, itemsPerPage = 12 }: UseInfiniteSc
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const pendingFrameRef = useRef<number | null>(null);
+  const onPageChangeRef = useRef<typeof onPageChange>(onPageChange);
 
   const totalPages = Math.ceil(items.length / itemsPerPage);
   const safeTotalPages = Math.max(1, totalPages);
@@ -39,15 +47,34 @@ export function useInfiniteScroll<T>({ items, itemsPerPage = 12 }: UseInfiniteSc
     }
   }, []);
 
-  // Reset when items change
+  useEffect(() => {
+    onPageChangeRef.current = onPageChange;
+  }, [onPageChange]);
+
+  const clampPage = useCallback(
+    (pageNumber: number) => Math.min(Math.max(pageNumber, 1), safeTotalPages),
+    [safeTotalPages],
+  );
+
+  // Reset when items change or when a persisted initial page is provided
   useEffect(() => {
     clearPendingFrame();
-    const initialItems = items.slice(0, itemsPerPage);
+    const nextPage = clampPage(initialPage);
+    const startIndex = (nextPage - 1) * itemsPerPage;
+    const endIndex = nextPage * itemsPerPage;
+    const initialItems = items.slice(startIndex, endIndex);
     setDisplayedItems(initialItems);
-    setPage(1);
-    setHasMore(items.length > itemsPerPage);
+    setPage(nextPage);
+    setHasMore(endIndex < items.length);
     setIsLoading(false);
-  }, [items, itemsPerPage, clearPendingFrame]);
+    // Only notify the caller once we have real data. If items is empty the
+    // list is still loading; the URL already encodes the user's desired page,
+    // and firing onPageChange(1) here would clobber the ?page= query param
+    // before the fetch resolves (the deep-link snap bug).
+    if (items.length > 0) {
+      onPageChangeRef.current?.(nextPage);
+    }
+  }, [items, itemsPerPage, clearPendingFrame, clampPage, initialPage]);
 
   useEffect(() => {
     return () => {
@@ -59,7 +86,7 @@ export function useInfiniteScroll<T>({ items, itemsPerPage = 12 }: UseInfiniteSc
   const loadPage = useCallback((pageNumber: number) => {
     if (isLoading) return;
 
-    const clampedPage = Math.min(Math.max(pageNumber, 1), safeTotalPages);
+    const clampedPage = clampPage(pageNumber);
     setIsLoading(true);
     clearPendingFrame();
     pendingFrameRef.current = requestAnimationFrame(() => {
@@ -71,6 +98,7 @@ export function useInfiniteScroll<T>({ items, itemsPerPage = 12 }: UseInfiniteSc
       setPage(clampedPage);
       setHasMore(endIndex < items.length);
       setIsLoading(false);
+      onPageChangeRef.current?.(clampedPage);
       pendingFrameRef.current = null;
 
       // Scroll to top of the page
@@ -84,7 +112,7 @@ export function useInfiniteScroll<T>({ items, itemsPerPage = 12 }: UseInfiniteSc
     itemsPerPage,
     isLoading,
     clearPendingFrame,
-    safeTotalPages,
+    clampPage,
     prefersReducedMotion,
   ]);
 
