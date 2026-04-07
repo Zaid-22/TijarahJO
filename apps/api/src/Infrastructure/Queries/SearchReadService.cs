@@ -122,7 +122,7 @@ public sealed class SearchReadService : ISearchReadService, ISearchCacheInvalida
                 CategoryId = row.CategoryId.ToString(CultureInfo.InvariantCulture),
                 Image = images.Count > 0 ? images[0] : string.Empty,
                 Images = images,
-                Phone = string.Empty,
+                Phone = string.Empty, // Phone is not exposed on public search results; available on the authenticated post-detail endpoint only.
                 Description = row.PostDescription,
                 CreatedAt = row.CreatedAt.ToString("o"),
                 UpdatedAt = row.UpdatedAt.ToString("o"),

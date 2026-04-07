@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json.Serialization;
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using TijarahJo.Application.Abstractions.Services;
@@ -14,6 +15,7 @@ namespace TijarahJo.Api.Common.Services
         IOptions<FileStorageOptions> fileStorageOptions) : IPostsFeedService
     {
         private const int MaxFeedPageSize = 200;
+        private static readonly ConcurrentDictionary<string, byte> CacheKeys = new(StringComparer.Ordinal);
         private readonly IPostListingQueryService _postListingQueries = postListingQueries;
         private readonly IMemoryCache _cache = cache;
         private readonly IWebHostEnvironment _environment = environment;
@@ -89,7 +91,7 @@ namespace TijarahJo.Api.Common.Services
                         ? thumbnailImage
                         : string.Empty,
                     Images = images,
-                    Phone = string.Empty,
+                    Phone = string.Empty, // Phone is not exposed on public listing feeds; available on the authenticated post-detail endpoint only.
                     Description = row.PostDescription,
                     CreatedAt = row.CreatedAt.ToString("o"),
                     UpdatedAt = row.UpdatedAt.ToString("o"),
@@ -122,8 +124,18 @@ namespace TijarahJo.Api.Common.Services
                 {
                     AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30)
                 });
+            CacheKeys[cacheKey] = 0;
 
             return response;
+        }
+
+        public void InvalidateAll()
+        {
+            foreach ((string cacheKey, _) in CacheKeys)
+            {
+                _cache.Remove(cacheKey);
+                CacheKeys.TryRemove(cacheKey, out _);
+            }
         }
     }
 
