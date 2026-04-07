@@ -266,7 +266,12 @@ app.LogRedisStartupStatus(redisResult);
 
 bool shouldUseForwardedHeaders = app.Environment.IsDevelopment() || hasExplicitForwardedHeaderTrust;
 if (shouldUseForwardedHeaders)
+{
+    // Trust X-Forwarded-* headers only when requests come from configured proxies/networks.
+    // In production, configure ForwardedHeaders:KnownProxies / KnownNetworks so Request.IsHttps
+    // reflects the original client protocol as reported by trusted reverse proxies.
     app.UseForwardedHeaders();
+}
 else
     app.Logger.LogWarning("Forwarded headers middleware is disabled. Configure ForwardedHeaders:KnownProxies or ForwardedHeaders:KnownNetworks.");
 

@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Hosting;
 using TijarahJo.Domain.Models;
 using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Application.Common;
@@ -81,31 +82,52 @@ internal static class AuthShared
 
     public static void SetTokenCookie(HttpResponse response, string token)
     {
-        bool isHttpsRequest = response.HttpContext.Request.IsHttps;
-        var cookieOptions = new CookieOptions
-        {
-            HttpOnly = true,
-            Expires = DateTime.UtcNow.AddDays(7),
-            Secure = isHttpsRequest,
-            SameSite = isHttpsRequest ? SameSiteMode.None : SameSiteMode.Lax,
-            Path = "/"
-        };
+        var environment = response.HttpContext.RequestServices.GetRequiredService<IHostEnvironment>();
+        var cookieOptions = BuildAuthCookieOptions(
+            environment,
+            response.HttpContext.Request,
+            DateTime.UtcNow.AddDays(7),
+            jwtCookie: true);
         response.Cookies.Append("jwt", token, cookieOptions);
     }
 
     public static void SetShortLivedAuthCookie(HttpResponse response, string name, string value, TimeSpan lifetime)
     {
-        bool isHttpsRequest = response.HttpContext.Request.IsHttps;
-        var cookieOptions = new CookieOptions
+        var environment = response.HttpContext.RequestServices.GetRequiredService<IHostEnvironment>();
+        var cookieOptions = BuildAuthCookieOptions(
+            environment,
+            response.HttpContext.Request,
+            DateTime.UtcNow.Add(lifetime),
+            jwtCookie: false);
+        response.Cookies.Append(name, value, cookieOptions);
+    }
+
+    private static CookieOptions BuildAuthCookieOptions(
+        IHostEnvironment environment,
+        HttpRequest request,
+        DateTime expiresUtc,
+        bool jwtCookie)
+    {
+        bool isDevelopment = environment.IsDevelopment();
+        bool isHttpsRequest = request.IsHttps;
+
+        // Security-sensitive cookie attributes should not rely solely on Request.IsHttps.
+        // In non-development environments, force Secure cookies and cross-site compatibility
+        // for JWT cookies even if a proxy misconfiguration causes IsHttps=false.
+        bool secure = !isDevelopment || isHttpsRequest;
+        SameSiteMode sameSite = jwtCookie
+            ? (isDevelopment && !isHttpsRequest ? SameSiteMode.Lax : SameSiteMode.None)
+            : SameSiteMode.Lax;
+
+        return new CookieOptions
         {
             HttpOnly = true,
-            Expires = DateTime.UtcNow.Add(lifetime),
-            Secure = isHttpsRequest,
-            SameSite = SameSiteMode.Lax,
+            Expires = expiresUtc,
+            Secure = secure,
+            SameSite = sameSite,
             IsEssential = true,
             Path = "/"
         };
-        response.Cookies.Append(name, value, cookieOptions);
     }
 
     public static void DeleteCookie(HttpResponse response, string name)
