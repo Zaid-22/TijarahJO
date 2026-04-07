@@ -313,9 +313,16 @@ function scorePost(post: Post, context: QueryContext): number {
   const location = normalizeSearchText(post.location || "");
   const seller = normalizeSearchText(post.seller || "");
   const description = normalizeSearchText(post.description || "");
-  const nameTokenSet = new Set(tokenize(name));
-  const categoryTokenSet = new Set(tokenize(category));
-  const descriptionTokenSet = new Set(tokenize(description));
+  const nameTokens = tokenize(name);
+  const categoryTokens = tokenize(category);
+  const descriptionTokens = tokenize(description);
+  const locationTokens = tokenize(location);
+  const sellerTokens = tokenize(seller);
+  const nameTokenSet = new Set(nameTokens);
+  const categoryTokenSet = new Set(categoryTokens);
+  const descriptionTokenSet = new Set(descriptionTokens);
+  const locationTokenSet = new Set(locationTokens);
+  const sellerTokenSet = new Set(sellerTokens);
 
   let score = 0;
 
@@ -333,18 +340,18 @@ function scorePost(post: Post, context: QueryContext): number {
 
   for (const token of queryTokens) {
     if (!token) continue;
-    if (category.includes(token)) score += 60;
-    if (name.includes(token)) score += 50;
-    if (description.includes(token)) score += 24;
-    if (location.includes(token)) score += 16;
-    if (seller.includes(token)) score += 10;
+    if (categoryTokenSet.has(token)) score += 60;
+    if (nameTokenSet.has(token)) score += 50;
+    if (descriptionTokenSet.has(token)) score += 24;
+    if (locationTokenSet.has(token)) score += 16;
+    if (sellerTokenSet.has(token)) score += 10;
   }
 
   for (const token of expandedTokens) {
     if (queryTokenSet.has(token)) continue;
-    if (category.includes(token)) score += 34;
-    if (name.includes(token)) score += 24;
-    if (description.includes(token)) score += 12;
+    if (categoryTokenSet.has(token)) score += 34;
+    if (nameTokenSet.has(token)) score += 24;
+    if (descriptionTokenSet.has(token)) score += 12;
   }
 
   for (const intent of activeIntents) {

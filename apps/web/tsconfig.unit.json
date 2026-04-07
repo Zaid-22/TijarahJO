@@ -28,6 +28,8 @@
     "src/services/api/chatNormalization.ts",
     "src/constants/appConfig.ts",
     "src/utils/idValidation.ts",
-    "src/contexts/authRuntimePolicy.ts"
+    "src/contexts/authRuntimePolicy.ts",
+    "src/lib/searchRanking.ts",
+    "src/types/index.ts"
   ]
 }
