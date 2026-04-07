@@ -1,3 +1,10 @@
+USE TijarahJoDB;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+SET ANSI_NULLS ON;
+GO
+
 -- =============================================================================
 -- V202604080900 — Cascade soft-deletes to orphaned PostImages & Favorites
 -- DBRE Audit: Findings 4, 5

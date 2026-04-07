@@ -1,5 +1,9 @@
 USE TijarahJoDB;
 GO
+SET QUOTED_IDENTIFIER ON;
+GO
+SET ANSI_NULLS ON;
+GO
 
 -- =============================================================================
 -- Fix: Messages trigger now validates BOTH SenderID and ReceiverID
