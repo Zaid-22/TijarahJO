@@ -14,24 +14,21 @@ namespace TijarahJo.Infrastructure.Services;
 ///   - Full diagnostic scan: only during off-peak (02:00-05:00 UTC)
 ///   - Lightweight purges: every cycle
 /// </summary>
-public sealed class DataCleanupBackgroundService : BackgroundService
+public sealed class DataCleanupBackgroundService(
+    IServiceScopeFactory scopeFactory,
+    ILogger<DataCleanupBackgroundService> logger) : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromHours(6);
 
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ILogger<DataCleanupBackgroundService> _logger;
-
-    public DataCleanupBackgroundService(
-        IServiceScopeFactory scopeFactory,
-        ILogger<DataCleanupBackgroundService> logger)
-    {
-        _scopeFactory = scopeFactory;
-        _logger = logger;
-    }
+    private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
+    private readonly ILogger<DataCleanupBackgroundService> _logger = logger;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("DataCleanupBackgroundService started. Interval: {Interval}", Interval);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("DataCleanupBackgroundService started. Interval: {Interval}", Interval);
+        }
 
         // Delay the first run by 2 minutes to let the app finish starting up
         await Task.Delay(TimeSpan.FromMinutes(2), stoppingToken);
@@ -64,12 +61,15 @@ public sealed class DataCleanupBackgroundService : BackgroundService
 
         var report = await hygieneService.RunDiagnosticScanAsync(forceFullScan: false, ct);
 
-        _logger.LogInformation(
-            "Cleanup cycle complete — Findings: {Findings}, Auto-executed: {Executed}, " +
-            "Pending review: {Pending}, Rows affected: {Rows}",
-            report.TotalFindings,
-            report.AutoExecuted,
-            report.PendingReview,
-            report.TotalRowsAffected);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Cleanup cycle complete — Findings: {Findings}, Auto-executed: {Executed}, " +
+                "Pending review: {Pending}, Rows affected: {Rows}",
+                report.TotalFindings,
+                report.AutoExecuted,
+                report.PendingReview,
+                report.TotalRowsAffected);
+        }
     }
 }

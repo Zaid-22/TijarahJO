@@ -81,7 +81,13 @@ export function renderAccountRouteGroup({
         path={APP_ROUTE_PATHS.settings}
         element={requireAuth(
           <SettingsPage
-            onBackToMarketplace={() => navigate(APP_ROUTE_PATHS.home)}
+            onBackToMarketplace={() => {
+              if (window.history.length > 2) {
+                navigate(-1);
+              } else {
+                navigate(APP_ROUTE_PATHS.home);
+              }
+            }}
             language={appProps.language}
             darkMode={appProps.darkMode}
             onDarkModeChange={appProps.setDarkMode}

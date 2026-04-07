@@ -1,5 +1,6 @@
 /* eslint-disable max-lines */
 import { useState, useEffect, useRef, useCallback, type ChangeEvent } from "react";
+import { Link } from "react-router-dom";
 import { useChat } from "../hooks/useChat";
 import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
@@ -226,13 +227,14 @@ export function ChatWindow({
           >
             ←
           </Button>
-          <div
+          <Link
+            to={`/seller/${otherUserId}`}
             className={cn(
-              "flex h-11 w-11 items-center justify-center rounded-full border border-border/60 overflow-hidden",
+              "flex h-11 w-11 items-center justify-center rounded-full border border-border/60 overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all",
               resolveAvatarSrc(otherUserAvatar) && !avatarError
                 ? "bg-transparent text-foreground" 
                 : "bg-primary/10 text-primary font-medium text-lg",
-              "me-3",
+              "me-3 shrink-0",
             )}
           >
             {resolveAvatarSrc(otherUserAvatar) && !avatarError ? (
@@ -247,11 +249,11 @@ export function ChatWindow({
             ) : (
               getAvatarInitial(otherDisplayName)
             )}
-          </div>
+          </Link>
           <div>
-            <h3 className="font-semibold text-foreground">
+            <Link to={`/seller/${otherUserId}`} className="font-semibold text-foreground hover:text-primary transition-colors block">
               {otherDisplayName}
-            </h3>
+            </Link>
             <p
               className={cn(
                 "flex items-center gap-2 text-sm",

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Star, User } from "lucide-react";
 import type { UnifiedProfileReview } from "../types";
 import type { UnifiedProfileLabels } from "./unifiedProfileLabels";
@@ -28,7 +29,10 @@ export function UnifiedProfileReviewCard({
     <div className="rounded-2xl border border-border bg-background/80 p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10">
+          <Link
+            to={`/seller/${review.reviewerID}`}
+            className="flex h-10 w-10 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-primary/10 hover:ring-2 hover:ring-primary/50 transition-all"
+          >
             {reviewerAvatarSrc && !avatarLoadFailed ? (
               <img
                 src={reviewerAvatarSrc}
@@ -45,11 +49,14 @@ export function UnifiedProfileReviewCard({
             ) : (
               <User className="h-4 w-4 text-primary" />
             )}
-          </div>
+          </Link>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-foreground">
+            <Link
+              to={`/seller/${review.reviewerID}`}
+              className="block truncate text-sm font-semibold text-foreground hover:text-primary transition-colors"
+            >
               {review.reviewerName || `${labels.userLabel} ${review.reviewerID}`}
-            </p>
+            </Link>
             <div className="mt-1 flex items-center gap-2">
               <div className="flex text-amber-500">
                 {Array.from({ length: 5 }, (_, index) => (

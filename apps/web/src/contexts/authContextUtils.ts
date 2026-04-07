@@ -74,8 +74,10 @@ export const isRetryableAuthError = (
   return (
     normalizedMessage.includes("failed to fetch") ||
     normalizedMessage.includes("connection refused") ||
-    normalizedMessage.includes("cannot connect to backend") ||
-    normalizedMessage.includes("timed out")
+    normalizedMessage.includes("cannot connect") ||
+    normalizedMessage.includes("unable to connect") ||
+    normalizedMessage.includes("timed out") ||
+    normalizedMessage.includes("server error")
   );
 };
 

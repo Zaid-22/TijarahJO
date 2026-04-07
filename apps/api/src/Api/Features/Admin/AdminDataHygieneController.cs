@@ -14,14 +14,9 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/data-hygiene")]
 [Authorize(Policy = AuthorizationPolicies.AdminAccess)]
-public class AdminDataHygieneController : ControllerBase
+public class AdminDataHygieneController(IDataHygieneService hygieneService) : ControllerBase
 {
-    private readonly IDataHygieneService _hygieneService;
-
-    public AdminDataHygieneController(IDataHygieneService hygieneService)
-    {
-        _hygieneService = hygieneService;
-    }
+    private readonly IDataHygieneService _hygieneService = hygieneService;
 
     /// <summary>
     /// Returns the latest diagnostic scan report with all findings and their status.

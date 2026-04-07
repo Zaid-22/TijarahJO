@@ -9,11 +9,9 @@ const REQUEST_TIMEOUT_MS = APP_CONFIG.requestTimeoutMs;
 const DEBUG_API =
   Boolean(import.meta.env.DEV) && import.meta.env.VITE_DEBUG_API === "true";
 
-const BACKEND_URL_HINT = APP_CONFIG.backendHostUrl;
-const BACKEND_RUN_COMMAND = APP_CONFIG.backendRunCommand;
-const BACKEND_TIMEOUT_MESSAGE = `Request timed out. Please check if the backend is running on ${BACKEND_URL_HINT}`;
-const BACKEND_CONNECTION_MESSAGE = `Cannot connect to backend. Please make sure the backend is running on ${BACKEND_URL_HINT}. Start it with: ${BACKEND_RUN_COMMAND}`;
-export const BACKEND_CONNECTION_SHORT_MESSAGE = `Cannot connect to backend. Please make sure the backend is running on ${BACKEND_URL_HINT}`;
+const BACKEND_TIMEOUT_MESSAGE = "Request timed out. Please try again later.";
+const BACKEND_CONNECTION_MESSAGE = "Unable to connect to the server. Please try again later.";
+export const BACKEND_CONNECTION_SHORT_MESSAGE = "Unable to connect to the server.";
 
 export type ApiRequestOptions = RequestInit & {
   timeoutMs?: number;

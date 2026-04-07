@@ -116,8 +116,7 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       tapToUpload: "Tap to upload",
     },
     errors: {
-      backendConnection:
-        "Cannot connect to backend. Please make sure the backend is running on",
+      backendConnection: "Unable to connect to the server. Please try again later.",
       unexpected: "An unexpected error occurred. Please try again.",
       duplicateHintSuffix:
         "Try using different credentials, or switch to sign in if you already have an account.",
@@ -205,8 +204,7 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       tapToUpload: "انقر للتحميل",
     },
     errors: {
-      backendConnection:
-        "لا يمكن الاتصال بالخادم الخلفي. تأكد من تشغيل الخادم على",
+      backendConnection: "فشل الاتصال بالخادم. يرجى المحاولة مرة أخرى لاحقاً.",
       unexpected: "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
       duplicateHintSuffix:
         "جرّب بيانات اعتماد مختلفة، أو انتقل إلى تسجيل الدخول إذا كان لديك حساب بالفعل.",

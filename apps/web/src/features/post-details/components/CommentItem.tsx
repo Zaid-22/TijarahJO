@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { MoreVertical, Reply, Trash2, Edit2, ChevronDown, ChevronUp } from "lucide-react";
 import { api } from "../../../services/api";
 import { logger } from "../../../shared/lib/logger";
@@ -132,17 +132,21 @@ export function CommentItem({
   return (
     <div className={cn("group animate-in fade-in slide-in-from-bottom-2 duration-300", isReply ? "ms-12 mt-4" : "")}>
       <div className="flex gap-3">
-        <Avatar className="w-10 h-10 border-2 border-background shadow-sm ring-1 ring-muted">
-          <AvatarImage src={resolveAvatarSrc(comment.authorAvatar) || undefined} />
-          <AvatarFallback className="bg-primary/10 text-primary font-bold">
-            {getAvatarInitial(comment.authorName)}
-          </AvatarFallback>
-        </Avatar>
+        <Link to={`/seller/${comment.userId}`} className="shrink-0 cursor-pointer">
+          <Avatar className="w-10 h-10 border-2 border-background shadow-sm ring-1 ring-muted hover:ring-primary transition-all">
+            <AvatarImage src={resolveAvatarSrc(comment.authorAvatar) || undefined} />
+            <AvatarFallback className="bg-primary/10 text-primary font-bold">
+              {getAvatarInitial(comment.authorName)}
+            </AvatarFallback>
+          </Avatar>
+        </Link>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-foreground text-sm sm:text-base">{comment.authorName}</span>
+              <Link to={`/seller/${comment.userId}`} className="font-bold text-foreground hover:text-primary transition-colors text-sm sm:text-base">
+                {comment.authorName}
+              </Link>
               {comment.userId.toString() === postOwnerId && (
                 <span className="bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded-md font-bold border border-primary/20 uppercase tracking-tighter">
                   {isRTL ? "صاحب الإعلان" : "Seller"}

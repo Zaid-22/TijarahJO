@@ -8,16 +8,10 @@ using TijarahJo.Infrastructure.Persistence;
 
 namespace TijarahJo.Infrastructure.DataAccess;
 
-public sealed class UserDataAccessAdapter : IUserDataAccess
+public sealed class UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<UserDataAccessAdapter> logger) : IUserDataAccess
 {
-    private readonly TijarahJoDbContext _dbContext;
-    private readonly ILogger<UserDataAccessAdapter> _logger;
-
-    public UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<UserDataAccessAdapter> logger)
-    {
-        _dbContext = dbContext;
-        _logger = logger;
-    }
+    private readonly TijarahJoDbContext _dbContext = dbContext;
+    private readonly ILogger<UserDataAccessAdapter> _logger = logger;
 
     public async Task<UserModel?> GetUserByIDAsync(int? userId, CancellationToken cancellationToken = default)
     {
@@ -204,7 +198,7 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
             .Take(safeSize)
             .ToListAsync(cancellationToken);
 
-        return entities.Select(ToPublicModel).ToList();
+        return [.. entities.Select(ToPublicModel)];
     }
 
     public async Task<UserModel?> GetUserByLoginAsync(string login, CancellationToken cancellationToken = default)

@@ -33,9 +33,11 @@ Legacy `Tb*` migration scripts were moved under `../archive/migrations-legacy/` 
 ## Migration Policy
 
 - Migrations are forward-only and immutable after commit.
+- New migrations from `V202604081200` onward must be database-context agnostic and **must not** include `USE ...;`.
 - Migrations from `V202602201100` onward must be transactional (`XACT_ABORT ON`, `TRY/CATCH`, `BEGIN/COMMIT/ROLLBACK TRANSACTION`).
 - Pre-atomic baseline migrations (`V202602200900`, `V202602200910`, `V202602201000`) are marked with `ATOMICITY_EXCEPTION`.
   - Operational rule: if one of these fails in a shared environment, do a full database reset and re-apply the canonical chain from baseline.
+- Legacy immutable migrations that still contain `USE ...;` are allowed as historical exceptions; bundle generation strips `USE` from migration output so execution follows the active connection/database context.
 
 ## Canonical Runtime Path
 
@@ -109,6 +111,12 @@ Run migration atomicity standards guard:
 
 ```bash
 ./apps/api/database/scripts/guard_migration_atomicity.sh
+```
+
+Run migration no-`USE` guard:
+
+```bash
+./apps/api/database/scripts/guard_migration_no_use.sh
 ```
 
 Notes:

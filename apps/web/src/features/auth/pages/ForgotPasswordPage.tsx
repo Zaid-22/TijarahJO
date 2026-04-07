@@ -1,7 +1,7 @@
 import { FormEvent, useState } from "react";
 import { AlertCircle, CheckCircle2, KeyRound, Lock, Mail } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { APP_CONFIG } from "../../../constants/appConfig";
+
 import { api } from "../../../services/api";
 import type { Language } from "../../../types";
 import { Alert, AlertDescription } from "../../../shared/ui/alert";
@@ -76,8 +76,7 @@ const forgotPasswordCopyByLanguage: Record<Language, ForgotPasswordCopy> = {
     successTitle: "Password updated",
     successBody: "Your password has been reset. You can now sign in.",
     errors: {
-      backendConnection:
-        "Cannot connect to backend. Please make sure the backend is running on",
+      backendConnection: "Unable to connect to the server. Please try again later.",
       emailRequired: "Email is required.",
       emailInvalid: "Enter a valid email address.",
       codeRequired: "Verification code is required.",
@@ -109,8 +108,7 @@ const forgotPasswordCopyByLanguage: Record<Language, ForgotPasswordCopy> = {
     successTitle: "تم تحديث كلمة المرور",
     successBody: "تمت إعادة تعيين كلمة المرور. يمكنك تسجيل الدخول الآن.",
     errors: {
-      backendConnection:
-        "لا يمكن الاتصال بالخادم الخلفي. تأكد من تشغيل الخادم على",
+      backendConnection: "فشل الاتصال بالخادم. يرجى المحاولة مرة أخرى لاحقاً.",
       emailRequired: "البريد الإلكتروني مطلوب.",
       emailInvalid: "أدخل بريدًا إلكترونيًا صالحًا.",
       codeRequired: "رمز التحقق مطلوب.",
@@ -150,8 +148,7 @@ export function ForgotPasswordPage({ language }: ForgotPasswordPageProps) {
   const [errorMessage, setErrorMessage] = useState("");
   const [infoMessage, setInfoMessage] = useState("");
 
-  const backendConnectionMessage =
-    `${copy.errors.backendConnection} ${APP_CONFIG.backendHostUrl}`;
+  const backendConnectionMessage = copy.errors.backendConnection;
 
   const validateEmail = (): string => {
     const normalized = email.trim();

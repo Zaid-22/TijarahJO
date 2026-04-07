@@ -138,7 +138,7 @@ export function LoginPage({
   const copy = getLoginCopy(language);
   const googleAuthEnabled = APP_CONFIG.googleAuthEnabled;
   const validationMessages = copy.validation;
-  const backendConnectionMessage = `${copy.errors.backendConnection} ${APP_CONFIG.backendHostUrl}`;
+  const backendConnectionMessage = copy.errors.backendConnection;
   const [state, dispatch] = useLoginReducer({
     phone: "",
   });

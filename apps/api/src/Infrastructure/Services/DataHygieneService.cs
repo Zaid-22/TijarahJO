@@ -11,21 +11,15 @@ namespace TijarahJo.Infrastructure.Services;
 /// Core data hygiene engine — detects cold/stale/orphaned data, classifies findings,
 /// and executes safe cleanup with full audit trail.
 /// </summary>
-public sealed class DataHygieneService : IDataHygieneService
+public sealed class DataHygieneService(
+    IServiceScopeFactory scopeFactory,
+    ILogger<DataHygieneService> logger) : IDataHygieneService
 {
     private const int BatchSize = 1000;
     private const double ThresholdPercent = 0.05; // 5% safety threshold
 
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ILogger<DataHygieneService> _logger;
-
-    public DataHygieneService(
-        IServiceScopeFactory scopeFactory,
-        ILogger<DataHygieneService> logger)
-    {
-        _scopeFactory = scopeFactory;
-        _logger = logger;
-    }
+    private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
+    private readonly ILogger<DataHygieneService> _logger = logger;
 
     // ── Public API ──────────────────────────────────────────────────────
 
@@ -37,7 +31,10 @@ public sealed class DataHygieneService : IDataHygieneService
         var utcNow = DateTime.UtcNow;
         var findings = new List<DataHygieneLogEntity>();
 
-        _logger.LogInformation("Data hygiene scan {CycleID} starting...", cycleId);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Data hygiene scan {CycleID} starting...", cycleId);
+        }
 
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<TijarahJoDbContext>();
@@ -148,10 +145,13 @@ public sealed class DataHygieneService : IDataHygieneService
             await db.SaveChangesAsync(ct);
         }
 
-        _logger.LogInformation(
-            "Data hygiene scan {CycleID} detected {Count} findings across {Tables} tables",
-            cycleId, findings.Count,
-            findings.Select(f => f.TableName).Distinct().Count());
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Data hygiene scan {CycleID} detected {Count} findings across {Tables} tables",
+                cycleId, findings.Count,
+                findings.Select(f => f.TableName).Distinct().Count());
+        }
 
         // ── Phase 2: Auto-execute SAFE_TO_DELETE ────────────────────
 
@@ -183,15 +183,20 @@ public sealed class DataHygieneService : IDataHygieneService
             .Where(l => l.DetectedAt < logRetention)
             .ExecuteDeleteAsync(ct);
 
-        if (purgedLogs > 0)
+        if (purgedLogs > 0 && _logger.IsEnabled(LogLevel.Information))
+        {
             _logger.LogInformation("Self-cleaned {Count} DataHygieneLog entries older than 90 days", purgedLogs);
+        }
 
-        _logger.LogInformation(
-            "Data hygiene scan {CycleID} complete. Findings: {Total}, Auto-executed: {Executed}, " +
-            "Pending review: {Pending}, Rows affected: {Rows}",
-            cycleId, findings.Count, autoExecuted,
-            findings.Count(f => f.Classification == "REQUIRES_REVIEW"),
-            totalRowsAffected);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Data hygiene scan {CycleID} complete. Findings: {Total}, Auto-executed: {Executed}, " +
+                "Pending review: {Pending}, Rows affected: {Rows}",
+                cycleId, findings.Count, autoExecuted,
+                findings.Count(f => f.Classification == "REQUIRES_REVIEW"),
+                totalRowsAffected);
+        }
 
         return BuildReport(cycleId, findings, autoExecuted, totalRowsAffected);
     }
@@ -279,9 +284,12 @@ public sealed class DataHygieneService : IDataHygieneService
         if (pendingFindings.Count > 0)
             await db.SaveChangesAsync(ct);
 
-        _logger.LogInformation(
-            "Admin approved cycle {CycleID}: {Count} findings executed, {Rows} rows affected",
-            cycleId, pendingFindings.Count, totalExecuted);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Admin approved cycle {CycleID}: {Count} findings executed, {Rows} rows affected",
+                cycleId, pendingFindings.Count, totalExecuted);
+        }
 
         return totalExecuted;
     }
@@ -349,7 +357,7 @@ public sealed class DataHygieneService : IDataHygieneService
         }
     }
 
-    private async Task ScanTableHealthAsync(
+    private static async Task ScanTableHealthAsync(
         TijarahJoDbContext db, Guid cycleId, DateTime utcNow,
         List<DataHygieneLogEntity> findings, CancellationToken ct)
     {
@@ -386,7 +394,7 @@ public sealed class DataHygieneService : IDataHygieneService
         }
     }
 
-    private async Task<int> GetTableRowCountAsync(
+    private static async Task<int> GetTableRowCountAsync(
         TijarahJoDbContext db, string tableName, CancellationToken ct)
     {
         return tableName switch
@@ -441,7 +449,7 @@ public sealed class DataHygieneService : IDataHygieneService
         AutoExecuted = autoExecuted,
         PendingReview = findings.Count(f => f.Classification == "REQUIRES_REVIEW" && f.Phase == 1),
         TotalRowsAffected = totalRowsAffected,
-        Findings = findings.Select(f => new DataHygieneFinding
+        Findings = [.. findings.Select(f => new DataHygieneFinding
         {
             HygieneLogID = f.HygieneLogID,
             TableName = f.TableName,
@@ -451,6 +459,6 @@ public sealed class DataHygieneService : IDataHygieneService
             Phase = f.Phase,
             ActionTaken = f.ActionTaken,
             Notes = f.Notes
-        }).ToList()
+        })]
     };
 }
