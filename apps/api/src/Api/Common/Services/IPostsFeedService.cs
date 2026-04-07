@@ -9,4 +9,5 @@ public interface IPostsFeedService
 {
     NormalizedFeedRequest NormalizeRequest(int? page, int? limit);
     Task<FeedResponse> FetchPostsFeedAsync(NormalizedFeedRequest request, CancellationToken cancellationToken = default);
+    void InvalidateAll();
 }

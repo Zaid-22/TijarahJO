@@ -179,6 +179,7 @@ namespace TijarahJo.Api.Features.Posts
 
             if (result.Success && result.Post != null)
             {
+                _postsFeedService.InvalidateAll();
                 return CreatedAtAction(
                     nameof(GetPostById),
                     new { id = result.Post.PostID },
@@ -222,6 +223,7 @@ namespace TijarahJo.Api.Features.Posts
 
             if (result.Success && result.Post != null)
             {
+                _postsFeedService.InvalidateAll();
                 return Ok(DTOMapper.ToPostResponseDTO(result.Post.PostModel));
             }
 
@@ -251,6 +253,7 @@ namespace TijarahJo.Api.Features.Posts
 
             if (result.Success)
             {
+                _postsFeedService.InvalidateAll();
                 return Ok(new ApiMessageResponse { Message = $"Post with ID {id} has been deleted." });
             }
 
@@ -286,6 +289,7 @@ namespace TijarahJo.Api.Features.Posts
 
             if (result.Success)
             {
+                _postsFeedService.InvalidateAll();
                 return Ok(DTOMapper.ToPostResponseDTO(result.Post!.PostModel));
             }
 

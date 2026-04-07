@@ -222,7 +222,7 @@ BEGIN
         UserID          INT           NOT NULL,
         CategoryID      INT           NOT NULL,
         PostTitle       NVARCHAR(200) NOT NULL,
-        PostDescription NVARCHAR(MAX) NULL,
+        PostDescription NVARCHAR(4000) NULL,
         Price           DECIMAL(18,2) NULL,
         Status          INT           NOT NULL,    -- 0=ACTIVE, 1=BLOCKED, 3=SOLD (no 2=DELETED; use IsDeleted)
         CreatedAt       DATETIME2     NOT NULL CONSTRAINT DF_Posts_CreatedAt DEFAULT SYSUTCDATETIME(),
@@ -256,7 +256,7 @@ BEGIN
     (
         PostImageID  INT           IDENTITY(1,1) CONSTRAINT PK_PostImages PRIMARY KEY,
         PostID       INT           NOT NULL,
-        PostImageURL NVARCHAR(MAX) NOT NULL,
+        PostImageURL NVARCHAR(2048) NOT NULL,
         UploadedAt   DATETIME2     NOT NULL CONSTRAINT DF_PostImages_UploadedAt DEFAULT SYSUTCDATETIME(),
         IsDeleted    BIT           NOT NULL CONSTRAINT DF_PostImages_IsDeleted DEFAULT 0,
         CONSTRAINT FK_PostImages_PostID FOREIGN KEY (PostID) REFERENCES dbo.Posts(PostID)
@@ -276,10 +276,14 @@ BEGIN
         PostID     INT       NOT NULL,
         CreatedAt  DATETIME2 NOT NULL CONSTRAINT DF_Favorites_CreatedAt DEFAULT SYSUTCDATETIME(),
         IsDeleted  BIT       NOT NULL CONSTRAINT DF_Favorites_IsDeleted DEFAULT 0,
-        CONSTRAINT UQ_Favorites_User_Post UNIQUE (UserID, PostID),
         CONSTRAINT FK_Favorites_UserID FOREIGN KEY (UserID) REFERENCES dbo.Users(UserID),
         CONSTRAINT FK_Favorites_PostID FOREIGN KEY (PostID) REFERENCES dbo.Posts(PostID)
     );
+
+    -- Filtered unique index: allows re-favoriting after soft-delete
+    CREATE UNIQUE NONCLUSTERED INDEX UQ_Favorites_User_Post
+    ON dbo.Favorites (UserID, PostID)
+    WHERE IsDeleted = 0;
 END
 GO
 
@@ -338,7 +342,7 @@ BEGIN
         SenderID       INT           NOT NULL,
         ReceiverID     INT           NOT NULL,
         ConversationID INT           NOT NULL,
-        Content        NVARCHAR(MAX) NOT NULL,
+        Content        NVARCHAR(4000) NOT NULL,
         CreatedAt      DATETIME2     NOT NULL CONSTRAINT DF_Messages_CreatedAt DEFAULT SYSUTCDATETIME(),
         IsRead         BIT           NOT NULL CONSTRAINT DF_Messages_IsRead DEFAULT 0,
         IsDeleted      BIT           NOT NULL CONSTRAINT DF_Messages_IsDeleted DEFAULT 0,
@@ -395,7 +399,7 @@ BEGIN
         IsRead           BIT            NOT NULL CONSTRAINT DF_Notifications_IsRead DEFAULT 0,
         CreatedAt        DATETIME2      NOT NULL CONSTRAINT DF_Notifications_CreatedAt DEFAULT SYSUTCDATETIME(),
         ReadAt           DATETIME2      NULL,
-        PayloadJson      NVARCHAR(MAX)  NULL,
+        PayloadJson      NVARCHAR(2000) NULL,
         CONSTRAINT FK_Notifications_UserID         FOREIGN KEY (UserID)         REFERENCES dbo.Users(UserID),
         CONSTRAINT FK_Notifications_SenderUserID   FOREIGN KEY (SenderUserID)   REFERENCES dbo.Users(UserID),
         CONSTRAINT FK_Notifications_ConversationID FOREIGN KEY (ConversationID) REFERENCES dbo.Conversations(ConversationID),
@@ -528,7 +532,7 @@ BEGIN
         SettingID   INT           IDENTITY(1,1) CONSTRAINT PK_SystemSettings PRIMARY KEY,
         SettingKey  NVARCHAR(100) NOT NULL CONSTRAINT UQ_SystemSettings_Key UNIQUE,
         Label       NVARCHAR(200) NOT NULL,
-        Value       NVARCHAR(MAX) NOT NULL,
+        Value       NVARCHAR(4000) NOT NULL,
         ValueType   NVARCHAR(20)  NOT NULL CONSTRAINT DF_SystemSettings_ValueType DEFAULT N'bool',
         Description NVARCHAR(500) NULL,
         UpdatedAt   DATETIME2     NOT NULL CONSTRAINT DF_SystemSettings_UpdatedAt DEFAULT SYSUTCDATETIME()
@@ -633,6 +637,95 @@ BEGIN
         
     CREATE NONCLUSTERED INDEX IX_VerificationChallenges_User_Type
         ON dbo.VerificationChallenges (UserId, ChallengeType);
+END
+GO
+
+-- ---------------------------------------------------------------------------
+-- Hero Banners (homepage carousel)
+-- ---------------------------------------------------------------------------
+IF OBJECT_ID(N'dbo.HeroBanners', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.HeroBanners
+    (
+        BannerID     INT            IDENTITY(1,1) CONSTRAINT PK_HeroBanners PRIMARY KEY,
+        Title        NVARCHAR(200)  NOT NULL,
+        TitleAr      NVARCHAR(200)  NOT NULL CONSTRAINT DF_HeroBanners_TitleAr DEFAULT N'',
+        Subtitle     NVARCHAR(400)  NOT NULL CONSTRAINT DF_HeroBanners_Subtitle DEFAULT N'',
+        SubtitleAr   NVARCHAR(400)  NOT NULL CONSTRAINT DF_HeroBanners_SubtitleAr DEFAULT N'',
+        ButtonText   NVARCHAR(100)  NOT NULL CONSTRAINT DF_HeroBanners_ButtonText DEFAULT N'',
+        ButtonTextAr NVARCHAR(100)  NOT NULL CONSTRAINT DF_HeroBanners_ButtonTextAr DEFAULT N'',
+        ImageUrl     NVARCHAR(2048) NOT NULL,
+        BgClass      NVARCHAR(200)  NOT NULL CONSTRAINT DF_HeroBanners_BgClass DEFAULT N'',
+        TextClass    NVARCHAR(200)  NOT NULL CONSTRAINT DF_HeroBanners_TextClass DEFAULT N'',
+        AltText      NVARCHAR(200)  NOT NULL CONSTRAINT DF_HeroBanners_AltText DEFAULT N'',
+        AltTextAr    NVARCHAR(200)  NOT NULL CONSTRAINT DF_HeroBanners_AltTextAr DEFAULT N'',
+        LinkUrl      NVARCHAR(500)  NULL,
+        IsActive     BIT            NOT NULL CONSTRAINT DF_HeroBanners_IsActive DEFAULT 1,
+        DisplayOrder INT            NOT NULL CONSTRAINT DF_HeroBanners_DisplayOrder DEFAULT 0,
+        CreatedAt    DATETIME2      NOT NULL CONSTRAINT DF_HeroBanners_CreatedAt DEFAULT SYSUTCDATETIME(),
+        UpdatedAt    DATETIME2      NOT NULL CONSTRAINT DF_HeroBanners_UpdatedAt DEFAULT SYSUTCDATETIME()
+    );
+END
+GO
+
+-- ---------------------------------------------------------------------------
+-- Post Comments (nested, self-referencing)
+-- ---------------------------------------------------------------------------
+IF OBJECT_ID(N'dbo.PostComments', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.PostComments
+    (
+        CommentID       INT            IDENTITY(1,1) CONSTRAINT PK_PostComments PRIMARY KEY,
+        PostID          INT            NOT NULL,
+        UserID          INT            NOT NULL,
+        ParentCommentID INT            NULL,
+        Content         NVARCHAR(2000) NOT NULL,
+        CreatedAt       DATETIME2      NOT NULL CONSTRAINT DF_PostComments_CreatedAt DEFAULT SYSUTCDATETIME(),
+        UpdatedAt       DATETIME2      NOT NULL CONSTRAINT DF_PostComments_UpdatedAt DEFAULT SYSUTCDATETIME(),
+        IsDeleted       BIT            NOT NULL CONSTRAINT DF_PostComments_IsDeleted DEFAULT 0,
+        CONSTRAINT FK_PostComments_PostID FOREIGN KEY (PostID) REFERENCES dbo.Posts(PostID),
+        CONSTRAINT FK_PostComments_UserID FOREIGN KEY (UserID) REFERENCES dbo.Users(UserID),
+        CONSTRAINT FK_PostComments_Parent FOREIGN KEY (ParentCommentID) REFERENCES dbo.PostComments(CommentID)
+    );
+
+    CREATE NONCLUSTERED INDEX IX_PostComments_PostID_CreatedAt
+        ON dbo.PostComments (PostID, CreatedAt);
+
+    CREATE NONCLUSTERED INDEX IX_PostComments_ParentCommentID
+        ON dbo.PostComments (ParentCommentID);
+END
+GO
+
+-- ══════════════════════════════════════════════════════════════════════
+-- DataHygieneLog — tracks automated hygiene scan findings + actions
+-- ══════════════════════════════════════════════════════════════════════
+IF OBJECT_ID(N'dbo.DataHygieneLog', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.DataHygieneLog
+    (
+        HygieneLogID     BIGINT         IDENTITY(1,1) CONSTRAINT PK_DataHygieneLog PRIMARY KEY,
+        CycleID          UNIQUEIDENTIFIER NOT NULL,
+        TableName        NVARCHAR(128)  NOT NULL,
+        FindingType      NVARCHAR(50)   NOT NULL,
+        Classification   NVARCHAR(50)   NOT NULL,
+        AffectedRowCount INT            NOT NULL CONSTRAINT DF_DataHygieneLog_AffectedRowCount DEFAULT 0,
+        SampleData       NVARCHAR(1000) NULL,
+        Phase            INT            NOT NULL CONSTRAINT DF_DataHygieneLog_Phase DEFAULT 1,
+        ActionTaken      NVARCHAR(50)   NOT NULL CONSTRAINT DF_DataHygieneLog_ActionTaken DEFAULT N'NONE',
+        DetectedAt       DATETIME2      NOT NULL CONSTRAINT DF_DataHygieneLog_DetectedAt DEFAULT SYSUTCDATETIME(),
+        ActionedAt       DATETIME2      NULL,
+        Notes            NVARCHAR(2000) NULL
+    );
+
+    CREATE NONCLUSTERED INDEX IX_DataHygieneLog_CycleID
+        ON dbo.DataHygieneLog (CycleID);
+
+    CREATE NONCLUSTERED INDEX IX_DataHygieneLog_DetectedAt
+        ON dbo.DataHygieneLog (DetectedAt);
+
+    CREATE NONCLUSTERED INDEX IX_DataHygieneLog_Classification_Phase
+        ON dbo.DataHygieneLog (Classification, Phase)
+        WHERE Phase = 1;
 END
 GO
 

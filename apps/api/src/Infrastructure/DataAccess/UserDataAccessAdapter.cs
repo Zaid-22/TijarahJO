@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using TijarahJo.Domain.Models;
 using TijarahJo.Application.Abstractions.DataAccess;
 using TijarahJo.Application.Common;
@@ -10,10 +11,12 @@ namespace TijarahJo.Infrastructure.DataAccess;
 public sealed class UserDataAccessAdapter : IUserDataAccess
 {
     private readonly TijarahJoDbContext _dbContext;
+    private readonly ILogger<UserDataAccessAdapter> _logger;
 
-    public UserDataAccessAdapter(TijarahJoDbContext dbContext)
+    public UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<UserDataAccessAdapter> logger)
     {
         _dbContext = dbContext;
+        _logger = logger;
     }
 
     public async Task<UserModel?> GetUserByIDAsync(int? userId, CancellationToken cancellationToken = default)
@@ -98,8 +101,7 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
         }
         catch (DbUpdateException ex)
         {
-            System.IO.File.WriteAllText("/tmp/tj_db_error.log", ex.ToString());
-            Console.WriteLine("DB UPDATE EXCEPTION: " + ex.ToString());
+            _logger.LogError(ex, "Failed to update user {UserId}", user.UserID);
             return false;
         }
     }

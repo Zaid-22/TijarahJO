@@ -340,3 +340,77 @@ erDiagram
 - `BlacklistedTokens` stores revoked JWT `jti` values so logout and forced invalidation can block previously issued cookies.
 - `VerificationChallenges` stores hashed verification state for flows such as login challenges, setup confirmation, and password reset verification.
 - There is no active `RefreshTokens` table in the current schema; session renewal is handled through the authenticated `/api/auth/refresh` path plus JWT cookie rotation and blacklisting.
+
+## Data Lifecycle Conventions
+
+### Soft-Delete Strategy
+
+All user-facing entities use an `IsDeleted BIT` flag for soft deletion. Hard-delete is **never** used on user content — it is reserved exclusively for transient/security data:
+
+| Table | Deletion Type | Rationale |
+|-------|--------------|-----------|
+| `BlacklistedTokens` | **Hard DELETE** | Expired JWTs have zero value; rows purged by `DataCleanupBackgroundService` |
+| `VerificationChallenges` | **Hard DELETE** | Expired 2FA/reset codes; purged automatically |
+| `PushSubscriptions` | **Hard DELETE** | Inactive endpoints (>90 days); dead browser subscriptions |
+| Everything else | **Soft DELETE** (`IsDeleted = 1`) | Audit trail, undo capability, legal compliance |
+
+### Cascade Soft-Delete Rules
+
+When a parent entity is soft-deleted, its dependent children are cascade-soft-deleted in the same transaction:
+
+| Parent | Children Cascaded |
+|--------|-------------------|
+| `Posts.IsDeleted → 1` | `PostImages.IsDeleted → 1`, `Favorites.IsDeleted → 1` |
+
+**Conversations referencing deleted Posts:** `Conversations.PostID` retains the stale reference intentionally. Nullifying it would lose "what item were we discussing?" context in the chat UI.
+
+### Background Data Cleanup (`DataCleanupBackgroundService`)
+
+Runs every **6 hours** with a 2-minute startup delay. Performs:
+
+1. **Purge expired `BlacklistedTokens`** — hard DELETE where `ExpiresAt ≤ now`
+2. **Purge expired `VerificationChallenges`** — hard DELETE where `ExpiresAt < now`
+3. **Purge dead `PushSubscriptions`** — hard DELETE where `IsActive = 0` AND `UpdatedAt < 90 days ago`
+4. **Soft-delete stale `Notifications`** — SET `IsDeleted = 1` where `IsRead = 1` AND `ReadAt < 30 days ago`
+
+All deletes use batch processing (1000 rows/batch) to avoid lock escalation.
+
+### Polymorphic FK: Reports.TargetID
+
+`Reports.TargetID` is a polymorphic foreign key — its meaning depends on `ReportType`:
+
+| ReportType | TargetID references |
+|------------|---------------------|
+| `LISTING` | `Posts.PostID` |
+| `USER` | `Users.UserID` |
+| `REVIEW` | `Reviews.ReviewID` |
+| `CHAT` | `Conversations.ConversationID` |
+
+Referential integrity for `TargetID` is enforced at the **application level**, not the database. This is a documented trade-off: adding separate nullable FK columns would require a schema migration with data mapping, while the current pattern works safely because only the admin panel reads reports.
+
+### Messages.ReceiverID — Intentional Denormalization
+
+`Messages.ReceiverID` is technically derivable from `Conversations` (`User1ID + User2ID - SenderID`). It is kept as an intentional denormalization for:
+- Trigger validation (`TR_Messages_ParticipantValidation` validates both sender and receiver)
+- Query convenience (direct receiver lookup without JOINing Conversations)
+- Notification creation (receiver is needed immediately when inserting a message)
+
+### Column Length Caps
+
+`NVARCHAR(MAX)` columns are capped to realistic bounded lengths to keep data in-row (SQL Server stores MAX values off-row in LOB pages when >8000 bytes):
+
+| Table.Column | Limit | Rationale |
+|-------------|-------|-----------|
+| `Posts.PostDescription` | 4000 | Listing descriptions |
+| `Messages.Content` | 4000 | Chat messages |
+| `SystemSettings.Value` | 4000 | Config values |
+| `Notifications.PayloadJson` | 2000 | Small JSON envelopes |
+| `HeroBanners.ImageUrl` | 2048 | URL standard max |
+| `PostImages.PostImageURL` | 2048 | URL standard max |
+| `Reviews.Comment` | 4000 | Review text |
+| `AuditLog.OldValues/NewValues` | MAX | JSON blobs vary widely — kept unbounded |
+
+### SchemaMigrations Table
+
+`dbo.SchemaMigrations` is an infrastructure-only tracking table. It has **no C# entity** and is accessed only by SQL migration scripts. Each row records a migration name and its applied timestamp to prevent re-execution.
+

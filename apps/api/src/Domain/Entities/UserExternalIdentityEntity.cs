@@ -11,5 +11,6 @@ namespace TijarahJo.Domain.Entities
         public string? ProviderEmail { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        public bool IsDeleted { get; set; }
     }
 }

@@ -47,6 +47,7 @@ public sealed class PostListingRow
     public string City { get; init; } = string.Empty;
     public string Area { get; init; } = string.Empty;
     public string SellerName { get; init; } = string.Empty;
+    public string Phone { get; init; } = string.Empty;
     public string CategoryName { get; init; } = string.Empty;
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
