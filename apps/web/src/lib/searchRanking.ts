@@ -316,15 +316,32 @@ function scorePost(post: Post, context: QueryContext): number {
   const nameTokenSet = new Set(tokenize(name));
   const categoryTokenSet = new Set(tokenize(category));
   const descriptionTokenSet = new Set(tokenize(description));
+  const isSingleTokenQuery = queryTokens.length === 1;
+
+  const hasBoundaryAwarePrefixMatch = (
+    normalizedFieldValue: string,
+    fieldTokenSet: Set<string>,
+  ): boolean => {
+    if (!normalizedFieldValue.startsWith(normalizedQuery)) {
+      return false;
+    }
+
+    if (!isSingleTokenQuery) {
+      return true;
+    }
+
+    const [firstToken = ""] = tokenize(normalizedFieldValue);
+    return fieldTokenSet.has(normalizedQuery) && firstToken === normalizedQuery;
+  };
 
   let score = 0;
 
   if (name === normalizedQuery) score += 280;
-  else if (name.startsWith(normalizedQuery)) score += 210;
+  else if (hasBoundaryAwarePrefixMatch(name, nameTokenSet)) score += 210;
   else if (name.includes(normalizedQuery)) score += 160;
 
   if (category === normalizedQuery) score += 260;
-  else if (category.startsWith(normalizedQuery)) score += 200;
+  else if (hasBoundaryAwarePrefixMatch(category, categoryTokenSet)) score += 200;
   else if (category.includes(normalizedQuery)) score += 150;
 
   if (description.includes(normalizedQuery)) score += 80;
