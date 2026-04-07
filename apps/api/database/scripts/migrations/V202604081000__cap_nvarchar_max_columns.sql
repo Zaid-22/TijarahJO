@@ -1,3 +1,10 @@
+USE TijarahJoDB;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+SET ANSI_NULLS ON;
+GO
+
 -- =============================================================================
 -- V202604081000 — Cap NVARCHAR(MAX) columns to realistic bounded lengths
 -- DBRE Audit: Findings 7, 12
@@ -14,7 +21,15 @@
 -- ---------------------------------------------------------------------------
 IF NOT EXISTS (SELECT 1 FROM dbo.Posts WHERE LEN(PostDescription) > 4000)
 BEGIN
+    IF COL_LENGTH(N'dbo.Posts', N'SearchDescriptionPrefixNormalized') IS NOT NULL
+    BEGIN
+        ALTER TABLE dbo.Posts DROP COLUMN SearchDescriptionPrefixNormalized;
+    END
+
     ALTER TABLE dbo.Posts ALTER COLUMN PostDescription NVARCHAR(4000) NULL;
+
+    ALTER TABLE dbo.Posts ADD SearchDescriptionPrefixNormalized AS
+        UPPER(SUBSTRING(PostDescription, 1, 100)) PERSISTED;
 END
 GO
 

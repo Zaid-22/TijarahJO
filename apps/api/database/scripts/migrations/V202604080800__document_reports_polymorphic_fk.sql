@@ -1,5 +1,9 @@
 USE TijarahJoDB;
 GO
+SET QUOTED_IDENTIFIER ON;
+GO
+SET ANSI_NULLS ON;
+GO
 
 -- =============================================================================
 -- Documentation: Reports table uses a polymorphic FK pattern

@@ -1,3 +1,10 @@
+USE TijarahJoDB;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+SET ANSI_NULLS ON;
+GO
+
 -- =============================================================================
 -- V202604081100 — Create DataHygieneLog table for automated lifecycle tracking
 -- =============================================================================
