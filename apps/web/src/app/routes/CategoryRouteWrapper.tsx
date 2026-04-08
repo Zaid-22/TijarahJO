@@ -9,6 +9,7 @@ interface CategoryRouteWrapperProps {
   currentUserDisplayName: string;
   currentUserId?: string;
   availablePosts: Post[];
+  isLoadingPosts: boolean;
   favoriteIds: string[];
   onFavoriteToggle: (postId: string) => void;
   onBack: () => void;
@@ -22,6 +23,7 @@ export function CategoryRouteWrapper({
   currentUserDisplayName,
   currentUserId,
   availablePosts,
+  isLoadingPosts,
   favoriteIds,
   onFavoriteToggle,
   onBack,
@@ -45,6 +47,7 @@ export function CategoryRouteWrapper({
       onFavoriteToggle={onFavoriteToggle}
       language={language}
       isAuthenticated={isAuthenticated}
+      isLoading={isLoadingPosts}
       currentUserId={isAuthenticated ? currentUserId : undefined}
       currentUserDisplayName={
         isAuthenticated ? currentUserDisplayName : undefined

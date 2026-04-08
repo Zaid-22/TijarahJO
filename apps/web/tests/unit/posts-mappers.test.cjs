@@ -6,6 +6,9 @@ const {
   getUserDisplayName,
   getUserIdentifier,
 } = require("../../.unit-dist/services/api/posts/mappers.js");
+const {
+  parseRawPost,
+} = require("../../.unit-dist/services/api/schemas/postSchema.js");
 
 test("getUserIdentifier resolves canonical user id from mixed backend casing", () => {
   assert.equal(getUserIdentifier({ UserID: 12 }), "12");
@@ -80,4 +83,16 @@ test("transformPostModelToPost prefers thumbnail image for card previews", () =>
 
   assert.equal(post.image, "http://localhost:5033/uploads/post-images/11.thumb.webp");
   assert.deepEqual(post.images, ["https://example.com/full-1.jpg"]);
+});
+
+test("parseRawPost preserves phone fields used by marketplace call actions", () => {
+  const parsed = parseRawPost({
+    PostID: 15,
+    Phone: "+962791234567",
+    phone: "+962791234567",
+  });
+
+  assert.ok(parsed);
+  assert.equal(parsed.Phone, "+962791234567");
+  assert.equal(parsed.phone, "+962791234567");
 });

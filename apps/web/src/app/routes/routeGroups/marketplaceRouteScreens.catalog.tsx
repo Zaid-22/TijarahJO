@@ -93,6 +93,7 @@ function CategoryMarketplaceRouteScreen() {
       currentUserId={sharedUserRouteProps.currentUserId}
       currentUserDisplayName={sharedUserRouteProps.currentUserDisplayName}
       availablePosts={sharedPostRouteProps.availablePosts}
+      isLoadingPosts={sharedPostRouteProps.isLoadingPosts}
       favoriteIds={sharedPostRouteProps.favoriteIds}
       onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
       onBack={() => navigate(APP_ROUTE_PATHS.home)}

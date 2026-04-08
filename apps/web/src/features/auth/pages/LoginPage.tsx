@@ -84,9 +84,19 @@ const appendDuplicateAccountHint = (
   message: string,
   duplicateHintSuffix: string,
 ): string => {
+  const normalizedMessage = message.toLowerCase();
+
   if (
-    message.includes("already exists") ||
-    message.includes("email address already")
+    normalizedMessage.includes("try logging in") ||
+    normalizedMessage.includes("switch to sign in") ||
+    normalizedMessage.includes("sign in if you already have an account")
+  ) {
+    return message;
+  }
+
+  if (
+    normalizedMessage.includes("already exists") ||
+    normalizedMessage.includes("email address already")
   ) {
     return `${message} ${duplicateHintSuffix}`;
   }

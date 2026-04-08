@@ -237,14 +237,11 @@ export function Footer({ language }: FooterProps) {
           </section>
         </div>
 
-        <div className="mt-5 flex flex-col items-center gap-2 text-sm text-slate-400 sm:flex-row sm:justify-between">
+        <div className="mt-5 flex flex-col items-center gap-2 text-sm text-slate-300 sm:flex-row sm:justify-between">
           <p>
             {language === "ar"
               ? `© ${currentYear} تجارة جو. ${content.allRightsReserved}`
               : `© ${currentYear} TijarahJo. ${content.allRightsReserved}`}
-          </p>
-          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
-            {content.madeInJordan}
           </p>
         </div>
       </div>

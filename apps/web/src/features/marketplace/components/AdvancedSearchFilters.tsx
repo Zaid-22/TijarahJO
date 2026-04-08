@@ -24,6 +24,7 @@ interface AdvancedSearchFiltersProps {
   onClear: () => void;
   categoryDisabled?: boolean;
   hideCategory?: boolean;
+  showApplyButton?: boolean;
 }
 
 const JORDAN_CITIES = [
@@ -80,6 +81,7 @@ export function AdvancedSearchFilters({
   onClear,
   categoryDisabled = false,
   hideCategory = false,
+  showApplyButton = true,
 }: AdvancedSearchFiltersProps) {
   const { categories } = useCatalogCategories();
   const isRTL = language === "ar";
@@ -257,14 +259,15 @@ export function AdvancedSearchFilters({
         </div>
       </FilterGroup>
 
-      {/* Apply Button */}
-      <Button
-        className="w-full rounded-xl shadow-md"
-        size="lg"
-        onClick={onApply}
-      >
-        {labels.apply}
-      </Button>
+      {showApplyButton ? (
+        <Button
+          className="w-full rounded-xl shadow-md"
+          size="lg"
+          onClick={onApply}
+        >
+          {labels.apply}
+        </Button>
+      ) : null}
     </div>
   );
 }

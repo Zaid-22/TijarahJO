@@ -263,13 +263,14 @@ export function SearchResultsPage({
             <div className="sticky top-24">
               <AdvancedSearchFilters
                 language={language}
-                filters={draftSearchFilters}
-                onFiltersChange={setDraftSearchFilters}
-                onApply={applySearchFilters}
+                filters={appliedSearchFilters}
+                onFiltersChange={setAppliedSearchFilters}
+                onApply={() => {}}
                 onClear={() => {
                   setDraftSearchFilters({});
                   setAppliedSearchFilters({});
                 }}
+                showApplyButton={false}
               />
             </div>
           </aside>

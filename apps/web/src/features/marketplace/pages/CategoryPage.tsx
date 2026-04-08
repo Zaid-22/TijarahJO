@@ -15,7 +15,7 @@ import {
 import { SubpageHeader } from "../../../shared/ui/subpage-header";
 import { MarketplaceDiscoveryControls } from "../components/MarketplaceDiscoveryControls";
 import { MarketplaceResultsPagination } from "../components/MarketplaceResultsPagination";
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { useMarketplaceDiscoveryState } from "../../../shared/hooks/useMarketplaceDiscoveryState";
 
 interface CategoryPageProps {
@@ -53,7 +53,6 @@ export function CategoryPage({
   const [appliedSearchFilters, setAppliedSearchFilters] = useState<SearchFilters>(
     {},
   );
-  const [draftSearchFilters, setDraftSearchFilters] = useState<SearchFilters>({});
 
   const normalizedCategoryName = categoryName.trim().toLowerCase();
   const currentCategory = categories.find(
@@ -107,14 +106,6 @@ export function CategoryPage({
       return results;
   }, [filteredPosts, appliedSearchFilters]);
 
-  useEffect(() => {
-    setDraftSearchFilters(appliedSearchFilters);
-  }, [appliedSearchFilters]);
-
-  const applySearchFilters = useCallback(() => {
-    setAppliedSearchFilters(draftSearchFilters);
-  }, [draftSearchFilters]);
-
   const {
     viewMode,
     displayedResults: displayedPosts,
@@ -126,6 +117,10 @@ export function CategoryPage({
     defaultViewMode: "list",
     storageKey: "tijarahjo_view_mode_category",
   });
+  const resultsSummary =
+    language === "ar"
+      ? `${sortedPosts.length} ${sortedPosts.length === 1 ? "نتيجة" : "نتائج"}`
+      : `${sortedPosts.length} ${sortedPosts.length === 1 ? "result" : "results"}`;
 
   return (
     <PageShell>
@@ -143,30 +138,42 @@ export function CategoryPage({
       />
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col lg:flex-row gap-6">
+      <main className="mx-auto w-full max-w-[94rem] px-4 py-8 sm:px-6 lg:px-8 xl:px-10">
+        <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)] xl:gap-7 xl:grid-cols-[15.5rem_minmax(0,1fr)]">
           {/* Sidebar Filters (Desktop) */}
-          <aside className="hidden lg:block w-72 flex-shrink-0">
+          <aside className="hidden lg:block">
             <div className="sticky top-24">
               <AdvancedSearchFilters
                 language={language}
-                filters={{ ...draftSearchFilters, category: displayCategoryName }}
-                onFiltersChange={setDraftSearchFilters}
-                onApply={applySearchFilters}
+                filters={{ ...appliedSearchFilters, category: displayCategoryName }}
+                onFiltersChange={setAppliedSearchFilters}
+                onApply={() => {}}
                 onClear={() => {
-                  setDraftSearchFilters({});
                   setAppliedSearchFilters({});
                 }}
                 hideCategory
+                showApplyButton={false}
               />
             </div>
           </aside>
 
           {/* Main Results Area */}
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 rounded-[30px] border border-slate-200/70 bg-gradient-to-br from-white via-slate-50/30 to-white p-4 shadow-[0_28px_70px_-55px_rgba(15,23,42,0.45)] sm:p-5 xl:p-6">
+            <div className="mb-5 rounded-[22px] border border-slate-200/70 bg-white/85 px-4 py-4 shadow-[0_12px_40px_-32px_rgba(15,23,42,0.35)] backdrop-blur sm:px-5">
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/75">
+                  {resultsSummary}
+                </p>
+                <h2 className="text-xl font-semibold tracking-[-0.02em] text-foreground">
+                  {displayCategoryName}
+                </h2>
+              </div>
+            </div>
+
             {/* Controls Bar */}
             <MarketplaceDiscoveryControls
               language={language}
+              className="mb-5"
               toolbarClassName="flex-none"
               leftSlotClassName="gap-2 flex-1 sm:flex-initial"
             />

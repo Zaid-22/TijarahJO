@@ -239,20 +239,22 @@ export function PostActionDialogs({
             </div>
             <a
               href={`tel:${sellerPhone || post.phone || "962700000000"}`}
-              className="text-3xl font-semibold tracking-wide hover:opacity-80 transition-opacity text-primary"
+              aria-label={
+                language === "ar"
+                  ? `اتصل الآن ${sellerPhone || post.phone || "+962 7 0000 0000"}`
+                  : `Call now ${sellerPhone || post.phone || "+962 7 0000 0000"}`
+              }
+              className="flex h-[4.9rem] w-full items-center justify-between rounded-[22px] bg-primary px-5 text-primary-foreground shadow-[0_22px_50px_-28px_rgba(37,99,235,0.95)] transition-all hover:bg-primary/92 hover:shadow-[0_26px_58px_-28px_rgba(37,99,235,0.98)]"
+              dir="ltr"
             >
-              {sellerPhone || post.phone || "+962 7 0000 0000"}
+              <span className="truncate pe-4 text-[1.95rem] font-extrabold tracking-[-0.03em]">
+                {sellerPhone || post.phone || "+962 7 0000 0000"}
+              </span>
+              <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-white/14">
+                <Phone className="h-6 w-6" />
+              </span>
             </a>
-            <div className="flex flex-col sm:flex-row gap-3 w-full pt-4">
-              <a
-                href={`tel:${sellerPhone || post.phone || "962700000000"}`}
-                className="flex-1"
-              >
-                <Button className="w-full">
-                  <Phone className={`w-4 h-4 me-2`} />
-                  {language === "ar" ? "اتصل الآن" : "Call Now"}
-                </Button>
-              </a>
+            <div className="flex flex-col sm:flex-row gap-3 w-full pt-1">
               <Button
                 variant="outline"
                 className="flex-1"

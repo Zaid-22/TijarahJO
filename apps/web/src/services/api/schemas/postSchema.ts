@@ -49,6 +49,8 @@ export function parseRawPost(value: unknown): RawPost | null {
     CityId: record.CityId,
     cityId: record.cityId,
     Area: record.Area,
+    Phone: record.Phone,
+    phone: record.phone,
     AreaId: record.AreaId,
     areaId: record.areaId,
     area: record.area,
