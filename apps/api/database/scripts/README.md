@@ -27,6 +27,35 @@ Active canonical migrations (current order):
 - `V202602241500__filtered_indexes_for_soft_deletes.sql`
 - `V202602241700__enforce_posts_status_domain.sql`
 - `V202602251000__add_user_totp_2fa_columns.sql`
+- `V202603241000__important_schema_fixes.sql`
+- `V202603242145__add_missing_tables.sql`
+- `V202603250100__grant_auditlog_update.sql`
+- `V202603250200__grant_permissions_missing_tables.sql`
+- `V202603271720__add_verification_challenges_and_session_invalidation.sql`
+- `V202603281800__add_hero_banners.sql`
+- `V202603291700__expand_hero_banner_image_url.sql`
+- `V202603291745__seed_system_settings_defaults.sql`
+- `V202603291800__seed_permissions_and_admin_role_mappings.sql`
+- `V202603291830__add_categories_manage_permission.sql`
+- `V202603292130__seed_maintenance_reason_and_eta.sql`
+- `V202603300000__add_arabic_location_names.sql`
+- `V202603300100__grant_dml_to_locations.sql`
+- `V202604010000__create_post_comments_table.sql`
+- `V202604010100__add_post_comment_permissions.sql`
+- `V202604080100__fix_favorites_unique_constraint.sql`
+- `V202604080200__messages_validate_receiver.sql`
+- `V202604080300__postimages_url_max_length.sql`
+- `V202604080400__add_missing_indexes.sql`
+- `V202604080500__review_comment_max_length.sql`
+- `V202604080600__add_notifications_is_deleted.sql`
+- `V202604080700__add_external_identities_is_deleted.sql`
+- `V202604080800__document_reports_polymorphic_fk.sql`
+- `V202604080900__cascade_soft_deletes.sql`
+- `V202604081000__cap_nvarchar_max_columns.sql`
+- `V202604081100__create_data_hygiene_log.sql`
+- `V202604081200__fix_reviews_unique_constraint.sql`
+- `V202604081300__add_postcomments_userid_index.sql`
+- `V202604081400__postcomments_depth_guard.sql`
 
 Legacy `Tb*` migration scripts were moved under `../archive/migrations-legacy/` and are excluded from bootstrap bundles.
 
@@ -163,3 +192,19 @@ Generated files:
 - Optional development seed data: apply `apps/api/database/bundles/seed_dev.sql`
 - Optional test seed data: apply `apps/api/database/bundles/seed_test.sql`
 - Maintenance cleanup (dev/test only): run `apps/api/database/ops/dev-only/CLEANUP_TEST_DATA.sql` with `sqlcmd -v ALLOW_DEV_DATA_CLEANUP=1`
+
+## Security
+
+> ⚠️ **Development uses the `sa` account for convenience. This must NEVER reach production.**
+
+For production deployment:
+
+1. Create dedicated SQL logins for `tijarahjo_app` and `tijarahjo_readonly` (see V202602221400)
+2. Map logins to the database users created by the security migration:
+   ```sql
+   CREATE LOGIN tijarahjo_app WITH PASSWORD = '<strong-password>';
+   ALTER USER tijarahjo_app WITH LOGIN = tijarahjo_app;
+   ```
+3. Update connection strings in `appsettings.Production.json` to use `tijarahjo_app`
+4. Never use `sa`, `Password123!@#`, or any weak credentials in production
+5. The `tijarahjo_app_role` is restricted to DML only; DDL and schema changes are explicitly denied

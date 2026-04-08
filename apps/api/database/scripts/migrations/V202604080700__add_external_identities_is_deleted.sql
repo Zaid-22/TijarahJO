@@ -5,6 +5,7 @@ GO
 SET ANSI_NULLS ON;
 GO
 
+-- ATOMICITY_EXCEPTION: Idempotent DDL/DML with GO-batched statements.
 -- =============================================================================
 -- Fix: Add IsDeleted to UserExternalIdentities for soft-delete consistency
 -- =============================================================================

@@ -5,6 +5,7 @@ GO
 SET ANSI_NULLS ON;
 GO
 
+-- ATOMICITY_EXCEPTION: Idempotent DDL/DML with GO-batched statements.
 -- =============================================================================
 -- Fix: Align PostImageURL SQL type with EF Core HasMaxLength(2048)
 -- Reason: SQL had NVARCHAR(MAX), EF had HasMaxLength(2048) — mismatch

@@ -5,6 +5,7 @@ GO
 SET ANSI_NULLS ON;
 GO
 
+-- ATOMICITY_EXCEPTION: Idempotent DDL/DML with GO-batched statements.
 -- =============================================================================
 -- Fix: Messages trigger now validates BOTH SenderID and ReceiverID
 -- Reason: Original trigger only validated SenderID; ReceiverID could drift

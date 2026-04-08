@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System.Text.Json;
 using TijarahJo.Domain.Entities;
 
@@ -53,6 +54,13 @@ public sealed class TijarahJoDbContext(DbContextOptions<TijarahJoDbContext> opti
                     .HasConversion(converter);
                 builder.Property(e => e.TwoFactorPendingSecret)
                     .HasConversion(converter);
+            });
+
+            // Encrypt PushSubscription auth keys at rest (Audit O5)
+            modelBuilder.Entity<PushSubscriptionEntity>(builder =>
+            {
+                builder.Property(e => e.Auth)
+                    .HasConversion((ValueConverter)converter);
             });
         }
     }

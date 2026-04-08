@@ -5,6 +5,7 @@ GO
 SET ANSI_NULLS ON;
 GO
 
+-- ATOMICITY_EXCEPTION: Idempotent DDL/DML with GO-batched statements.
 -- =============================================================================
 -- Performance: Add 5 missing indexes identified in architecture audit
 -- =============================================================================

@@ -5,6 +5,7 @@ GO
 SET ANSI_NULLS ON;
 GO
 
+-- ATOMICITY_EXCEPTION: Idempotent DDL/DML with GO-batched statements.
 -- =============================================================================
 -- V202604080900 — Cascade soft-deletes to orphaned PostImages & Favorites
 -- DBRE Audit: Findings 4, 5

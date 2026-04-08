@@ -20,8 +20,14 @@ public class PostConfiguration : IEntityTypeConfiguration<PostEntity>
         builder.Property(e => e.CityID);
         builder.Property(e => e.AreaID);
 
-        builder.Property(e => e.SearchTitleNormalized).ValueGeneratedOnAddOrUpdate().HasMaxLength(200);
-        builder.Property(e => e.SearchDescriptionPrefixNormalized).ValueGeneratedOnAddOrUpdate().HasMaxLength(450);
+        builder.Property(e => e.SearchTitleNormalized)
+            .ValueGeneratedOnAddOrUpdate()
+            .HasMaxLength(200)
+            .Metadata.SetAfterSaveBehavior(Microsoft.EntityFrameworkCore.Metadata.PropertySaveBehavior.Ignore);
+        builder.Property(e => e.SearchDescriptionPrefixNormalized)
+            .ValueGeneratedOnAddOrUpdate()
+            .HasMaxLength(450)
+            .Metadata.SetAfterSaveBehavior(Microsoft.EntityFrameworkCore.Metadata.PropertySaveBehavior.Ignore);
         
         builder.HasOne<UserEntity>()
             .WithMany()

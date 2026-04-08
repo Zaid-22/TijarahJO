@@ -5,6 +5,7 @@ GO
 SET ANSI_NULLS ON;
 GO
 
+-- ATOMICITY_EXCEPTION: Idempotent DDL/DML with GO-batched statements.
 -- =============================================================================
 -- V202604081000 — Cap NVARCHAR(MAX) columns to realistic bounded lengths
 -- DBRE Audit: Findings 7, 12

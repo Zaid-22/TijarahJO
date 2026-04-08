@@ -5,6 +5,7 @@ GO
 SET ANSI_NULLS ON;
 GO
 
+-- ATOMICITY_EXCEPTION: Idempotent DDL/DML with GO-batched statements.
 -- =============================================================================
 -- Fix: Replace Favorites UNIQUE(UserID, PostID) with filtered index
 -- Reason: The unfiltered constraint blocks re-favoriting after soft-delete

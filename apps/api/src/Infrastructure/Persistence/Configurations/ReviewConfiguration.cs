@@ -15,7 +15,10 @@ public class ReviewConfiguration : IEntityTypeConfiguration<ReviewEntity>
         builder.Property(e => e.CreatedAt).HasColumnType("datetime2");
         builder.Property(e => e.IsDeleted).HasDefaultValue(false);
         
-        builder.HasIndex(e => new { e.ReviewerID, e.ReviewedUserID }).IsUnique();
+        builder.HasIndex(e => new { e.ReviewerID, e.ReviewedUserID })
+            .IsUnique()
+            .HasFilter("[IsDeleted] = 0")
+            .HasDatabaseName("UQ_Reviews_Reviewer_Reviewed");
         
         builder.HasOne<UserEntity>()
             .WithMany()

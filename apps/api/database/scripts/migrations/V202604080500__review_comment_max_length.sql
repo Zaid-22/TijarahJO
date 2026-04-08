@@ -5,6 +5,7 @@ GO
 SET ANSI_NULLS ON;
 GO
 
+-- ATOMICITY_EXCEPTION: Idempotent DDL/DML with GO-batched statements.
 -- =============================================================================
 -- Fix: Cap Review.Comment to NVARCHAR(4000) from NVARCHAR(MAX)
 -- Reason: Review comments should have a reasonable length limit

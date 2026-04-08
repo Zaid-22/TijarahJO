@@ -303,9 +303,13 @@ BEGIN
         IsDeleted      BIT           NOT NULL CONSTRAINT DF_Reviews_IsDeleted DEFAULT 0,
         CONSTRAINT FK_Reviews_ReviewerID     FOREIGN KEY (ReviewerID)     REFERENCES dbo.Users(UserID),
         CONSTRAINT FK_Reviews_ReviewedUserID FOREIGN KEY (ReviewedUserID) REFERENCES dbo.Users(UserID),
-        CONSTRAINT CK_Reviews_NoSelfReview CHECK (ReviewerID <> ReviewedUserID),
-        CONSTRAINT UQ_Reviews_Reviewer_Reviewed UNIQUE (ReviewerID, ReviewedUserID)
+        CONSTRAINT CK_Reviews_NoSelfReview CHECK (ReviewerID <> ReviewedUserID)
     );
+
+    -- Filtered unique: allows re-review after soft-delete (Audit C1)
+    CREATE UNIQUE NONCLUSTERED INDEX UQ_Reviews_Reviewer_Reviewed
+    ON dbo.Reviews (ReviewerID, ReviewedUserID)
+    WHERE IsDeleted = 0;
 END
 GO
 

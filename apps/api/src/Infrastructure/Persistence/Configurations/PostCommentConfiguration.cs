@@ -38,6 +38,9 @@ public class PostCommentConfiguration : IEntityTypeConfiguration<PostCommentEnti
         builder.HasIndex(e => e.ParentCommentID)
             .HasDatabaseName("IX_PostComments_ParentCommentID");
 
+        builder.HasIndex(e => new { e.UserID, e.CreatedAt })
+            .HasDatabaseName("IX_PostComments_UserID_Active");
+
         builder.HasQueryFilter(e => !e.IsDeleted);
     }
 }
