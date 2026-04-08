@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import {
   Users,
   ShoppingBag,
@@ -17,28 +17,27 @@ import {
 } from "../../../shared/ui/card";
 import { Badge } from "../../../shared/ui/badge";
 import { api } from "../../../services/api";
-import { AdminDashboardStats } from "../../../services/api/admin";
+import type { AdminDashboardStats } from "../../../services/api/admin";
 import { formatCompactDateTime } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
 import { LoadingState } from "../../../shared/ui/loading-state";
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-} from "recharts";
+
+const AdminDashboardCharts = lazy(() =>
+  import("./AdminDashboardCharts").then((module) => ({
+    default: module.AdminDashboardCharts,
+  })),
+);
+
+type AdminDashboardAnalytics = {
+  weeklyUsers: Record<string, unknown>[];
+  categoryData: Record<string, unknown>[];
+};
 
 export function AdminDashboard() {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
-  const [analytics, setAnalytics] = useState<{
-    weeklyUsers: Record<string, unknown>[];
-    categoryData: Record<string, unknown>[];
-  } | null>(null);
+  const [analytics, setAnalytics] = useState<AdminDashboardAnalytics | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -189,130 +188,16 @@ export function AdminDashboard() {
 
       {/* Analytics Charts */}
       {analytics && (
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Active Users Chart (7 Days) */}
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold">
-                Signups (Last 7 Days)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[250px] w-full">
-                <ResponsiveContainer width="100%" height={250}>
-                  <LineChart
-                    data={analytics.weeklyUsers}
-                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                  >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      opacity={0.3}
-                    />
-                    <XAxis
-                      dataKey="day"
-                      axisLine={false}
-                      tickLine={false}
-                      fontSize={12}
-                      tickMargin={10}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      fontSize={12}
-                      allowDecimals={false}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        borderRadius: "8px",
-                        border: "1px solid var(--border)",
-                        boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-                      }}
-                      cursor={{
-                        stroke: "var(--muted-foreground)",
-                        strokeWidth: 1,
-                        strokeDasharray: "3 3",
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="count"
-                      name="New Users"
-                      stroke="var(--primary)"
-                      strokeWidth={3}
-                      dot={{
-                        r: 4,
-                        fill: "var(--primary)",
-                        strokeWidth: 2,
-                        stroke: "var(--background)",
-                      }}
-                      activeDot={{ r: 6 }}
-                      animationDuration={1500}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Listings by Category Chart */}
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold">
-                Top Categories
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[250px] w-full">
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart
-                    data={analytics.categoryData}
-                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                  >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      opacity={0.3}
-                    />
-                    <XAxis
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      fontSize={11}
-                      tickMargin={10}
-                      tickFormatter={(value) =>
-                        value.length > 10
-                          ? `${value.substring(0, 10)}...`
-                          : value
-                      }
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      fontSize={12}
-                      allowDecimals={false}
-                    />
-                    <Tooltip
-                      cursor={{ fill: "var(--muted)" }}
-                      contentStyle={{
-                        borderRadius: "8px",
-                        border: "1px solid var(--border)",
-                        boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-                      }}
-                    />
-                    <Bar
-                      dataKey="count"
-                      name="Active Listings"
-                      fill="var(--primary)"
-                      radius={[4, 4, 0, 0]}
-                      animationDuration={1500}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <Suspense
+          fallback={
+            <LoadingState
+              label="Loading charts..."
+              minHeightClassName="min-h-[320px]"
+            />
+          }
+        >
+          <AdminDashboardCharts analytics={analytics} />
+        </Suspense>
       )}
 
       {/* Second Row: System Overview & Recent Activity */}

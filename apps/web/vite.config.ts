@@ -187,6 +187,21 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [tailwindcss(), react(), injectCspPolicy(mode, env)],
     build: {
+      manifest: true,
+      modulePreload: {
+        resolveDependencies(_filename, deps, context) {
+          if (context.hostType !== "html") {
+            return deps;
+          }
+
+          // Keep chart code deferred until the admin dashboard requests it.
+          return deps.filter(
+            (dep) =>
+              !dep.includes("recharts-vendor-") &&
+              !dep.includes("victory-vendor-"),
+          );
+        },
+      },
       rollupOptions: {
         output: {
           manualChunks(id) {
@@ -200,8 +215,13 @@ export default defineConfig(({ mode }) => {
               return "signalr-vendor";
             }
 
+            if (normalizedId.includes("/node_modules/recharts/")) {
+              return "recharts-vendor";
+            }
 
-
+            if (normalizedId.includes("/node_modules/victory-vendor/")) {
+              return "victory-vendor";
+            }
 
             if (
               normalizedId.includes("/node_modules/react-router/") ||
