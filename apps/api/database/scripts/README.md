@@ -56,6 +56,7 @@ Active canonical migrations (current order):
 - `V202604081200__fix_reviews_unique_constraint.sql`
 - `V202604081300__add_postcomments_userid_index.sql`
 - `V202604081400__postcomments_depth_guard.sql`
+- `V202604081500__seed_default_hero_banners.sql`
 
 Legacy `Tb*` migration scripts were moved under `../archive/migrations-legacy/` and are excluded from bootstrap bundles.
 
@@ -76,8 +77,9 @@ Use `./scripts/bootstrap_db.sh` (from repo root) for local setup.
 1. Runs `build_sql_bundles.sh`
 2. Applies `apps/api/database/bundles/master.sql` (base schema + ordered migrations)
 3. Applies `apps/api/database/bundles/seed_data.sql` (baseline seeds only, by default)
-4. Applies `apps/api/database/bundles/seed_dev.sql` only with `--with-dev-seeds`
-5. Applies `apps/api/database/bundles/seed_test.sql` only with `--with-test-seeds`
+4. Applies `apps/api/database/bundles/seed_admin.sql` only with `--with-admin-bootstrap`
+5. Applies `apps/api/database/bundles/seed_dev.sql` only with `--with-dev-seeds`
+6. Applies `apps/api/database/bundles/seed_test.sql` only with `--with-test-seeds`
 
 ## Canonical Source Layout
 
@@ -89,6 +91,8 @@ Use `./scripts/bootstrap_db.sh` (from repo root) for local setup.
   - archived legacy migrations (outside runtime migration path and not part of `master.sql`)
 - `seeds/baseline/`
   - baseline reference data required for local/runtime defaults
+- `seeds/bootstrap/`
+  - guarded bootstrap seeds such as a local admin account
 - `seeds/dev/`
   - development-only sample/test data helpers
 - `seeds/test/`
@@ -177,6 +181,7 @@ Generated files:
 - `apps/api/database/bundles/schema.sql`: base table/constraint schema bundle
 - `apps/api/database/bundles/migrations.sql`: ordered migration bundle
 - `apps/api/database/bundles/seed_data.sql`: baseline seed bundle only
+- `apps/api/database/bundles/seed_admin.sql`: guarded admin bootstrap seed bundle
 - `apps/api/database/bundles/seed_dev.sql`: development-only seed bundle
 - `apps/api/database/bundles/seed_test.sql`: test-only seed bundle
 - `apps/api/database/bundles/master.sql`: one-shot deployment bundle (`base schema + migrations`)
@@ -184,11 +189,14 @@ Generated files:
 ## Execution Strategy
 
 - Full setup (recommended): run `./scripts/bootstrap_db.sh`
+- Full setup + guarded admin bootstrap: `./scripts/bootstrap_db.sh --with-admin-bootstrap`
 - Full setup + dev seeds: `./scripts/bootstrap_db.sh --with-dev-seeds`
+- Full setup + admin bootstrap + dev seeds: `./scripts/bootstrap_db.sh --with-admin-bootstrap --with-dev-seeds`
 - Full setup + dev/test seeds: `./scripts/bootstrap_db.sh --with-dev-seeds --with-test-seeds`
 - Manual schema-only setup: apply `apps/api/database/bundles/schema.sql`
 - Manual migration-only setup: apply `apps/api/database/bundles/migrations.sql`
 - Baseline-only seed data: apply `apps/api/database/bundles/seed_data.sql`
+- Optional guarded admin bootstrap seed: apply `apps/api/database/bundles/seed_admin.sql`
 - Optional development seed data: apply `apps/api/database/bundles/seed_dev.sql`
 - Optional test seed data: apply `apps/api/database/bundles/seed_test.sql`
 - Maintenance cleanup (dev/test only): run `apps/api/database/ops/dev-only/CLEANUP_TEST_DATA.sql` with `sqlcmd -v ALLOW_DEV_DATA_CLEANUP=1`
