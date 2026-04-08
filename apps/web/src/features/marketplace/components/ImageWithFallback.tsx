@@ -14,20 +14,36 @@ export const ImageWithFallback = forwardRef<
 >((props, ref) => {
   const [didError, setDidError] = useState(false);
   const [currentSrc, setCurrentSrc] = useState(props.src);
+  const [currentSrcSet, setCurrentSrcSet] = useState(props.srcSet);
 
-  const { src, alt, style: _style, className, fallbackSrc, ...rest } = props;
+  const {
+    src,
+    srcSet,
+    alt,
+    style: _style,
+    className,
+    fallbackSrc,
+    onError,
+    ...rest
+  } = props;
 
   useEffect(() => {
     setCurrentSrc(src);
+    setCurrentSrcSet(srcSet);
     setDidError(false);
-  }, [src]);
+  }, [src, srcSet]);
 
-  const handleError = () => {
+  const handleError = (
+    event: React.SyntheticEvent<HTMLImageElement, Event>,
+  ) => {
     if (fallbackSrc && currentSrc !== fallbackSrc) {
       setCurrentSrc(fallbackSrc);
+      setCurrentSrcSet(undefined);
+      onError?.(event);
       return;
     }
     setDidError(true);
+    onError?.(event);
   };
 
   const hasObjectFitClass =
@@ -84,6 +100,7 @@ export const ImageWithFallback = forwardRef<
     <img
       ref={ref}
       src={currentSrc}
+      srcSet={currentSrcSet}
       alt={alt}
       loading="lazy"
       decoding="async"

@@ -1,18 +1,59 @@
-import { useMemo } from "react";
-import { Globe } from "lucide-react";
+import { Suspense, lazy } from "react";
 import { Language, Post, ViewMode } from "../../../types";
 import { APP_CONFIG } from "../../../constants/appConfig";
 import { HomeHeroSection } from "../components/HomeHeroSection";
 import { HomeCategoriesSection } from "../components/HomeCategoriesSection";
-import { PostCarousel } from "../components/PostCarousel";
 import { PostCarouselSkeleton } from "../components/PostCarouselSkeleton";
-import { HomePromotionalBanner } from "../components/HomePromotionalBanner";
 import { usePrefersReducedMotion } from "../../../shared/hooks/usePrefersReducedMotion";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { useCatalogCategories } from "../../../shared/hooks/useCatalogCategories";
-import { resolveCategoryName } from "../../../shared/lib/categoryVisuals";
-import { isActivePost } from "../../../lib/searchRanking";
-import { MarketplaceEmptyState } from "../../marketplace/components/MarketplaceEmptyState";
+import type { Category } from "../../../types/api";
+
+function lazyImportWithRetry<TModule>(
+  load: () => Promise<TModule>,
+  retryKey: string,
+) {
+  return async () => {
+    try {
+      const module = await load();
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem(retryKey);
+      }
+      return module;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isRecoverableImportError =
+        /Failed to fetch dynamically imported module|Importing a module script failed/i.test(
+          message,
+        );
+
+      if (
+        typeof window !== "undefined" &&
+        isRecoverableImportError &&
+        !window.sessionStorage.getItem(retryKey)
+      ) {
+        window.sessionStorage.setItem(retryKey, "1");
+        window.location.reload();
+
+        return new Promise<never>(() => {
+          // Keep React.lazy pending while the page reload is in flight.
+        });
+      }
+
+      throw error;
+    }
+  };
+}
+
+const HomeDeferredSections = lazy(
+  lazyImportWithRetry(
+    () =>
+      import("../components/HomeDeferredSections").then((m) => ({
+        default: m.HomeDeferredSections,
+      })),
+    "lazy-import-retry:home-deferred-sections",
+  ),
+);
 
 interface HomePageProps {
   language: Language;
@@ -74,12 +115,12 @@ export function HomePage({
   setSelectedCategoryForPage,
   isLoadingPosts,
   postsError,
-  displayedPosts,
-  availablePosts,
-  filteredPosts,
+  displayedPosts = [],
+  availablePosts = [],
+  filteredPosts = [],
   viewMode: _viewMode,
   onPostClick,
-  favoriteIds,
+  favoriteIds = [],
   toggleFavorite,
   currentUserDisplayName,
   currentUserId,
@@ -93,7 +134,9 @@ export function HomePage({
 }: HomePageProps) {
   const backendUrlHint = APP_CONFIG.backendHostUrl;
   const prefersReducedMotion = usePrefersReducedMotion();
-  const { categories, isLoading: isLoadingCategories } = useCatalogCategories();
+  const { categories, isLoading: isLoadingCategories } = useCatalogCategories({
+    useInitialFallback: true,
+  });
 
   const scrollToTop = () => {
     const mainContent = document.getElementById("home-marketplace-content");
@@ -102,72 +145,6 @@ export function HomePage({
       block: "start",
     });
   };
-
-  // Split posts for "Featured" carousel and main grid
-  const featuredPosts = useMemo(() => {
-    return displayedPosts.filter((p) => p.status !== "SOLD").slice(0, 10);
-  }, [displayedPosts]);
-
-  const recentPosts = useMemo(() => {
-    return displayedPosts
-      .filter(isActivePost)
-      .sort((a, b) => {
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return dateB - dateA;
-      })
-      .slice(0, 10);
-  }, [displayedPosts]);
-
-  const allListingsCarouselPosts = useMemo(() => {
-    return [...filteredPosts]
-      .filter(isActivePost)
-      .sort((a, b) => {
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return dateB - dateA;
-      });
-  }, [filteredPosts]);
-
-  const categorySections = useMemo(() => {
-    const postsByCategory = new Map<string, Post[]>();
-
-    availablePosts
-      .filter(isActivePost)
-      .forEach((post) => {
-        const normalizedCategoryName = post.category.trim().toLowerCase();
-        if (!normalizedCategoryName) {
-          return;
-        }
-
-        const categoryPosts = postsByCategory.get(normalizedCategoryName) || [];
-        categoryPosts.push(post);
-        postsByCategory.set(normalizedCategoryName, categoryPosts);
-      });
-
-    return categories.flatMap((category) => {
-      const normalizedCategoryName = category.name.trim().toLowerCase();
-      const matchingPosts = postsByCategory.get(normalizedCategoryName);
-
-      if (!matchingPosts || matchingPosts.length === 0) {
-        return [];
-      }
-
-      return [
-        {
-          categoryName: category.name,
-          displayName: resolveCategoryName(category, language),
-          posts: [...matchingPosts]
-            .sort((a, b) => {
-              const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-              const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-              return dateB - dateA;
-            })
-            .slice(0, 10),
-        },
-      ];
-    });
-  }, [availablePosts, categories, language]);
 
   return (
     <PageShell>
@@ -195,196 +172,73 @@ export function HomePage({
         setShowAllPosts={setShowAllPosts}
       />
 
-      {/* 3. Featured Posts Carousel */}
-      {isLoadingPosts ? (
-        <PostCarouselSkeleton hasSubtitle />
-      ) : featuredPosts.length > 0 ? (
-        <PostCarousel
-          title={language === "ar" ? "المنشورات المميزة" : "Featured Posts"}
-          subtitle={
-            language === "ar"
-              ? "أبرز المنتجات المتوفرة حالياً"
-              : "Top picks available right now"
-          }
-          posts={featuredPosts}
+      <Suspense
+        fallback={
+          <HomeDeferredSectionsFallback
+            language={language}
+            isLoadingPosts={isLoadingPosts}
+            isLoadingCategories={isLoadingCategories}
+          />
+        }
+      >
+        <HomeDeferredSections
           language={language}
           isAuthenticated={isAuthenticated}
-          currentUserId={currentUserId}
-          currentUserDisplayName={currentUserDisplayName}
+          isLoadingPosts={isLoadingPosts}
+          isLoadingCategories={isLoadingCategories}
+          postsError={postsError}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          setShowLoginPrompt={setShowLoginPrompt}
+          setShowSellItem={setShowSellItem}
+          setShowAllPosts={setShowAllPosts}
+          setSelectedCategoryForPage={setSelectedCategoryForPage}
+          onPostClick={onPostClick}
           favoriteIds={favoriteIds}
-          onFavoriteToggle={toggleFavorite}
-          onPostClick={(id) => onPostClick(id, "featured")}
-          onViewAll={() => setShowAllPosts(true)}
-          viewAllLabel={language === "ar" ? "عرض الكل" : "View All"}
-          onRequireAuth={() => setShowLoginPrompt(true)}
-        />
-      ) : null}
-
-
-
-      {/* 5. Recent Posts Carousel */}
-      {isLoadingPosts ? (
-        <PostCarouselSkeleton hasSubtitle />
-      ) : recentPosts.length > 0 ? (
-        <PostCarousel
-          title={language === "ar" ? "أحدث الإعلانات" : "Recently Added"}
-          subtitle={
-            language === "ar"
-              ? "أحدث ما تمت إضافته للمنصة"
-              : "The latest listings on TijarahJO"
-          }
-          posts={recentPosts}
-          language={language}
-          isAuthenticated={isAuthenticated}
-          currentUserId={currentUserId}
+          toggleFavorite={toggleFavorite}
           currentUserDisplayName={currentUserDisplayName}
-          favoriteIds={favoriteIds}
-          onFavoriteToggle={toggleFavorite}
-          onPostClick={(id) => onPostClick(id, "recent")}
-          onViewAll={() => setShowAllPosts(true)}
-          viewAllLabel={language === "ar" ? "عرض الكل" : "View All"}
-          onRequireAuth={() => setShowLoginPrompt(true)}
+          currentUserId={currentUserId}
+          displayedPosts={displayedPosts}
+          availablePosts={availablePosts}
+          filteredPosts={filteredPosts}
+          categories={categories as Category[]}
+          backendUrlHint={backendUrlHint}
         />
-      ) : null}
+      </Suspense>
+    </PageShell>
+  );
+}
 
-      {!isLoadingPosts &&
-      !isLoadingCategories &&
-      categorySections.length > 0
-        ? categorySections.map((section) => (
-            <PostCarousel
-              key={section.categoryName}
-              title={section.displayName}
-              subtitle={
-                language === "ar"
-                  ? `أحدث الإعلانات في ${section.displayName}`
-                  : `Latest listings in ${section.displayName}`
-              }
-              posts={section.posts}
-              language={language}
-              isAuthenticated={isAuthenticated}
-              currentUserId={currentUserId}
-              currentUserDisplayName={currentUserDisplayName}
-              favoriteIds={favoriteIds}
-              onFavoriteToggle={toggleFavorite}
-              onPostClick={(id) => onPostClick(id, section.categoryName)}
-              onViewAll={() =>
-                setSelectedCategoryForPage(section.categoryName)
-              }
-              viewAllLabel={language === "ar" ? "عرض الكل" : "View All"}
-              onRequireAuth={() => setShowLoginPrompt(true)}
-            />
-          ))
-        : null}
-
-      {/* 6. Bottom Promotional Banner */}
-      <HomePromotionalBanner
-        title={
-          language === "ar"
-            ? "بيع في كل مكان بالأردن"
-            : "Sell Across All of Jordan"
-        }
-        subtitle={
-          language === "ar"
-            ? "اعرض منشوراتك ووصلها للمشترين في كل المحافظات"
-            : "List your posts and reach buyers in every governorate"
-        }
-        buttonLabel={
-          isAuthenticated
-            ? language === "ar"
-              ? "أضف إعلان"
-              : "Post a Listing"
-            : language === "ar"
-              ? "سجل الآن"
-              : "Sign Up Now"
-        }
-        onButtonClick={() =>
-          isAuthenticated ? setShowSellItem(true) : setShowLoginPrompt(true)
-        }
-        icon={Globe}
-        variant="gradient"
-      />
-
-      {/* 7. Main Content - All Posts Grid */}
+function HomeDeferredSectionsFallback({
+  language,
+  isLoadingPosts,
+  isLoadingCategories,
+}: {
+  language: Language;
+  isLoadingPosts: boolean;
+  isLoadingCategories: boolean;
+}) {
+  return (
+    <>
+      {(isLoadingPosts || isLoadingCategories) ? <PostCarouselSkeleton hasSubtitle /> : null}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="overflow-hidden rounded-2xl bg-muted animate-pulse px-6 py-8 sm:px-8 sm:py-10">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-3">
+              <div className="h-6 w-48 rounded-md bg-background/60" />
+              <div className="h-4 w-72 max-w-full rounded-md bg-background/50" />
+            </div>
+            <div className="h-11 w-36 rounded-xl bg-background/60" />
+          </div>
+        </div>
+      </section>
       <section
         id="home-marketplace-content"
         aria-label={language === "ar" ? "محتوى السوق" : "Marketplace content"}
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
       >
-        {isLoadingPosts ? (
-          <PostCarouselSkeleton hasSubtitle />
-        ) : null}
-
-        {/* Error State */}
-        {!isLoadingPosts && postsError && (
-          <div className="col-span-full flex flex-col items-center justify-center py-8 px-4 mb-4 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
-            <p className="text-yellow-800 dark:text-yellow-200 text-sm text-center">
-              {postsError}
-            </p>
-            {postsError.includes("Cannot connect") && (
-              <p className="text-yellow-700 dark:text-yellow-300 text-xs text-center mt-2">
-                {language === "ar"
-                  ? `تأكد من تشغيل الخادم الخلفي على ${backendUrlHint}`
-                  : `Make sure the backend server is running on ${backendUrlHint}`}
-              </p>
-            )}
-          </div>
-        )}
-
-        {!isLoadingPosts && !postsError && allListingsCarouselPosts.length > 0 ? (
-          <PostCarousel
-            title={language === "ar" ? "جميع المنتجات" : "All Listings"}
-            subtitle={
-              language === "ar"
-                ? "تصفح جميع الإعلانات المتاحة"
-                : "Browse all available listings"
-            }
-            posts={allListingsCarouselPosts}
-            language={language}
-            isAuthenticated={isAuthenticated}
-            currentUserId={currentUserId}
-            currentUserDisplayName={currentUserDisplayName}
-            favoriteIds={favoriteIds}
-            onFavoriteToggle={toggleFavorite}
-            onPostClick={(id) => onPostClick(id, "marketplace")}
-            onViewAll={() => setShowAllPosts(true)}
-            viewAllLabel={language === "ar" ? "عرض الكل" : "View All"}
-            onRequireAuth={() => setShowLoginPrompt(true)}
-          />
-        ) : null}
-
-        {!isLoadingPosts &&
-        !postsError &&
-        allListingsCarouselPosts.length === 0 ? (
-          <MarketplaceEmptyState
-            title={
-              searchQuery
-                ? language === "ar"
-                  ? "لا توجد نتائج"
-                  : "No results found"
-                : language === "ar"
-                  ? "لا توجد منشورات"
-                  : "No posts found"
-            }
-            description={
-              searchQuery
-                ? language === "ar"
-                  ? `لم نتمكن من العثور على أي منشورات تطابق "${searchQuery}"`
-                  : `We couldn't find any posts matching "${searchQuery}"`
-                : language === "ar"
-                  ? "جرب فئة أخرى أو أضف منشورات جديدة"
-                  : "Try a different category or add new posts"
-            }
-            actionLabel={
-              searchQuery
-                ? language === "ar"
-                  ? "مسح البحث"
-                  : "Clear Search"
-                : undefined
-            }
-            onAction={searchQuery ? () => setSearchQuery("") : undefined}
-          />
-        ) : null}
+        <PostCarouselSkeleton hasSubtitle />
       </section>
-    </PageShell>
+    </>
   );
 }

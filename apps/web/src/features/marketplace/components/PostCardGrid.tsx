@@ -3,7 +3,7 @@ import { CardContent } from "../../../shared/ui/card";
 import { Badge } from "../../../shared/ui/badge";
 import { Star } from "lucide-react";
 import { ImageWithFallback } from "./ImageWithFallback";
-import { toThumbnailUrl } from "../../../shared/lib/thumbnail";
+import { getResponsiveImageProps } from "../../../shared/lib/thumbnail";
 import { PostCardFavoriteButton } from "./PostCardFavoriteButton";
 import { PostCardPriceBadge } from "./PostCardPriceBadge";
 import { postCardMediaClass } from "./postCardMediaClass";
@@ -11,6 +11,13 @@ import { usePostCardState, type PostCardSharedProps } from "./usePostCardState";
 
 export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardSharedProps) {
   const { post, isFavorite = false } = props;
+  const imageProps = getResponsiveImageProps(post.image, {
+    width: 480,
+    aspectRatio: 16 / 9,
+    quality: 60,
+    widths: [240, 360, 480],
+    sizes: resolveGridImageSizes(props.viewMode),
+  });
   const {
     labels,
     priceLocale,
@@ -46,9 +53,13 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
           className={`${postCardMediaClass} pointer-events-none rounded-[20px] border border-border/40 bg-muted/30 aspect-[16/9] overflow-hidden shadow-lg`}
         >
           <ImageWithFallback
-            src={toThumbnailUrl(post.image) || post.image}
+            src={imageProps.src || post.image}
+            srcSet={imageProps.srcSet}
+            sizes={imageProps.sizes}
             fallbackSrc={post.image}
             alt={post.name}
+            width={480}
+            height={270}
             className="absolute inset-0 block h-full min-h-full w-full min-w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/[0.02] via-transparent to-black/[0.18]" />
@@ -119,3 +130,17 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
     </article>
   );
 });
+
+function resolveGridImageSizes(viewMode: PostCardSharedProps["viewMode"]): string {
+  switch (viewMode) {
+    case "grid-2":
+      return "(max-width: 639px) 92vw, 46vw";
+    case "grid-3":
+      return "(max-width: 639px) 92vw, (max-width: 1023px) 45vw, 30vw";
+    case "grid-4":
+      return "(max-width: 639px) 92vw, (max-width: 1023px) 45vw, (max-width: 1279px) 30vw, 23vw";
+    case "list":
+    default:
+      return "(max-width: 639px) 92vw, 23vw";
+  }
+}

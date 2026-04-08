@@ -4,9 +4,27 @@ import { type MarketplaceRouteDefinition } from "./marketplaceRouteDefinitions";
 import { useSearch } from "../../../contexts/SearchContext";
 import { APP_ROUTE_BUILDERS, APP_ROUTE_PATHS } from "../routeConfig";
 
-const HomePage = lazy(() =>
-  import("../../../features/home/pages/HomePage").then((m) => ({ default: m.HomePage })),
-);
+function normalizePathname(pathname: string): string {
+  const normalized = pathname.toLowerCase().replace(/\/+$/, "");
+  return normalized || "/";
+}
+
+function loadHomePage() {
+  return import("../../../features/home/pages/HomePage").then((m) => ({
+    default: m.HomePage,
+  }));
+}
+
+const shouldPreloadHomePage =
+  typeof window !== "undefined" &&
+  normalizePathname(window.location.pathname) === APP_ROUTE_PATHS.home;
+
+let homePageModulePromise = shouldPreloadHomePage ? loadHomePage() : null;
+
+const HomePage = lazy(() => {
+  homePageModulePromise ??= loadHomePage();
+  return homePageModulePromise;
+});
 
 function HomeMarketplaceRouteScreen() {
   const {

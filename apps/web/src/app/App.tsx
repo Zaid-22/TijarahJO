@@ -1,4 +1,6 @@
 import {
+  Suspense,
+  lazy,
   useEffect,
   useRef,
   useState,
@@ -17,17 +19,63 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { ScrollToTop } from "../shared/ui/ScrollToTop";
 
 import { useAuth } from "../contexts/AuthContext";
+import { userHasAdminAccess } from "../contexts/authUtils";
 import { api } from "../services/api";
 import { deferredToast } from "../utils/toast";
 import { useScrollReset } from "./hooks/useScrollReset";
 import { useChatConnection } from "./hooks/useChatConnection";
 import { useNotificationPolling } from "./hooks/useNotificationPolling";
-import { MaintenanceScreen } from "./components/MaintenanceScreen";
 import type { PublicSystemStatus } from "../services/api/system";
 
 import { Header } from "../features/marketplace/components/Header";
 import { Footer } from "../features/marketplace/components/Footer";
 import { AppRoutes } from "./routes/AppRoutes";
+
+function lazyImportWithRetry<TModule>(
+  load: () => Promise<TModule>,
+  retryKey: string,
+) {
+  return async () => {
+    try {
+      const module = await load();
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem(retryKey);
+      }
+      return module;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isRecoverableImportError =
+        /Failed to fetch dynamically imported module|Importing a module script failed/i.test(
+          message,
+        );
+
+      if (
+        typeof window !== "undefined" &&
+        isRecoverableImportError &&
+        !window.sessionStorage.getItem(retryKey)
+      ) {
+        window.sessionStorage.setItem(retryKey, "1");
+        window.location.reload();
+
+        return new Promise<never>(() => {
+          // Keep React.lazy pending while the page reload is in flight.
+        });
+      }
+
+      throw error;
+    }
+  };
+}
+
+const MaintenanceScreen = lazy(
+  lazyImportWithRetry(
+    () =>
+      import("./components/MaintenanceScreen").then((m) => ({
+        default: m.MaintenanceScreen,
+      })),
+    "lazy-import-retry:maintenance-screen",
+  ),
+);
 
 const ROUTES_WITH_LOCAL_HEADER = new Set([
   "admin",
@@ -52,6 +100,64 @@ const KNOWN_PRIMARY_SEGMENTS = new Set([
   ...Array.from(ROUTES_WITH_LOCAL_HEADER),
 ]);
 const AUTH_TOAST_COOLDOWN_MS = 12_000;
+const MAINTENANCE_STATUS_CACHE_KEY = "tijarahjo_public_system_status_v1";
+const MAINTENANCE_STATUS_TTL_MS = 60_000;
+const MAINTENANCE_STATUS_REFRESH_MS = 30_000;
+
+type CachedMaintenanceStatus = {
+  cachedAt: number;
+  status: PublicSystemStatus;
+};
+
+function readCachedMaintenanceStatus(): PublicSystemStatus | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(MAINTENANCE_STATUS_CACHE_KEY);
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as CachedMaintenanceStatus;
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      typeof parsed.cachedAt !== "number" ||
+      typeof parsed.status !== "object" ||
+      parsed.status === null
+    ) {
+      return null;
+    }
+
+    if (Date.now() - parsed.cachedAt > MAINTENANCE_STATUS_TTL_MS) {
+      return null;
+    }
+
+    return parsed.status;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedMaintenanceStatus(status: PublicSystemStatus): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(
+      MAINTENANCE_STATUS_CACHE_KEY,
+      JSON.stringify({
+        cachedAt: Date.now(),
+        status,
+      } satisfies CachedMaintenanceStatus),
+    );
+  } catch {
+    // Ignore cache write failures so app startup never breaks.
+  }
+}
 
 export default function App() {
   return (
@@ -81,9 +187,7 @@ function AppContent() {
     shownAt: 0,
   });
   const [maintenanceStatus, setMaintenanceStatus] =
-    useState<PublicSystemStatus | null>(null);
-  const [hasLoadedMaintenanceStatus, setHasLoadedMaintenanceStatus] =
-    useState(false);
+    useState<PublicSystemStatus | null>(() => readCachedMaintenanceStatus());
   const normalizedPathname = location.pathname
     .toLowerCase()
     .replace(/\/+$/, "");
@@ -107,7 +211,12 @@ function AppContent() {
   // Extracted effect hooks
   useScrollReset();
   useChatConnection();
-  const { unreadNotificationsCount } = useNotificationPolling();
+  const { unreadNotificationsCount } = useNotificationPolling({
+    suspended:
+      maintenanceStatus === null ||
+      (maintenanceStatus?.maintenanceMode ?? false) ||
+      (maintenanceStatus?.serviceUnavailable ?? false),
+  });
 
   // Auth error toast (kept inline — too tightly coupled to local ref)
   useEffect(() => {
@@ -138,23 +247,48 @@ function AppContent() {
 
   useEffect(() => {
     let isCurrent = true;
+    let isLoading = false;
 
     const loadMaintenanceStatus = async () => {
-      const status = await api.system.getPublicStatus();
-      if (!isCurrent) {
+      if (isLoading) {
         return;
       }
 
-      setMaintenanceStatus(status);
-      setHasLoadedMaintenanceStatus(true);
+      isLoading = true;
+      try {
+        const status = await api.system.getPublicStatus();
+        if (!isCurrent) {
+          return;
+        }
+
+        setMaintenanceStatus(status);
+        writeCachedMaintenanceStatus(status);
+      } finally {
+        isLoading = false;
+      }
+    };
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") {
+        void loadMaintenanceStatus();
+      }
     };
 
     void loadMaintenanceStatus();
+    const intervalId = window.setInterval(
+      () => void loadMaintenanceStatus(),
+      MAINTENANCE_STATUS_REFRESH_MS,
+    );
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
 
     return () => {
       isCurrent = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
-  }, [normalizedPathname]);
+  }, []);
 
   const globalHeader = shouldRenderGlobalHeader ? (
     <Header
@@ -183,7 +317,7 @@ function AppContent() {
       }
       onNotificationsNavigate={(url) => navigate(url)}
       darkMode={darkMode}
-      isAdmin={user?.role === "admin"}
+      isAdmin={userHasAdminAccess(user)}
       unreadMessagesCount={unreadNotificationsCount}
       authLoading={authLoading}
     />
@@ -191,25 +325,15 @@ function AppContent() {
 
   if (maintenanceStatus?.maintenanceMode && !isAuthRoute) {
     return (
-      <MaintenanceScreen
-        language={language}
-        maintenanceReason={maintenanceStatus.maintenanceReason}
-        maintenanceExpectedReturn={maintenanceStatus.maintenanceExpectedReturn}
-      />
+      <Suspense fallback={<div className="min-h-screen bg-background" />}>
+        <MaintenanceScreen
+          language={language}
+          maintenanceReason={maintenanceStatus.maintenanceReason}
+          maintenanceExpectedReturn={maintenanceStatus.maintenanceExpectedReturn}
+        />
+      </Suspense>
     );
   }
-
-  // Determine main content: show spinner while maintenance status loads, else show routes
-  const mainContent = !hasLoadedMaintenanceStatus && !isAuthRoute ? (
-    <div className="flex justify-center pt-32 sm:pt-40">
-      <span
-        aria-hidden="true"
-        className="h-7 w-7 rounded-full border-2 border-primary/20 border-t-primary animate-spin"
-      />
-    </div>
-  ) : (
-    <AppRoutes />
-  );
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -224,12 +348,10 @@ function AppContent() {
       {globalHeader}
 
       <main id="main-content" className="flex-1">
-        {mainContent}
+        <AppRoutes />
       </main>
 
-      {!isAuthRoute && (
-        <Footer language={language} />
-      )}
+      {!isAuthRoute ? <Footer language={language} /> : null}
       <ScrollToTop />
     </div>
   );

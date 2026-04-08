@@ -10,6 +10,9 @@ const {
   parsePostComment,
   parseCommentListResponse,
 } = require("../../.unit-dist/services/api/schemas/commentsSchema.js");
+const {
+  normalizePublicSystemStatusResponse,
+} = require("../../.unit-dist/services/api/systemStatus.js");
 
 test("parseAuthEnvelope normalizes backend auth payload", () => {
   const parsed = parseAuthEnvelope({
@@ -155,4 +158,50 @@ test("parsePostComment treats timezone-less backend timestamps as UTC", () => {
   assert.ok(parsed);
   assert.equal(parsed.createdAt, "2026-04-01T09:54:32.450Z");
   assert.equal(parsed.updatedAt, "2026-04-01T09:54:32.450Z");
+});
+
+test("normalizePublicSystemStatusResponse treats maintenance 503 as maintenance mode", () => {
+  const parsed = normalizePublicSystemStatusResponse({
+    success: false,
+    error: {
+      code: "HTTP_503",
+      message: "Service Unavailable",
+      details: {
+        code: "MAINTENANCE_MODE",
+        detail: "TijarahJo is currently undergoing maintenance. Please try again later.",
+      },
+    },
+  });
+
+  assert.equal(parsed.maintenanceMode, true);
+  assert.equal(parsed.serviceUnavailable, true);
+  assert.match(parsed.maintenanceReason || "", /maintenance/i);
+});
+
+test("normalizePublicSystemStatusResponse pauses polling for generic 503 responses", () => {
+  const parsed = normalizePublicSystemStatusResponse({
+    success: false,
+    error: {
+      code: "HTTP_503",
+      message: "Service Unavailable",
+    },
+  });
+
+  assert.equal(parsed.maintenanceMode, false);
+  assert.equal(parsed.serviceUnavailable, true);
+  assert.equal(parsed.maintenanceReason, "Service Unavailable");
+});
+
+test("normalizePublicSystemStatusResponse keeps non-503 failures out of maintenance mode", () => {
+  const parsed = normalizePublicSystemStatusResponse({
+    success: false,
+    error: {
+      code: "CONNECTION_REFUSED",
+      message: "Unable to connect to the server. Please try again later.",
+    },
+  });
+
+  assert.equal(parsed.maintenanceMode, false);
+  assert.equal(parsed.serviceUnavailable, false);
+  assert.equal(parsed.maintenanceReason, undefined);
 });

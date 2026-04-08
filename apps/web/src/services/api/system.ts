@@ -1,4 +1,10 @@
 import { apiRequest } from "./client";
+import {
+  normalizePublicSystemStatusResponse,
+  PublicSystemStatus,
+} from "./systemStatus";
+
+export type { PublicSystemStatus } from "./systemStatus";
 
 type PublicSystemStatusDto = {
   MaintenanceMode?: boolean;
@@ -7,32 +13,12 @@ type PublicSystemStatusDto = {
   MaintenanceExpectedReturn?: string | null;
 };
 
-export type PublicSystemStatus = {
-  maintenanceMode: boolean;
-  maintenanceModeUpdatedAt?: string | null;
-  maintenanceReason?: string | null;
-  maintenanceExpectedReturn?: string | null;
-};
-
 export const systemApi = {
   getPublicStatus: async (): Promise<PublicSystemStatus> => {
     const response = await apiRequest<PublicSystemStatusDto>("/system/status", {
       method: "GET",
       timeoutMs: 4_000,
     });
-
-    if (!response.success) {
-      return {
-        maintenanceMode: false,
-      };
-    }
-
-    return {
-      maintenanceMode: Boolean(response.data?.MaintenanceMode),
-      maintenanceModeUpdatedAt: response.data?.MaintenanceModeUpdatedAt ?? null,
-      maintenanceReason: response.data?.MaintenanceReason ?? null,
-      maintenanceExpectedReturn:
-        response.data?.MaintenanceExpectedReturn ?? null,
-    };
+    return normalizePublicSystemStatusResponse(response);
   },
 };

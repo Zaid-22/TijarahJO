@@ -1,14 +1,23 @@
-import { ArrowLeft, MessageCircle, Plus } from "lucide-react";
+import { ArrowLeft, MessageCircle, Plus, User } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 import { Button } from "../../../shared/ui/button";
 import { Logo } from "../../../shared/ui/logo";
 import { type Language, translations } from "../../../translations";
 import { useCatalogCategories } from "../../../shared/hooks/useCatalogCategories";
-import { HeaderDesktopProfileMenu } from "./header/HeaderDesktopProfileMenu";
 import { HeaderMobileMenuSheet } from "./header/HeaderMobileMenuSheet";
 import { HeaderSearchInput } from "./header/HeaderSearchInput";
-import { HeaderNotificationsDropdown } from "./header/HeaderNotificationsDropdown";
+
+const HeaderDesktopProfileMenu = lazy(() =>
+  import("./header/HeaderDesktopProfileMenu").then((m) => ({
+    default: m.HeaderDesktopProfileMenu,
+  })),
+);
+const HeaderNotificationsDropdown = lazy(() =>
+  import("./header/HeaderNotificationsDropdown").then((m) => ({
+    default: m.HeaderNotificationsDropdown,
+  })),
+);
 
 interface HeaderProps {
   language: Language;
@@ -73,7 +82,11 @@ export function Header({
   );
   const actionIconButtonClassName =
     "group relative h-10 w-10 rounded-full border border-border/60 bg-background/70 p-0 text-muted-foreground shadow-sm hover:border-primary/35 hover:bg-primary/5 hover:text-primary hover:shadow-md transition-all";
+  const notificationFallbackClassName =
+    "h-10 w-10 rounded-full border border-border/60 bg-background/40";
   const shouldShowAuthenticatedActions = !authLoading && isAuthenticated;
+  const authIconFallbackClassName =
+    "hidden h-10 w-10 rounded-full border border-border/60 bg-background/40 sm:flex";
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/20 bg-background/80 shadow-md backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 transition-all duration-300">
@@ -144,11 +157,13 @@ export function Header({
           {/* Right section: Profile, Actions & Sell Button */}
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             {shouldShowAuthenticatedActions && (
-              <HeaderNotificationsDropdown
-                language={language}
-                unreadCount={normalizedUnreadMessagesCount}
-                onNavigate={onNotificationsNavigate}
-              />
+              <Suspense fallback={<div className={notificationFallbackClassName} aria-hidden="true" />}>
+                <HeaderNotificationsDropdown
+                  language={language}
+                  unreadCount={normalizedUnreadMessagesCount}
+                  onNavigate={onNotificationsNavigate}
+                />
+              </Suspense>
             )}
 
             {shouldShowAuthenticatedActions && (
@@ -181,21 +196,37 @@ export function Header({
               </Button>
             )}
 
-            <HeaderDesktopProfileMenu
-              language={language}
-              isAuthenticated={isAuthenticated}
-              authLoading={authLoading}
-              isAdmin={isAdmin}
-              currentUserDisplayName={currentUserDisplayName}
-              userAvatar={userAvatar}
-              unreadMessagesCount={normalizedUnreadMessagesCount}
-              onShowProfile={onShowProfile}
-              onShowFavorites={onShowFavorites}
-              onShowMessages={onShowMessages}
-              onShowSettings={onShowSettings}
-              onShowAdminDashboard={onShowAdminDashboard}
-              onLogout={onLogout}
-            />
+            {authLoading ? (
+              <div className="hidden h-10 w-24 sm:block" aria-hidden="true" />
+            ) : isAuthenticated ? (
+              <Suspense fallback={<div className={authIconFallbackClassName} aria-hidden="true" />}>
+                <HeaderDesktopProfileMenu
+                  language={language}
+                  isAuthenticated={isAuthenticated}
+                  authLoading={authLoading}
+                  isAdmin={isAdmin}
+                  currentUserDisplayName={currentUserDisplayName}
+                  userAvatar={userAvatar}
+                  unreadMessagesCount={normalizedUnreadMessagesCount}
+                  onShowProfile={onShowProfile}
+                  onShowFavorites={onShowFavorites}
+                  onShowMessages={onShowMessages}
+                  onShowSettings={onShowSettings}
+                  onShowAdminDashboard={onShowAdminDashboard}
+                  onLogout={onLogout}
+                />
+              </Suspense>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="hidden h-10 rounded-full border border-primary/35 bg-background/85 px-5 font-semibold text-primary shadow-sm hover:border-primary hover:bg-primary hover:text-primary-foreground hover:shadow-md sm:flex"
+                onClick={onShowProfile}
+              >
+                <User className="me-2 h-4 w-4" aria-hidden="true" />
+                {language === "ar" ? "تسجيل الدخول" : "Sign In"}
+              </Button>
+            )}
           </div>
         </div>
 

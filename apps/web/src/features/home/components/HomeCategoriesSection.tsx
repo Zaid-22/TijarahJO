@@ -1,7 +1,7 @@
 import { useId } from "react";
 import type { Language } from "../../../types";
 import type { Category } from "../../../types/api";
-import { toThumbnailUrl } from "../../../shared/lib/thumbnail";
+import { getResponsiveImageProps } from "../../../shared/lib/thumbnail";
 
 type HomeCategoriesSectionProps = {
   language: Language;
@@ -68,13 +68,15 @@ export function HomeCategoriesSection({
                   : category.name;
 
               const hasImage = category.image && category.image.trim().length > 0;
-
-              const delayClass = [
-                "animate-delay-[0ms]", "animate-delay-[50ms]", "animate-delay-[100ms]", 
-                "animate-delay-[150ms]", "animate-delay-[200ms]", "animate-delay-[250ms]", 
-                "animate-delay-[300ms]", "animate-delay-[350ms]", "animate-delay-[400ms]", 
-                "animate-delay-[450ms]", "animate-delay-[500ms]"
-              ][Math.min(index, 10)];
+              const prioritizeImage = index === 0;
+              const categoryImageProps = getResponsiveImageProps(category.image, {
+                width: 480,
+                aspectRatio: 4 / 3,
+                quality: 58,
+                widths: [220, 320, 400, 480],
+                sizes:
+                  "(max-width: 639px) 44vw, (max-width: 767px) 29vw, (max-width: 1023px) 22vw, (max-width: 1279px) 18vw, 15vw",
+              });
 
               return (
                 <button
@@ -82,24 +84,29 @@ export function HomeCategoriesSection({
                   type="button"
                   aria-label={categoryLabel}
                   onClick={() => setSelectedCategoryForPage(category.name)}
-                  className={`group relative overflow-hidden rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 animate-fade-in-up aspect-[4/3] ${delayClass}`}
+                  className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 aspect-[4/3]"
                 >
                   {hasImage ? (
                     /* Database image */
                     <>
                       <img
-                        src={toThumbnailUrl(category.image) || category.image}
+                        src={categoryImageProps.src || category.image}
+                        srcSet={categoryImageProps.srcSet}
                         alt=""
                         aria-hidden="true"
                         width={320}
                         height={240}
-                        loading="lazy"
+                        loading={prioritizeImage ? "eager" : "lazy"}
                         decoding="async"
-                        sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 20vw"
+                        {...{
+                          fetchpriority: prioritizeImage ? "high" : "auto",
+                        }}
+                        sizes={categoryImageProps.sizes}
                         className="absolute inset-0 block h-full min-h-full w-full min-w-full object-cover transition-transform duration-500 group-hover:scale-110"
                         onError={(e) => {
                           const img = e.currentTarget;
                           if (img.src !== category.image) {
+                            img.srcset = "";
                             img.src = category.image;
                           }
                         }}

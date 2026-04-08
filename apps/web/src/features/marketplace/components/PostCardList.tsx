@@ -22,7 +22,7 @@ import { APP_ROUTE_BUILDERS } from "../../../app/routes/routeConfig";
 import { buildCurrentPath } from "../../../shared/lib/backNavigation";
 import { formatPostedAgo } from "../../post-details/postDetailsUtils";
 import { ImageWithFallback } from "./ImageWithFallback";
-import { toThumbnailUrl } from "../../../shared/lib/thumbnail";
+import { getResponsiveImageProps } from "../../../shared/lib/thumbnail";
 import { PostCardPriceBadge } from "./PostCardPriceBadge";
 import { postCardMediaClass } from "./postCardMediaClass";
 import { usePostCardState, type PostCardSharedProps } from "./usePostCardState";
@@ -61,6 +61,13 @@ export const PostCardList = React.memo(function PostCardList(
   props: PostCardSharedProps,
 ) {
   const { post, isFavorite = false } = props;
+  const imageProps = getResponsiveImageProps(post.image, {
+    width: 420,
+    aspectRatio: 16 / 9,
+    quality: 60,
+    widths: [240, 320, 420],
+    sizes: "(max-width: 639px) 92vw, (max-width: 1279px) 212px, 228px",
+  });
   const [resolvedPhone, setResolvedPhone] = useState("");
   const [isResolvingPhone, setIsResolvingPhone] = useState(false);
   const [showPhoneDialog, setShowPhoneDialog] = useState(false);
@@ -193,9 +200,13 @@ export const PostCardList = React.memo(function PostCardList(
           }
         >
           <ImageWithFallback
-            src={toThumbnailUrl(post.image) || post.image}
+            src={imageProps.src || post.image}
+            srcSet={imageProps.srcSet}
+            sizes={imageProps.sizes}
             fallbackSrc={post.image}
             alt={post.name}
+            width={420}
+            height={236}
             className="absolute inset-0 block h-full min-h-full w-full min-w-full object-cover object-center"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/[0.04] via-transparent to-black/[0.14]" />

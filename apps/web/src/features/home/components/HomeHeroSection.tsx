@@ -1,7 +1,11 @@
 import { useState, useEffect, useCallback, useId, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Language } from "../../../types";
-import { type HeroBanner } from "./heroBannerData";
+import {
+  getAllHeroBanners,
+  saveHeroBanners,
+  type HeroBanner,
+} from "./heroBannerData";
 import { bannersApi } from "../../../services/api/banners";
 
 type HomeHeroSectionProps = {
@@ -36,14 +40,20 @@ export function HomeHeroSection({
   onNavigate,
 }: HomeHeroSectionProps) {
   const titleId = useId();
-  const [banners, setBanners] = useState<HeroBanner[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [banners, setBanners] = useState<HeroBanner[]>(() => getAllHeroBanners());
   
   useEffect(() => {
-    bannersApi.getActiveBanners().then((apiBanners) => {
-      if (apiBanners && apiBanners.length > 0) {
-        // Map API models to HeroBanner frontend models
-        setBanners(apiBanners.map((b) => ({
+    let isCurrent = true;
+    let idleHandle: number | null = null;
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+    const refreshBanners = () => {
+      bannersApi.getActiveBanners().then((apiBanners) => {
+        if (!isCurrent || !apiBanners || apiBanners.length === 0) {
+          return;
+        }
+
+        const resolvedBanners = apiBanners.map((b) => ({
           id: `api-banner-${b.bannerID}`,
           title: b.title,
           titleAr: b.titleAr,
@@ -59,15 +69,34 @@ export function HomeHeroSection({
           linkUrl: b.linkUrl || undefined,
           isActive: b.isActive,
           order: b.displayOrder,
-        })));
-      } else {
-        setBanners([]);
+        }));
+
+        setBanners(resolvedBanners);
+        saveHeroBanners(resolvedBanners);
+      }).catch((_error) => {
+        // Keep cached/default banners in place when the refresh fails.
+      });
+    };
+
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      idleHandle = window.requestIdleCallback(() => {
+        refreshBanners();
+      }, { timeout: 1500 });
+    } else {
+      timeoutHandle = setTimeout(() => {
+        refreshBanners();
+      }, 1200);
+    }
+
+    return () => {
+      isCurrent = false;
+      if (idleHandle !== null && typeof window !== "undefined" && "cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleHandle);
       }
-      setIsLoading(false);
-    }).catch((_error) => {
-      setBanners([]);
-      setIsLoading(false);
-    });
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+      }
+    };
   }, []);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -112,7 +141,7 @@ export function HomeHeroSection({
     }
   };
 
-  if (isLoading) {
+  if (banners.length === 0) {
     return (
       <section className="relative w-full overflow-hidden bg-gradient-to-b from-muted/30 to-background">
         <div className="relative w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 pt-4 sm:pt-6 pb-2">

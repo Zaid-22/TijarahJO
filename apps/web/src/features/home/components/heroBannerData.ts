@@ -86,17 +86,42 @@ const DEFAULT_BANNERS: HeroBanner[] = [
 const BANNERS_STORAGE_KEY =
   STORAGE_KEYS.SETTINGS_PREFERENCES.replace("settings", "hero-banners-v2");
 
+function normalizeStoredBanners(value: unknown): HeroBanner[] | null {
+  if (!Array.isArray(value) || value.length === 0) {
+    return null;
+  }
 
-
-
+  return value
+    .filter((banner): banner is HeroBanner => {
+      return (
+        typeof banner === "object" &&
+        banner !== null &&
+        typeof banner.id === "string" &&
+        typeof banner.title === "string" &&
+        typeof banner.titleAr === "string" &&
+        typeof banner.subtitle === "string" &&
+        typeof banner.subtitleAr === "string" &&
+        typeof banner.buttonText === "string" &&
+        typeof banner.buttonTextAr === "string" &&
+        typeof banner.imageUrl === "string" &&
+        typeof banner.bgClass === "string" &&
+        typeof banner.textClass === "string" &&
+        typeof banner.altText === "string" &&
+        typeof banner.altTextAr === "string" &&
+        typeof banner.isActive === "boolean" &&
+        typeof banner.order === "number"
+      );
+    })
+    .sort((a, b) => a.order - b.order);
+}
 
 export function getAllHeroBanners(): HeroBanner[] {
   try {
     const stored = localStorage.getItem(BANNERS_STORAGE_KEY);
     if (stored) {
-      const parsed = JSON.parse(stored) as HeroBanner[];
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.sort((a, b) => a.order - b.order);
+      const parsed = normalizeStoredBanners(JSON.parse(stored));
+      if (parsed && parsed.length > 0) {
+        return parsed;
       }
     }
   } catch {
@@ -106,4 +131,18 @@ export function getAllHeroBanners(): HeroBanner[] {
   return [...DEFAULT_BANNERS];
 }
 
+export function saveHeroBanners(banners: HeroBanner[]): void {
+  try {
+    const normalizedBanners = normalizeStoredBanners(banners);
+    if (!normalizedBanners || normalizedBanners.length === 0) {
+      return;
+    }
 
+    localStorage.setItem(
+      BANNERS_STORAGE_KEY,
+      JSON.stringify(normalizedBanners),
+    );
+  } catch {
+    // Ignore storage failures so the homepage never breaks on cache writes.
+  }
+}

@@ -9,12 +9,19 @@ import { toPositiveIntegerId } from "../../utils/idValidation";
 
 const UNREAD_COUNT_REFRESH_MS = 30_000;
 
+type UseNotificationPollingOptions = {
+  suspended?: boolean;
+};
+
 /**
  * Manages unread notification count via polling, SignalR realtime updates,
  * and chat-route refresh. Returns the current count.
  * Uses dynamic import for chatService to defer SignalR loading.
  */
-export function useNotificationPolling() {
+export function useNotificationPolling(
+  options: UseNotificationPollingOptions = {},
+) {
+  const { suspended = false } = options;
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -29,7 +36,7 @@ export function useNotificationPolling() {
 
   // Polling
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || suspended) {
       setUnreadNotificationsCount(0);
       return;
     }
@@ -59,11 +66,11 @@ export function useNotificationPolling() {
       window.clearInterval(intervalId);
       window.removeEventListener("tijarahjo:refreshUnreadCount", refreshUnreadCount);
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, suspended]);
 
   // Realtime notifications via SignalR (dynamically loaded)
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || suspended) {
       subscriptionCleanupRef.current?.();
       subscriptionCleanupRef.current = null;
       return;
@@ -136,11 +143,12 @@ export function useNotificationPolling() {
     location.search,
     navigate,
     normalizedPathname,
+    suspended,
   ]);
 
   // Refresh on chat route entry
   useEffect(() => {
-    if (!isAuthenticated || !isChatRoute) {
+    if (!isAuthenticated || suspended || !isChatRoute) {
       return;
     }
 
@@ -161,7 +169,7 @@ export function useNotificationPolling() {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [isAuthenticated, isChatRoute, location.pathname]);
+  }, [isAuthenticated, isChatRoute, location.pathname, suspended]);
 
   return { unreadNotificationsCount };
 }

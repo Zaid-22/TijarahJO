@@ -28,10 +28,12 @@
     "src/services/api/shared.ts",
     "src/services/api/csrfPolicy.ts",
     "src/services/api/chatNormalization.ts",
+    "src/services/api/systemStatus.ts",
     "src/features/marketplace/components/postCardPhoneDialog.ts",
     "src/constants/appConfig.ts",
     "src/utils/idValidation.ts",
     "src/contexts/authRuntimePolicy.ts",
+    "src/shared/lib/thumbnail.ts",
     "src/lib/searchRanking.ts",
     "src/types/index.ts"
   ]
