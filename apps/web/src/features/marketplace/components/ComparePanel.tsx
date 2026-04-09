@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { X, Scale, ArrowRight, Trash2 } from "lucide-react";
+import { X, Scale, ArrowRight, Trash2, Plus } from "lucide-react";
 import { useCompare } from "../../../contexts/CompareContext";
 import { APP_ROUTE_PATHS } from "../../../app/routes/routeConfig";
 
@@ -28,34 +28,33 @@ export const ComparePanel = React.memo(function ComparePanel() {
     >
       <div className="mx-auto max-w-4xl px-3 pb-3 sm:px-4 sm:pb-4">
         <div
-          className="relative overflow-hidden rounded-2xl border border-white/20 
-            bg-slate-900/85 px-4 py-3 shadow-2xl shadow-black/30 
-            backdrop-blur-xl sm:px-5 sm:py-4"
+          className="relative overflow-hidden rounded-2xl border border-border
+            bg-background shadow-[0_20px_50px_rgba(0,0,0,0.15)] 
+            sm:px-5 sm:py-4"
         >
           {/* Header */}
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20 shadow-sm backdrop-blur-sm">
-                <Scale className="h-4.5 w-4.5 text-white/90" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary ring-1 ring-primary shadow-sm">
+                <Scale className="h-5 w-5 text-primary-foreground" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">
-                  Compare {selectedProducts[0]?.category || "Products"}
+                <p className="text-sm font-bold text-foreground">
+                  Compare {selectedProducts[0]?.category || "Items"}
                 </p>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-muted-foreground">
                   {compareCount}/3 selected
-                  {!canCompare && " — add at least 2"}
+                  {!canCompare && " — add 1 more"}
                 </p>
               </div>
             </div>
             <button
-              type="button"
               onClick={clearCompare}
-              className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
-              aria-label="Clear all products from comparison"
+              className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:bg-destructive/10 hover:text-destructive"
+              aria-label="Clear all selections"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              Clear
+              <span>{location.pathname.includes("/ar") ? "مسح" : "Clear"}</span>
             </button>
           </div>
 
@@ -65,66 +64,62 @@ export const ComparePanel = React.memo(function ComparePanel() {
               {selectedProducts.map((product) => (
                 <div
                   key={product.id}
-                  className="group relative flex shrink-0 items-center gap-2.5 rounded-xl bg-white/10 px-3 py-2 transition-colors hover:bg-white/15"
+                  className="group relative flex shrink-0 items-center gap-2.5 rounded-xl bg-accent p-1.5 pr-3 transition-colors"
                 >
-                  {product.image ? (
+                  <div className="relative">
                     <img
                       src={product.image}
                       alt={product.name}
-                      className="h-10 w-10 rounded-lg object-cover ring-1 ring-white/10"
+                      className="h-10 w-10 rounded-lg border border-border bg-card object-cover shadow-sm ring-2 ring-transparent transition-all group-hover:ring-primary/30"
                     />
-                  ) : (
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/10">
-                      <Scale className="h-4 w-4 text-slate-400" />
-                    </div>
-                  )}
-                  <div className="min-w-0 max-w-[120px]">
-                    <p className="truncate text-xs font-medium text-white">
+                    <button
+                      onClick={() => removeFromCompare(product.id)}
+                      className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-all hover:bg-destructive hover:text-white"
+                      title="Remove product"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                  <div className="hidden min-w-0 flex-1 sm:block">
+                    <p className="truncate text-[11px] font-bold text-foreground">
                       {product.name}
                     </p>
-                    <p className="text-[10px] text-slate-400">
-                      {product.category} • {product.price > 0
-                        ? `${product.price.toLocaleString()} JOD`
-                        : "N/A"}
+                    <p className="text-[10px] text-muted-foreground">
+                      {product.price.toLocaleString()} JOD
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => removeFromCompare(product.id)}
-                    className="ml-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-slate-400 transition-colors hover:bg-red-500/20 hover:text-red-400"
-                    aria-label={`Remove ${product.name} from comparison`}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
                 </div>
               ))}
-
-              {/* Empty slots */}
-              {Array.from({ length: 3 - compareCount }).map((_, i) => (
+              {[...Array(3 - compareCount)].map((_, i) => (
                 <div
                   key={`empty-${i}`}
-                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border-2 border-dashed border-white/10"
+                  className="flex h-12 w-12 items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 sm:w-auto sm:px-3 sm:justify-start sm:gap-3"
                 >
-                  <span className="text-xs text-slate-600">+</span>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-dashed border-border/40 text-muted-foreground/40">
+                    <Plus className="h-4 w-4" />
+                  </div>
+                  <span className="hidden text-[10px] italic text-muted-foreground/40 sm:block">
+                    Empty spot
+                  </span>
                 </div>
               ))}
             </div>
 
-            {/* Compare Button */}
-            <button
-              type="button"
-              onClick={handleCompare}
-              disabled={!canCompare}
-              className={
-                "flex shrink-0 items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-all duration-200 " +
-                (canCompare
-                  ? "bg-primary text-white shadow-lg shadow-primary/30 hover:brightness-110 active:scale-95"
-                  : "cursor-not-allowed bg-white/5 text-slate-500")
-              }
-            >
-              Compare
-              <ArrowRight className="h-4 w-4" />
-            </button>
+            {/* Action Button */}
+            <div className="flex shrink-0 items-center pl-2 border-l border-border/20">
+              <button
+                onClick={handleCompare}
+                disabled={!canCompare}
+                className={`group flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold shadow-lg transition-all active:scale-95 ${
+                  canCompare
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-primary/20 hover:shadow-xl"
+                    : "cursor-not-allowed bg-muted text-muted-foreground opacity-50 shadow-none"
+                }`}
+              >
+                <span>Compare</span>
+                <ArrowRight className={`h-4 w-4 transition-transform ${canCompare ? "group-hover:translate-x-1" : ""}`} />
+              </button>
+            </div>
           </div>
 
           {/* Gradient accent */}

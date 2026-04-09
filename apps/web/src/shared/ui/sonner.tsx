@@ -155,16 +155,16 @@ function getToastClasses(kind: ToastKind, richColors: boolean) {
 
   switch (kind) {
     case "success":
-      return "border-emerald-200 bg-emerald-50 text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/80 dark:text-emerald-100";
+      return "border-emerald-600 bg-emerald-600 text-white font-bold shadow-emerald-900/10";
     case "error":
-      return "border-rose-200 bg-rose-50 text-rose-950 dark:border-rose-900 dark:bg-rose-950/80 dark:text-rose-100";
+      return "border-destructive bg-destructive text-destructive-foreground font-bold shadow-destructive/20";
     case "info":
-      return "border-sky-200 bg-sky-50 text-sky-950 dark:border-sky-900 dark:bg-sky-950/80 dark:text-sky-100";
+      return "border-primary bg-primary text-primary-foreground font-bold shadow-primary/20";
     case "warning":
-      return "border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900 dark:bg-amber-950/80 dark:text-amber-100";
+      return "border-amber-500 bg-amber-500 text-white font-bold shadow-amber-900/10";
     case "default":
     default:
-      return "border-border bg-popover text-popover-foreground";
+      return "border-border bg-white text-foreground shadow-2xl font-bold dark:bg-slate-900 dark:text-white";
   }
 }
 
@@ -175,16 +175,16 @@ function getActionButtonClasses(kind: ToastKind, destructive = false) {
 
   switch (kind) {
     case "success":
-      return "border-emerald-300/80 bg-emerald-100 text-emerald-900 hover:bg-emerald-200 dark:border-emerald-700 dark:bg-emerald-900/70 dark:text-emerald-100 dark:hover:bg-emerald-900";
+      return "border-emerald-300 bg-emerald-200 text-emerald-950 hover:bg-emerald-300 dark:border-emerald-700 dark:bg-emerald-800 dark:text-emerald-50 dark:hover:bg-emerald-700";
     case "error":
-      return "border-rose-300/80 bg-rose-100 text-rose-900 hover:bg-rose-200 dark:border-rose-700 dark:bg-rose-900/70 dark:text-rose-100 dark:hover:bg-rose-900";
+      return "border-rose-300 bg-rose-200 text-rose-950 hover:bg-rose-300 dark:border-rose-700 dark:bg-rose-800 dark:text-rose-50 dark:hover:bg-rose-700";
     case "info":
-      return "border-sky-300/80 bg-sky-100 text-sky-900 hover:bg-sky-200 dark:border-sky-700 dark:bg-sky-900/70 dark:text-sky-100 dark:hover:bg-sky-900";
+      return "border-white/20 bg-white/10 text-white hover:bg-white/20 dark:border-white/30 dark:bg-white/10 dark:hover:bg-white/20";
     case "warning":
-      return "border-amber-300/80 bg-amber-100 text-amber-900 hover:bg-amber-200 dark:border-amber-700 dark:bg-amber-900/70 dark:text-amber-100 dark:hover:bg-amber-900";
+      return "border-amber-300 bg-amber-200 text-amber-950 hover:bg-amber-300 dark:border-amber-700 dark:bg-amber-800 dark:text-amber-50 dark:hover:bg-amber-700";
     case "default":
     default:
-      return "border-border bg-background text-foreground hover:bg-accent";
+      return "border-border bg-muted text-foreground hover:bg-accent";
   }
 }
 
@@ -214,8 +214,8 @@ function ToastCard({
   return (
     <div
       className={cn(
-        "pointer-events-auto w-full rounded-2xl border shadow-lg ring-1 ring-black/5 backdrop-blur-sm transition-transform duration-200 ease-out",
-        "dark:ring-white/5",
+        "pointer-events-auto w-full animate-pop-in rounded-2xl border shadow-2xl ring-1 ring-black/10 transition-all duration-300 ease-out",
+        "dark:ring-white/10",
         getToastClasses(toastRecord.kind, richColors),
         toastRecord.className,
       )}

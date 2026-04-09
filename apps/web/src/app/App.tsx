@@ -100,18 +100,28 @@ const ROUTES_WITH_LOCAL_HEADER = new Set([
   "terms",
   "privacy",
   "post",
-  "category",
   "seller",
 ]);
 const KNOWN_PRIMARY_SEGMENTS = new Set([
   "",
   "login",
   "admin",
+  "compare",
+  "category",
   ...Array.from(ROUTES_WITH_LOCAL_HEADER),
 ]);
 const AUTH_TOAST_COOLDOWN_MS = 12_000;
 const MAINTENANCE_STATUS_CACHE_KEY = "tijarahjo_public_system_status_v1";
 const MAINTENANCE_STATUS_TTL_MS = 60_000;
+const COMPARISON_EXCLUDED_SEGMENTS = new Set([
+  "admin",
+  "settings",
+  "profile",
+  "chat",
+  "sell",
+  "login",
+  "register",
+]);
 const MAINTENANCE_STATUS_REFRESH_MS = 30_000;
 
 type CachedMaintenanceStatus = {
@@ -214,7 +224,7 @@ function AppContent() {
   const shouldRenderGlobalHeader = shouldShowGlobalHeader;
 
   // Context Hooks
-  const { userProfile } = useUserProfileContext();
+  const { userProfile, isLoading: isProfileLoading } = useUserProfileContext();
   const { darkMode, language } = useAppSettings();
 
   // Search state lives in SearchContext
@@ -322,7 +332,7 @@ function AppContent() {
       }}
       onShowSettings={() => navigate("/settings")}
       onShowAdminDashboard={() => navigate("/admin")}
-      onShowSellItem={() => navigate("/sell")}
+      onShowCreatePost={() => navigate("/sell")}
       onLogout={logout}
       onCategoryClick={(cat) =>
         navigate(`/category/${encodeURIComponent(cat)}`)
@@ -331,7 +341,7 @@ function AppContent() {
       darkMode={darkMode}
       isAdmin={userHasAdminAccess(user)}
       unreadMessagesCount={unreadNotificationsCount}
-      authLoading={authLoading}
+      authLoading={authLoading || isProfileLoading}
     />
   ) : null;
 
@@ -346,6 +356,9 @@ function AppContent() {
       </Suspense>
     );
   }
+
+  const shouldShowComparePanel = 
+    !isAuthRoute && !COMPARISON_EXCLUDED_SEGMENTS.has(primarySegment);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -369,7 +382,7 @@ function AppContent() {
         </Suspense>
       ) : null}
       <ScrollToTop />
-      <ComparePanel />
+      {shouldShowComparePanel && <ComparePanel />}
     </div>
   );
 }

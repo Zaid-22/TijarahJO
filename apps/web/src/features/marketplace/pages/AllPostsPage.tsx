@@ -9,6 +9,7 @@ import { useMarketplaceDiscoveryState } from "../../../shared/hooks/useMarketpla
 import { useCallback, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AdvancedSearchFilters, type SearchFilters } from "../components/AdvancedSearchFilters";
+import { ArrowLeft } from "lucide-react";
 
 interface AllPostsPageProps {
   onBack: () => void;
@@ -112,14 +113,24 @@ export function AllPostsPage({
 
   return (
     <PageShell>
-      <SubpageHeader
-        onBack={onBack}
-        isRTL={isRTL}
-        backLabel={t.backToMarketplace}
-        showLogo={false}
-        title={language === "ar" ? "جميع المنتجات" : "All Products"}
-        subtitle={language === "ar" ? "تصفح جميع الإعلانات المتاحة" : "Browse all available listings"}
-      />
+      {/* Unified Header Section */}
+      <div className="mx-auto w-full max-w-[94rem] px-4 pt-6 sm:px-6 lg:px-8 xl:px-10">
+        <button
+          onClick={onBack}
+          className="mb-4 flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {language === "ar" ? "العودة" : "Back to Marketplace"}
+        </button>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">
+          {language === "ar" ? "جميع المنشورات" : "All Posts"}
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {language === "ar"
+            ? "تصفح جميع الإعلانات المتاحة في السوق"
+            : "Browse all available listings in the marketplace"}
+        </p>
+      </div>
 
       <main className="mx-auto w-full max-w-[94rem] px-4 py-8 sm:px-6 lg:px-8 xl:px-10">
         <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)] xl:gap-7 xl:grid-cols-[15.5rem_minmax(0,1fr)]">

@@ -1,4 +1,4 @@
-import { SellItemDialogContent } from "../components/SellItemDialog";
+import { CreatePostDialogContent } from "../components/CreatePostDialog";
 import { SubpageHeader } from "../../../shared/ui/subpage-header";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { translations } from "../../../translations";
@@ -6,7 +6,7 @@ import { Language } from "../../../types";
 import { UserProfile } from "../../../types";
 import { CreatePostInput } from "../../../app/routes/appRoutesUtils";
 
-interface SellItemPageProps {
+interface CreatePostPageProps {
   language: Language;
   onBack: () => void;
   onSubmit: (post: CreatePostInput) => void | Promise<void>;
@@ -14,13 +14,13 @@ interface SellItemPageProps {
   darkMode?: boolean;
 }
 
-export function SellItemPage({
+export function CreatePostPage({
   language,
   onBack,
   onSubmit,
   userProfile,
   darkMode = false,
-}: SellItemPageProps) {
+}: CreatePostPageProps) {
   const t = translations[language];
   const isRTL = language === "ar";
 
@@ -40,15 +40,16 @@ export function SellItemPage({
         <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
           <div className="mb-6">
             <h1 className="mb-2 text-2xl font-bold text-foreground">
-              {t.sellItem || "Create Post"}
+              {language === "ar" ? "إنشاء منشور" : "Create Post"}
             </h1>
             <p className="text-base font-normal text-muted-foreground">
-              {t.sellItemDescription ||
-                "Fill in the details below to list your post for sale"}
+              {language === "ar"
+                ? "قم بتعبئة التفاصيل أدناه لنشر إعلانك في السوق"
+                : "Fill in the details below to list your post in the marketplace"}
             </p>
           </div>
 
-          <SellItemDialogContent
+          <CreatePostDialogContent
             language={language}
             onClose={onBack}
             onSubmit={onSubmit}

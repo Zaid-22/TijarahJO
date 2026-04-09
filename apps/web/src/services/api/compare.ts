@@ -41,6 +41,7 @@ async function compareProducts(productIds: number[]): Promise<CompareResponse | 
   const response = await apiRequest<CompareResponse>("/compare", {
     method: "POST",
     body: JSON.stringify({ ProductIds: productIds }),
+    timeoutMs: 60_000, // Increase timeout to 60s for AI generation
   });
 
   if (response.success) {

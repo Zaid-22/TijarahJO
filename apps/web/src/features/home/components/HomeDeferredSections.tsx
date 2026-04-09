@@ -24,7 +24,7 @@ type HomeDeferredSectionsProps = {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   setShowLoginPrompt: (show: boolean) => void;
-  setShowSellItem: (show: boolean) => void;
+  setShowCreatePost: (show: boolean) => void;
   setShowAllPosts: (show: boolean) => void;
   setSelectedCategoryForPage: (category: string) => void;
   onPostClick: (id: string, origin?: string) => void;
@@ -47,7 +47,7 @@ export function HomeDeferredSections({
   searchQuery = "",
   setSearchQuery,
   setShowLoginPrompt,
-  setShowSellItem,
+  setShowCreatePost,
   setShowAllPosts,
   setSelectedCategoryForPage,
   onPostClick,
@@ -244,7 +244,7 @@ export function HomeDeferredSections({
               : "Sign Up Now"
         }
         onButtonClick={() =>
-          isAuthenticated ? setShowSellItem(true) : setShowLoginPrompt(true)
+          isAuthenticated ? setShowCreatePost(true) : setShowLoginPrompt(true)
         }
         icon={Globe}
         variant="gradient"

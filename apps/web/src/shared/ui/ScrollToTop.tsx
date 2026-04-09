@@ -20,10 +20,18 @@ export function ScrollToTop() {
   }, []);
 
   const scrollToTop = () => {
-    window.scrollTo({
+    const scrollTarget = document.documentElement || document.body;
+    scrollTarget.scrollTo({
       top: 0,
       behavior: prefersReducedMotion ? "auto" : "smooth",
     });
+    // Fallback for some browsers
+    if (window.scrollY !== 0) {
+      window.scrollTo({
+        top: 0,
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+      });
+    }
   };
 
   if (!isVisible) {
@@ -31,7 +39,7 @@ export function ScrollToTop() {
   }
 
   return (
-    <div className="fixed bottom-8 right-8 z-50">
+    <div className="fixed bottom-24 right-6 z-[150] sm:bottom-28 sm:right-8">
       <button
         onClick={scrollToTop}
         type="button"

@@ -1,4 +1,3 @@
-import { SubpageHeader } from "../../../shared/ui/subpage-header";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { MarketplaceDiscoveryControls } from "../components/MarketplaceDiscoveryControls";
 import { MarketplaceQueryStatus } from "../components/MarketplaceQueryStatus";
@@ -8,6 +7,7 @@ import {
   AdvancedSearchFilters,
   type SearchFilters,
 } from "../components/AdvancedSearchFilters";
+import { ArrowLeft } from "lucide-react";
 
 import { PostResultsGrid } from "../components/PostResultsGrid";
 import { PostResultsGridSkeleton } from "../components/PostResultsGridSkeleton";
@@ -225,21 +225,30 @@ export function SearchResultsPage({
 
   return (
     <PageShell>
-      <SubpageHeader
-        onBack={onBack}
-        isRTL={language === "ar"}
-        backLabel={language === "ar" ? "العودة" : "Back"}
-        showLogo={false}
-        title={
-          normalizedSearchQuery
+      {/* Unified Header Section */}
+      <div className="mx-auto w-full max-w-[94rem] px-4 pt-6 sm:px-6 lg:px-8 xl:px-10">
+        <button
+          onClick={onBack}
+          className="mb-4 flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {language === "ar" ? "العودة" : "Back to Marketplace"}
+        </button>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">
+          {normalizedSearchQuery
             ? language === "ar"
               ? `نتائج البحث عن "${normalizedSearchQuery}"`
               : `Search results for "${normalizedSearchQuery}"`
             : language === "ar"
               ? "نتائج البحث"
-              : "Search results"
-        }
-      />
+              : "Search results"}
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {language === "ar"
+            ? "تصفح جميع الإعلانات التي تطابق بحثك"
+            : "Browse all listings that match your search query"}
+        </p>
+      </div>
 
       {/* Main Content */}
       <main className="mx-auto w-full max-w-[94rem] px-4 py-8 sm:px-6 lg:px-8 xl:px-10">

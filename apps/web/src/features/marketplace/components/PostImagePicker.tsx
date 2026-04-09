@@ -3,14 +3,14 @@ import type { ChangeEvent } from "react";
 import type { Language } from "../../../types";
 import { Button } from "../../../shared/ui/button";
 
-interface SellItemImagePreview {
+interface PostImagePreview {
   id: string;
   previewUrl: string;
 }
 
-interface SellItemImagePickerProps {
+interface PostImagePickerProps {
   language: Language;
-  selectedImages: SellItemImagePreview[];
+  selectedImages: PostImagePreview[];
   maxImages: number;
   title: string;
   uploadLabel: string;
@@ -21,7 +21,7 @@ interface SellItemImagePickerProps {
   onRemove: (index: number) => void;
 }
 
-export function SellItemImagePicker({
+export function PostImagePicker({
   language,
   selectedImages,
   maxImages,
@@ -32,7 +32,7 @@ export function SellItemImagePicker({
   hasError,
   onUpload,
   onRemove,
-}: SellItemImagePickerProps) {
+}: PostImagePickerProps) {
   return (
     <div className="space-y-2">
       <p className="text-base font-semibold">{title}</p>

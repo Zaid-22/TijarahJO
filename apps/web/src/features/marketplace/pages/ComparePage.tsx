@@ -192,8 +192,8 @@ export default function ComparePage() {
             {/* Price Comparison */}
             <section className="compare-card rounded-2xl border border-border/50 bg-card p-4 shadow-sm sm:p-5">
               <div className="mb-3 flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10">
-                  <DollarSign className="h-5 w-5 text-emerald-500" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10">
+                  <DollarSign className="h-5 w-5 text-blue-500" />
                 </div>
                 <h2 className="text-base font-bold text-foreground">
                   Price Comparison
@@ -231,7 +231,7 @@ export default function ComparePage() {
                         ) {
                           const diff = sorted[sorted.length - 1].price - price;
                           contextBadge = (
-                            <span className="inline-flex items-center rounded-md bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-500">
+                            <span className="inline-flex items-center rounded-md bg-blue-500/10 px-2 py-1 text-[10px] font-bold text-blue-500">
                               Save {diff.toLocaleString()} JOD
                             </span>
                           );
@@ -242,7 +242,7 @@ export default function ComparePage() {
                             key={product.id}
                             className={`relative flex flex-col justify-between overflow-hidden rounded-xl border p-4 ${
                               isCheapest
-                                ? "border-emerald-500/30 bg-emerald-500/5"
+                                ? "border-blue-500/30 bg-blue-500/5"
                                 : "border-border/40 bg-muted/20"
                             }`}
                           >
@@ -267,7 +267,7 @@ export default function ComparePage() {
                   );
                 })()}
               </div>
-              <div className="relative mt-4 rounded-xl border-l-4 border-emerald-500 bg-emerald-500/5 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
+              <div className="relative mt-4 rounded-xl border-l-4 border-blue-500 bg-blue-500/5 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
                 {result.PriceComparison}
               </div>
             </section>
@@ -339,7 +339,7 @@ export default function ComparePage() {
                           key={i}
                           className="flex items-start gap-2 text-xs"
                         >
-                          <ThumbsUp className="mt-1 h-3 w-3 shrink-0 text-emerald-500" />
+                          <ThumbsUp className="mt-1 h-3 w-3 shrink-0 text-blue-500" />
                           <span className="text-foreground/80">{pro}</span>
                         </div>
                       ))}
@@ -381,7 +381,7 @@ export default function ComparePage() {
                     onClick={() => setActiveBestFor("Budget")}
                     className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-bold transition-all sm:text-sm ${
                       activeBestFor === "Budget"
-                        ? "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400"
+                        ? "border-blue-500 bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400"
                         : "border-border/50 bg-background text-muted-foreground hover:bg-muted"
                     }`}
                   >
@@ -414,27 +414,13 @@ export default function ComparePage() {
 
                 {/* Dynamic Winner Card */}
                 <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-muted/10 p-5">
-                  {activeBestFor === "Budget" && (
-                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                      <p className="text-sm leading-relaxed text-foreground/90">
-                        {result.BestFor.Budget}
-                      </p>
-                    </div>
-                  )}
-                  {activeBestFor === "Performance" && (
-                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                      <p className="text-sm leading-relaxed text-foreground/90">
-                        {result.BestFor.Performance}
-                      </p>
-                    </div>
-                  )}
-                  {activeBestFor === "DailyUse" && (
-                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                      <p className="text-sm leading-relaxed text-foreground/90">
-                        {result.BestFor.DailyUse}
-                      </p>
-                    </div>
-                  )}
+                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <p className="text-sm leading-relaxed text-foreground/90">
+                      {activeBestFor === "Budget" && result.BestFor.Budget}
+                      {activeBestFor === "Performance" && result.BestFor.Performance}
+                      {activeBestFor === "DailyUse" && result.BestFor.DailyUse}
+                    </p>
+                  </div>
                 </div>
               </section>
             )}
@@ -442,16 +428,10 @@ export default function ComparePage() {
             {/* Final Recommendation */}
             <section className="compare-card compare-recommendation rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-card to-primary/5 p-5 shadow-sm sm:p-6">
               <div className="mb-3 flex items-center gap-2.5">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                </div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15"><Sparkles className="h-5 w-5 text-primary" /></div>
                 <div>
-                  <h2 className="text-base font-bold text-foreground">
-                    Final Recommendation
-                  </h2>
-                  <p className="text-[10px] text-muted-foreground">
-                    AI-generated suggestion
-                  </p>
+                  <h2 className="text-base font-bold text-foreground">Final Recommendation</h2>
+                  <p className="text-[10px] text-muted-foreground">AI-generated suggestion</p>
                 </div>
               </div>
               <p className="text-sm font-medium leading-relaxed text-foreground/90">

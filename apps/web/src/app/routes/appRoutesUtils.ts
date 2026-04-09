@@ -20,6 +20,11 @@ export type CreatePostInput = {
   images?: PostImageInput[];
 };
 
+export type UpdatePostInput = CreatePostInput & {
+  id: string;
+  status: string;
+};
+
 function isFileInput(value: unknown): value is File {
   return typeof File !== "undefined" && value instanceof File;
 }

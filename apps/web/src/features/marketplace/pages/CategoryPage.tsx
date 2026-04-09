@@ -12,10 +12,10 @@ import {
   AdvancedSearchFilters,
   type SearchFilters,
 } from "../components/AdvancedSearchFilters";
-import { SubpageHeader } from "../../../shared/ui/subpage-header";
 import { MarketplaceDiscoveryControls } from "../components/MarketplaceDiscoveryControls";
 import { MarketplaceResultsPagination } from "../components/MarketplaceResultsPagination";
 import { useState, useMemo } from "react";
+import { ArrowLeft } from "lucide-react";
 import { useMarketplaceDiscoveryState } from "../../../shared/hooks/useMarketplaceDiscoveryState";
 
 interface CategoryPageProps {
@@ -45,7 +45,6 @@ export function CategoryPage({
   isLoading = false,
   onRequireAuth,
 }: CategoryPageProps) {
-  const isRTL = language === "ar";
   const { categories } = useCatalogCategories();
 
   const [appliedSearchFilters, setAppliedSearchFilters] = useState<SearchFilters>(
@@ -122,18 +121,24 @@ export function CategoryPage({
 
   return (
     <PageShell>
-      <SubpageHeader
-        onBack={onBack}
-        isRTL={isRTL}
-        backLabel={language === "ar" ? "العودة" : "Back"}
-        showLogo={false}
-        title={displayCategoryName}
-        subtitle={
-          language === "ar"
-            ? `تصفح جميع ${displayCategoryName}`
-            : `Browse all ${categoryName.toLowerCase()}`
-        }
-      />
+      {/* Category Header Section */}
+      <div className="mx-auto w-full max-w-[94rem] px-4 pt-6 sm:px-6 lg:px-8 xl:px-10">
+        <button
+          onClick={onBack}
+          className="mb-4 flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {language === "ar" ? "العودة" : "Back to Marketplace"}
+        </button>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">
+          {displayCategoryName}
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {language === "ar"
+            ? `تصفح جميع الإعلانات في قسم ${displayCategoryName}`
+            : `Browse all available items in the ${categoryName.toLowerCase()} category`}
+        </p>
+      </div>
 
       {/* Main Content */}
       <main className="mx-auto w-full max-w-[94rem] px-4 py-8 sm:px-6 lg:px-8 xl:px-10">

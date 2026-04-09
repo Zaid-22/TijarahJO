@@ -316,7 +316,10 @@ Important:
 - Be extremely specific and helpful.
 - Reference actual product names and prices.
 - Each product must have its own entry in both featureDifferences and prosCons.
-- STRICT LIMIT: Every string inside 'pros', 'cons', and 'features' arrays MUST be 5 words or less. Completely eliminate filler words. Make them direct, punchy, and perfectly scannable.";
+- **Price Comparison**: Keep this extremely brief. Max 1-2 short sentences focused on the price gap.
+- **Best Choice For reasoning**: Provide 2 detailed sentences of reasoning for each category.
+- **Final Recommendation**: Max 3 concise sentences of reasoning.
+- **STRICT LIMIT: Bullet points (pros, cons, features arrays only) MUST be 5 words or less.** Eliminate filler words.";
     }
 
     private ProductCompareResult ParseGeminiResponse(

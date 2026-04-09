@@ -23,8 +23,8 @@ const SettingsPage = lazy(() =>
 const FavoritesPage = lazy(() =>
   import("../../../features/marketplace/pages/FavoritesPage").then((m) => ({ default: m.FavoritesPage })),
 );
-const SellItemPage = lazy(() =>
-  import("../../../features/marketplace/pages/SellItemPage").then((m) => ({ default: m.SellItemPage })),
+const CreatePostPage = lazy(() =>
+  import("../../../features/marketplace/pages/CreatePostPage").then((m) => ({ default: m.CreatePostPage })),
 );
 const EditProfilePage = lazy(() =>
   import("../../../features/profile/pages/EditProfilePage").then((m) => ({
@@ -191,7 +191,7 @@ export function renderAccountRouteGroup({
       <Route
         path={APP_ROUTE_PATHS.sell}
         element={requireAuth(
-          <SellItemPage
+          <CreatePostPage
             language={appProps.language}
             onBack={() => navigate(APP_ROUTE_PATHS.home)}
             onSubmit={async (post) => {

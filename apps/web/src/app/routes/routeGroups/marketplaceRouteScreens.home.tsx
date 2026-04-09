@@ -52,7 +52,7 @@ function HomeMarketplaceRouteScreen() {
         setActiveSearchQuery(query);
       }}
       setShowLoginPrompt={(show: boolean) => show && promptLoginModal()}
-      setShowSellItem={(show: boolean) => {
+      setShowCreatePost={(show: boolean) => {
         if (!show) {
           return;
         }

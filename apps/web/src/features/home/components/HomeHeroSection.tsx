@@ -16,7 +16,7 @@ type HomeHeroSectionProps = {
   isRTL: boolean;
   darkMode: boolean;
   setShowLoginPrompt: (show: boolean) => void;
-  setShowSellItem: (show: boolean) => void;
+  setShowCreatePost: (show: boolean) => void;
   onBrowseItems: () => void;
   onNavigate?: (path: string) => void;
 };

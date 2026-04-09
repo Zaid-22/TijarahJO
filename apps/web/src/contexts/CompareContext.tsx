@@ -95,7 +95,9 @@ export function CompareProvider({ children }: { children: ReactNode }) {
     (productId: string) => {
       const product = selectedProducts.find((p) => p.id === productId);
       if (product) {
-        toast.info(`Removed "${product.name}" from comparison`);
+        toast.error(`Removed "${product.name}" from comparison`, {
+          id: `compare-removed-${productId}`,
+        });
         setSelectedProducts((prev) => prev.filter((p) => p.id !== productId));
       }
     },

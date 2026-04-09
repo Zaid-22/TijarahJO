@@ -1,28 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "../../../shared/ui/button";
-import { Input } from "../../../shared/ui/input";
-import { Label } from "../../../shared/ui/label";
-import { Textarea } from "../../../shared/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../../shared/ui/select";
+import { MarketplaceProgressBar } from "./MarketplaceProgressBar";
+import { PostForm, type PostFormData, type PostFormErrors } from "./PostForm";
+import { cn } from "../../../shared/ui/utils";
 import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
+  DialogDescription
 } from "../../../shared/ui/dialog";
-import { Language } from "../../../translations";
-import { Upload, X } from "lucide-react";
-import { Post } from "../../../types";
-import { deferredToast } from "../../../utils/toast";
+import { translations } from "../../../translations";
+import { Language, Post } from "../../../types";
+import { UpdatePostInput } from "../../../app/routes/appRoutesUtils";
 import { useCatalogCategories } from "../../../shared/hooks/useCatalogCategories";
 import { useLocationOptions } from "../../../shared/hooks/useLocationOptions";
-import type { UpdatePostInput } from "../../../app/routes/usePostActions";
+import { deferredToast } from "../../../utils/toast";
+
 
 const MAX_IMAGES = 5;
 
@@ -63,388 +55,188 @@ function buildInitialImageEntries(post: Post): EditableImageEntry[] {
 export function EditPostDialog({
   post,
   onSave,
-  onCancel,
+
   language = "en",
 }: EditPostDialogProps) {
-
   const objectUrlsRef = useRef<Set<string>>(new Set());
+  const [formData, setFormData] = useState<PostFormData>({
+    title: post.name,
+    price: post.price.toString(),
+    category: post.category,
+    location: post.location,
+    area: post.area || "",
+    description: post.description || "",
+  });
 
-  const [name, setName] = useState(post.name);
-  const [price, setPrice] = useState(post.price.toString());
-  const [category, setCategory] = useState(post.category);
-  const [location, setLocation] = useState(post.location);
-  const [area, setArea] = useState(post.area || "");
   const [images, setImages] = useState<EditableImageEntry[]>(
     buildInitialImageEntries(post),
   );
-  const [description, setDescription] = useState(post.description || "");
-  const { categories: catalogCategories } = useCatalogCategories();
+
+  const [errors, setErrors] = useState<PostFormErrors>({
+    title: false,
+    price: false,
+    category: false,
+    location: false,
+    area: false,
+    images: false,
+    description: false,
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  const progress = useMemo(() => {
+    const steps = [
+      Boolean(formData.title.trim()),
+      Boolean(formData.price && parseFloat(formData.price) >= 0.01),
+      Boolean(formData.category),
+      Boolean(formData.location),
+      Boolean(formData.area),
+      Boolean(formData.description.trim()),
+      images.length > 0,
+    ];
+    const completedSteps = steps.filter(Boolean).length;
+    return Math.round((completedSteps / steps.length) * 100);
+  }, [formData, images.length]);
+
+  const { categories: catalogCategories, isLoading: isLoadingCategories } = useCatalogCategories();
   const categories = useMemo(() => {
     const fromCatalog = catalogCategories
-      .map((entry) => entry.name.trim())
-      .filter((name) => name.length > 0);
-    if (fromCatalog.includes(post.category)) {
-      return fromCatalog;
-    }
-
-    return [post.category, ...fromCatalog].filter((entry, index, all) => {
-      return all.indexOf(entry) === index;
-    });
+      .map((entry: { name: string }) => entry.name.trim())
+      .filter((name: string) => name.length > 0);
+    if (fromCatalog.includes(post.category)) return fromCatalog;
+    return [post.category, ...fromCatalog].filter((entry: string, index: number, all: string[]) => all.indexOf(entry) === index);
   }, [catalogCategories, post.category]);
 
-  const { cityNames, areaNames, isLoadingCities, isLoadingAreas } =
-    useLocationOptions(location, language);
+  const { cityNames, areaNames, isLoadingCities, isLoadingAreas } = useLocationOptions(formData.location, language);
+
   const cityOptions = useMemo(() => {
-    const normalizedOptionSet = new Set(cityNames.map((city) => city.trim().toLocaleLowerCase()).filter((city) => city.length > 0));
-    const normalizedCurrent = location.trim();
+    const normalizedOptionSet = new Set(cityNames.map((city: string) => city.trim().toLocaleLowerCase()).filter((c: string) => c.length > 0));
+    const normalizedCurrent = formData.location.trim();
     if (normalizedCurrent && !normalizedOptionSet.has(normalizedCurrent.toLocaleLowerCase())) return [normalizedCurrent, ...cityNames];
     return cityNames;
-  }, [cityNames, location]);
-  const areaOptions = useMemo(() => {
-    const normalizedOptionSet = new Set(areaNames.map((a) => a.trim().toLocaleLowerCase()).filter((a) => a.length > 0));
-    const normalizedCurrent = area.trim();
+  }, [cityNames, formData.location]);
+
+  const areaSuggestions = useMemo(() => {
+    const normalizedOptionSet = new Set(areaNames.map((a: string) => a.trim().toLocaleLowerCase()).filter((a: string) => a.length > 0));
+    const normalizedCurrent = formData.area.trim();
     if (normalizedCurrent && !normalizedOptionSet.has(normalizedCurrent.toLocaleLowerCase())) return [normalizedCurrent, ...areaNames];
     return areaNames;
-  }, [areaNames, area]);
+  }, [areaNames, formData.area]);
 
   useEffect(() => {
     const objectUrls = objectUrlsRef.current;
     return () => {
-      for (const objectUrl of objectUrls) {
-        URL.revokeObjectURL(objectUrl);
-      }
+      for (const objectUrl of objectUrls) URL.revokeObjectURL(objectUrl);
       objectUrls.clear();
     };
   }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files) {
-      return;
-    }
-
-    setImages((prev) => {
+    if (!files) return;
+    setImages((prev: EditableImageEntry[]) => {
       const remainingSlots = Math.max(0, MAX_IMAGES - prev.length);
-      if (remainingSlots === 0) {
-        return prev;
-      }
-
-      const nextEntries = Array.from(files)
-        .slice(0, remainingSlots)
-        .map((file, index) => {
-          const previewUrl = URL.createObjectURL(file);
-          objectUrlsRef.current.add(previewUrl);
-          return {
-            id: `new-${file.name}-${file.size}-${file.lastModified}-${index}`,
-            kind: "new" as const,
-            previewUrl,
-            file,
-          };
-        });
-
+      if (remainingSlots === 0) return prev;
+      const nextEntries = Array.from(files).slice(0, remainingSlots).map((file: File, index: number) => {
+        const previewUrl = URL.createObjectURL(file);
+        objectUrlsRef.current.add(previewUrl);
+        return {
+          id: `new-${file.name}-${file.size}-${file.lastModified}-${index}`,
+          kind: "new" as const,
+          previewUrl,
+          file,
+        };
+      });
       return [...prev, ...nextEntries];
     });
-
     e.target.value = "";
   };
 
   const removeImage = (index: number) => {
-    setImages((prev) => {
+    setImages((prev: EditableImageEntry[]) => {
       const target = prev[index];
-      if (
-        target &&
-        target.kind === "new" &&
-        objectUrlsRef.current.delete(target.previewUrl)
-      ) {
+      if (target && target.kind === "new" && objectUrlsRef.current.delete(target.previewUrl)) {
         URL.revokeObjectURL(target.previewUrl);
       }
-      return prev.filter((_, i) => i !== index);
+      return prev.filter((_: EditableImageEntry, i: number) => i !== index);
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = () => {
+    if (isSubmitting) return;
 
-    if (!name || !price || !category || !location) {
-      deferredToast.error(
-        language === "ar"
-          ? "يرجى ملء جميع الحقول المطلوبة"
-          : "Please fill in all required fields",
-      );
-      return;
-    }
+    const newErrors = {
+      title: !formData.title.trim(),
+      price: !formData.price || parseFloat(formData.price) < 0.01,
+      category: !formData.category,
+      location: !formData.location,
+      area: !formData.area,
+      description: !formData.description.trim(),
+      images: images.length === 0,
+    };
 
-    const priceValue = parseFloat(price);
-    if (priceValue < 0.01) {
-      deferredToast.error(
-        language === "ar"
-          ? "السعر يجب أن يكون 0.01 دينار على الأقل"
-          : "Price must be at least 0.01 JOD",
-      );
+    setErrors(newErrors);
+    if (Object.values(newErrors).some(e => e)) {
+      deferredToast.error(language === "ar" ? "يرجى ملء جميع الحقول المطلوبة" : "Please fill in all required fields");
       return;
     }
 
     const updatedPost: UpdatePostInput = {
       id: post.id,
-      name,
-      price: priceValue,
-      category,
-      status: post.status,
-      location,
-      area,
-      description,
-      images: images.map((entry) =>
-        entry.kind === "existing" ? entry.url : entry.file,
-      ),
+      name: formData.title,
+      price: parseFloat(formData.price),
+      category: formData.category,
+      status: post.status || "ACTIVE",
+      location: formData.location,
+      area: formData.area,
+      description: formData.description,
+      images: images.map((entry: EditableImageEntry) => (entry.kind === "existing" ? entry.url : entry.file)),
     };
 
+    setIsSubmitting(true);
     onSave(updatedPost);
   };
 
+  const t = translations[language];
+
   return (
-    <DialogContent className="max-w-2xl max-h-dialog-90vh overflow-y-auto">
+    <DialogContent onPointerDownOutside={(e) => e.preventDefault()} className="max-w-2xl max-h-dialog-90vh overflow-y-auto">
       <DialogHeader>
-        <DialogTitle className={"text-start"}>
+        <DialogTitle className={cn("text-start", language === "ar" ? "ps-12" : "pe-12")}>
           {language === "ar" ? "تعديل المنشور" : "Edit Post"}
         </DialogTitle>
-        <DialogDescription className={"text-start"}>
+        <DialogDescription className={cn("text-start", language === "ar" ? "ps-12" : "pe-12")}>
           {language === "ar"
             ? "قم بتحديث معلومات منشورك أدناه"
             : "Update your post information below"}
         </DialogDescription>
       </DialogHeader>
 
-      <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-        <div className="space-y-2">
-          <Label id="edit-name-label" htmlFor="edit-name" className="text-start block">
-            {language === "ar" ? "اسم المنشور" : "Post Name"} *
-          </Label>
-          <Input
-            id="edit-name"
-            name="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={
-              language === "ar" ? "مثال: iPhone 13 Pro" : "e.g. iPhone 13 Pro"
-            }
-            required
-            className={"text-start"}
-          />
-        </div>
+      <div className="mt-6">
+        <MarketplaceProgressBar progress={progress} language={language} />
 
-        <div className="space-y-2">
-          <Label id="edit-price-label" htmlFor="edit-price" className="text-start block">
-            {language === "ar" ? "السعر (دينار أردني)" : "Price (JOD)"} *
-          </Label>
-          <Input
-            id="edit-price"
-            name="price"
-            type="number"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            placeholder="450"
-            required
-            min="0.01"
-            step="0.01"
-            className={"text-start"}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label id="edit-category-label" htmlFor="edit-category" className="text-start block">
-            {language === "ar" ? "الفئة" : "Category"} *
-          </Label>
-          <Select name="category" value={category} onValueChange={setCategory} required>
-            <SelectTrigger id="edit-category" className="text-start">
-              <SelectValue
-                placeholder={
-                  language === "ar" ? "اختر الفئة" : "Select category"
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label id="edit-location-label" htmlFor="edit-location" className="text-start block">
-            {language === "ar" ? "المدينة" : "City"} *
-          </Label>
-          <Select name="location" value={location} onValueChange={(value) => { setLocation(value); setArea(""); }} required>
-            <SelectTrigger id="edit-location" className="text-start">
-              <SelectValue
-                placeholder={language === "ar" ? "اختر المدينة" : "Select city"}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {cityOptions.length > 0 ? (
-                cityOptions.map((city) => (
-                  <SelectItem key={city} value={city}>
-                    {city}
-                  </SelectItem>
-                ))
-              ) : (
-                <SelectItem value="__no_edit_cities__" disabled>
-                  {isLoadingCities
-                    ? language === "ar" ? "جارٍ تحميل المدن..." : "Loading cities..."
-                    : language === "ar" ? "لا توجد مدن متاحة" : "No cities available"}
-                </SelectItem>
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label id="edit-area-label" htmlFor="edit-area" className="text-start block">
-            {language === "ar" ? "المنطقة" : "Area"}
-          </Label>
-          <Select
-            name="area"
-            value={area}
-            onValueChange={setArea}
-            disabled={!location || isLoadingAreas}
-          >
-            <SelectTrigger id="edit-area" className={"text-start"}>
-              <SelectValue placeholder={
-                !location
-                  ? language === "ar" ? "اختر المدينة أولاً" : "Select a city first"
-                  : isLoadingAreas
-                    ? language === "ar" ? "جارٍ تحميل المناطق..." : "Loading areas..."
-                    : language === "ar" ? "اختر المنطقة" : "Select area"
-              } />
-            </SelectTrigger>
-            <SelectContent>
-              {areaOptions.length > 0 ? (
-                areaOptions.map((a) => (
-                  <SelectItem key={a} value={a}>
-                    {a}
-                  </SelectItem>
-                ))
-              ) : (
-                <SelectItem value="__no_edit_areas__" disabled>
-                  {isLoadingAreas
-                    ? language === "ar" ? "جارٍ تحميل المناطق..." : "Loading areas..."
-                    : language === "ar" ? "لا توجد مناطق متاحة" : "No areas available"}
-                </SelectItem>
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label className={"text-start block"}>
-            {language === "ar" ? "صور المنشور" : "Post Images"}
-          </Label>
-
-          {images.length > 0 && (
-            <div className="grid grid-cols-3 gap-3">
-              {images.map((img, index) => (
-                <div
-                  key={img.id}
-                  className="group relative aspect-square overflow-hidden rounded-lg border-2 border-border"
-                >
-                  <img
-                    src={img.previewUrl}
-                    alt={`Post ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                  {index === 0 && (
-                    <div className="absolute left-2 top-2 rounded bg-primary px-2 py-1 text-xs text-primary-foreground">
-                      {language === "ar" ? "غلاف" : "Cover"}
-                    </div>
-                  )}
-                  <Button
-                    type="button"
-                    onClick={() => removeImage(index)}
-                    aria-label={
-                      language === "ar"
-                        ? `إزالة الصورة ${index + 1}`
-                        : `Remove image ${index + 1}`
-                    }
-                    title={
-                      language === "ar"
-                        ? `إزالة الصورة ${index + 1}`
-                        : `Remove image ${index + 1}`
-                    }
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-2 top-2 h-7 w-7 rounded-full bg-destructive text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-destructive/90"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {images.length < MAX_IMAGES && (
-            <label
-              htmlFor="edit-image-upload"
-              className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-primary p-6 transition-colors hover:bg-muted/60"
-            >
-              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-primary/15">
-                <Upload className="w-5 h-5 text-primary" />
-              </div>
-              <div className="text-center">
-                <div className="text-sm text-primary">
-                  {language === "ar" ? "رفع صور جديدة" : "Upload More Images"}
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  {language === "ar"
-                    ? "PNG, JPG, GIF حتى 10MB"
-                    : "PNG, JPG, GIF up to 10MB"}
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  {images.length}/{MAX_IMAGES} {language === "ar" ? "صور" : "images"}
-                </div>
-              </div>
-              <input
-                id="edit-image-upload"
-                name="images"
-                aria-label={language === "ar" ? "تحميل صور المنشور" : "Upload post images"}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={handleImageUpload}
-              />
-            </label>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="edit-description" className="text-start block">
-            {language === "ar" ? "الوصف (اختياري)" : "Description (Optional)"}
-          </Label>
-          <Textarea
-            id="edit-description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder={
-              language === "ar"
-                ? "أضف وصفاً تفصيلياً لمنشورك..."
-                : "Add a detailed description of your post..."
-            }
-            rows={4}
-            className={"text-start"}
-          />
-        </div>
-
-        <div className="flex gap-3 justify-end pt-4 border-t">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            {language === "ar" ? "إلغاء" : "Cancel"}
-          </Button>
-          <Button type="submit">
-            {language === "ar" ? "حفظ التغييرات" : "Save Changes"}
-          </Button>
-        </div>
-      </form>
+        <PostForm
+          language={language}
+          t={t}
+          formData={formData}
+          setFormData={setFormData}
+          errors={errors}
+          setErrors={setErrors}
+          categories={categories}
+          isLoadingCategories={isLoadingCategories}
+          cityOptions={cityOptions}
+          isLoadingCities={isLoadingCities}
+          areaSuggestions={areaSuggestions}
+          isLoadingAreas={isLoadingAreas}
+          selectedImages={images.map(img => ({ id: img.id, previewUrl: img.previewUrl }))}
+          maxImages={MAX_IMAGES}
+          handleImageUpload={handleImageUpload}
+          removeImage={removeImage}
+          isSubmitting={isSubmitting}
+          onSubmit={handleSubmit}
+          submitLabel={language === "ar" ? "حفظ التغييرات" : "Save Changes"}
+        />
+      </div>
     </DialogContent>
   );
 }

@@ -68,7 +68,7 @@ interface HomePageProps {
 
   // Navigation / Actions
   setShowLoginPrompt: (show: boolean) => void;
-  setShowSellItem: (show: boolean) => void;
+  setShowCreatePost: (show: boolean) => void;
   setShowAllPosts: (show: boolean) => void;
   setSelectedCategoryForPage: (category: string) => void;
 
@@ -109,7 +109,7 @@ export function HomePage({
   searchQuery,
   setSearchQuery,
   setShowLoginPrompt,
-  setShowSellItem,
+  setShowCreatePost,
   setShowAllPosts,
   setSelectedCategoryForPage,
   isLoadingPosts,
@@ -154,7 +154,7 @@ export function HomePage({
         isRTL={isRTL}
         darkMode={darkMode}
         setShowLoginPrompt={setShowLoginPrompt}
-        setShowSellItem={setShowSellItem}
+        setShowCreatePost={setShowCreatePost}
         onBrowseItems={scrollToTop}
         onNavigate={onNavigate}
       />
@@ -188,7 +188,7 @@ export function HomePage({
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           setShowLoginPrompt={setShowLoginPrompt}
-          setShowSellItem={setShowSellItem}
+          setShowCreatePost={setShowCreatePost}
           setShowAllPosts={setShowAllPosts}
           setSelectedCategoryForPage={setSelectedCategoryForPage}
           onPostClick={onPostClick}

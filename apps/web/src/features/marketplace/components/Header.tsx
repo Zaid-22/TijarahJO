@@ -37,7 +37,7 @@ interface HeaderProps {
   onShowProfile?: () => void;
   onShowSettings?: () => void;
   onShowAdminDashboard?: () => void;
-  onShowSellItem?: () => void;
+  onShowCreatePost?: () => void;
   onLogout?: () => void;
   onCategoryClick?: (categoryName: string) => void;
   onNotificationsNavigate?: (url: string) => void;
@@ -64,7 +64,7 @@ export function Header({
   onShowProfile,
   onShowSettings,
   onShowAdminDashboard,
-  onShowSellItem,
+  onShowCreatePost,
   onLogout,
   onCategoryClick,
   onNotificationsNavigate,
@@ -185,15 +185,17 @@ export function Header({
               <Button
                 size="sm"
                 className="h-10 rounded-full bg-primary px-2 text-primary-foreground shadow-lg hover:bg-primary/95 hover:shadow-xl active:scale-95 sm:px-5"
-                onClick={onShowSellItem}
+                onClick={onShowCreatePost}
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
                 <span
                   className={`text-sm font-semibold ms-1 sm:ms-2`}
                 >
-                  <span className="sr-only sm:not-sr-only">{t.sellItem}</span>
+                  <span className="sr-only sm:not-sr-only">
+                    {language === "ar" ? "إنشاء منشور" : "Create Post"}
+                  </span>
                   <span className="sm:hidden" aria-hidden="true">
-                    {language === "ar" ? "بيع" : "Sell"}
+                    {language === "ar" ? "نشر" : "Post"}
                   </span>
                 </span>
               </Button>
