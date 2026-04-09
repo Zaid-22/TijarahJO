@@ -99,18 +99,19 @@ const socialLinks: SocialLink[] = [
 ];
 
 export function Footer({ language }: FooterProps) {
-  const { categories } = useCatalogCategories();
+  const { categories, isLoading } = useCatalogCategories();
   const location = useLocation();
   const isRTL = language === "ar";
   const currentPath = `${location.pathname}${location.search}`;
   const currentYear = new Date().getFullYear();
   const content = footerCopyByLanguage[language];
+  const topCategories = categories.slice(0, 5);
 
   return (
     <footer
       data-app-global-footer="true"
       dir={isRTL ? "rtl" : "ltr"}
-      className="relative border-t border-white/10 bg-slate-950 text-slate-100"
+      className="relative border-t border-white/10 bg-slate-950 text-slate-100 [content-visibility:auto] [contain-intrinsic-size:720px]"
     >
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/75 to-transparent" />
 
@@ -198,16 +199,24 @@ export function Footer({ language }: FooterProps) {
               {content.categories}
             </h3>
             <ul className="space-y-3 text-sm">
-              {categories.slice(0, 5).map((category) => (
-                <li key={String(category.id || category.name)}>
-                  <Link
-                    to={`/category/${encodeURIComponent(category.name)}`}
-                    className="rounded-sm text-slate-300 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-                  >
-                    {resolveCategoryName(category, language)}
-                  </Link>
-                </li>
-              ))}
+              {isLoading
+                ? Array.from({ length: 5 }).map((_, index) => (
+                    <li
+                      key={`footer-category-skeleton-${index}`}
+                      aria-hidden="true"
+                      className="h-5 w-32 max-w-full animate-pulse rounded bg-white/10"
+                    />
+                  ))
+                : topCategories.map((category) => (
+                    <li key={String(category.id || category.name)}>
+                      <Link
+                        to={`/category/${encodeURIComponent(category.name)}`}
+                        className="rounded-sm text-slate-300 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                      >
+                        {resolveCategoryName(category, language)}
+                      </Link>
+                    </li>
+                  ))}
             </ul>
           </section>
 

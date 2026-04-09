@@ -31,6 +31,7 @@ interface ChatWindowProps {
   onBack: () => void;
   postId?: number; // Optional context
   language?: Language;
+  showBackButton?: boolean;
 }
 
 export function ChatWindow({
@@ -41,6 +42,7 @@ export function ChatWindow({
   onBack,
   postId,
   language = "en",
+  showBackButton = true,
 }: ChatWindowProps) {
   const { messages, isLoading, error, sendMessage, sendImageMessage } = useChat(otherUserId);
   const [inputText, setInputText] = useState("");
@@ -218,15 +220,17 @@ export function ChatWindow({
       <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-md backdrop-blur-sm relative z-10">
         {/* Header */}
         <div className="flex items-center border-b border-border/60 bg-gradient-to-r from-muted/70 via-muted/50 to-transparent p-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onBack}
-            className={`md:hidden me-2`}
-            aria-label={labels.back}
-          >
-            ←
-          </Button>
+          {showBackButton ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onBack}
+              className="me-2"
+              aria-label={labels.back}
+            >
+              ←
+            </Button>
+          ) : null}
           <Link
             to={`/seller/${otherUserId}`}
             className={cn(

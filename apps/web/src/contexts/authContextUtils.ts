@@ -105,6 +105,14 @@ export const persistAdminAccessHint = (hasAdminAccess: boolean): void => {
   localStorage.setItem(AUTH_ADMIN_ACCESS_HINT_KEY, hasAdminAccess ? "true" : "false");
 };
 
+export const emitAuthSessionChanged = (): void => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(new Event("authSessionChanged"));
+};
+
 export const clearAuthSessionHint = (): void => {
   if (typeof window === "undefined") {
     return;

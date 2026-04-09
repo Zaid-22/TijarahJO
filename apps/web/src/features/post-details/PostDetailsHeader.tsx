@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { Flag, Heart, Share2 } from "lucide-react";
 import { Button } from "../../shared/ui/button";
 import { SubpageHeader } from "../../shared/ui/subpage-header";
+import { hasStoredAuthSessionHint } from "../../contexts/authContextUtils";
 import type { Language, Post } from "../../types";
 
 interface PostDetailsHeaderProps {
@@ -32,6 +34,15 @@ export function PostDetailsHeader({
   onReport,
   backToListingsLabel,
 }: PostDetailsHeaderProps) {
+  const [optimisticFavorited, setOptimisticFavorited] = useState(isFavorited);
+
+  useEffect(() => {
+    setOptimisticFavorited(isFavorited);
+  }, [isFavorited]);
+
+  const resolvedFavorited = optimisticFavorited;
+  const canUseAuthenticatedActions =
+    isAuthenticated || hasStoredAuthSessionHint();
   const actionButtons = (
     <div className="flex items-center gap-1 sm:gap-2">
       <Button
@@ -53,7 +64,7 @@ export function PostDetailsHeader({
           size="sm"
           className="h-9 w-9 rounded-lg p-0 transition-all duration-200 hover:scale-110 hover:bg-background hover:shadow-sm sm:h-10 sm:w-10"
           onClick={() => {
-            if (!isAuthenticated) {
+            if (!canUseAuthenticatedActions) {
               onRequireAuth?.();
               return;
             }
@@ -75,16 +86,17 @@ export function PostDetailsHeader({
           size="sm"
           className="h-9 w-9 rounded-lg p-0 transition-all duration-200 hover:scale-110 hover:bg-background hover:shadow-sm sm:h-10 sm:w-10"
           onClick={() => {
-            if (!isAuthenticated) {
+            if (!canUseAuthenticatedActions) {
               onRequireAuth?.();
               return;
             }
 
+            setOptimisticFavorited((previousValue) => !previousValue);
             onFavoriteToggle?.(post.id);
           }}
-          title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+          title={resolvedFavorited ? "Remove from favorites" : "Add to favorites"}
           aria-label={
-            isFavorited
+            resolvedFavorited
               ? language === "ar"
                 ? "إزالة من المفضلة"
                 : "Remove from favorites"
@@ -95,7 +107,7 @@ export function PostDetailsHeader({
         >
           <Heart
             className={`w-4 h-4 sm:w-5 sm:h-5 transition-all duration-300 text-red-500 ${
-              isFavorited ? "fill-current scale-110" : ""
+              resolvedFavorited ? "fill-current scale-110" : ""
             }`}
           />
         </Button>

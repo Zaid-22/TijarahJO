@@ -30,7 +30,6 @@ type HomeDeferredSectionsProps = {
   onPostClick: (id: string, origin?: string) => void;
   favoriteIds: string[];
   toggleFavorite: (id: string) => void;
-  currentUserDisplayName: string;
   currentUserId?: string;
   displayedPosts: Post[];
   availablePosts: Post[];
@@ -54,7 +53,6 @@ export function HomeDeferredSections({
   onPostClick,
   favoriteIds = [],
   toggleFavorite,
-  currentUserDisplayName,
   currentUserId,
   displayedPosts = [],
   availablePosts = [],
@@ -62,13 +60,36 @@ export function HomeDeferredSections({
   categories = [],
   backendUrlHint,
 }: HomeDeferredSectionsProps) {
-  const featuredPosts = useMemo(
-    () => displayedPosts.filter((p) => p.status !== "SOLD").slice(0, 10),
+  const safeDisplayedPosts = useMemo(
+    () => (Array.isArray(displayedPosts) ? displayedPosts : []),
     [displayedPosts],
+  );
+  const safeAvailablePosts = useMemo(
+    () => (Array.isArray(availablePosts) ? availablePosts : []),
+    [availablePosts],
+  );
+  const safeFilteredPosts = useMemo(
+    () => (Array.isArray(filteredPosts) ? filteredPosts : []),
+    [filteredPosts],
+  );
+  const safeCategories = useMemo(
+    () => (Array.isArray(categories) ? categories : []),
+    [categories],
+  );
+  const safeFavoriteIds = useMemo(
+    () => (Array.isArray(favoriteIds) ? favoriteIds : []),
+    [favoriteIds],
+  );
+
+  const featuredPosts = useMemo(
+    () => [...safeDisplayedPosts]
+      .filter((p) => p.status !== "SOLD")
+      .slice(0, 10),
+    [safeDisplayedPosts],
   );
 
   const recentPosts = useMemo(() => {
-    return displayedPosts
+    return safeDisplayedPosts
       .filter(isActivePost)
       .sort((a, b) => {
         const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -76,12 +97,12 @@ export function HomeDeferredSections({
         return dateB - dateA;
       })
       .slice(0, 10);
-  }, [displayedPosts]);
+  }, [safeDisplayedPosts]);
 
   const categorySections = useMemo<CategorySection[]>(() => {
     const postsByCategory = new Map<string, Post[]>();
 
-    availablePosts
+    safeAvailablePosts
       .filter(isActivePost)
       .forEach((post) => {
         const normalizedCategoryName = post.category.trim().toLowerCase();
@@ -94,7 +115,7 @@ export function HomeDeferredSections({
         postsByCategory.set(normalizedCategoryName, categoryPosts);
       });
 
-    return categories.flatMap((category) => {
+    return safeCategories.flatMap((category) => {
       const normalizedCategoryName = category.name.trim().toLowerCase();
       const matchingPosts = postsByCategory.get(normalizedCategoryName);
 
@@ -116,17 +137,17 @@ export function HomeDeferredSections({
         },
       ];
     });
-  }, [availablePosts, categories, language]);
+  }, [safeAvailablePosts, safeCategories, language]);
 
   const allListingsCarouselPosts = useMemo(() => {
-    return [...filteredPosts]
+    return [...safeFilteredPosts]
       .filter(isActivePost)
       .sort((a, b) => {
         const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return dateB - dateA;
       });
-  }, [filteredPosts]);
+  }, [safeFilteredPosts]);
 
   return (
     <>
@@ -144,8 +165,7 @@ export function HomeDeferredSections({
           language={language}
           isAuthenticated={isAuthenticated}
           currentUserId={currentUserId}
-          currentUserDisplayName={currentUserDisplayName}
-          favoriteIds={favoriteIds}
+          favoriteIds={safeFavoriteIds}
           onFavoriteToggle={toggleFavorite}
           onPostClick={(id) => onPostClick(id, "featured")}
           onViewAll={() => setShowAllPosts(true)}
@@ -168,8 +188,7 @@ export function HomeDeferredSections({
           language={language}
           isAuthenticated={isAuthenticated}
           currentUserId={currentUserId}
-          currentUserDisplayName={currentUserDisplayName}
-          favoriteIds={favoriteIds}
+          favoriteIds={safeFavoriteIds}
           onFavoriteToggle={toggleFavorite}
           onPostClick={(id) => onPostClick(id, "recent")}
           onViewAll={() => setShowAllPosts(true)}
@@ -192,8 +211,7 @@ export function HomeDeferredSections({
               language={language}
               isAuthenticated={isAuthenticated}
               currentUserId={currentUserId}
-              currentUserDisplayName={currentUserDisplayName}
-              favoriteIds={favoriteIds}
+              favoriteIds={safeFavoriteIds}
               onFavoriteToggle={toggleFavorite}
               onPostClick={(id) => onPostClick(id, section.categoryName)}
               onViewAll={() =>
@@ -266,8 +284,7 @@ export function HomeDeferredSections({
             language={language}
             isAuthenticated={isAuthenticated}
             currentUserId={currentUserId}
-            currentUserDisplayName={currentUserDisplayName}
-            favoriteIds={favoriteIds}
+            favoriteIds={safeFavoriteIds}
             onFavoriteToggle={toggleFavorite}
             onPostClick={(id) => onPostClick(id, "marketplace")}
             onViewAll={() => setShowAllPosts(true)}

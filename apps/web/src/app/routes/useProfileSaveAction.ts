@@ -34,6 +34,8 @@ export function useProfileSaveAction({
       const trimmedArea = updatedProfile.area.trim();
       const trimmedBio = updatedProfile.bio.trim();
       const trimmedAvatar = (updatedProfile.avatar || "").trim();
+      const currentAvatar = (userProfile.avatar || "").trim();
+      const shouldSendAvatar = trimmedAvatar != currentAvatar;
       const normalizedEmail = (
         updatedProfile.email || userProfile.email
       ).trim();
@@ -72,7 +74,7 @@ export function useProfileSaveAction({
           CityId: cityId,
           AreaId: areaId,
           Bio: trimmedBio || null,
-          Avatar: trimmedAvatar || null,
+          ...(shouldSendAvatar ? { Avatar: trimmedAvatar || null } : {}),
         });
 
         setUserProfile({
@@ -86,7 +88,7 @@ export function useProfileSaveAction({
           city: trimmedCity,
           area: trimmedArea,
           bio: trimmedBio,
-          avatar: trimmedAvatar,
+          avatar: shouldSendAvatar ? (trimmedAvatar || null) : userProfile.avatar,
           location: `${trimmedCity}, ${trimmedArea}`,
           name:
             `${trimmedFirstName} ${trimmedLastName}`.trim() || normalizedEmail,

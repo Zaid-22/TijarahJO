@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Language } from "../../../types";
 import {
   getAllHeroBanners,
+  resolveHeroBannerMedia,
   saveHeroBanners,
   type HeroBanner,
 } from "./heroBannerData";
@@ -31,7 +32,7 @@ function resolveLocalizedBannerCopy(
     return primaryValue.trim() || fallbackValue.trim();
   }
 
-  return primaryValue.trim() || fallbackValue.trim();
+  return fallbackValue.trim() || primaryValue.trim();
 }
 
 export function HomeHeroSection({
@@ -69,6 +70,7 @@ export function HomeHeroSection({
           linkUrl: b.linkUrl || undefined,
           isActive: b.isActive,
           order: b.displayOrder,
+          ...resolveHeroBannerMedia(b.imageUrl),
         }));
 
         setBanners(resolvedBanners);
@@ -135,6 +137,44 @@ export function HomeHeroSection({
     };
   }, [isPaused, totalSlides]);
 
+  useEffect(() => {
+    if (typeof window === "undefined" || totalSlides <= 1) {
+      return;
+    }
+
+    const nextBanner = banners[(currentIndex + 1) % totalSlides];
+    if (!nextBanner?.imageUrl) {
+      return;
+    }
+
+    let idleHandle: number | null = null;
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+    const warmNextBannerImage = () => {
+      const preloadImage = new Image();
+      preloadImage.src = nextBanner.imageUrl;
+    };
+
+    if ("requestIdleCallback" in window) {
+      idleHandle = window.requestIdleCallback(() => {
+        warmNextBannerImage();
+      }, { timeout: 1500 });
+    } else {
+      timeoutHandle = setTimeout(() => {
+        warmNextBannerImage();
+      }, 900);
+    }
+
+    return () => {
+      if (idleHandle !== null && "cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleHandle);
+      }
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+      }
+    };
+  }, [banners, currentIndex, totalSlides]);
+
   const handleBannerClick = (banner: HeroBanner) => {
     if (banner.linkUrl && onNavigate) {
       onNavigate(banner.linkUrl);
@@ -184,16 +224,15 @@ export function HomeHeroSection({
                 banner.altTextAr,
                 banner.altText,
               )}`;
-              const slideClassName = `absolute inset-0 h-full w-full overflow-hidden transition-all duration-500 ease-in-out ${
+              const slideClassName = `absolute inset-0 h-full w-full overflow-hidden transition-opacity duration-500 ease-in-out ${
                 banner.linkUrl ? "cursor-pointer" : "cursor-default"
               } ${
                 isActive
-                  ? "opacity-100 scale-100 z-10"
-                  : "opacity-0 scale-105 z-0"
+                  ? "opacity-100 z-10"
+                  : "opacity-0 z-0"
               } ${banner.bgClass} ${banner.textClass}`;
               const slideContent = (
                 <div className={`relative w-full h-full flex flex-col md:flex-row items-center justify-center md:justify-between px-6 sm:px-12 lg:px-24 py-6 md:py-0 gap-4 md:gap-0 ${isRTL ? 'md:flex-row-reverse' : ''}`}>
-                  {/* Text Content Area */}
                   <div className={`flex flex-col items-center md:items-start text-center md:text-start space-y-3 sm:space-y-4 max-w-lg z-10 ${isRTL ? 'md:items-end md:text-end' : ''}`}>
                     <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold tracking-tight leading-tight">
                       {resolveLocalizedBannerCopy(
@@ -217,29 +256,31 @@ export function HomeHeroSection({
                       )}
                     </div>
                   </div>
-                  
-                  {/* Image Area - Square Asset */}
+
                   <div className="relative w-[180px] h-[180px] sm:w-[220px] sm:h-[220px] md:w-[280px] md:h-[280px] lg:w-[350px] lg:h-[350px] flex-shrink-0 z-0">
-                    <picture>
-                      {banner.imageSrcSet && (
-                        <source
-                          type="image/webp"
-                          srcSet={banner.imageSrcSet}
-                          sizes="(max-width: 639px) 180px, (max-width: 767px) 220px, (max-width: 1023px) 280px, 350px"
+                    {(isActive || index === ((currentIndex + 1) % totalSlides)) && (
+                      <picture>
+                        {banner.imageSrcSet && (
+                          <source
+                            type="image/webp"
+                            srcSet={banner.imageSrcSet}
+                            sizes="(max-width: 639px) 180px, (max-width: 767px) 220px, (max-width: 1023px) 280px, 350px"
+                          />
+                        )}
+                        <img
+                          src={banner.pngFallbackUrl || banner.imageUrl}
+                          alt=""
+                          aria-hidden="true"
+                          width={640}
+                          height={640}
+                          className="absolute inset-0 h-full w-full object-contain"
+                          loading={index === 0 ? "eager" : "lazy"}
+                          decoding={index === 0 ? "sync" : "async"}
+                          {...{ fetchpriority: index === 0 ? "high" : "auto" }}
+                          draggable={false}
                         />
-                      )}
-                      <img
-                        src={banner.pngFallbackUrl || banner.imageUrl}
-                        alt=""
-                        aria-hidden="true"
-                        width={640}
-                        height={640}
-                        className="absolute inset-0 w-full h-full object-contain filter drop-shadow-2xl"
-                        loading={index === 0 ? "eager" : "lazy"}
-                        {...{ fetchpriority: index === 0 ? "high" : "auto" }}
-                        draggable={false}
-                      />
-                    </picture>
+                      </picture>
+                    )}
                   </div>
                 </div>
               );

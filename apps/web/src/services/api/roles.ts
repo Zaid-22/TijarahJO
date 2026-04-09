@@ -22,7 +22,7 @@ type RawRole = {
   Message?: unknown;
 };
 
-type NormalizedRole = {
+export type NormalizedRole = {
   RoleID: number;
   RoleName: string;
   CreatedAt: string;

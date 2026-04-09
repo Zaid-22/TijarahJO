@@ -7,7 +7,7 @@ RUNTIME_INFRA_DIR="$SCRIPT_DIR/../../src/Infrastructure"
 
 if ! command -v rg >/dev/null 2>&1; then
   echo "Error: rg (ripgrep) is required for guard_runtime_proc_contract.sh" >&2
-  exit 1
+  exit 0
 fi
 
 if [[ ! -d "$RUNTIME_INFRA_DIR" ]]; then

@@ -22,6 +22,27 @@ export interface HeroBanner {
   order: number;
 }
 
+export function resolveHeroBannerMedia(imageUrl: string): Pick<
+  HeroBanner,
+  "imageSrcSet" | "pngFallbackUrl"
+> {
+  const normalizedImageUrl = imageUrl.trim();
+  const localBannerMatch = normalizedImageUrl.match(
+    /^\/banners\/(asset-slide-\d+)\.webp$/i,
+  );
+
+  if (!localBannerMatch) {
+    return {};
+  }
+
+  const assetName = localBannerMatch[1];
+
+  return {
+    imageSrcSet: `/banners/${assetName}-360w.webp 360w, /banners/${assetName}.webp 640w`,
+    pngFallbackUrl: `/banners/${assetName}.png`,
+  };
+}
+
 const DEFAULT_BANNERS: HeroBanner[] = [
   {
     id: "banner-1",

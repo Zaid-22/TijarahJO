@@ -6,6 +6,7 @@ const host = process.argv[2] || "127.0.0.1";
 const port = Number(process.argv[3] || "4173");
 const distDir = path.resolve(__dirname, "..", "dist");
 const indexPath = path.join(distDir, "index.html");
+const indexHtml = fs.existsSync(indexPath) ? fs.readFileSync(indexPath) : null;
 
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -26,7 +27,28 @@ function sendFile(res, filePath) {
   const contentType =
     CONTENT_TYPES[extension] || "application/octet-stream";
   res.writeHead(200, { "Content-Type": contentType });
-  fs.createReadStream(filePath).pipe(res);
+  const fileStream = fs.createReadStream(filePath);
+  fileStream.on("error", () => {
+    if (!res.headersSent) {
+      sendNotFound(res);
+      return;
+    }
+
+    res.destroy();
+  });
+  fileStream.pipe(res);
+}
+
+function sendIndex(res) {
+  if (!indexHtml) {
+    sendNotFound(res);
+    return;
+  }
+
+  res.writeHead(200, {
+    "Content-Type": CONTENT_TYPES[".html"],
+  });
+  res.end(indexHtml);
 }
 
 function sendNotFound(res) {
@@ -66,7 +88,7 @@ const server = http.createServer((req, res) => {
     }
 
     if (shouldServeSpaFallback(requestPath)) {
-      sendFile(res, indexPath);
+      sendIndex(res);
       return;
     }
 

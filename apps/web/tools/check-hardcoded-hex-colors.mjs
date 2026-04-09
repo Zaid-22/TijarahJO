@@ -4,10 +4,6 @@ import path from "node:path";
 const SRC_DIR = path.resolve(process.cwd(), "src");
 const HEX_COLOR_PATTERN = /#[0-9a-fA-F]{3,8}\b/g;
 
-const ALLOWED_FILES = new Set([
-  "src/constants/colors.ts",
-]);
-
 function walkFiles(dirPath) {
   const entries = readdirSync(dirPath);
   const files = [];
@@ -37,10 +33,6 @@ function main() {
     const relativePath = path
       .relative(process.cwd(), filePath)
       .replace(/\\/g, "/");
-    if (ALLOWED_FILES.has(relativePath)) {
-      continue;
-    }
-
     const content = readFileSync(filePath, "utf8");
     const lines = content.split("\n");
 
@@ -70,4 +62,3 @@ function main() {
 }
 
 main();
-

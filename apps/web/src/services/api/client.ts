@@ -54,6 +54,20 @@ function isUnsafeMethod(method: string): boolean {
   );
 }
 
+function isSafeMethod(method: string): boolean {
+  return !isUnsafeMethod(method);
+}
+
+function isRetryableTransientStatus(status: number): boolean {
+  return status === 502 || status === 503 || status === 504;
+}
+
+async function delay(ms: number): Promise<void> {
+  await new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
 function hasAuthorizationHeader(headers?: HeadersInit): boolean {
   if (!headers) {
     return false;
@@ -291,6 +305,20 @@ export async function apiRequest<T>(
       signal: controller.signal,
       headers: requestHeaders,
     });
+
+    if (
+      isSafeMethod(method) &&
+      isRetryableTransientStatus(response.status) &&
+      !callerSignal?.aborted
+    ) {
+      await delay(250);
+      response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...requestOptions,
+        credentials: requestOptions.credentials ?? "include",
+        signal: controller.signal,
+        headers: requestHeaders,
+      });
+    }
 
     // Auto-retry on 401 by refreshing the JWT cookie (one attempt only).
     if (

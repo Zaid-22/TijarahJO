@@ -1,6 +1,5 @@
 import { User, Mail, Phone, MapPin } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
-import { Label } from "../../../shared/ui/label";
 import { Separator } from "../../../shared/ui/separator";
 import {
   Card,
@@ -55,15 +54,15 @@ export function AccountSection({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label className="text-sm text-muted-foreground">
+          <p className="text-sm font-medium text-muted-foreground">
             {text.fullName}
-          </Label>
+          </p>
           <div className="text-foreground">{displayName}</div>
         </div>
 
         <Separator />
         <div className="space-y-2">
-          <Label className="text-sm text-muted-foreground">{text.email}</Label>
+          <p className="text-sm font-medium text-muted-foreground">{text.email}</p>
           <div className="flex items-center gap-2 text-foreground">
             <Mail className="w-4 h-4 opacity-50" />
             {displayEmail}
@@ -71,7 +70,7 @@ export function AccountSection({
         </div>
         <Separator />
         <div className="space-y-2">
-          <Label className="text-sm text-muted-foreground">{text.phone}</Label>
+          <p className="text-sm font-medium text-muted-foreground">{text.phone}</p>
           <div className="flex items-center gap-2 text-foreground">
             <Phone className="w-4 h-4 opacity-50" />
             {displayPhone}
@@ -79,9 +78,9 @@ export function AccountSection({
         </div>
         <Separator />
         <div className="space-y-2">
-          <Label className="text-sm text-muted-foreground">
+          <p className="text-sm font-medium text-muted-foreground">
             {text.currentLocation}
-          </Label>
+          </p>
           <div className="flex items-center gap-2 text-foreground">
             <MapPin className="w-4 h-4 opacity-50" />
             {displayLocation}

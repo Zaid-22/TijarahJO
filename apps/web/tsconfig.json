@@ -23,7 +23,8 @@
     /* Path aliases */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "sonner": ["./src/shared/ui/sonner.tsx"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx"],

@@ -10,7 +10,6 @@ interface SimilarItemsSectionProps {
   language: Language;
   isAuthenticated?: boolean;
   currentUserId?: string;
-  currentUserDisplayName?: string;
   favoriteIds?: string[];
   onFavoriteToggle?: (id: string) => void;
   onPostClick?: (id: string) => void;
@@ -23,7 +22,6 @@ export function SimilarItemsSection({
   language,
   isAuthenticated = false,
   currentUserId,
-  currentUserDisplayName,
   favoriteIds = [],
   onFavoriteToggle,
   onPostClick,
@@ -116,7 +114,6 @@ export function SimilarItemsSection({
           language={language}
           isAuthenticated={isAuthenticated}
           currentUserId={currentUserId}
-          currentUserDisplayName={currentUserDisplayName}
           favoriteIds={favoriteIds}
           onFavoriteToggle={onFavoriteToggle}
           onPostClick={(id: string) => onPostClick?.(id)}
@@ -136,7 +133,6 @@ export function SimilarItemsSection({
           language={language}
           isAuthenticated={isAuthenticated}
           currentUserId={currentUserId}
-          currentUserDisplayName={currentUserDisplayName}
           favoriteIds={favoriteIds}
           onFavoriteToggle={onFavoriteToggle}
           onPostClick={(id: string) => onPostClick?.(id)}

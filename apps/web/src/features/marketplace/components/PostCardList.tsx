@@ -62,11 +62,11 @@ export const PostCardList = React.memo(function PostCardList(
 ) {
   const { post, isFavorite = false } = props;
   const imageProps = getResponsiveImageProps(post.image, {
-    width: 420,
-    aspectRatio: 16 / 9,
+    width: 520,
+    aspectRatio: 16 / 10,
     quality: 60,
-    widths: [240, 320, 420],
-    sizes: "(max-width: 639px) 92vw, (max-width: 1279px) 212px, 228px",
+    widths: [320, 420, 520],
+    sizes: "(max-width: 639px) 92vw, (max-width: 1279px) 220px, 240px",
   });
   const [resolvedPhone, setResolvedPhone] = useState("");
   const [isResolvingPhone, setIsResolvingPhone] = useState(false);
@@ -184,19 +184,19 @@ export const PostCardList = React.memo(function PostCardList(
   };
 
   return (
-    <article className="group relative flex w-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_20px_50px_-32px_rgba(15,23,42,0.35)] dark:border-slate-800/80 dark:bg-slate-900 sm:flex-row">
+    <article className="group relative flex w-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-[22px] border border-slate-200/80 bg-white shadow-[0_18px_42px_-30px_rgba(15,23,42,0.24)] dark:border-slate-800/80 dark:bg-slate-900 sm:flex-row">
       <button
         type="button"
         onClick={openPost}
         aria-label={labels.viewDetailsAria}
-        className="absolute inset-0 z-10 rounded-[24px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        className="absolute inset-0 z-10 rounded-[22px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       />
 
-      <div className="px-3 pt-3 sm:w-[13.25rem] sm:flex-shrink-0 sm:pb-3 xl:w-[14.25rem]">
+      <div className="px-3 pt-3 sm:w-[13.25rem] sm:flex-shrink-0 sm:pb-3 xl:w-[14.5rem]">
         <div
           className={
             postCardMediaClass +
-            " pointer-events-none rounded-[22px] border border-border/40 bg-muted/30 aspect-[16/9] overflow-hidden shadow-lg sm:h-full sm:min-h-[12.5rem]"
+            " pointer-events-none rounded-[16px] border border-border/40 bg-muted/30 aspect-[16/10] overflow-hidden shadow-[0_14px_30px_-24px_rgba(15,23,42,0.28)] sm:h-full sm:min-h-[12.5rem]"
           }
         >
           <ImageWithFallback
@@ -209,7 +209,7 @@ export const PostCardList = React.memo(function PostCardList(
             height={236}
             className="absolute inset-0 block h-full min-h-full w-full min-w-full object-cover object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/[0.04] via-transparent to-black/[0.14]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/[0.03] via-transparent to-black/[0.1]" />
 
           {post.status === "SOLD" && (
             <div className="absolute left-3 top-3 z-10">
@@ -219,52 +219,52 @@ export const PostCardList = React.memo(function PostCardList(
             </div>
           )}
 
-          <div className="absolute bottom-2.5 right-2.5 z-10">
+        </div>
+      </div>
+
+      <div className="pointer-events-none relative z-20 flex min-w-0 flex-1 flex-col justify-between px-4 pb-4 pt-4 sm:px-5 sm:pb-4 sm:pt-[1.125rem]">
+        <div>
+          <div className="mb-2.5">
             <PostCardPriceBadge
               price={post.price}
               currency={labels.currency}
               locale={priceLocale}
+              className="mb-2 w-fit rounded-none border-0 bg-transparent px-0 py-0 shadow-none backdrop-blur-0 supports-[backdrop-filter]:bg-transparent"
             />
-          </div>
-        </div>
-      </div>
 
-      <div className="pointer-events-none relative z-20 flex min-w-0 flex-1 flex-col justify-between px-4 pb-4 pt-4 sm:px-6 sm:pb-5 sm:pt-5">
-        <div>
-          <div className="mb-3 flex items-start justify-between gap-4">
-            <h3 className="line-clamp-2 text-base font-semibold leading-[1.12] tracking-[-0.018em] text-foreground sm:text-[1.3rem]">
+            <h3 className="line-clamp-2 text-base font-semibold leading-[1.12] tracking-[-0.018em] text-foreground sm:text-[1.18rem]">
               {post.name}
             </h3>
+
+            {hasDescription && (
+              <p className="mt-2 line-clamp-2 max-w-none text-sm leading-6 text-muted-foreground">
+                {post.description}
+              </p>
+            )}
           </div>
 
-          {hasDescription && (
-            <p className="mb-3 line-clamp-2 max-w-none text-sm leading-6 text-muted-foreground sm:text-[1rem] sm:leading-7">
-              {post.description}
-            </p>
-          )}
-
-          <div className="flex flex-wrap items-center gap-2.5 text-sm text-slate-600 dark:text-slate-300">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
             <div className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-slate-100/90 px-2.5 py-1 font-medium dark:bg-slate-800/80">
               <span className="truncate">{detailLocation}</span>
             </div>
 
             {post.condition && (
               <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100/90 px-2.5 py-1 font-medium dark:bg-slate-800/80">
-                <Sparkles className="h-3.5 w-3.5 flex-shrink-0 text-primary/85" />
+                <Sparkles className="h-3.5 w-3.5 flex-shrink-0 text-primary/80" />
                 <span>{post.condition}</span>
               </div>
             )}
 
             {postedAgo && (
               <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100/90 px-2.5 py-1 font-medium dark:bg-slate-800/80">
-                <Clock3 className="h-3.5 w-3.5 flex-shrink-0 text-primary/85" />
+                <Clock3 className="h-3.5 w-3.5 flex-shrink-0 text-primary/80" />
                 <span>{postedAgo}</span>
               </div>
             )}
 
             {typeof post.views === "number" && post.views > 0 && (
               <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100/90 px-2.5 py-1 font-medium dark:bg-slate-800/80">
-                <Eye className="h-3.5 w-3.5 flex-shrink-0 text-primary/85" />
+                <Eye className="h-3.5 w-3.5 flex-shrink-0 text-primary/80" />
                 <span>
                   {post.views} {labels.views}
                 </span>
@@ -285,25 +285,29 @@ export const PostCardList = React.memo(function PostCardList(
           </div>
         </div>
 
-        <div className="pointer-events-auto relative z-30 mt-5 flex flex-wrap items-stretch gap-2.5 sm:inline-grid sm:w-auto sm:grid-cols-[9.5rem_10.5rem_auto] sm:gap-3">
+        <div className="pointer-events-auto relative z-30 mt-4 flex flex-wrap items-stretch gap-2.5 sm:inline-grid sm:w-auto sm:grid-cols-[9.5rem_10.5rem_auto] sm:gap-3">
           <Button
             variant="outline"
-            className="flex h-10 min-w-0 flex-[0.92] basis-[calc(46%-0.5rem)] items-center justify-center gap-1.5 rounded-[18px] border-2 border-primary bg-white px-3 text-sm font-semibold text-primary shadow-[0_12px_26px_-24px_rgba(37,99,235,0.42)] transition-colors hover:bg-primary/[0.06] sm:basis-auto sm:px-3.5 dark:bg-slate-950 dark:text-primary-foreground"
+            aria-label={labels.chatButton}
+            title={labels.chatButton}
+            className="flex h-11 min-w-0 flex-[0.92] basis-[calc(46%-0.5rem)] items-center justify-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 text-[0.95rem] font-semibold text-slate-700 shadow-none transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 sm:basis-auto sm:px-4"
             onClick={handleChatClick}
           >
-            <MessageCircle className="h-4 w-4 text-primary sm:h-5 sm:w-5" />
+            <MessageCircle className="h-[1.2rem] w-[1.2rem] text-slate-500 transition-colors group-hover:text-slate-700 dark:text-slate-400" />
             <span>{labels.chatButton}</span>
           </Button>
 
           <Button
-            className="flex h-10 min-w-0 flex-[1.08] basis-[calc(54%-0.5rem)] items-center justify-center gap-1.5 rounded-[18px] bg-primary px-3 text-sm font-semibold text-primary-foreground shadow-[0_14px_30px_-22px_rgba(37,99,235,0.8)] transition-colors hover:bg-primary/92 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none dark:disabled:bg-slate-800 dark:disabled:text-slate-400 sm:basis-auto sm:px-3.5"
+            aria-label={labels.callButton}
+            title={labels.callButton}
+            className="flex h-11 min-w-0 flex-[1.08] basis-[calc(54%-0.5rem)] items-center justify-center gap-2 rounded-[16px] bg-primary px-4 text-[0.95rem] font-semibold text-primary-foreground shadow-none transition-colors hover:bg-primary/92 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none dark:disabled:bg-slate-800 dark:disabled:text-slate-400 sm:basis-auto sm:px-4"
             onClick={handleCallClick}
             disabled={canResolvePhone === false || isResolvingPhone}
           >
             {isResolvingPhone ? (
-              <Loader2 className="h-[1rem] w-[1rem] animate-spin text-primary-foreground" />
+              <Loader2 className="h-[1.2rem] w-[1.2rem] animate-spin text-primary-foreground" />
             ) : (
-              <Phone className="h-[1rem] w-[1rem] text-primary-foreground" />
+              <Phone className="h-[1.05rem] w-[1.05rem] text-primary-foreground" />
             )}
             <span>{labels.callButton}</span>
           </Button>
@@ -316,15 +320,15 @@ export const PostCardList = React.memo(function PostCardList(
               title={labels.favoriteLabel}
               className={
                 isFavorite
-                  ? "inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[18px] border border-rose-200 bg-rose-50 text-rose-500 shadow-[0_12px_24px_-24px_rgba(244,63,94,0.6)] transition-colors hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:border-rose-900/70 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-950/60"
-                  : "inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[18px] border border-slate-200 bg-white text-slate-400 shadow-[0_10px_22px_-24px_rgba(15,23,42,0.3)] transition-colors hover:bg-slate-50 hover:text-rose-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:border-white/10 dark:bg-slate-950 dark:text-slate-500 dark:hover:bg-slate-900 dark:hover:text-rose-300"
+                  ? "inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[16px] border border-rose-200 bg-rose-50 text-rose-500 shadow-none transition-colors hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:border-rose-900/70 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-950/60"
+                  : "inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[16px] border border-slate-200 bg-white text-slate-400 shadow-none transition-colors hover:bg-slate-50 hover:text-rose-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:border-white/10 dark:bg-slate-950 dark:text-slate-500 dark:hover:bg-slate-900 dark:hover:text-rose-300"
               }
             >
               <Heart
                 className={
                   isFavorite
-                    ? "h-5.5 w-5.5 fill-current stroke-[2.1]"
-                    : "h-5.5 w-5.5 stroke-[2.1]"
+                    ? "h-5 w-5 fill-current stroke-[2.1]"
+                    : "h-5 w-5 stroke-[2.1]"
                 }
               />
             </button>

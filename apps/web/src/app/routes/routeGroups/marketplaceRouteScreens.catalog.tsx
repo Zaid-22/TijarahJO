@@ -1,9 +1,45 @@
-import { lazy } from "react";
-import { CategoryRouteWrapper } from "../CategoryRouteWrapper";
+import { lazy, Suspense } from "react";
 import { useMarketplaceRouteContext } from "./marketplaceRouteContext";
 import { type MarketplaceRouteDefinition } from "./marketplaceRouteDefinitions";
 import { useSearch } from "../../../contexts/SearchContext";
 import { APP_ROUTE_PATHS } from "../routeConfig";
+import { LoadingState } from "../../../shared/ui/loading-state";
+
+function lazyImportWithRetry<TModule>(
+  load: () => Promise<TModule>,
+  retryKey: string,
+) {
+  return async () => {
+    try {
+      const module = await load();
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem(retryKey);
+      }
+      return module;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isRecoverableImportError =
+        /Failed to fetch dynamically imported module|Importing a module script failed/i.test(
+          message,
+        );
+
+      if (
+        typeof window !== "undefined" &&
+        isRecoverableImportError &&
+        !window.sessionStorage.getItem(retryKey)
+      ) {
+        window.sessionStorage.setItem(retryKey, "1");
+        window.location.reload();
+
+        return new Promise<never>(() => {
+          // Keep React.lazy pending while the page reload is in flight.
+        });
+      }
+
+      throw error;
+    }
+  };
+}
 
 const AllPostsPage = lazy(() =>
   import("../../../features/marketplace/pages/AllPostsPage").then((m) => ({
@@ -14,6 +50,15 @@ const SearchResultsPage = lazy(() =>
   import("../../../features/marketplace/pages/SearchResultsPage").then((m) => ({
     default: m.SearchResultsPage,
   })),
+);
+const CategoryRouteWrapper = lazy(
+  lazyImportWithRetry(
+    () =>
+      import("../CategoryRouteWrapper").then((m) => ({
+        default: m.CategoryRouteWrapper,
+      })),
+    "lazy-import-retry:category-route-wrapper",
+  ),
 );
 
 function AllPostsMarketplaceRouteScreen() {
@@ -37,7 +82,6 @@ function AllPostsMarketplaceRouteScreen() {
       isAuthenticated={sharedUserRouteProps.isAuthenticated}
       darkMode={appProps.darkMode}
       currentUserId={sharedUserRouteProps.currentUserId}
-      currentUserDisplayName={sharedUserRouteProps.currentUserDisplayName}
       onRequireAuth={promptLoginModal}
     />
   );
@@ -66,7 +110,6 @@ function SearchResultsMarketplaceRouteScreen() {
       onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
       isAuthenticated={sharedUserRouteProps.isAuthenticated}
       currentUserId={sharedUserRouteProps.currentUserId}
-      currentUserDisplayName={sharedUserRouteProps.currentUserDisplayName}
       onRequireAuth={promptLoginModal}
       onSearch={(newQuery) => {
         setActiveSearchQuery(newQuery);
@@ -87,19 +130,20 @@ function CategoryMarketplaceRouteScreen() {
   } = useMarketplaceRouteContext();
 
   return (
-    <CategoryRouteWrapper
-      language={appProps.language}
-      isAuthenticated={sharedUserRouteProps.isAuthenticated}
-      currentUserId={sharedUserRouteProps.currentUserId}
-      currentUserDisplayName={sharedUserRouteProps.currentUserDisplayName}
-      availablePosts={sharedPostRouteProps.availablePosts}
-      isLoadingPosts={sharedPostRouteProps.isLoadingPosts}
-      favoriteIds={sharedPostRouteProps.favoriteIds}
-      onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
-      onBack={() => navigate(APP_ROUTE_PATHS.home)}
-      onOpenPost={(id) => navigateToPost(id, "/category")}
-      onRequireAuth={promptLoginModal}
-    />
+    <Suspense fallback={<LoadingState minHeightClassName="min-h-[40vh]" />}>
+      <CategoryRouteWrapper
+        language={appProps.language}
+        isAuthenticated={sharedUserRouteProps.isAuthenticated}
+        currentUserId={sharedUserRouteProps.currentUserId}
+        availablePosts={sharedPostRouteProps.availablePosts}
+        isLoadingPosts={sharedPostRouteProps.isLoadingPosts}
+        favoriteIds={sharedPostRouteProps.favoriteIds}
+        onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
+        onBack={() => navigate(APP_ROUTE_PATHS.home)}
+        onOpenPost={(id) => navigateToPost(id, "/category")}
+        onRequireAuth={promptLoginModal}
+      />
+    </Suspense>
   );
 }
 

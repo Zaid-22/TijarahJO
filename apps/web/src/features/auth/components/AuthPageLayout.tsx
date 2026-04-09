@@ -8,7 +8,7 @@ interface AuthPageLayoutProps {
   /** Page heading */
   title: string;
   /** Short description below the heading */
-  subtitle: string;
+  subtitle?: string;
   /** Card content (forms, alerts, etc.) */
   children: ReactNode;
   /** Optional footer content rendered below the card */
@@ -44,9 +44,11 @@ export function AuthPageLayout({
           <h1 className="mb-2 text-2xl sm:text-3xl text-foreground">
             {title}
           </h1>
-          <p className="px-4 text-sm sm:text-base text-muted-foreground">
-            {subtitle}
-          </p>
+          {subtitle && (
+            <p className="px-4 text-sm sm:text-base text-muted-foreground">
+              {subtitle}
+            </p>
+          )}
         </div>
 
         <div className="rounded-2xl border border-border bg-card shadow-xl p-4 sm:p-6 lg:p-8">

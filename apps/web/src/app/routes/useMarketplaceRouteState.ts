@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Language, UserProfile } from "../../types";
 import { DEBOUNCE_DELAY } from "../../constants";
 import { useDebounce } from "../../shared/hooks/useDebounce";
@@ -25,8 +26,40 @@ export function useMarketplaceRouteState({
   language,
   userProfile,
 }: UseMarketplaceRouteStateParams) {
-  const shouldLoadPostsData = shouldLoadPostsForPath(pathname);
-  const shouldLoadFavoritesData = shouldLoadFavoritesForPath(pathname);
+  const normalizedPathname = pathname.toLowerCase().replace(/\/+$/, "") || "/";
+  const isHomeRoute = normalizedPathname === "/";
+  const [isHomeRouteDataReady, setIsHomeRouteDataReady] = useState(
+    !isHomeRoute,
+  );
+
+  useEffect(() => {
+    if (!isHomeRoute) {
+      setIsHomeRouteDataReady(true);
+      return;
+    }
+
+    setIsHomeRouteDataReady(false);
+
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+    const animationFrameHandle = window.requestAnimationFrame(() => {
+      timeoutHandle = setTimeout(() => {
+        setIsHomeRouteDataReady(true);
+      }, 0);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameHandle);
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+      }
+    };
+  }, [isHomeRoute]);
+
+  const shouldLoadPostsData =
+    shouldLoadPostsForPath(pathname) && (!isHomeRoute || isHomeRouteDataReady);
+  const shouldLoadFavoritesData =
+    shouldLoadFavoritesForPath(pathname) &&
+    (!isHomeRoute || isHomeRouteDataReady);
 
   const debouncedSearchQuery = useDebounce(
     searchQuery,
@@ -45,6 +78,7 @@ export function useMarketplaceRouteState({
 
   const { favoriteIds, toggleFavorite } = useFavorites({
     enabled: shouldLoadFavoritesData,
+    userIdHint: userProfile.id,
   });
 
   const {

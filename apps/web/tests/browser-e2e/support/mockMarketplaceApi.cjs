@@ -330,7 +330,9 @@ function createMarketplaceApiMock(options = {}) {
   }
 
   async function install(page) {
-    await page.addInitScript(() => {
+    const shouldBootAuthenticatedSession = sessionAuthenticated;
+
+    await page.addInitScript((bootAuthenticatedSession) => {
       try {
         Object.defineProperty(window.navigator, "onLine", {
           configurable: true,
@@ -339,7 +341,12 @@ function createMarketplaceApiMock(options = {}) {
       } catch {
         // Ignore readonly navigator environments.
       }
-    });
+
+      if (bootAuthenticatedSession) {
+        window.localStorage.setItem("tijarahjo_has_authenticated", "true");
+        window.localStorage.removeItem("tijarahjo_logged_out");
+      }
+    }, shouldBootAuthenticatedSession);
 
     await page.route("**/*", async (route) => {
       const request = route.request();

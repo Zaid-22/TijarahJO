@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { api } from "../../../services/api";
 import { logger } from "../../../shared/lib/logger";
 import type { PermissionItem } from "../../../services/api/admin";
+import { emitAuthSessionChanged } from "../../../contexts/authContextUtils";
 
 type Props = {
   roleName: string;
@@ -90,6 +91,7 @@ export function PermissionsDialog({
         roleId,
         Array.from(selectedPermIds),
       );
+      emitAuthSessionChanged();
       toast.success(`Permissions updated for ${roleName}`);
       onOpenChange(false);
       setLoaded(false);

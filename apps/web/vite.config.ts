@@ -159,7 +159,7 @@ function buildCspPolicy(isProduction: boolean): string {
     "default-src 'self'",
     "base-uri 'self'",
     "object-src 'none'",
-    "script-src 'self' 'sha256-O1bNQKJh8URhQqcUBWRAukbQDDV3EluEojBj0bb7ApA='",
+    "script-src 'self' 'sha256-SLOKmWvKYj1okn6TfCw3PMmRTrhS4oK78YwwL9JigrM='",
     styleSrc,
     imgSrc,
     "font-src 'self' data: https://fonts.gstatic.com",
@@ -175,6 +175,14 @@ function injectCspPolicy(mode: string, env: Record<string, string>) {
   return {
     name: "inject-csp-policy",
     transformIndexHtml(html: string) {
+      if (mode !== "production") {
+        return html.replace(
+          `    <meta http-equiv="Content-Security-Policy" content="__CSP_POLICY__" />
+`,
+          ""
+        );
+      }
+
       return html.replace("__CSP_POLICY__", cspPolicy);
     },
   };
@@ -186,6 +194,12 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [tailwindcss(), react(), injectCspPolicy(mode, env)],
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "src"),
+        sonner: path.resolve(__dirname, "src/shared/ui/sonner.tsx"),
+      },
+    },
     build: {
       manifest: true,
       modulePreload: {
@@ -276,11 +290,6 @@ export default defineConfig(({ mode }) => {
 
           warn(warning);
         },
-      },
-    },
-    resolve: {
-      alias: {
-        "@": path.resolve(__dirname, "./src"),
       },
     },
     server: {

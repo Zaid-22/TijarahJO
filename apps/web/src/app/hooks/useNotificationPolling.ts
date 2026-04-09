@@ -8,6 +8,7 @@ import { deferredToast } from "../../utils/toast";
 import { toPositiveIntegerId } from "../../utils/idValidation";
 
 const UNREAD_COUNT_REFRESH_MS = 30_000;
+const NOTIFICATION_SERVICE_RETRY_MS = 60_000;
 
 type UseNotificationPollingOptions = {
   suspended?: boolean;
@@ -26,6 +27,7 @@ export function useNotificationPolling(
   const navigate = useNavigate();
   const location = useLocation();
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const [notificationsRetryAt, setNotificationsRetryAt] = useState<number | null>(null);
   const subscriptionCleanupRef = useRef<(() => void) | null>(null);
 
   const normalizedPathname = location.pathname
@@ -33,6 +35,28 @@ export function useNotificationPolling(
     .replace(/\/+$/, "");
   const isChatRoute =
     normalizedPathname === "/chat" || normalizedPathname.startsWith("/chat/");
+  const isNotificationsServiceCoolingDown =
+    notificationsRetryAt !== null && notificationsRetryAt > Date.now();
+
+  useEffect(() => {
+    if (notificationsRetryAt === null) {
+      return;
+    }
+
+    const remainingMs = notificationsRetryAt - Date.now();
+    if (remainingMs <= 0) {
+      setNotificationsRetryAt(null);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setNotificationsRetryAt(null);
+    }, remainingMs);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [notificationsRetryAt]);
 
   // Polling
   useEffect(() => {
@@ -41,12 +65,22 @@ export function useNotificationPolling(
       return;
     }
 
+    if (isNotificationsServiceCoolingDown) {
+      return;
+    }
+
     let isCancelled = false;
     const refreshUnreadCount = async () => {
       try {
-        const unreadCount = await api.notifications.getUnreadCount();
+        const result = await api.notifications.getUnreadCountResult();
         if (!isCancelled) {
-          setUnreadNotificationsCount(unreadCount);
+          if (result.serviceUnavailable) {
+            setNotificationsRetryAt(Date.now() + NOTIFICATION_SERVICE_RETRY_MS);
+            return;
+          }
+
+          setNotificationsRetryAt(null);
+          setUnreadNotificationsCount(result.unreadCount);
         }
       } catch (error) {
         logger.warn("[App] Failed to load unread notifications count:", error);
@@ -66,7 +100,7 @@ export function useNotificationPolling(
       window.clearInterval(intervalId);
       window.removeEventListener("tijarahjo:refreshUnreadCount", refreshUnreadCount);
     };
-  }, [isAuthenticated, suspended]);
+  }, [isAuthenticated, suspended, isNotificationsServiceCoolingDown]);
 
   // Realtime notifications via SignalR (dynamically loaded)
   useEffect(() => {
@@ -119,9 +153,15 @@ export function useNotificationPolling(
         }
 
         void api.notifications
-          .getUnreadCount()
-          .then((count) => {
-            setUnreadNotificationsCount(count);
+          .getUnreadCountResult()
+          .then((result) => {
+            if (result.serviceUnavailable) {
+              setNotificationsRetryAt(Date.now() + NOTIFICATION_SERVICE_RETRY_MS);
+              return;
+            }
+
+            setNotificationsRetryAt(null);
+            setUnreadNotificationsCount(result.unreadCount);
           })
           .catch((error) => {
             logger.warn(
@@ -144,19 +184,31 @@ export function useNotificationPolling(
     navigate,
     normalizedPathname,
     suspended,
+    isNotificationsServiceCoolingDown,
   ]);
 
   // Refresh on chat route entry
   useEffect(() => {
-    if (!isAuthenticated || suspended || !isChatRoute) {
+    if (
+      !isAuthenticated ||
+      suspended ||
+      isNotificationsServiceCoolingDown ||
+      !isChatRoute
+    ) {
       return;
     }
 
     const timeoutId = window.setTimeout(() => {
       void api.notifications
-        .getUnreadCount()
-        .then((count) => {
-          setUnreadNotificationsCount(count);
+        .getUnreadCountResult()
+        .then((result) => {
+          if (result.serviceUnavailable) {
+            setNotificationsRetryAt(Date.now() + NOTIFICATION_SERVICE_RETRY_MS);
+            return;
+          }
+
+          setNotificationsRetryAt(null);
+          setUnreadNotificationsCount(result.unreadCount);
         })
         .catch((error) => {
           logger.warn(
@@ -169,7 +221,7 @@ export function useNotificationPolling(
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [isAuthenticated, isChatRoute, location.pathname, suspended]);
+  }, [isAuthenticated, isChatRoute, location.pathname, suspended, isNotificationsServiceCoolingDown]);
 
   return { unreadNotificationsCount };
 }

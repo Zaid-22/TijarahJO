@@ -2,7 +2,6 @@ import { Upload, X } from "lucide-react";
 import type { ChangeEvent } from "react";
 import type { Language } from "../../../types";
 import { Button } from "../../../shared/ui/button";
-import { Label } from "../../../shared/ui/label";
 
 interface SellItemImagePreview {
   id: string;
@@ -36,7 +35,7 @@ export function SellItemImagePicker({
 }: SellItemImagePickerProps) {
   return (
     <div className="space-y-2">
-      <Label className="text-base font-semibold">{title}</Label>
+      <p className="text-base font-semibold">{title}</p>
       <div className="space-y-3">
         {selectedImages.length > 0 ? (
           <div className="grid grid-cols-3 gap-3">

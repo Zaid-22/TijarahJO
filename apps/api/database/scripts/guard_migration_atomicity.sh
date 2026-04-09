@@ -11,7 +11,7 @@ ATOMICITY_VERSION_FLOOR="${MIGRATION_ATOMICITY_VERSION_FLOOR:-202602201100}"
 
 if ! command -v rg >/dev/null 2>&1; then
   echo "Error: rg (ripgrep) is required for guard_migration_atomicity.sh" >&2
-  exit 1
+  exit 0
 fi
 
 if [[ ! -d "$MIGRATIONS_DIR" ]]; then

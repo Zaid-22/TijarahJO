@@ -19,8 +19,57 @@ import { useMediaQuery } from "../../../shared/hooks/useMediaQuery";
 import { formatChatPreviewText } from "../chatMessageContent";
 import {
   buildCurrentPath,
+  resolveBackPathFromHistoryState,
   resolveBackPathFromLocationState,
 } from "../../../shared/lib/backNavigation";
+
+type ChatLocationState = {
+  fromPath?: string;
+  chatListPath?: string;
+};
+
+type PersistedChatReturnState = {
+  chatUserId: string;
+  returnPath: string;
+};
+
+function readPersistedChatReturnState(): PersistedChatReturnState | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const storedValue = window.sessionStorage.getItem("chat:return-path");
+  if (!storedValue) {
+    return null;
+  }
+
+  try {
+    const parsedValue = JSON.parse(storedValue) as {
+      chatUserId?: unknown;
+      returnPath?: unknown;
+    };
+
+    return typeof parsedValue.chatUserId === "string" &&
+      parsedValue.chatUserId.trim().length > 0 &&
+      typeof parsedValue.returnPath === "string" &&
+      parsedValue.returnPath.startsWith("/")
+      ? {
+          chatUserId: parsedValue.chatUserId,
+          returnPath: parsedValue.returnPath,
+        }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearPersistedChatReturnPath() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.sessionStorage.removeItem("chat:return-path");
+}
 
 interface ChatSummary {
   userId: number;
@@ -43,11 +92,59 @@ export function ChatPage({ language }: ChatPageProps) {
   const resolvedLanguage = language || resolveDocumentLanguage();
   const isRTL = resolvedLanguage === "ar";
   const currentPath = buildCurrentPath(location.pathname, location.search);
+  const locationState =
+    typeof location.state === "object" && location.state !== null
+      ? (location.state as ChatLocationState)
+      : null;
   const safeBackPath = resolveBackPathFromLocationState({
-    locationState: location.state,
+    locationState,
     currentPath,
     fallbackPath: "/",
   });
+  const queryReturnPath = (() => {
+    const rawValue = new URLSearchParams(location.search).get("returnTo");
+    return typeof rawValue === "string" && rawValue.startsWith("/")
+      ? rawValue
+      : "/";
+  })();
+  const historyBackPath =
+    typeof window === "undefined"
+      ? "/"
+      : resolveBackPathFromHistoryState({
+          historyState: window.history.state,
+          currentPath,
+          fallbackPath: "/",
+        });
+  const routeSelectedUserId = toPositiveIntegerId(userId);
+  const persistedReturnState = readPersistedChatReturnState();
+  const persistedBackPath =
+    routeSelectedUserId !== null &&
+    persistedReturnState?.chatUserId === String(routeSelectedUserId)
+      ? persistedReturnState.returnPath
+      : null;
+  const [sessionReturnState, setSessionReturnState] = useState<
+    PersistedChatReturnState | null
+  >(persistedReturnState);
+  const rememberedBackPath =
+    routeSelectedUserId !== null &&
+    sessionReturnState?.chatUserId === String(routeSelectedUserId)
+      ? sessionReturnState.returnPath
+      : null;
+  const resolvedBackPath =
+    queryReturnPath !== "/"
+      ? queryReturnPath
+      : safeBackPath !== "/"
+        ? safeBackPath
+        : historyBackPath !== "/"
+          ? historyBackPath
+          : routeSelectedUserId !== null
+            ? rememberedBackPath ?? persistedBackPath ?? safeBackPath
+            : safeBackPath;
+  const chatListPath =
+    typeof locationState?.chatListPath === "string" &&
+    locationState.chatListPath.startsWith("/")
+      ? locationState.chatListPath
+      : null;
   const labels = {
     userPrefix: resolvedLanguage === "ar" ? "مستخدم" : "User",
     me: resolvedLanguage === "ar" ? "أنا" : "Me",
@@ -64,7 +161,7 @@ export function ChatPage({ language }: ChatPageProps) {
     back: resolvedLanguage === "ar" ? "العودة" : "Back",
   };
 
-  const initialSelectedUserId = toPositiveIntegerId(userId);
+  const initialSelectedUserId = routeSelectedUserId;
   const [selectedUserId, setSelectedUserId] = useState<number | null>(
     initialSelectedUserId ?? null,
   );
@@ -233,6 +330,43 @@ export function ChatPage({ language }: ChatPageProps) {
   }, [userId]);
 
   useEffect(() => {
+    if (routeSelectedUserId === null) {
+      setSessionReturnState(null);
+      return;
+    }
+
+    if (safeBackPath !== "/") {
+      setSessionReturnState({
+        chatUserId: String(routeSelectedUserId),
+        returnPath: safeBackPath,
+      });
+      return;
+    }
+
+    if (persistedBackPath) {
+      setSessionReturnState({
+        chatUserId: String(routeSelectedUserId),
+        returnPath: persistedBackPath,
+      });
+    }
+  }, [persistedBackPath, routeSelectedUserId, safeBackPath]);
+
+  useEffect(() => {
+    if (currentPath === "/chat" && typeof locationState?.fromPath !== "string") {
+      clearPersistedChatReturnPath();
+      return;
+    }
+
+    if (
+      routeSelectedUserId !== null &&
+      safeBackPath === "/" &&
+      persistedReturnState !== null
+    ) {
+      clearPersistedChatReturnPath();
+    }
+  }, [currentPath, locationState, persistedReturnState, routeSelectedUserId, safeBackPath]);
+
+  useEffect(() => {
     if (selectedUserId === null) {
       setSelectedDisplayName("");
       return;
@@ -294,23 +428,35 @@ export function ChatPage({ language }: ChatPageProps) {
     setSelectedUserAvatar(userAvatarsById[normalizedUserId]);
     navigate(`/chat/${normalizedUserId}`, {
       state: {
-        fromPath: safeBackPath,
+        fromPath: resolvedBackPath,
+        chatListPath: "/chat",
       },
     });
   };
 
   const handlePageBack = () => {
     if (isMobile && selectedUserId) {
-      setSelectedUserId(null);
-      navigate("/chat", {
-        state: {
-          fromPath: safeBackPath,
-        },
-      });
+      if (chatListPath) {
+        setSelectedUserId(null);
+        navigate(chatListPath, {
+          state: {
+            fromPath: resolvedBackPath,
+          },
+        });
+        return;
+      }
+
+      if (resolvedBackPath !== "/chat") {
+        clearPersistedChatReturnPath();
+      }
+      navigate(resolvedBackPath, { replace: true });
       return;
     }
 
-    navigate(safeBackPath, { replace: true });
+    if (resolvedBackPath !== "/chat") {
+      clearPersistedChatReturnPath();
+    }
+    navigate(resolvedBackPath, { replace: true });
   };
 
   if (!isAuthenticated) {
@@ -389,14 +535,33 @@ export function ChatPage({ language }: ChatPageProps) {
                   name: user?.name || labels.me,
                 }}
                 onBack={() => {
+                  if (isMobile) {
+                    if (chatListPath) {
+                      setSelectedUserId(null);
+                      navigate(chatListPath, {
+                        state: {
+                          fromPath: resolvedBackPath,
+                        },
+                      });
+                      return;
+                    }
+
+                    if (resolvedBackPath !== "/chat") {
+                      clearPersistedChatReturnPath();
+                    }
+                    navigate(resolvedBackPath, { replace: true });
+                    return;
+                  }
+
                   setSelectedUserId(null);
                   navigate("/chat", {
                     state: {
-                      fromPath: safeBackPath,
+                      fromPath: resolvedBackPath,
                     },
                   });
                 }}
                 language={resolvedLanguage}
+                showBackButton={isMobile}
               />
             ) : (
               <div className="h-full flex flex-col items-center justify-center rounded-lg border border-border bg-muted/40 p-8 text-center">

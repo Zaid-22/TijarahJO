@@ -28,7 +28,6 @@ import { useNotificationPolling } from "./hooks/useNotificationPolling";
 import type { PublicSystemStatus } from "../services/api/system";
 
 import { Header } from "../features/marketplace/components/Header";
-import { Footer } from "../features/marketplace/components/Footer";
 import { AppRoutes } from "./routes/AppRoutes";
 
 function lazyImportWithRetry<TModule>(
@@ -74,6 +73,15 @@ const MaintenanceScreen = lazy(
         default: m.MaintenanceScreen,
       })),
     "lazy-import-retry:maintenance-screen",
+  ),
+);
+const Footer = lazy(
+  lazyImportWithRetry(
+    () =>
+      import("../features/marketplace/components/Footer").then((m) => ({
+        default: m.Footer,
+      })),
+    "lazy-import-retry:footer",
   ),
 );
 
@@ -351,7 +359,11 @@ function AppContent() {
         <AppRoutes />
       </main>
 
-      {!isAuthRoute ? <Footer language={language} /> : null}
+      {!isAuthRoute ? (
+        <Suspense fallback={null}>
+          <Footer language={language} />
+        </Suspense>
+      ) : null}
       <ScrollToTop />
     </div>
   );

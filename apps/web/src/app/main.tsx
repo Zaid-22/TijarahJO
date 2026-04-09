@@ -11,6 +11,20 @@ import { ADMIN_PERMISSIONS } from "../features/admin/adminPermissions";
 import App from "./App";
 import "../styles/globals.css";
 
+function normalizePathname(pathname: string): string {
+  const normalized = pathname.toLowerCase().replace(/\/+$/, "");
+  return normalized || "/";
+}
+
+const shouldWarmInitialHomeRoute =
+  typeof window !== "undefined" &&
+  normalizePathname(window.location.pathname) === "/";
+
+if (shouldWarmInitialHomeRoute) {
+  void import("../features/home/pages/HomePage");
+  void import("../features/home/components/HomeDeferredSections");
+}
+
 const AdminRoute = lazy(() =>
   import("../features/admin/components/AdminRoute").then((m) => ({
     default: m.AdminRoute,
@@ -111,7 +125,9 @@ if (!rootElement) {
   throw new Error("Root element not found");
 }
 
-ReactDOM.createRoot(rootElement).render(
+const rootContainer = rootElement;
+
+const appTree = (
   <ErrorBoundary>
     <QueryClientProvider client={serverQueryClient}>
       <AuthProvider>
@@ -283,5 +299,18 @@ ReactDOM.createRoot(rootElement).render(
         </BrowserRouter>
       </AuthProvider>
     </QueryClientProvider>
-  </ErrorBoundary>,
+  </ErrorBoundary>
 );
+
+async function bootstrap() {
+  if (shouldWarmInitialHomeRoute) {
+    await Promise.all([
+      import("../features/home/pages/HomePage"),
+      import("../features/home/components/HomeDeferredSections"),
+    ]);
+  }
+
+  ReactDOM.createRoot(rootContainer).render(appTree);
+}
+
+void bootstrap();

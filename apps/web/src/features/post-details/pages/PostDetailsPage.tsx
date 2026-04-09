@@ -43,7 +43,6 @@ interface PostDetailsPageProps {
   favoriteIds?: string[];
   onFavoriteToggle?: (postId: string) => void;
   isAuthenticated?: boolean;
-  currentUserDisplayName?: string;
   onRequireAuth?: () => void;
 }
 
@@ -62,7 +61,6 @@ export function PostDetailsPage({
   favoriteIds = [],
   onFavoriteToggle,
   isAuthenticated = false,
-  currentUserDisplayName,
   onRequireAuth,
 }: PostDetailsPageProps) {
   type ActiveDialog = "delete" | "edit" | "phone" | "report" | "share" | null;
@@ -396,7 +394,6 @@ export function PostDetailsPage({
         allPosts={allPosts}
         language={language}
         isAuthenticated={isAuthenticated}
-        currentUserDisplayName={currentUserDisplayName}
         favoriteIds={favoriteIds}
         onFavoriteToggle={onFavoriteToggle}
         onPostClick={onPostClick}

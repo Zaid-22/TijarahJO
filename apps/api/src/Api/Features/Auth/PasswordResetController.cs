@@ -10,14 +10,9 @@ namespace TijarahJo.Api.Features.Auth;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/auth/forgot-password")]
-public class PasswordResetController : ControllerBase
+public class PasswordResetController(IPasswordResetService passwordResetService) : ControllerBase
 {
-    private readonly IPasswordResetService _passwordResetService;
-
-    public PasswordResetController(IPasswordResetService passwordResetService)
-    {
-        _passwordResetService = passwordResetService;
-    }
+    private readonly IPasswordResetService _passwordResetService = passwordResetService;
 
     [HttpPost("request")]
     [AllowAnonymous]
@@ -27,11 +22,16 @@ public class PasswordResetController : ControllerBase
         [FromBody] ForgotPasswordRequest request,
         CancellationToken cancellationToken)
     {
-        await _passwordResetService.RequestResetAsync(request?.Email, cancellationToken);
+        bool success = await _passwordResetService.RequestResetAsync(request?.Email, cancellationToken);
+        
+        if (!success)
+        {
+            return BadRequest(new ApiMessageResponse { Message = "Account does not exist or is unavailable." });
+        }
 
         return Ok(new ApiMessageResponse
         {
-            Message = "If an account exists for that email, a verification code has been sent."
+            Message = "A verification code has been sent to your email."
         });
     }
 

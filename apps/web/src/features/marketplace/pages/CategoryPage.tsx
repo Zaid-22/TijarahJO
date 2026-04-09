@@ -26,7 +26,6 @@ interface CategoryPageProps {
   favoriteIds: string[];
   onFavoriteToggle: (postId: string) => void;
   language: Language;
-  currentUserDisplayName?: string;
   currentUserId?: string;
   isAuthenticated?: boolean;
   isLoading?: boolean;
@@ -41,7 +40,6 @@ export function CategoryPage({
   favoriteIds,
   onFavoriteToggle,
   language,
-  currentUserDisplayName,
   currentUserId,
   isAuthenticated = false,
   isLoading = false,
@@ -158,16 +156,14 @@ export function CategoryPage({
           </aside>
 
           {/* Main Results Area */}
-          <div className="min-w-0 rounded-[30px] border border-slate-200/70 bg-gradient-to-br from-white via-slate-50/30 to-white p-4 shadow-[0_28px_70px_-55px_rgba(15,23,42,0.45)] sm:p-5 xl:p-6">
-            <div className="mb-5 rounded-[22px] border border-slate-200/70 bg-white/85 px-4 py-4 shadow-[0_12px_40px_-32px_rgba(15,23,42,0.35)] backdrop-blur sm:px-5">
-              <div className="space-y-1.5">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/75">
-                  {resultsSummary}
-                </p>
-                <h2 className="text-xl font-semibold tracking-[-0.02em] text-foreground">
-                  {displayCategoryName}
-                </h2>
-              </div>
+          <div className="min-w-0 flex-1">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4 px-2">
+              <h2 className="text-2xl font-bold tracking-tight text-slate-800">
+                {language === "ar" ? "الإعلانات المتاحة" : "Available Listings"}
+              </h2>
+              <span className="inline-flex items-center justify-center rounded-full bg-slate-100/80 px-3.5 py-1.5 text-xs font-semibold text-slate-600">
+                {resultsSummary}
+              </span>
             </div>
 
             {/* Controls Bar */}
@@ -195,8 +191,6 @@ export function CategoryPage({
                 onFavoriteToggle={onFavoriteToggle}
                 isAuthenticated={isAuthenticated}
                 currentUserId={currentUserId}
-                currentUserDisplayName={currentUserDisplayName}
-                hideCategoryBadge
                 language={language}
                 emptyState={{
                   title: language === "ar" ? "لا توجد نتائج" : "No results found",

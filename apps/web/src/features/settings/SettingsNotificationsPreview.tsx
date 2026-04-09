@@ -1,5 +1,4 @@
 import { Button } from "../../shared/ui/button";
-import { Label } from "../../shared/ui/label";
 import type { Language } from "../../translations";
 import type { AppNotification } from "../../types";
 
@@ -23,7 +22,9 @@ export function SettingsNotificationsPreview({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <Label>{language === "ar" ? "آخر الإشعارات" : "Recent Notifications"}</Label>
+        <p className="text-sm font-medium">
+          {language === "ar" ? "آخر الإشعارات" : "Recent Notifications"}
+        </p>
         <Button
           type="button"
           variant="ghost"

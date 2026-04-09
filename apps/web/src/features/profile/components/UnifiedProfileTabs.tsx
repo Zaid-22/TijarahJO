@@ -41,36 +41,40 @@ export function UnifiedProfileTabs({
   dateLocale,
 }: UnifiedProfileTabsProps) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+    <div className="mt-2">
       <Tabs defaultValue="active" className="w-full gap-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <TabsList className="h-auto w-full justify-start gap-3 bg-transparent p-0 sm:w-fit">
+        <div className="mb-4 flex flex-col gap-3 px-2 sm:px-4 md:flex-row md:items-center md:justify-between">
+          <TabsList className="h-auto w-full min-w-0 flex-nowrap justify-start gap-2 overflow-x-auto whitespace-nowrap bg-transparent p-1 sm:flex-wrap sm:gap-3 md:w-fit hide-scrollbar">
             <TabsTrigger
               value="active"
-              className="h-auto rounded-xl border-0 px-4 py-2 text-base font-semibold text-muted-foreground shadow-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="flex-none h-auto rounded-[14px] border border-transparent px-4 py-2.5 text-[0.95rem] font-semibold text-muted-foreground shadow-none data-[state=active]:bg-card dark:data-[state=active]:bg-muted/50 data-[state=active]:text-primary data-[state=active]:border-border/60 data-[state=active]:shadow-sm transition-all"
             >
               <span>{labels.activeListings}</span>
-              <span className="opacity-80">({viewModel.activeListings.length})</span>
+              <span className="opacity-80 ms-1.5">({viewModel.activeListings.length})</span>
             </TabsTrigger>
             <TabsTrigger
               value="sold"
-              className="h-auto rounded-xl border-0 px-4 py-2 text-base font-semibold text-muted-foreground shadow-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="flex-none h-auto rounded-[14px] border border-transparent px-4 py-2.5 text-[0.95rem] font-semibold text-muted-foreground shadow-none data-[state=active]:bg-card dark:data-[state=active]:bg-muted/50 data-[state=active]:text-primary data-[state=active]:border-border/60 data-[state=active]:shadow-sm transition-all"
             >
               <span>{labels.soldListings}</span>
-              <span className="opacity-80">({viewModel.soldListings.length})</span>
+              <span className="opacity-80 ms-1.5">({viewModel.soldListings.length})</span>
             </TabsTrigger>
             <TabsTrigger
               value="reviews"
-              className="h-auto rounded-xl border-0 px-4 py-2 text-base font-semibold text-muted-foreground shadow-none data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="flex-none h-auto rounded-[14px] border border-transparent px-4 py-2.5 text-[0.95rem] font-semibold text-muted-foreground shadow-none data-[state=active]:bg-card dark:data-[state=active]:bg-muted/50 data-[state=active]:text-primary data-[state=active]:border-border/60 data-[state=active]:shadow-sm transition-all"
             >
               <span>{labels.reviews}</span>
-              <span className="opacity-80">({viewModel.reviews.length})</span>
+              <span className="opacity-80 ms-1.5">({viewModel.reviews.length})</span>
             </TabsTrigger>
           </TabsList>
 
           {viewModel.canManageListings && onAddPostClick ? (
-            <Button className="w-full rounded-xl sm:w-auto" onClick={onAddPostClick}>
-              <Plus className="me-2 h-4 w-4" />
+            <Button
+              variant="outline"
+              className="h-10 w-full rounded-xl border border-primary/15 bg-primary/5 px-4 text-sm font-semibold text-primary shadow-none hover:bg-primary/10 hover:text-primary sm:w-auto"
+              onClick={onAddPostClick}
+            >
+              <Plus className="me-2 h-4 w-4 text-primary/90" />
               {labels.addPost}
             </Button>
           ) : null}

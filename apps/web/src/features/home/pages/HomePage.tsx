@@ -86,7 +86,6 @@ interface HomePageProps {
   onPostClick: (id: string, origin?: string) => void;
   favoriteIds: string[];
   toggleFavorite: (id: string) => void;
-  currentUserDisplayName: string;
   currentUserId?: string;
 
   // Pagination
@@ -122,7 +121,6 @@ export function HomePage({
   onPostClick,
   favoriteIds = [],
   toggleFavorite,
-  currentUserDisplayName,
   currentUserId,
   currentPage: _currentPage,
   totalPages: _totalPages,
@@ -147,7 +145,7 @@ export function HomePage({
   };
 
   return (
-    <PageShell>
+    <PageShell showDecorations={false}>
       {/* 1. Hero Section */}
       <HomeHeroSection
         language={language}
@@ -196,7 +194,6 @@ export function HomePage({
           onPostClick={onPostClick}
           favoriteIds={favoriteIds}
           toggleFavorite={toggleFavorite}
-          currentUserDisplayName={currentUserDisplayName}
           currentUserId={currentUserId}
           displayedPosts={displayedPosts}
           availablePosts={availablePosts}

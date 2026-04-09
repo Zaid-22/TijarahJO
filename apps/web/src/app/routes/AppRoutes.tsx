@@ -12,7 +12,11 @@ import { useUserProfileContext } from "../../contexts/UserProfileContext";
 import { userHasAdminAccess } from "../../contexts/authUtils";
 import { LoginPromptModal } from "../../features/auth/components/LoginPromptModal";
 import { useState, useEffect } from "react";
-import { applyLoginUserDataToProfile } from "./appRoutesUtils";
+import {
+  applyLoginUserDataToProfile,
+  isProfileCompleteForRouting,
+} from "./appRoutesUtils";
+import { APP_ROUTE_PATHS } from "./routeConfig";
 
 function normalizePathname(pathname: string): string {
   const normalized = pathname.toLowerCase().replace(/\/+$/, "");
@@ -30,22 +34,6 @@ function HomeRouteLoadingFallback() {
             <div className="w-2.5 h-2.5 rounded-full bg-muted/80" />
             <div className="w-2.5 h-2.5 rounded-full bg-muted/80" />
           </div>
-        </div>
-      </section>
-
-      <section className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-md text-center">
-          <div className="mx-auto h-10 w-64 rounded-xl bg-muted/70" />
-          <div className="mx-auto mt-3 h-6 w-72 rounded-xl bg-muted/50" />
-        </div>
-
-        <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <div
-              key={index}
-              className="aspect-[4/3] rounded-3xl bg-muted/60"
-            />
-          ))}
         </div>
       </section>
     </div>
@@ -153,24 +141,40 @@ export function AppRoutes() {
         onClose={() => setShowAuthModal(false)} 
         language={language}
         onLogin={(userData) => {
-          setUserProfile(
-            applyLoginUserDataToProfile(userProfile, userData),
-          );
+          const nextProfile = applyLoginUserDataToProfile(userProfile, userData);
+          setUserProfile(nextProfile);
+
+          const intendedPath = userHasAdminAccess({
+            role: userData.role ?? "user",
+            hasAdminAccess: userData.hasAdminAccess,
+            permissions: userData.permissions,
+          })
+            ? APP_ROUTE_PATHS.admin
+            : `${location.pathname}${location.search}`;
+
           if (
+            !isProfileCompleteForRouting(userData)
+          ) {
+            navigate(APP_ROUTE_PATHS.completeProfile, {
+              replace: true,
+              state: { fromPath: intendedPath },
+            });
+          } else if (
             userHasAdminAccess({
               role: userData.role ?? "user",
               hasAdminAccess: userData.hasAdminAccess,
               permissions: userData.permissions,
             })
           ) {
-            navigate("/admin", { replace: true });
+            navigate(APP_ROUTE_PATHS.admin, { replace: true });
           }
           setShowAuthModal(false);
         }}
         onContinueAsGuest={() => setShowAuthModal(false)}
       />
-      {shouldShowProfileCompletion && location.pathname !== "/complete-profile" && (
-        <Navigate to="/complete-profile" replace />
+      {shouldShowProfileCompletion &&
+        location.pathname !== APP_ROUTE_PATHS.completeProfile && (
+        <Navigate to={APP_ROUTE_PATHS.completeProfile} replace />
       )}
     </Suspense>
   );

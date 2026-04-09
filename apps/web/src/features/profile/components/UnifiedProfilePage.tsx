@@ -20,7 +20,6 @@ import type { Language } from "../../../translations";
 import type { Post, ViewMode } from "../../../types";
 import type { UpdatePostInput } from "../../../app/routes/usePostActions";
 import type { UnifiedProfileViewModel } from "../types";
-import { UnifiedProfileAboutCard } from "./UnifiedProfileAboutCard";
 import { UnifiedProfileHeaderCard } from "./UnifiedProfileHeaderCard";
 import { UnifiedProfileListingCard } from "./UnifiedProfileListingCard";
 import { UnifiedProfileTabs } from "./UnifiedProfileTabs";
@@ -33,7 +32,6 @@ interface UnifiedProfilePageProps {
   isAuthenticated: boolean;
   favoriteIds?: string[];
   currentUserId?: string;
-  currentUserDisplayName?: string;
   onBack: () => void;
   backLabel: string;
   title: string;
@@ -56,7 +54,6 @@ export function UnifiedProfilePage({
   isAuthenticated,
   favoriteIds = [],
   currentUserId,
-  currentUserDisplayName,
   onBack,
   backLabel,
   title,
@@ -79,7 +76,7 @@ export function UnifiedProfilePage({
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [postToEdit, setPostToEdit] = useState<Post | null>(null);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
-  const listingViewMode: ViewMode = "grid-4";
+  const listingViewMode: ViewMode = "list";
 
   const averageRating =
     viewModel.reviews.length > 0
@@ -198,8 +195,6 @@ export function UnifiedProfilePage({
         />
 
         <div className="space-y-6">
-          <UnifiedProfileAboutCard viewModel={viewModel} labels={labels} />
-
           <UnifiedProfileTabs
             labels={labels}
             viewModel={viewModel}
@@ -224,7 +219,6 @@ export function UnifiedProfilePage({
                 favoriteIds={favoriteIds}
                 isAuthenticated={isAuthenticated}
                 currentUserId={currentUserId}
-                currentUserDisplayName={currentUserDisplayName}
                 onFavoriteToggle={onFavoriteToggle}
                 onPostClick={onPostClick}
                 onEditPost={onUpdatePost ? setPostToEdit : undefined}

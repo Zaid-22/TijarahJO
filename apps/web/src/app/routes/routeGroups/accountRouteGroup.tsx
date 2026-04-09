@@ -262,7 +262,6 @@ export function renderAccountRouteGroup({
             favoriteIds={sharedPostRouteProps.favoriteIds}
             onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
             isAuthenticated={sharedUserRouteProps.isAuthenticated}
-            currentUserDisplayName={sharedUserRouteProps.currentUserDisplayName}
           />,
         )}
       />

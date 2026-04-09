@@ -53,7 +53,7 @@ export function PostImageGallery({ post }: PostImageGalleryProps) {
     <>
       <Card className="overflow-hidden shadow-2xl">
         <div className="relative w-full bg-muted">
-          <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] min-h-72 sm:min-h-[22rem] lg:min-h-[24rem] overflow-hidden">
+          <div className="relative aspect-[4/3] w-full min-h-[18rem] overflow-hidden sm:aspect-[16/10] sm:min-h-[20rem] lg:min-h-[22rem]">
             {hasMultipleImages &&
               displayImages.map((img, idx) => {
                 const isAdjacent =
@@ -79,7 +79,7 @@ export function PostImageGallery({ post }: PostImageGalleryProps) {
               key={`img-${selectedImage}`}
               src={displayImages[selectedImage] || ""}
               alt={post.name}
-              className="absolute inset-0 w-full h-full object-contain cursor-pointer"
+              className="absolute inset-0 h-full w-full cursor-pointer object-contain"
               onClick={() => setLightboxOpen(true)}
               fallbackSrc="https://via.placeholder.com/800x600?text=No+Image+Available"
             />
@@ -89,7 +89,7 @@ export function PostImageGallery({ post }: PostImageGalleryProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 backdrop-blur-sm z-10 h-10 w-10 sm:h-11 sm:w-11 p-0 rounded-full shadow-xl transition-all hover:scale-110 border-2 border-white/20"
+                  className="absolute left-2 top-1/2 z-10 h-10 w-10 -translate-y-1/2 rounded-full border-2 border-white/20 bg-black/50 p-0 shadow-xl backdrop-blur-sm transition-all hover:scale-110 hover:bg-black/70 dark:border-white/15 dark:bg-slate-950/72 dark:hover:bg-slate-900/92 sm:left-4 sm:h-11 sm:w-11"
                   onClick={prevImage}
                   aria-label="Previous image"
                 >
@@ -98,41 +98,39 @@ export function PostImageGallery({ post }: PostImageGalleryProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 backdrop-blur-sm z-10 h-10 w-10 sm:h-11 sm:w-11 p-0 rounded-full shadow-xl transition-all hover:scale-110 border-2 border-white/20"
+                  className="absolute right-2 top-1/2 z-10 h-10 w-10 -translate-y-1/2 rounded-full border-2 border-white/20 bg-black/50 p-0 shadow-xl backdrop-blur-sm transition-all hover:scale-110 hover:bg-black/70 dark:border-white/15 dark:bg-slate-950/72 dark:hover:bg-slate-900/92 sm:right-4 sm:h-11 sm:w-11"
                   onClick={nextImage}
                   aria-label="Next image"
                 >
                   <ChevronRight className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
                 </Button>
+
+                <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full bg-background/88 px-3 py-2 shadow-lg backdrop-blur-sm dark:border dark:border-white/10 dark:bg-slate-950/88">
+                  {displayImages.map((_, index) => (
+                    <button
+                      key={`gallery-dot-${displayImages[index] || "image"}-${index}`}
+                      type="button"
+                      onClick={() => setSelectedImage(index)}
+                      className="rounded-full p-1 transition-all hover:scale-125 active:scale-110"
+                      aria-label={`Go to image ${index + 1}`}
+                    >
+                      <span
+                        className={`block h-2.5 rounded-full transition-all ${
+                          index === selectedImage
+                            ? "w-8 bg-primary"
+                            : "w-2.5 bg-muted-foreground/40 dark:bg-white/30"
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
               </>
             )}
           </div>
         </div>
 
         {hasMultipleImages && (
-          <div className="flex justify-center gap-2 bg-card py-3">
-            {displayImages.map((_, index) => (
-              <button
-                key={`gallery-dot-${displayImages[index] || "image"}-${index}`}
-                type="button"
-                onClick={() => setSelectedImage(index)}
-                className="rounded-full transition-all hover:scale-125 active:scale-110 p-2"
-                aria-label={`Go to image ${index + 1}`}
-              >
-                <span
-                  className={`block rounded-full transition-all h-3 ${
-                    index === selectedImage
-                      ? "w-8 bg-primary"
-                      : "w-3 bg-muted-foreground/40"
-                  }`}
-                />
-              </button>
-            ))}
-          </div>
-        )}
-
-        {hasMultipleImages && (
-          <div className="flex gap-2 overflow-x-auto border-t border-border bg-muted/40 p-4">
+          <div className="flex gap-2 overflow-x-auto border-t border-border bg-muted/40 p-4 dark:border-white/10 dark:bg-slate-950/60">
             {displayImages.map((img, index) => (
               <button
                 key={`gallery-thumb-${img || "image"}-${index}`}
@@ -141,7 +139,7 @@ export function PostImageGallery({ post }: PostImageGalleryProps) {
                   setSelectedImage(index);
                   setLightboxOpen(true);
                 }}
-                className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 hover:scale-105 active:scale-95 cursor-pointer ${
+                className={`h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all hover:scale-105 active:scale-95 ${
                   index === selectedImage
                     ? "border-primary"
                     : "border-transparent"
@@ -151,7 +149,7 @@ export function PostImageGallery({ post }: PostImageGalleryProps) {
                 <ImageWithFallback
                   src={img}
                   alt={`${post.name} - ${index + 1}`}
-                  className="w-full h-full object-cover"
+                  className="h-full w-full object-cover"
                   fallbackSrc="https://via.placeholder.com/200x200?text=No+Image"
                 />
               </button>

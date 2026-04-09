@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -10,8 +10,7 @@
     />
     <meta http-equiv="Content-Security-Policy" content="__CSP_POLICY__" />
     <script>
-      // Inline theme init — prevents FOUC while avoiding render-blocking network request
-      try{var r=localStorage.getItem("tijarahjo_dark_mode"),v=r===null?null:JSON.parse(r),d=v===true||v==="dark";document.documentElement.classList.toggle("dark",d);document.documentElement.style.colorScheme=d?"dark":"light"}catch(e){document.documentElement.classList.remove("dark");document.documentElement.style.colorScheme="light"}
+      try{var t=localStorage.getItem("tijarahjo_dark_mode"),v=t===null?null:JSON.parse(t),d=v===true||v==="dark",l=localStorage.getItem("tijarahjo_language"),n=l===null?"ar":JSON.parse(l);document.documentElement.classList.toggle("dark",d);document.documentElement.lang=n==="en"?"en":"ar";document.documentElement.dir=n==="en"?"ltr":"rtl"}catch(e){document.documentElement.classList.remove("dark");document.documentElement.lang="ar";document.documentElement.dir="rtl"}
     </script>
     <title>TijarahJo - Jordan's Marketplace</title>
   </head>

@@ -1,4 +1,4 @@
-import { ArrowLeft, MessageCircle, Plus, User } from "lucide-react";
+import { ArrowLeft, MessageCircle, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Suspense, lazy, useState } from "react";
 import { Button } from "../../../shared/ui/button";
@@ -75,7 +75,10 @@ export function Header({
   const t = translations[language];
   const isRTL = language === "ar";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { categories } = useCatalogCategories();
+  const { categories } = useCatalogCategories({
+    enabled: isMobileMenuOpen,
+    useInitialFallback: true,
+  });
   const normalizedUnreadMessagesCount = Math.max(
     0,
     Math.floor(unreadMessagesCount),
@@ -223,7 +226,6 @@ export function Header({
                 className="hidden h-10 rounded-full border border-primary/35 bg-background/85 px-5 font-semibold text-primary shadow-sm hover:border-primary hover:bg-primary hover:text-primary-foreground hover:shadow-md sm:flex"
                 onClick={onShowProfile}
               >
-                <User className="me-2 h-4 w-4" aria-hidden="true" />
                 {language === "ar" ? "تسجيل الدخول" : "Sign In"}
               </Button>
             )}

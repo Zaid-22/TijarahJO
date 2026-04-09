@@ -30,8 +30,33 @@ interface LoginUserData {
   lastName: string;
   email: string;
   phone?: string;
+  city?: string;
+  area?: string;
+  cityId?: number;
+  areaId?: number;
   avatar?: string;
   joinedDate?: string;
+}
+
+function normalizeIdentityValue(value: string | undefined): string {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isSameAuthenticatedUser(
+  userProfile: UserProfile,
+  userData: LoginUserData,
+): boolean {
+  const nextUserId = normalizeIdentityValue(userData.id);
+  const currentUserId = normalizeIdentityValue(userProfile.id);
+
+  if (nextUserId && currentUserId) {
+    return nextUserId === currentUserId;
+  }
+
+  const nextEmail = normalizeIdentityValue(userData.email);
+  const currentEmail = normalizeIdentityValue(userProfile.email);
+
+  return Boolean(nextEmail && currentEmail && nextEmail === currentEmail);
 }
 
 function normalizePathname(pathname: string): string {
@@ -216,6 +241,13 @@ export const applyLoginUserDataToProfile = (
 ): UserProfile => {
   const resolvedName =
     `${userData.firstName} ${userData.lastName}`.trim() || userData.email;
+  const preserveExistingFields = isSameAuthenticatedUser(userProfile, userData);
+  const city = String(
+    userData.city || (preserveExistingFields ? userProfile.city : "") || "",
+  );
+  const area = String(
+    userData.area || (preserveExistingFields ? userProfile.area : "") || "",
+  );
 
   return {
     ...userProfile,
@@ -224,8 +256,34 @@ export const applyLoginUserDataToProfile = (
     firstName: userData.firstName,
     lastName: userData.lastName,
     email: userData.email,
-    phone: userData.phone || userProfile.phone,
-    avatar: userData.avatar || userProfile.avatar,
-    joinedDate: userData.joinedDate || userProfile.joinedDate,
+    phone: userData.phone || (preserveExistingFields ? userProfile.phone : ""),
+    city,
+    area,
+    location: city && area ? `${city}, ${area}` : city,
+    avatar: userData.avatar || (preserveExistingFields ? userProfile.avatar : null),
+    joinedDate:
+      userData.joinedDate || (preserveExistingFields ? userProfile.joinedDate : ""),
   };
 };
+
+export const isProfileCompleteForRouting = (
+  userProfile: {
+    phone?: string;
+    city?: string;
+    area?: string;
+    cityId?: number;
+    areaId?: number;
+  },
+): boolean =>
+  Boolean(
+    userProfile.phone?.trim() &&
+      (
+        (userProfile.city?.trim() && userProfile.area?.trim()) ||
+        (
+          Number.isInteger(userProfile.cityId) &&
+          Number(userProfile.cityId) > 0 &&
+          Number.isInteger(userProfile.areaId) &&
+          Number(userProfile.areaId) > 0
+        )
+      ),
+  );

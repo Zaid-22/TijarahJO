@@ -340,13 +340,8 @@ public class TwoFactorController(
         });
     }
 
-    private static string BuildTwoFactorPromptMessage(string message, string? debugCode)
+    private static string BuildTwoFactorPromptMessage(string message, string? _debugCode)
     {
-        if (string.IsNullOrWhiteSpace(debugCode))
-        {
-            return message;
-        }
-
-        return $"{message} Development code: {debugCode}.";
+        return message;
     }
 }

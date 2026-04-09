@@ -1,6 +1,5 @@
 import { Trash2, LogOut } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
-import { Label } from "../../../shared/ui/label";
 import {
   Card,
   CardContent,
@@ -42,7 +41,7 @@ export function DangerZoneSection({
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <LogOut className="w-4 h-4 text-destructive" />
-                <Label className="text-destructive">{text.logout}</Label>
+                <p className="font-medium text-destructive">{text.logout}</p>
               </div>
               <p className="text-sm text-muted-foreground">{text.logoutDesc}</p>
             </div>
@@ -62,7 +61,7 @@ export function DangerZoneSection({
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <Trash2 className="w-4 h-4 text-destructive" />
-                <Label className="text-destructive">{text.deleteAccount}</Label>
+                <p className="font-medium text-destructive">{text.deleteAccount}</p>
               </div>
               <p className="text-sm text-muted-foreground">
                 {text.deleteAccountDesc}

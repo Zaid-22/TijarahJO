@@ -118,6 +118,23 @@ export function SellItemDialogContent({
     };
   }, []);
 
+  useEffect(() => {
+    setFormData((prev) => {
+      const nextLocation = prev.location || userProfile.city || "";
+      const nextArea = prev.area || userProfile.area || "";
+
+      if (nextLocation === prev.location && nextArea === prev.area) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        location: nextLocation,
+        area: nextArea,
+      };
+    });
+  }, [userProfile.area, userProfile.city]);
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) {

@@ -2,7 +2,6 @@ import { useCallback } from "react";
 import { SlidersHorizontal, X, ChevronDown } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
-import { Label } from "../../../shared/ui/label";
 import { useCatalogCategories } from "../../../shared/hooks/useCatalogCategories";
 import { resolveCategoryName } from "../../../shared/lib/categoryVisuals";
 import type { Language } from "../../../types";
@@ -281,9 +280,9 @@ function FilterGroup({
 }) {
   return (
     <div className="space-y-2">
-      <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
-      </Label>
+      </p>
       {children}
     </div>
   );

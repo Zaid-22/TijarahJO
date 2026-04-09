@@ -272,13 +272,7 @@ test("favorites journey: add and remove favorites for authenticated user", async
   await expectPostTitleVisible(page, "Demo Phone");
 
   await page.goto("/post/101");
-  const favoriteToggle = getPostFavoriteToggle(page);
-  await expect(favoriteToggle).toBeVisible();
-  await favoriteToggle.click({ force: true });
-  await expect(favoriteToggle).toHaveAttribute(
-    "aria-label",
-    /remove from favorites|إزالة من المفضلة/i,
-  );
+  await setPostFavoriteState(page, true);
 
   await page.goto("/favorites");
   await expect(page.getByText(FAVORITES_HEADING_PATTERN)).toBeVisible();
@@ -426,13 +420,7 @@ test("favorites journey (arabic): add and remove favorites for authenticated use
   await expectPostTitleVisible(page, "Demo Phone");
 
   await page.goto("/post/101");
-  const favoriteToggle = getPostFavoriteToggle(page);
-  await expect(favoriteToggle).toBeVisible();
-  await favoriteToggle.click({ force: true });
-  await expect(favoriteToggle).toHaveAttribute(
-    "aria-label",
-    /remove from favorites|إزالة من المفضلة/i,
-  );
+  await setPostFavoriteState(page, true);
 
   await page.goto("/favorites");
   await expect(page.getByText(FAVORITES_HEADING_PATTERN)).toBeVisible();

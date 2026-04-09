@@ -1,0 +1,8 @@
+feat(marketplace): comprehensive UI standardization and API optimizations
+
+- **UI & Components:** Finalized "box-less" layout standard across Marketplace, Unified Profiles, Chat Windows, and Post Cards. Replaced CSS variables with cleaned up color constants.
+- **Routing & State:** Streamlined `AppRoutes.tsx` and Route Groups. Implemented unified navigation links for user profiles across components to properly route to seller profiles.
+- **Database Architecture:** Enhanced `build_sql_bundles.sh` to support admin bootstrap and override scripts. Hardened atomicity and checksum validation scripts.
+- **Backend API:** Optimized authentication API endpoints (Auth, OAuth, PasswordReset). Removed outdated data mapping (`EntityMappingExtensions`) and unused storage services (`AzureBlobStorageService`).
+- **Frontend Clients:** Reorganized API services (`users.ts`, `client.ts`, `notifications.ts`), introducing automated hook polling for unread notifications to resolve 503 errors.
+- **Testing & Cleanup:** Removed temporary files in `tmp/` (HashGenerator, rehash_admin.cs). Added UI unit tests and updated end-to-end Playswright mappings.

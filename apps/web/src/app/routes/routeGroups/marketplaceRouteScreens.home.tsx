@@ -78,7 +78,6 @@ function HomeMarketplaceRouteScreen() {
       favoriteIds={routeState.favoriteIds}
       toggleFavorite={routeState.toggleFavorite}
       currentUserId={sharedUserRouteProps.currentUserId}
-      currentUserDisplayName={sharedUserRouteProps.currentUserDisplayName}
       getCategoryTranslation={routeState.translateCategory}
       onNavigate={navigate}
     />

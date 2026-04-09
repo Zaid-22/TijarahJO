@@ -173,7 +173,7 @@ export function CompleteProfilePage() {
         ...(isValidAvatarUrl ? { Avatar: avatarPreview } : {}),
       });
 
-      refreshProfile();
+      await refreshProfile();
       const fromPath = location.state?.fromPath || "/";
       navigate(fromPath, { replace: true });
     } catch (error) {

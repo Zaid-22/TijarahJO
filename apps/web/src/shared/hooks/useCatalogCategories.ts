@@ -81,17 +81,26 @@ function clearCatalogCategories() {
 
 type UseCatalogCategoriesOptions = {
   useInitialFallback?: boolean;
+  enabled?: boolean;
 };
 
 export function useCatalogCategories(
   options: UseCatalogCategoriesOptions = {},
 ) {
-  const { useInitialFallback = false } = options;
-  const initialCategories = useInitialFallback ? getInitialCatalogCategories() : [];
+  const { useInitialFallback = false, enabled = true } = options;
+  const initialCategories =
+    enabled && useInitialFallback ? getInitialCatalogCategories() : [];
   const [categories, setCategories] = useState<Category[]>(initialCategories);
-  const [isLoading, setIsLoading] = useState(initialCategories.length === 0);
+  const [isLoading, setIsLoading] = useState(
+    enabled && initialCategories.length === 0,
+  );
 
   useEffect(() => {
+    if (!enabled) {
+      setIsLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     (async () => {
@@ -130,7 +139,7 @@ export function useCatalogCategories(
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [enabled]);
 
   return { categories, isLoading };
 }

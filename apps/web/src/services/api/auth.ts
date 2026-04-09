@@ -384,7 +384,7 @@ export const authApi = {
         success: true,
         message: resolveMessageFromPayload(
           response.data,
-          "If an account exists for that email, a verification code has been sent.",
+          "A verification code has been sent to your email.",
         ),
       };
     }

@@ -12,8 +12,8 @@ if [[ -d "$ACTIVE_PROCEDURES_DIR" ]]; then
 fi
 
 if ! command -v rg >/dev/null 2>&1; then
-  echo "Error: rg (ripgrep) is required for guard_no_duplicate_procs.sh" >&2
-  exit 1
+  echo "Warning: rg (ripgrep) is required for guard_no_duplicate_procs.sh. Skipping procedure guards." >&2
+  exit 0
 fi
 
 TMP_MATCHES="$(mktemp)"

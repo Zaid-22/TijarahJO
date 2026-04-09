@@ -28,7 +28,7 @@ export function HomeCategoriesSection({
     <section
       aria-labelledby={headingId}
       aria-describedby={descriptionId}
-      className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14"
+      className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 [content-visibility:auto] [contain-intrinsic-size:560px]"
     >
       {/* Section Header */}
       <div className="text-center mb-10">

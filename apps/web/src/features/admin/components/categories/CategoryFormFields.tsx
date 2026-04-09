@@ -116,7 +116,7 @@ export function CategoryFormFields({
             alt="Category preview"
             className="col-span-3 h-24 w-full rounded-md border border-border object-cover"
             onError={(e) => {
-              (e.currentTarget as HTMLImageElement).style.display = "none";
+              (e.currentTarget as HTMLImageElement).hidden = true;
             }}
           />
         </div>

@@ -19,7 +19,11 @@ interface SettingsActionRowProps {
   icon: LucideIcon;
   label: string;
   description: string;
-  control: ReactNode;
+  control?: ReactNode;
+  controlId?: string;
+  checked?: boolean;
+  onCheckedChange?: (value: boolean) => void;
+  disabled?: boolean;
 }
 
 export function SettingsActionRow({
@@ -27,17 +31,40 @@ export function SettingsActionRow({
   label,
   description,
   control,
+  controlId,
+  checked,
+  onCheckedChange,
+  disabled,
 }: SettingsActionRowProps) {
+  const isSwitchControl =
+    typeof control === "undefined" &&
+    typeof controlId === "string" &&
+    typeof checked === "boolean" &&
+    typeof onCheckedChange === "function";
+
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="flex-1">
         <div className="flex items-center gap-2 mb-1">
           <Icon className="w-4 h-4" />
-          <Label>{label}</Label>
+          {isSwitchControl ? (
+            <Label htmlFor={controlId}>{label}</Label>
+          ) : (
+            <p className="text-sm font-medium leading-none">{label}</p>
+          )}
         </div>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
-      {control}
+      {isSwitchControl ? (
+        <Switch
+          id={controlId}
+          checked={checked}
+          onCheckedChange={onCheckedChange}
+          disabled={disabled}
+        />
+      ) : (
+        control
+      )}
     </div>
   );
 }
@@ -87,54 +114,42 @@ export function NotificationsSettingsSection({
       <CardContent className="space-y-4">
         <SettingsActionRow
           icon={Mail}
+          controlId="settings-email-notifications"
           label={text.emailNotifications}
           description={text.emailNotificationsDesc}
-          control={
-            <Switch
-              checked={settingsPreferences.emailNotifications}
-              onCheckedChange={updatePreference("emailNotifications")}
-            />
-          }
+          checked={settingsPreferences.emailNotifications}
+          onCheckedChange={updatePreference("emailNotifications")}
         />
         <Separator />
         <SettingsActionRow
           icon={Bell}
+          controlId="settings-push-notifications"
           label={text.pushNotifications}
           description={text.pushNotificationsDesc}
-          control={
-            <Switch
-              checked={settingsPreferences.pushNotifications}
-              onCheckedChange={
-                onPushNotificationsChange ??
-                updatePreference("pushNotifications")
-              }
-              disabled={isPushNotificationsDisabled}
-            />
+          checked={settingsPreferences.pushNotifications}
+          onCheckedChange={
+            onPushNotificationsChange ??
+            updatePreference("pushNotifications")
           }
+          disabled={isPushNotificationsDisabled}
         />
         <Separator />
         <SettingsActionRow
           icon={Mail}
+          controlId="settings-message-notifications"
           label={text.messageNotifications}
           description={text.messageNotificationsDesc}
-          control={
-            <Switch
-              checked={settingsPreferences.messageNotifications}
-              onCheckedChange={updatePreference("messageNotifications")}
-            />
-          }
+          checked={settingsPreferences.messageNotifications}
+          onCheckedChange={updatePreference("messageNotifications")}
         />
         <Separator />
         <SettingsActionRow
           icon={Bell}
+          controlId="settings-new-listing-notifications"
           label={text.newListings}
           description={text.newListingsDesc}
-          control={
-            <Switch
-              checked={settingsPreferences.newListingNotifications}
-              onCheckedChange={updatePreference("newListingNotifications")}
-            />
-          }
+          checked={settingsPreferences.newListingNotifications}
+          onCheckedChange={updatePreference("newListingNotifications")}
         />
         <Separator />
         <SettingsNotificationsPreview

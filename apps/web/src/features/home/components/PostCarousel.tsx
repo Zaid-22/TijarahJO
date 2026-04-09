@@ -16,7 +16,6 @@ interface PostCarouselProps {
   language: Language;
   isAuthenticated?: boolean;
   currentUserId?: string;
-  currentUserDisplayName?: string;
   favoriteIds?: string[];
   onFavoriteToggle?: (id: string) => void;
   onPostClick: (id: string) => void;
@@ -35,7 +34,6 @@ export function PostCarousel({
   language,
   isAuthenticated = false,
   currentUserId,
-  currentUserDisplayName,
   favoriteIds = [],
   onFavoriteToggle,
   onPostClick,
@@ -206,7 +204,6 @@ export function PostCarousel({
                 onFavoriteToggle={onFavoriteToggle}
                 isAuthenticated={isAuthenticated}
                 currentUserId={currentUserId}
-                currentUserDisplayName={currentUserDisplayName}
                 language={language}
                 onRequireAuth={onRequireAuth}
               />

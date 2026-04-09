@@ -20,7 +20,6 @@ interface PostDetailsRouteWrapperProps {
   isAuthenticated: boolean;
   userProfile: UserProfile;
   favoriteIds: string[];
-  currentUserDisplayName: string;
   onFavoriteToggle: (postId: string) => void;
   onOpenPost: (postId: string) => void;
   onNavigateHome: () => void;
@@ -41,7 +40,6 @@ export function PostDetailsRouteWrapper({
   isAuthenticated,
   userProfile,
   favoriteIds,
-  currentUserDisplayName,
   onFavoriteToggle,
   onOpenPost,
   onNavigateHome,
@@ -195,7 +193,6 @@ export function PostDetailsRouteWrapper({
       favoriteIds={favoriteIds}
       onFavoriteToggle={onFavoriteToggle}
       isAuthenticated={isAuthenticated}
-      currentUserDisplayName={currentUserDisplayName}
       onRequireAuth={onRequireAuth}
     />
   );

@@ -10,11 +10,13 @@ import { Button } from "../../../../shared/ui/button";
 import { Input } from "../../../../shared/ui/input";
 import { Label } from "../../../../shared/ui/label";
 import type { CreateUserForm } from "./types";
+import type { NormalizedRole } from "../../../../services/api/roles";
 
 interface CreateUserDialogProps {
   open: boolean;
   isCreatingUser: boolean;
   formData: CreateUserForm;
+  roles: NormalizedRole[];
   onOpenChange: (open: boolean) => void;
   onFormDataChange: (next: CreateUserForm) => void;
   onSubmit: () => void;
@@ -25,6 +27,7 @@ export function CreateUserDialog({
   open,
   isCreatingUser,
   formData,
+  roles,
   onOpenChange,
   onFormDataChange,
   onSubmit,
@@ -119,17 +122,24 @@ export function CreateUserDialog({
             </Label>
             <select
               id="role"
-              value={formData.role}
+              value={formData.roleId}
               onChange={(e) =>
                 onFormDataChange({
                   ...formData,
-                  role: e.target.value === "admin" ? "admin" : "user",
+                  roleId: e.target.value,
                 })
               }
+              disabled={roles.length === 0}
               className="col-span-3 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
+              {roles.length === 0 && (
+                <option value="">No roles available</option>
+              )}
+              {roles.map((role) => (
+                <option key={role.RoleID} value={String(role.RoleID)}>
+                  {role.RoleName}
+                </option>
+              ))}
             </select>
           </div>
         </div>

@@ -9,18 +9,12 @@ interface PostCardProps {
   isFavorite?: boolean;
   onFavoriteToggle?: (postId: string) => void;
   isAuthenticated?: boolean;
-  currentUserDisplayName?: string;
   currentUserId?: string;
-  hideCategoryBadge?: boolean;
   language?: Language;
   onRequireAuth?: () => void;
 }
 
-export function PostCard({
-  viewMode = "grid-4",
-  currentUserDisplayName: _currentUserDisplayName,
-  ...sharedProps
-}: PostCardProps) {
+export function PostCard({ viewMode = "grid-4", ...sharedProps }: PostCardProps) {
   return viewMode === "list" ? (
     <PostCardList {...sharedProps} />
   ) : (

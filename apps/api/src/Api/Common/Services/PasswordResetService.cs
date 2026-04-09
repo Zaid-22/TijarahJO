@@ -29,7 +29,7 @@ public sealed class PasswordResetConfirmationResult
 
 public interface IPasswordResetService
 {
-    Task RequestResetAsync(string? email, CancellationToken cancellationToken = default);
+    Task<bool> RequestResetAsync(string? email, CancellationToken cancellationToken = default);
 
     Task<PasswordResetConfirmationResult> ConfirmResetAsync(
         string? email,
@@ -58,18 +58,18 @@ public sealed class PasswordResetService(
     private readonly ITokenBlacklistService _tokenBlacklist = tokenBlacklist;
     private readonly byte[] _hmacKey = Encoding.UTF8.GetBytes(jwtOptions.SigningKey);
 
-    public async Task RequestResetAsync(string? email, CancellationToken cancellationToken = default)
+    public async Task<bool> RequestResetAsync(string? email, CancellationToken cancellationToken = default)
     {
         if (!_options.Enabled)
         {
             _logger.LogInformation("Password reset request ignored because feature is disabled.");
-            return;
+            return false;
         }
 
         string? normalizedEmail = NormalizeEmail(email);
         if (string.IsNullOrWhiteSpace(normalizedEmail))
         {
-            return;
+            return false;
         }
 
         UserModel? user = await _users.GetUserByLoginAsync(normalizedEmail, cancellationToken);
@@ -78,7 +78,7 @@ public sealed class PasswordResetService(
             user.IsDeleted ||
             user.Status != UserStatusPolicy.Active)
         {
-            return;
+            return false;
         }
 
         string? stateStr = await _challenges.GetChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
@@ -92,7 +92,7 @@ public sealed class PasswordResetService(
                     existingChallenge.ExpiresAtUtc > nowDt && 
                     nowDt - existingChallenge.SentAtUtc < TimeSpan.FromSeconds(GetRequestCooldownSeconds()))
                 {
-                    return; // Cooldown active
+                    return true; // Cooldown active
                 }
             }
             catch (System.Text.Json.JsonException) { /* Override corrupt state */ }
@@ -137,7 +137,10 @@ public sealed class PasswordResetService(
                 "Password reset email failed for {Email}. Challenge was discarded.",
                 normalizedEmail
             );
+            return false;
         }
+
+        return true;
     }
 
     public async Task<PasswordResetConfirmationResult> ConfirmResetAsync(

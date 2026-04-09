@@ -8,6 +8,7 @@ interface PageShellProps {
   children: ReactNode;
   className?: string;
   tone?: PageShellTone;
+  showDecorations?: boolean;
 }
 
 const shellToneClass: Record<PageShellTone, string> = {
@@ -21,6 +22,7 @@ export function PageShell({
   children,
   className,
   tone = "marketplace",
+  showDecorations = true,
 }: PageShellProps) {
   const prefersReducedMotion = usePrefersReducedMotion();
 
@@ -33,7 +35,7 @@ export function PageShell({
       )}
     >
       {/* Decorative blurs — skip for reduced-motion users to improve perf on lower-end devices */}
-      {!prefersReducedMotion && (
+      {showDecorations && !prefersReducedMotion && (
         <>
           <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-primary/10 blur-3xl will-change-transform" />
           <div className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-secondary/10 blur-3xl will-change-transform" />

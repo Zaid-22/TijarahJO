@@ -12,6 +12,8 @@ import { formatCompactDate } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
 import { useNavigate } from "react-router-dom";
 import { TypeToConfirmDialog } from "../../../shared/ui/type-to-confirm-dialog";
+import { emitAuthSessionChanged } from "../../../contexts/authContextUtils";
+import type { NormalizedRole } from "../../../services/api/roles";
 
 function formatJoinedDate(dateValue?: string): string {
   if (!dateValue) {
@@ -20,9 +22,33 @@ function formatJoinedDate(dateValue?: string): string {
   return formatCompactDate(dateValue) || dateValue;
 }
 
+function getAssignableRoles(roles: NormalizedRole[]): NormalizedRole[] {
+  return roles.filter((role) => !role.IsDeleted);
+}
+
+function getDefaultCreateRoleId(roles: NormalizedRole[]): string {
+  const assignableRoles = getAssignableRoles(roles);
+  if (assignableRoles.length === 0) {
+    return "";
+  }
+
+  const preferredRole =
+    assignableRoles.find(
+      (role) =>
+        role.RoleID === 2 || role.RoleName.trim().toLowerCase() === "user",
+    ) ??
+    assignableRoles.find(
+      (role) => role.RoleName.trim().toLowerCase() !== "admin",
+    ) ??
+    assignableRoles[0];
+
+  return String(preferredRole.RoleID);
+}
+
 export function UsersManagement() {
   const navigate = useNavigate();
   const [users, setUsers] = useState<AdminUserRecord[]>([]);
+  const [roles, setRoles] = useState<NormalizedRole[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
@@ -45,8 +71,13 @@ export function UsersManagement() {
     [searchQuery, users],
   );
 
+  const assignableRoles = useMemo(() => getAssignableRoles(roles), [roles]);
+
   const resetCreateForm = () => {
-    setCreateForm(initialCreateUserForm);
+    setCreateForm({
+      ...initialCreateUserForm,
+      roleId: getDefaultCreateRoleId(roles),
+    });
   };
 
   const fetchUsers = async () => {
@@ -63,9 +94,38 @@ export function UsersManagement() {
     }
   };
 
+  const fetchRoles = async () => {
+    try {
+      const nextRoles = await api.roles.getRoles();
+      setRoles(nextRoles);
+    } catch (error) {
+      logger.warn("[UsersManagement] Failed to fetch roles", error);
+      toast.error("Error fetching roles");
+    }
+  };
+
   useEffect(() => {
     void fetchUsers();
+    void fetchRoles();
   }, []);
+
+  useEffect(() => {
+    const nextDefaultRoleId = getDefaultCreateRoleId(roles);
+    if (!nextDefaultRoleId) {
+      return;
+    }
+
+    const hasSelectedAssignableRole = assignableRoles.some(
+      (role) => String(role.RoleID) === createForm.roleId,
+    );
+
+    if (!hasSelectedAssignableRole) {
+      setCreateForm((previous) => ({
+        ...previous,
+        roleId: nextDefaultRoleId,
+      }));
+    }
+  }, [assignableRoles, createForm.roleId, roles]);
 
   const handleCreateUser = async () => {
     const firstName = createForm.firstName.trim();
@@ -73,10 +133,19 @@ export function UsersManagement() {
     const email = createForm.email.trim().toLowerCase();
     const password = createForm.password;
     const phone = createForm.phone.trim();
-    const roleId = createForm.role === "admin" ? 1 : 2;
+    const roleId = Number.parseInt(createForm.roleId, 10);
 
-    if (!firstName || !email || !password) {
-      toast.error("First name, email, and password are required");
+    const selectedRole = assignableRoles.find((role) => role.RoleID === roleId);
+
+    if (
+      !firstName ||
+      !email ||
+      !password ||
+      !Number.isInteger(roleId) ||
+      roleId < 1 ||
+      !selectedRole
+    ) {
+      toast.error("First name, email, password, and a valid role are required");
       return;
     }
 
@@ -98,7 +167,7 @@ export function UsersManagement() {
         toast.success("User created successfully");
         setIsCreateOpen(false);
         resetCreateForm();
-        await fetchUsers();
+        await Promise.all([fetchUsers(), fetchRoles()]);
       } else {
         toast.error(response.message || "Failed to create user");
       }
@@ -129,6 +198,7 @@ export function UsersManagement() {
             user.id === userId ? { ...user, status: newStatus } : user,
           ),
         );
+        emitAuthSessionChanged();
         toast.success(`User status updated to ${newStatus}`);
       } else {
         toast.error("Failed to update status");
@@ -139,9 +209,7 @@ export function UsersManagement() {
     }
   };
 
-  const toggleRole = async (userId: string, currentRole: "admin" | "user") => {
-    const newRole = currentRole === "admin" ? "user" : "admin";
-
+  const handleRoleChange = async (userId: string, newRoleId: number) => {
     try {
       const exists = await api.users.exists(userId);
       if (!exists) {
@@ -150,14 +218,27 @@ export function UsersManagement() {
         return;
       }
 
-      const success = await api.users.updateUserRole(userId, newRole);
+      const targetRole = roles.find((role) => role.RoleID === newRoleId);
+      if (!targetRole) {
+        toast.error("Selected role was not found");
+        return;
+      }
+
+      const success = await api.users.updateUserRole(userId, newRoleId);
       if (success) {
         setUsers((previous) =>
           previous.map((user) =>
-            user.id === userId ? { ...user, role: newRole } : user,
+            user.id === userId
+              ? {
+                  ...user,
+                  roleId: targetRole.RoleID,
+                  roleName: targetRole.RoleName,
+                }
+              : user,
           ),
         );
-        toast.success(`User role updated to ${newRole}`);
+        emitAuthSessionChanged();
+        toast.success(`User role updated to ${targetRole.RoleName}`);
       } else {
         toast.error("Failed to update role");
       }
@@ -242,8 +323,9 @@ export function UsersManagement() {
 
       <UsersTable
         users={filteredUsers}
-        onToggleRole={(userId, role) => {
-          void toggleRole(userId, role);
+        roles={assignableRoles}
+        onChangeRole={(userId, roleId) => {
+          void handleRoleChange(userId, roleId);
         }}
         onChangeStatus={(userId, status) => {
           void handleStatusChange(userId, status);
@@ -299,6 +381,7 @@ export function UsersManagement() {
         open={isCreateOpen}
         isCreatingUser={isCreatingUser}
         formData={createForm}
+        roles={assignableRoles}
         onOpenChange={(open) => {
           setIsCreateOpen(open);
           if (!open) {

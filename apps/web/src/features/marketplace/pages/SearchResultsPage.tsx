@@ -30,7 +30,6 @@ interface SearchResultsPageProps {
   onFavoriteToggle: (id: string) => void;
   onSearch: (query: string) => void;
   isAuthenticated?: boolean;
-  currentUserDisplayName?: string;
   currentUserId?: string;
   onRequireAuth?: () => void;
 }
@@ -45,11 +44,9 @@ export function SearchResultsPage({
   onFavoriteToggle,
   onSearch,
   isAuthenticated = false,
-  currentUserDisplayName,
   currentUserId,
   onRequireAuth,
 }: SearchResultsPageProps) {
-  const [localSearchQuery, setLocalSearchQuery] = useState(initialSearchQuery);
   const [appliedSearchQuery, setAppliedSearchQuery] = useState(
     initialSearchQuery.trim(),
   );
@@ -69,19 +66,9 @@ export function SearchResultsPage({
     setSearchQuery: setAppliedSearchQuery,
   });
   const clearSearch = useCallback(() => {
-    setLocalSearchQuery("");
     clearAppliedSearch();
     onSearch("");
   }, [clearAppliedSearch, onSearch]);
-  const submitSearch = useCallback(
-    (query: string) => {
-      const normalizedQuery = query.trim();
-      setLocalSearchQuery(query);
-      setAppliedSearchQuery(normalizedQuery);
-      onSearch(normalizedQuery);
-    },
-    [onSearch],
-  );
 
   // Build active filter items for the filter chips UI
   const activeFilterItems = [
@@ -218,7 +205,6 @@ export function SearchResultsPage({
 
   useEffect(() => {
     const normalizedInitialQuery = initialSearchQuery.trim();
-    setLocalSearchQuery(initialSearchQuery);
     setAppliedSearchQuery(normalizedInitialQuery);
   }, [initialSearchQuery]);
 
@@ -256,10 +242,10 @@ export function SearchResultsPage({
       />
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col lg:flex-row gap-6">
+      <main className="mx-auto w-full max-w-[94rem] px-4 py-8 sm:px-6 lg:px-8 xl:px-10">
+        <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)] xl:gap-7 xl:grid-cols-[15.5rem_minmax(0,1fr)]">
           {/* Sidebar Filters (Desktop) */}
-          <aside className="hidden lg:block w-72 flex-shrink-0">
+          <aside className="hidden lg:block">
             <div className="sticky top-24">
               <AdvancedSearchFilters
                 language={language}
@@ -276,7 +262,15 @@ export function SearchResultsPage({
           </aside>
 
           {/* Main Results Area */}
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4 px-2">
+              <h2 className="text-2xl font-bold tracking-tight text-slate-800">
+                {normalizedSearchQuery ? (language === "ar" ? `نتائج البحث عن "${normalizedSearchQuery}"` : `Search results for "${normalizedSearchQuery}"`) : (language === "ar" ? "نتائج البحث" : "Search Results")}
+              </h2>
+              <span className="inline-flex items-center justify-center rounded-full bg-slate-100/80 px-3.5 py-1.5 text-xs font-semibold text-slate-600">
+                {language === "ar" ? `${displayedPosts.length} نتيجة` : `${displayedPosts.length} results`}
+              </span>
+            </div>
             <MarketplaceQueryStatus
               isLoading={isSearching}
               error={searchError}
@@ -288,16 +282,6 @@ export function SearchResultsPage({
             <MarketplaceDiscoveryControls
               language={language}
               toolbarClassName="flex-none"
-              search={{
-                value: localSearchQuery,
-                placeholder:
-                  language === "ar"
-                    ? "ابحث في النتائج..."
-                    : "Search results...",
-                clearLabel: language === "ar" ? "مسح البحث" : "Clear search",
-                onChange: setLocalSearchQuery,
-                onSubmit: submitSearch,
-              }}
               mobileFilters={{
                 isOpen: showFilters,
                 toggleLabel: language === "ar" ? "الفلاتر" : "Filters",
@@ -343,7 +327,6 @@ export function SearchResultsPage({
                 onFavoriteToggle={onFavoriteToggle}
                 isAuthenticated={isAuthenticated}
                 currentUserId={currentUserId}
-                currentUserDisplayName={currentUserDisplayName}
                 language={language}
                 animated
                 emptyState={{

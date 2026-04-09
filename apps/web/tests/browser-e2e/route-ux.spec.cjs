@@ -4,21 +4,23 @@ const {
 } = require("./support/mockMarketplaceApi.cjs");
 
 async function clickBackControl(page) {
-  const roleBackControl = page
-    .getByRole("button", { name: /back|العودة|go back|رجوع/i })
+  const ariaBackControl = page
+    .locator(
+      "button[aria-label='Back']:visible, button[aria-label='Go back']:visible, button[aria-label='العودة']:visible, button[aria-label='رجوع']:visible",
+    )
     .first();
-  if (await roleBackControl.isVisible().catch(() => false)) {
-    await roleBackControl.click();
+  if (await ariaBackControl.count()) {
+    await ariaBackControl.click();
     return;
   }
 
-  const ariaBackControl = page
-    .locator(
-      "button[aria-label*='Back' i], button[aria-label*='Go back' i], button[aria-label*='العودة'], button[aria-label*='رجوع']",
-    )
+  const roleBackControl = page
+    .locator("button:visible", {
+      hasText: /^(back|go back|العودة|رجوع)$/i,
+    })
     .first();
-  if (await ariaBackControl.isVisible().catch(() => false)) {
-    await ariaBackControl.click();
+  if (await roleBackControl.count()) {
+    await roleBackControl.click();
     return;
   }
 
@@ -69,13 +71,41 @@ test("seller to chat preserves deterministic back path", async ({ page }) => {
     .getByRole("button", { name: /chat with seller|الدردشة مع البائع/i })
     .first()
     .click();
-  await expect(page).toHaveURL(/\/chat\/5$/);
+  await expect(page).toHaveURL(/\/chat\/5(?:\?.*)?$/);
+  await expect(
+    page.getByRole("heading", { name: /messages|الرسائل/i }).first(),
+  ).toBeVisible();
 
   await clickBackControl(page);
   if (/\/chat$/.test(page.url())) {
     await clickBackControl(page);
   }
   await expect(page).toHaveURL(/\/seller\/5$/);
+});
+
+test("direct chat route ignores stale persisted seller back path", async ({ page }) => {
+  const apiMock = createMarketplaceApiMock({ authenticated: true });
+  await apiMock.install(page);
+
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem(
+      "chat:return-path",
+      JSON.stringify({
+        chatUserId: "5",
+        returnPath: "/seller/5",
+      }),
+    );
+  });
+
+  await page.goto("/chat/42");
+  await expect(page).toHaveURL(/\/chat\/42$/);
+
+  await clickBackControl(page);
+  if (/\/chat$/.test(page.url())) {
+    await clickBackControl(page);
+  }
+
+  await expect(page).toHaveURL(/\/$/);
 });
 
 test("auth screen renders Arabic-first copy when language is Arabic", async ({

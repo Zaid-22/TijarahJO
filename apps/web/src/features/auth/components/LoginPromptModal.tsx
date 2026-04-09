@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Dialog, DialogContent } from "../../../shared/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "../../../shared/ui/dialog";
 import type { Language } from "../../../types";
 
 const LoginPage = lazy(() =>
@@ -18,9 +18,15 @@ interface LoginPromptModalProps {
     lastName: string;
     email: string;
     phone?: string;
+    city?: string;
+    area?: string;
+    cityId?: number;
+    areaId?: number;
     avatar?: string;
     joinedDate?: string;
     role?: "user" | "admin";
+    hasAdminAccess?: boolean;
+    permissions?: string[];
   }) => void;
   onContinueAsGuest: () => void;
 }
@@ -39,7 +45,9 @@ export function LoginPromptModal({
       <DialogContent
         className="sm:max-w-md p-0 overflow-hidden bg-transparent border-0 shadow-none w-[95vw] sm:w-full overflow-y-auto [&>button]:hidden flex flex-col justify-start sm:justify-center items-center"
         dir={isRTL ? "rtl" : "ltr"}
+        aria-describedby={undefined}
       >
+        <DialogTitle className="sr-only">Login Menu</DialogTitle>
         <div className="w-full max-w-md bg-card rounded-2xl border border-border shadow-xl p-4 sm:p-6 lg:p-8 relative">
           {/* Custom close button styled nicely */}
           <button

@@ -28,7 +28,7 @@ export function exportToCsv(filename: string, rows: Record<string, unknown>[]) {
   const link = document.createElement("a");
   link.setAttribute("href", url);
   link.setAttribute("download", filename);
-  link.style.visibility = "hidden";
+  link.hidden = true;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

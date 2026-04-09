@@ -24,7 +24,6 @@ interface ProfilePageProps {
   favoriteIds?: string[];
   onFavoriteToggle?: (postId: string) => void;
   isAuthenticated?: boolean;
-  currentUserDisplayName?: string;
 }
 
 export function ProfilePage({
@@ -42,7 +41,6 @@ export function ProfilePage({
   favoriteIds = [],
   onFavoriteToggle,
   isAuthenticated = false,
-  currentUserDisplayName,
 }: ProfilePageProps) {
   const t = translations[language];
   const profileUserId = String(userProfile.id || "").trim();
@@ -81,7 +79,6 @@ export function ProfilePage({
       isAuthenticated={isAuthenticated}
       favoriteIds={favoriteIds}
       currentUserId={profileUserId || undefined}
-      currentUserDisplayName={currentUserDisplayName}
       onBack={onBackToMarketplace}
       backLabel={t.backToMarketplace}
       title={t.myProfile}

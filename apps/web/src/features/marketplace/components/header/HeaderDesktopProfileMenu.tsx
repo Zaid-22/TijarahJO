@@ -49,7 +49,10 @@ export function HeaderDesktopProfileMenu({
   onShowAdminDashboard,
   onLogout,
 }: HeaderDesktopProfileMenuProps) {
-  const iconSpacingClass = language === "ar" ? "ml-2" : "mr-2";
+  const iconSpacingClass = language === "ar" ? "ml-3" : "mr-3";
+  const menuItemClass =
+    "h-11 rounded-xl px-3 text-sm font-medium text-foreground/90 transition-colors hover:bg-accent/70 focus:bg-accent/70";
+  const iconClass = `h-4 w-4 text-muted-foreground/90 ${iconSpacingClass}`;
 
   if (authLoading) {
     return <div className="hidden h-10 w-24 sm:block" aria-hidden="true" />;
@@ -76,7 +79,7 @@ export function HeaderDesktopProfileMenu({
         <Button
           variant="ghost"
           size="icon"
-          className="hidden h-10 w-10 rounded-full border border-border/60 bg-background/70 p-0 shadow-sm transition-all duration-200 hover:scale-105 hover:border-primary/35 hover:bg-primary/5 sm:flex"
+          className="hidden h-10 w-10 rounded-full border border-border/60 bg-background/70 p-0 shadow-sm transition-colors duration-200 hover:border-primary/35 hover:bg-primary/5 sm:flex"
           aria-label={
             language === "ar" ? "فتح قائمة الحساب" : "Open account menu"
           }
@@ -93,17 +96,30 @@ export function HeaderDesktopProfileMenu({
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem onClick={onShowProfile} className="cursor-pointer">
-          <User className={`h-4 w-4 ${iconSpacingClass}`} />
+      <DropdownMenuContent
+        align="end"
+        sideOffset={8}
+        className="w-52 rounded-2xl border border-border/70 bg-background/96 p-2 shadow-xl backdrop-blur-sm"
+      >
+        <DropdownMenuItem
+          onClick={onShowProfile}
+          className={`${menuItemClass} cursor-pointer`}
+        >
+          <User className={iconClass} />
           {language === "ar" ? "ملفي الشخصي" : "My Profile"}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={onShowFavorites} className="cursor-pointer">
-          <Heart className={`h-4 w-4 ${iconSpacingClass}`} />
+        <DropdownMenuItem
+          onClick={onShowFavorites}
+          className={`${menuItemClass} cursor-pointer`}
+        >
+          <Heart className={iconClass} />
           {language === "ar" ? "المفضلة" : "Favorites"}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={onShowMessages} className="cursor-pointer">
-          <MessageCircle className={`h-4 w-4 ${iconSpacingClass}`} />
+        <DropdownMenuItem
+          onClick={onShowMessages}
+          className={`${menuItemClass} cursor-pointer`}
+        >
+          <MessageCircle className={iconClass} />
           <span>{language === "ar" ? "الرسائل" : "Messages"}</span>
           {normalizedUnread > 0 && (
             <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-xs font-semibold text-destructive-foreground">
@@ -111,25 +127,28 @@ export function HeaderDesktopProfileMenu({
             </span>
           )}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={onShowSettings} className="cursor-pointer">
-          <Settings className={`h-4 w-4 ${iconSpacingClass}`} />
+        <DropdownMenuItem
+          onClick={onShowSettings}
+          className={`${menuItemClass} cursor-pointer`}
+        >
+          <Settings className={iconClass} />
           {language === "ar" ? "الإعدادات" : "Settings"}
         </DropdownMenuItem>
         {isAdmin && (
           <DropdownMenuItem
             onClick={onShowAdminDashboard}
-            className="cursor-pointer"
+            className={`${menuItemClass} cursor-pointer`}
           >
-            <Shield className={`h-4 w-4 ${iconSpacingClass}`} />
+            <Shield className={iconClass} />
             {language === "ar" ? "لوحة الإدارة" : "Admin Dashboard"}
           </DropdownMenuItem>
         )}
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="my-2" />
         <DropdownMenuItem
           onClick={onLogout}
-          className="cursor-pointer text-destructive focus:text-destructive"
+          className="h-11 cursor-pointer rounded-xl px-3 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 focus:bg-rose-50 focus:text-rose-700 dark:hover:bg-rose-950/20 dark:focus:bg-rose-950/20 dark:focus:text-rose-400"
         >
-          <LogOut className={`h-4 w-4 ${iconSpacingClass}`} />
+          <LogOut className={`h-4 w-4 text-rose-500 ${iconSpacingClass}`} />
           {language === "ar" ? "تسجيل الخروج" : "Logout"}
         </DropdownMenuItem>
       </DropdownMenuContent>

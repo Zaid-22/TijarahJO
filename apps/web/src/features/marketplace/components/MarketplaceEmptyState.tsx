@@ -22,9 +22,8 @@ export function MarketplaceEmptyState({
   return (
     <div
       className={cn(
-        "col-span-full flex flex-col items-center justify-center p-12 lg:p-16 text-center",
-        "bg-white dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-800",
-        "shadow-sm backdrop-blur-sm",
+        "col-span-full flex flex-col items-center justify-center p-8 sm:p-12 text-center",
+        "w-full min-h-[40vh]",
         className,
       )}
     >

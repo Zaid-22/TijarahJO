@@ -1,6 +1,6 @@
 import React from "react";
-import { CardContent } from "../../../shared/ui/card";
 import { Badge } from "../../../shared/ui/badge";
+import { CardContent } from "../../../shared/ui/card";
 import { Star } from "lucide-react";
 import { ImageWithFallback } from "./ImageWithFallback";
 import { getResponsiveImageProps } from "../../../shared/lib/thumbnail";
@@ -13,7 +13,7 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
   const { post, isFavorite = false } = props;
   const imageProps = getResponsiveImageProps(post.image, {
     width: 480,
-    aspectRatio: 16 / 9,
+    aspectRatio: 4 / 5,
     quality: 60,
     widths: [240, 360, 480],
     sizes: resolveGridImageSizes(props.viewMode),
@@ -25,6 +25,7 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
     handleFavoriteClick,
     openPost,
   } = usePostCardState(props);
+
   const sellerAverageRating =
     typeof post.averageRating === "number" && post.averageRating > 0
       ? post.averageRating
@@ -33,98 +34,85 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
     typeof post.reviewCount === "number" && post.reviewCount > 0
       ? post.reviewCount
       : null;
-  const hasSellerRating =
-    sellerAverageRating !== null && sellerReviewCount !== null;
-  const detailLocation = post.area
-    ? post.location + ", " + post.area
-    : post.location;
+  const hasSellerRating = sellerAverageRating !== null && sellerReviewCount !== null;
+  const detailLocation = post.area ? post.location + ", " + post.area : post.location;
 
   return (
-    <article className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-[24px] border border-border/60 bg-card animate-fade-in shadow-sm sm:shadow-md">
+    <article className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-[14px] bg-card shadow-[0_12px_28px_-20px_rgba(15,23,42,0.24)] ring-1 ring-black/5 dark:ring-white/5">
       <button
         type="button"
         onClick={openPost}
         aria-label={labels.viewDetailsAria}
-        className="absolute inset-0 z-10 rounded-[24px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        className="absolute inset-0 z-10 rounded-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       />
 
-      <div className="px-3 pt-3">
-        <div
-          className={`${postCardMediaClass} pointer-events-none rounded-[20px] border border-border/40 bg-muted/30 aspect-[16/9] overflow-hidden shadow-lg`}
-        >
-          <ImageWithFallback
-            src={imageProps.src || post.image}
-            srcSet={imageProps.srcSet}
-            sizes={imageProps.sizes}
-            fallbackSrc={post.image}
-            alt={post.name}
-            width={480}
-            height={270}
-            className="absolute inset-0 block h-full min-h-full w-full min-w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/[0.02] via-transparent to-black/[0.18]" />
+      <div
+        className={postCardMediaClass + " pointer-events-none relative aspect-[4/5] overflow-hidden bg-muted/30"}
+      >
+        <ImageWithFallback
+          src={imageProps.src || post.image}
+          srcSet={imageProps.srcSet}
+          sizes={imageProps.sizes}
+          fallbackSrc={post.image}
+          alt={post.name}
+          width={480}
+          height={600}
+          className="absolute inset-0 block h-full min-h-full w-full min-w-full object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.04)_0%,rgba(15,23,42,0)_42%,rgba(15,23,42,0.22)_100%)]" />
 
-          {post.status === "SOLD" && (
-            <div className="absolute left-3 top-3 z-10">
-              <Badge className="border-white/35 bg-slate-950/55 px-2.5 py-1 text-xs font-semibold text-white shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-slate-950/40">
+        <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 p-2.5">
+          <div className="flex flex-wrap gap-1.5">
+            {post.status === "SOLD" && (
+              <Badge className="border-white/20 bg-slate-950/60 px-2.5 py-0.5 text-[10px] font-semibold text-white shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-slate-950/45">
                 {labels.soldOut}
               </Badge>
-            </div>
-          )}
-
-          {post.condition && post.status !== "SOLD" && (
-            <div className="absolute bottom-3 left-3 z-10">
-              <Badge className="border-white/35 bg-white/78 px-2 py-0.5 text-xs font-medium text-foreground shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-white/60">
+            )}
+            {post.condition && post.status !== "SOLD" && (
+              <Badge className="border-white/45 bg-white/88 px-2 py-0.5 text-[10px] font-semibold text-slate-900 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-white/70">
                 {post.condition}
               </Badge>
-            </div>
-          )}
-
-          <div className="absolute bottom-2.5 right-2.5 z-10">
-            <PostCardPriceBadge
-              price={post.price}
-              currency={labels.currency}
-              locale={priceLocale}
-            />
+            )}
           </div>
+
+          {showFavoriteButton && (
+            <PostCardFavoriteButton
+              isFavorite={isFavorite}
+              label={labels.favoriteLabel}
+              onClick={handleFavoriteClick}
+              className="pointer-events-auto z-30 h-7 w-7"
+            />
+          )}
         </div>
       </div>
 
-      {showFavoriteButton && (
-        <PostCardFavoriteButton
-          isFavorite={isFavorite}
-          label={labels.favoriteLabel}
-          onClick={handleFavoriteClick}
-          className="absolute right-5 top-5 z-30 pointer-events-auto h-9 w-9"
-        />
-      )}
-
-      <CardContent className="pointer-events-none relative z-20 flex flex-grow flex-col px-4 pb-4 pt-3.5 sm:px-4.5 sm:pb-4.5 sm:pt-3.5">
-        <div className="flex-grow space-y-1">
-          <h3 className="line-clamp-1 text-base font-semibold leading-[1.2] tracking-[-0.015em] text-foreground transition-colors group-hover:text-primary sm:text-lg">
+      <CardContent className="pointer-events-none relative z-20 flex flex-grow flex-col gap-2 px-2.5 pb-2.5 pt-2.5 sm:px-3 sm:pb-3">
+        <div className="space-y-1.5">
+          <h3 className="truncate text-sm font-semibold leading-tight text-foreground sm:text-[15px]">
             {post.name}
           </h3>
-          {detailLocation ? (
-            <p className="line-clamp-1 text-sm font-medium text-slate-600 dark:text-slate-300">
-              {detailLocation}
-            </p>
-          ) : (
-            <div className="h-5" />
-          )}
+          <p className="truncate text-[10px] font-medium text-muted-foreground sm:text-[11px]">
+            {detailLocation || post.location || "-"}
+          </p>
+        </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5">
-            {hasSellerRating && (
-              <div className="flex flex-shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
-                <Star className="h-3 w-3 fill-current" />
-                <span>
-                  {sellerAverageRating?.toFixed(1)}
-                  <span className="ms-1 font-medium opacity-70">
-                    ({sellerReviewCount})
-                  </span>
-                </span>
-              </div>
-            )}
-          </div>
+        <div className="flex items-center justify-between gap-2">
+          <PostCardPriceBadge
+            price={post.price}
+            currency={labels.currency}
+            locale={priceLocale}
+            className="shrink-0 border-white/45 bg-white/94 text-slate-950 shadow-[0_10px_18px_-14px_rgba(15,23,42,0.55)] supports-[backdrop-filter]:bg-white/86 px-2 py-0.5 scale-95"
+          />
+
+          {hasSellerRating ? (
+            <div className="inline-flex items-center gap-1 rounded-full bg-amber-500/12 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+              <Star className="h-3.5 w-3.5 fill-current" />
+              <span>{sellerAverageRating?.toFixed(1)}</span>
+              <span className="text-[10px] font-medium opacity-70">({sellerReviewCount})</span>
+            </div>
+          ) : (
+            <div className="h-7" />
+          )}
         </div>
       </CardContent>
     </article>

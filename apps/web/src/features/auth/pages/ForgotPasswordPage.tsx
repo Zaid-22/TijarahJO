@@ -59,7 +59,7 @@ const forgotPasswordCopyByLanguage: Record<Language, ForgotPasswordCopy> = {
     title: "Reset your password",
     subtitle: "We will send a verification code to your email.",
     emailLabel: "Email address",
-    emailPlaceholder: "name@example.com",
+    emailPlaceholder: "Enter your email",
     codeLabel: "Verification code",
     codePlaceholder: "6-digit code",
     newPasswordLabel: "New password",
@@ -72,7 +72,7 @@ const forgotPasswordCopyByLanguage: Record<Language, ForgotPasswordCopy> = {
     resettingPassword: "Resetting password...",
     backToLogin: "Back to sign in",
     codeSentHint:
-      "If an account exists for this email, a verification code has been sent.",
+      "A verification code has been sent to your email.",
     successTitle: "Password updated",
     successBody: "Your password has been reset. You can now sign in.",
     errors: {
@@ -91,7 +91,7 @@ const forgotPasswordCopyByLanguage: Record<Language, ForgotPasswordCopy> = {
     title: "إعادة تعيين كلمة المرور",
     subtitle: "سنرسل رمز تحقق إلى بريدك الإلكتروني.",
     emailLabel: "البريد الإلكتروني",
-    emailPlaceholder: "name@example.com",
+    emailPlaceholder: "أدخل بريدك الإلكتروني",
     codeLabel: "رمز التحقق",
     codePlaceholder: "رمز مكوّن من 6 أرقام",
     newPasswordLabel: "كلمة المرور الجديدة",
@@ -104,7 +104,7 @@ const forgotPasswordCopyByLanguage: Record<Language, ForgotPasswordCopy> = {
     resettingPassword: "جارٍ إعادة التعيين...",
     backToLogin: "العودة إلى تسجيل الدخول",
     codeSentHint:
-      "إذا كان هناك حساب مرتبط بهذا البريد، فسيتم إرسال رمز تحقق إليه.",
+      "تم إرسال رمز التحقق إلى بريدك الإلكتروني.",
     successTitle: "تم تحديث كلمة المرور",
     successBody: "تمت إعادة تعيين كلمة المرور. يمكنك تسجيل الدخول الآن.",
     errors: {
@@ -265,7 +265,7 @@ export function ForgotPasswordPage({ language }: ForgotPasswordPageProps) {
         <AuthPageLayout
           direction={isRTL ? "rtl" : "ltr"}
           title={copy.title}
-          subtitle={copy.subtitle}
+          subtitle={step === "request" ? copy.subtitle : undefined}
           footer={
             step !== "complete" ? (
               <div className="text-center mt-4">
@@ -281,14 +281,14 @@ export function ForgotPasswordPage({ language }: ForgotPasswordPageProps) {
           }
         >
             {errorMessage && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="mb-4 sm:mb-6">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription className="text-sm">{errorMessage}</AlertDescription>
               </Alert>
             )}
 
             {infoMessage && (
-              <Alert>
+              <Alert className="mb-4 sm:mb-6">
                 <CheckCircle2 className="h-4 w-4" />
                 <AlertDescription className="text-sm">{infoMessage}</AlertDescription>
               </Alert>
@@ -322,24 +322,6 @@ export function ForgotPasswordPage({ language }: ForgotPasswordPageProps) {
 
             {step === "confirm" && (
               <form className="space-y-4" onSubmit={handleConfirmReset} noValidate>
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-email">{copy.emailLabel}</Label>
-                  <div className="relative">
-                    <Mail
-                      className={`pointer-events-none absolute ${iconPositionClass} top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground`}
-                    />
-                    <Input
-                      id="confirm-email"
-                      type="email"
-                      value={email}
-                      onChange={(event) => setEmail(event.target.value)}
-                      placeholder={copy.emailPlaceholder}
-                      autoComplete="email"
-                      className={inputPaddingClass}
-                    />
-                  </div>
-                </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="verification-code">{copy.codeLabel}</Label>
                   <div className="relative">

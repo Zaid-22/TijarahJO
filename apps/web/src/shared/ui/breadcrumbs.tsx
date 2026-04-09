@@ -28,7 +28,7 @@ export function Breadcrumbs({
     <nav
       aria-label={isRTL ? "مسار التنقل" : "Breadcrumb"}
       className={cn(
-        "flex items-center gap-1 text-sm text-muted-foreground overflow-x-auto",
+        "flex items-center gap-1 text-sm text-muted-foreground overflow-x-auto dark:text-slate-300/85",
         className,
       )}
       dir={isRTL ? "rtl" : "ltr"}
@@ -45,7 +45,7 @@ export function Breadcrumbs({
             {index > 0 && (
               <Separator
                 className={cn(
-                  "h-3.5 w-3.5 flex-shrink-0 text-muted-foreground/50",
+                  "h-3.5 w-3.5 flex-shrink-0 text-muted-foreground/50 dark:text-slate-500",
                   isRTL && "rotate-180",
                 )}
                 aria-hidden="true"
@@ -53,7 +53,7 @@ export function Breadcrumbs({
             )}
             {isLast ? (
               <span
-                className="font-medium text-foreground truncate max-w-[180px]"
+                className="font-medium text-foreground truncate max-w-[180px] dark:text-slate-100"
                 aria-current="page"
               >
                 {item.label}
@@ -63,7 +63,7 @@ export function Breadcrumbs({
                 type="button"
                 onClick={item.onClick}
                 aria-label={isFirst && !item.label ? "Home" : undefined}
-                className="flex items-center gap-1 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded"
+                className="flex items-center gap-1 transition-colors hover:text-primary dark:hover:text-slate-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded"
               >
                 {isFirst && <Home className="h-3.5 w-3.5" />}
                 <span>{item.label}</span>

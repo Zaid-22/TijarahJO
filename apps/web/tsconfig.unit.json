@@ -35,6 +35,8 @@
     "src/contexts/authRuntimePolicy.ts",
     "src/shared/lib/thumbnail.ts",
     "src/lib/searchRanking.ts",
-    "src/types/index.ts"
+    "src/types/index.ts",
+    "src/constants/index.ts",
+    "src/features/home/components/heroBannerData.ts"
   ]
 }

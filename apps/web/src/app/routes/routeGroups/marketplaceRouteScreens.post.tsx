@@ -1,9 +1,9 @@
-import { lazy } from "react";
-import { PostDetailsRouteWrapper } from "../PostDetailsRouteWrapper";
+import { lazy, Suspense } from "react";
 import { useMarketplaceRouteContext } from "./marketplaceRouteContext";
 import { type MarketplaceRouteDefinition } from "./marketplaceRouteDefinitions";
 import { APP_ROUTE_BUILDERS, APP_ROUTE_PATHS } from "../routeConfig";
 import { deferredToast } from "../../../utils/toast";
+import { LoadingState } from "../../../shared/ui/loading-state";
 
 function lazyImportWithRetry<TModule>(
   load: () => Promise<TModule>,
@@ -50,6 +50,15 @@ const SellerProfilePage = lazy(
     "lazy-import-retry:seller-profile-page",
   ),
 );
+const PostDetailsRouteWrapper = lazy(
+  lazyImportWithRetry(
+    () =>
+      import("../PostDetailsRouteWrapper").then((m) => ({
+        default: m.PostDetailsRouteWrapper,
+      })),
+    "lazy-import-retry:post-details-route-wrapper",
+  ),
+);
 
 function PostDetailsMarketplaceRouteScreen() {
   const {
@@ -64,38 +73,39 @@ function PostDetailsMarketplaceRouteScreen() {
   } = useMarketplaceRouteContext();
 
   return (
-    <PostDetailsRouteWrapper
-      language={appProps.language}
-      availablePosts={sharedPostRouteProps.availablePosts}
-      isLoadingPosts={routeState.isLoadingPostsFromRouteData}
-      isAuthenticated={sharedUserRouteProps.isAuthenticated}
-      userProfile={appProps.userProfile}
-      favoriteIds={sharedPostRouteProps.favoriteIds}
-      currentUserDisplayName={sharedUserRouteProps.currentUserDisplayName}
-      onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
-      onOpenPost={(id) => navigateToPost(id, APP_ROUTE_PATHS.home)}
-      onNavigateHome={() => navigate(APP_ROUTE_PATHS.home)}
-      onNavigateProfile={() => navigate(APP_ROUTE_PATHS.profile)}
-      onNavigateSeller={(sellerId, fromPath) =>
-        navigate(APP_ROUTE_BUILDERS.sellerProfile(sellerId), {
-          state: {
-            fromPath: fromPath || APP_ROUTE_PATHS.home,
-          },
-        })
-      }
-      onNavigateChat={(sellerId, fromPath) =>
-        navigate(APP_ROUTE_BUILDERS.chatUser(sellerId), {
-          state: {
-            fromPath: fromPath || APP_ROUTE_PATHS.home,
-          },
-        })
-      }
-      onNavigateLogin={() => navigate(APP_ROUTE_PATHS.login)}
-      onRequireAuth={promptLoginModal}
-      onUpdatePost={postActions.updatePost}
-      onUpdatePostStatus={postActions.updatePostStatus}
-      onDeletePost={postActions.deletePost}
-    />
+    <Suspense fallback={<LoadingState minHeightClassName="min-h-[40vh]" />}>
+      <PostDetailsRouteWrapper
+        language={appProps.language}
+        availablePosts={sharedPostRouteProps.availablePosts}
+        isLoadingPosts={routeState.isLoadingPostsFromRouteData}
+        isAuthenticated={sharedUserRouteProps.isAuthenticated}
+        userProfile={appProps.userProfile}
+        favoriteIds={sharedPostRouteProps.favoriteIds}
+        onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
+        onOpenPost={(id) => navigateToPost(id, APP_ROUTE_PATHS.home)}
+        onNavigateHome={() => navigate(APP_ROUTE_PATHS.home)}
+        onNavigateProfile={() => navigate(APP_ROUTE_PATHS.profile)}
+        onNavigateSeller={(sellerId, fromPath) =>
+          navigate(APP_ROUTE_BUILDERS.sellerProfile(sellerId), {
+            state: {
+              fromPath: fromPath || APP_ROUTE_PATHS.home,
+            },
+          })
+        }
+        onNavigateChat={(sellerId, fromPath) =>
+          navigate(APP_ROUTE_BUILDERS.chatUser(sellerId), {
+            state: {
+              fromPath: fromPath || APP_ROUTE_PATHS.home,
+            },
+          })
+        }
+        onNavigateLogin={() => navigate(APP_ROUTE_PATHS.login)}
+        onRequireAuth={promptLoginModal}
+        onUpdatePost={postActions.updatePost}
+        onUpdatePostStatus={postActions.updatePostStatus}
+        onDeletePost={postActions.deletePost}
+      />
+    </Suspense>
   );
 }
 
@@ -115,7 +125,6 @@ function SellerMarketplaceRouteScreen() {
       onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
       isAuthenticated={sharedUserRouteProps.isAuthenticated}
       currentUserId={sharedUserRouteProps.currentUserId}
-      currentUserDisplayName={sharedUserRouteProps.currentUserDisplayName}
       onSettingsClick={() => navigate(APP_ROUTE_PATHS.settings)}
       onEditProfileClick={() => navigate(APP_ROUTE_PATHS.profileEdit)}
       onAddPostClick={() => navigate(APP_ROUTE_PATHS.sell)}

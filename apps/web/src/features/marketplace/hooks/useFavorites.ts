@@ -15,6 +15,7 @@ import { useServerMutation } from "../../../shared/hooks/useServerMutation";
 
 interface UseFavoritesOptions {
   enabled?: boolean;
+  userIdHint?: string;
 }
 
 function normalizeFavoriteIds(ids: Array<string | number>): string[] {
@@ -32,20 +33,20 @@ function normalizePostId(postId: string): string {
 }
 
 export function useFavorites(options: UseFavoritesOptions = {}) {
-  const { enabled = true } = options;
+  const { enabled = true, userIdHint } = options;
   const { isAuthenticated, user } = useAuth();
+  const resolvedUserId =
+    String(user?.id || userIdHint || "self").trim() || "self";
   const [guestFavoriteIds, setGuestFavoriteIds] = useState<string[]>(() =>
     normalizeFavoriteIds(storage.get<string[]>(STORAGE_KEYS.FAVORITES, [])),
   );
 
   const authFavoritesCacheKey = useMemo(() => {
-    const normalizedUserId = String(user?.id || "self").trim() || "self";
-    return `favorites:auth:${normalizedUserId}`;
-  }, [user?.id]);
+    return `favorites:auth:${resolvedUserId}`;
+  }, [resolvedUserId]);
   const favoritesTag = useMemo(() => {
-    const normalizedUserId = String(user?.id || "self").trim() || "self";
-    return `favorites:${normalizedUserId}`;
-  }, [user?.id]);
+    return `favorites:${resolvedUserId}`;
+  }, [resolvedUserId]);
   const favoriteQueryTags = useMemo(
     () => ["favorites", favoritesTag],
     [favoritesTag],

@@ -97,13 +97,13 @@ export function PostSellerSidebar({
 
   return (
     <div className="space-y-3 lg:sticky lg:top-24">
-      <Card className="rounded-2xl border-slate-200/80 bg-gradient-to-b from-white to-slate-50/70 shadow-2xl">
+      <Card className="rounded-2xl border-slate-200/80 bg-gradient-to-b from-white to-slate-50/70 shadow-2xl dark:border-white/10 dark:from-slate-900 dark:to-slate-950/95">
         <CardContent className="pt-5 pb-5">
           {onSellerClick ? (
             <button
               type="button"
               onClick={onSellerClick}
-              className="mb-4 block w-full rounded-2xl text-center outline-none transition-all hover:bg-slate-50/80 focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="mb-4 block w-full rounded-2xl text-center outline-none transition-all hover:bg-slate-50/80 focus-visible:ring-2 focus-visible:ring-primary/30 dark:hover:bg-white/5"
             >
               {sellerIdentityContent}
             </button>
@@ -153,7 +153,7 @@ export function PostSellerSidebar({
               <>
                 {post.status === "SOLD" && (
                   <div className="rounded-lg bg-muted p-4 text-center mb-2">
-                    <Badge className="border border-border bg-muted/95 px-4 py-2 text-base font-semibold text-muted-foreground backdrop-blur-md">
+                    <Badge className="border border-border bg-muted/95 px-4 py-2 text-base font-semibold text-muted-foreground backdrop-blur-md dark:bg-white/5 dark:text-slate-200">
                       🏷️ {labels.soldOut}
                     </Badge>
                   </div>
@@ -194,7 +194,7 @@ export function PostSellerSidebar({
             ) : (
               <>
                 {post.status === "SOLD" ? (
-                  <div className="rounded-lg bg-destructive/10 p-4 text-center">
+                  <div className="rounded-lg bg-destructive/10 p-4 text-center dark:bg-destructive/15">
                     <p className="font-semibold text-destructive">
                       {labels.postSoldMessage}
                     </p>
@@ -203,20 +203,19 @@ export function PostSellerSidebar({
                   <>
                     <Button
                       className="w-full h-10 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/92"
-                      onClick={onChatWithSeller}
+                      onClick={onShowPhoneDialog}
                     >
-                      <MessageSquare className="h-4 w-4 me-2 text-primary-foreground/90" />
-                      {labels.chatWithSeller}
+                      <Phone className="h-4 w-4 me-2 text-primary-foreground/90" />
+                      {labels.callSeller}
                     </Button>
 
                     <Button
                       variant="outline"
                       className="w-full h-10 rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 shadow-md transition-all hover:bg-slate-50 hover:text-slate-800 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                      type="button"
-                      onClick={onShowPhoneDialog}
+                      onClick={onChatWithSeller}
                     >
-                      <Phone className="h-4 w-4 me-2 text-slate-500 dark:text-slate-400" />
-                      {labels.callSeller}
+                      <MessageSquare className="h-4 w-4 me-2 text-slate-500 dark:text-slate-400" />
+                      {labels.chatWithSeller}
                     </Button>
                   </>
                 )}

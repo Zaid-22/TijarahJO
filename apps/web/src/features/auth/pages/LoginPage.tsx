@@ -6,6 +6,7 @@ import { useAuth } from "../../../contexts/AuthContext";
 import { persistAuthSessionHint } from "../../../contexts/authContextUtils";
 import { api } from "../../../services/api";
 import { debugError } from "../../../services/api/client";
+import { readStringArray } from "../../../services/api/normalizers";
 import { normalizeJordanPhone } from "../../../utils/phone";
 import { getLoginCopy } from "../loginCopy";
 import { PageShell } from "../../../shared/ui/page-shell";
@@ -39,9 +40,15 @@ interface LoginPageProps {
     lastName: string;
     email: string;
     phone?: string;
+    city?: string;
+    area?: string;
+    cityId?: number;
+    areaId?: number;
     avatar?: string;
     joinedDate?: string;
     role?: "user" | "admin";
+    hasAdminAccess?: boolean;
+    permissions?: string[];
   }) => void;
   onContinueAsGuest: () => void;
   language: Language;
@@ -133,6 +140,43 @@ const readAuthString = (
   }
 
   return "";
+};
+
+const readAuthPermissions = (payload: unknown): string[] => {
+  if (typeof payload !== "object" || payload === null) {
+    return [];
+  }
+
+  return readStringArray(
+    (payload as Record<string, unknown>).AdminPermissions ??
+      (payload as Record<string, unknown>).adminPermissions ??
+      (payload as Record<string, unknown>).Permissions ??
+      (payload as Record<string, unknown>).permissions,
+  );
+};
+
+const readAuthPositiveInt = (
+  payload: Record<string, unknown> | null,
+  ...keys: string[]
+): number | undefined => {
+  if (!payload) {
+    return undefined;
+  }
+
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+      return value;
+    }
+    if (typeof value === "string") {
+      const parsed = Number.parseInt(value, 10);
+      if (Number.isInteger(parsed) && parsed > 0) {
+        return parsed;
+      }
+    }
+  }
+
+  return undefined;
 };
 
 export function LoginPage({
@@ -290,9 +334,15 @@ export function LoginPage({
     lastName: string;
     email: string;
     phone?: string;
+    city?: string;
+    area?: string;
+    cityId?: number;
+    areaId?: number;
     avatar?: string;
     joinedDate?: string;
     role?: "user" | "admin";
+    hasAdminAccess?: boolean;
+    permissions?: string[];
   }) => {
     localStorage.removeItem("tijarahjo_logged_out");
     persistAuthSessionHint();
@@ -318,12 +368,27 @@ export function LoginPage({
              lastName: readAuthString(authenticatedUser, "LastName", "lastName") || fallbackUser.lastName,
              email: readAuthString(authenticatedUser, "Email", "email") || fallbackUser.email,
              phone: readAuthString(authenticatedUser, "Phone", "phone") || fallbackUser.phone,
+             city: readAuthString(authenticatedUser, "City", "city") || fallbackUser.city,
+             area: readAuthString(authenticatedUser, "Area", "area") || fallbackUser.area,
+             cityId:
+               readAuthPositiveInt(authenticatedUser, "CityId", "cityId") ??
+               fallbackUser.cityId,
+             areaId:
+               readAuthPositiveInt(authenticatedUser, "AreaId", "areaId") ??
+               fallbackUser.areaId,
              avatar: readAuthString(authenticatedUser, "Avatar", "avatar") || fallbackUser.avatar,
              joinedDate: formatJoinedDateLabel(
                readAuthString(authenticatedUser, "JoinedDate", "joinedDate", "JoinDate", "joinDate") || fallbackUser.joinedDate,
                language,
              ),
              role: resolveLoginRole(authenticatedUser) || fallbackUser.role,
+             hasAdminAccess:
+               resolveHasAdminAccessFromPayload(authenticatedUser) ||
+               fallbackUser.hasAdminAccess,
+             permissions:
+               readAuthPermissions(authenticatedUser).length > 0
+                 ? readAuthPermissions(authenticatedUser)
+                 : (fallbackUser.permissions ?? []),
            };
         }
       }
@@ -339,6 +404,8 @@ export function LoginPage({
       lastName: finalUser.lastName,
       avatar: finalUser.avatar,
       role: finalUser.role || "user",
+      hasAdminAccess: finalUser.hasAdminAccess,
+      permissions: finalUser.permissions,
     });
 
     onLogin({
@@ -347,9 +414,15 @@ export function LoginPage({
       lastName: finalUser.lastName,
       email: finalUser.email,
       phone: finalUser.phone,
+      city: finalUser.city,
+      area: finalUser.area,
+      cityId: finalUser.cityId,
+      areaId: finalUser.areaId,
       avatar: finalUser.avatar,
       joinedDate: finalUser.joinedDate,
       role: finalUser.role,
+      hasAdminAccess: finalUser.hasAdminAccess,
+      permissions: finalUser.permissions,
     });
   };
 
@@ -439,9 +512,13 @@ export function LoginPage({
       email:
         user?.email || parsedIdentifier.email || state.values.identifier.trim(),
       phone: user?.phone || normalizedPhone,
+      city: user?.city || normalizedCity,
+      area: user?.area || normalizedArea,
       avatar: user?.avatar,
       joinedDate: user?.joinedDate,
       role: resolveLoginRole(user),
+      hasAdminAccess: resolveHasAdminAccessFromPayload(user),
+      permissions: readAuthPermissions(user),
     });
   };
 
@@ -485,9 +562,13 @@ export function LoginPage({
       lastName: user?.lastName || "",
       email: user?.email || state.values.identifier.trim(),
       phone: user?.phone || "",
+      city: user?.city || "",
+      area: user?.area || "",
       avatar: user?.avatar,
       joinedDate: user?.joinedDate,
       role: resolveLoginRole(user),
+      hasAdminAccess: resolveHasAdminAccessFromPayload(user),
+      permissions: readAuthPermissions(user),
     });
   };
 
@@ -539,9 +620,13 @@ export function LoginPage({
       lastName: user?.lastName || "",
       email: user?.email || state.values.identifier.trim(),
       phone: user?.phone || "",
+      city: user?.city || "",
+      area: user?.area || "",
       avatar: user?.avatar,
       joinedDate: user?.joinedDate,
       role: resolveLoginRole(user),
+      hasAdminAccess: resolveHasAdminAccessFromPayload(user),
+      permissions: readAuthPermissions(user),
     });
   };
 

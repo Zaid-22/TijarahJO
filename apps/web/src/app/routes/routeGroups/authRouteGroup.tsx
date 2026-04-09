@@ -1,8 +1,12 @@
 import { lazy } from "react";
 import { Route, type NavigateFunction } from "react-router-dom";
-import { applyLoginUserDataToProfile } from "../appRoutesUtils";
+import {
+  applyLoginUserDataToProfile,
+  isProfileCompleteForRouting,
+} from "../appRoutesUtils";
 import type { BaseAppRouteProps } from "../AppRouteTypes";
 import { APP_ROUTE_PATHS } from "../routeConfig";
+import { userHasAdminAccess } from "../../../contexts/authUtils";
 import {
   buildCurrentPath,
   resolveBackPathFromHistoryState,
@@ -38,14 +42,11 @@ export function renderAuthRouteGroup({
         element={
           <LoginPage
             onLogin={(userData) => {
-              appProps.setUserProfile(
-                applyLoginUserDataToProfile(appProps.userProfile, userData),
+              const nextProfile = applyLoginUserDataToProfile(
+                appProps.userProfile,
+                userData,
               );
-              
-              if (userData.role === "admin") {
-                navigate(APP_ROUTE_PATHS.admin, { replace: true });
-                return;
-              }
+              appProps.setUserProfile(nextProfile);
 
               const currentPath = buildCurrentPath(
                 window.location.pathname,
@@ -57,6 +58,34 @@ export function renderAuthRouteGroup({
                 fallbackPath: "/",
                 blockedPathnames: ["/login"],
               });
+              const intendedPath = userHasAdminAccess({
+                role: userData.role ?? "user",
+                hasAdminAccess: userData.hasAdminAccess,
+                permissions: userData.permissions,
+              })
+                ? APP_ROUTE_PATHS.admin
+                : safePath;
+
+              if (
+                !isProfileCompleteForRouting(userData)
+              ) {
+                navigate(APP_ROUTE_PATHS.completeProfile, {
+                  replace: true,
+                  state: { fromPath: intendedPath },
+                });
+                return;
+              }
+
+              if (
+                userHasAdminAccess({
+                  role: userData.role ?? "user",
+                  hasAdminAccess: userData.hasAdminAccess,
+                  permissions: userData.permissions,
+                })
+              ) {
+                navigate(APP_ROUTE_PATHS.admin, { replace: true });
+                return;
+              }
               navigate(safePath, { replace: true });
             }}
             onContinueAsGuest={() => navigate(APP_ROUTE_PATHS.home)}

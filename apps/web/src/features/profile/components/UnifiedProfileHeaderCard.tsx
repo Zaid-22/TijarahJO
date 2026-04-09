@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Calendar,
   Edit,
@@ -35,18 +35,19 @@ export function UnifiedProfileHeaderCard({
 }: UnifiedProfileHeaderCardProps) {
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   const avatarSrc = resolveAvatarSrc(viewModel.profile.avatar);
+
+  useEffect(() => {
+    setAvatarLoadFailed(false);
+  }, [avatarSrc]);
+
   const shouldShowAvatarImage = Boolean(avatarSrc) && !avatarLoadFailed;
-
   return (
-    <div className="mb-8 overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
-      <div className="relative h-32 w-full bg-gradient-to-br from-primary to-secondary sm:h-48">
-        <div className="absolute inset-0 bg-black/10" />
-      </div>
-
-      <div className="relative px-6 pb-6">
-        <div className="-mt-8 flex flex-col items-center gap-6 sm:-mt-10 md:flex-row md:items-end">
-          <div className="relative">
-            <Avatar className="h-24 w-24 border-4 border-background bg-card shadow-md sm:h-32 sm:w-32">
+    <div className="mb-8 overflow-hidden">
+      <div className="relative px-2 sm:px-4">
+        <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start md:items-center">
+          {/* Avatar */}
+          <div className="relative shrink-0">
+            <Avatar className="h-24 w-24 border border-border/40 shadow-sm sm:h-32 sm:w-32 rounded-[28px] overflow-hidden">
               {shouldShowAvatarImage ? (
                 <AvatarImage
                   src={avatarSrc || undefined}
@@ -55,45 +56,47 @@ export function UnifiedProfileHeaderCard({
                   onError={() => setAvatarLoadFailed(true)}
                 />
               ) : null}
-              <AvatarFallback className="bg-card text-3xl font-bold text-primary sm:text-4xl">
+              <AvatarFallback className="bg-primary/5 text-3xl font-bold text-primary sm:text-4xl rounded-[28px]">
                 {getAvatarInitial(viewModel.profile.name)}
               </AvatarFallback>
             </Avatar>
           </div>
 
-          <div className="mb-2 flex-1 text-center md:text-left">
-            <h1 className="mb-2 text-2xl font-bold leading-tight text-foreground sm:text-3xl">
+          {/* User Info */}
+          <div className="flex-1 text-center sm:text-start pt-2">
+            <h1 className="mb-3 text-2xl font-bold leading-tight text-foreground sm:text-3xl tracking-tight">
               {viewModel.profile.name || `${labels.userLabel} ${viewModel.profileUserId}`}
             </h1>
 
-            <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground md:justify-start">
-              <div className="flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1">
+            <div className="flex flex-wrap justify-center sm:justify-start gap-3 sm:gap-4 text-sm text-muted-foreground font-medium">
+              <div className="flex items-center gap-1.5 rounded-full bg-slate-100/80 px-3.5 py-1.5 dark:bg-slate-800/50">
                 <MapPin className="h-4 w-4 text-primary" />
                 <span>{viewModel.profile.location || labels.jordan}</span>
               </div>
-              <div className="flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1">
+              <div className="flex items-center gap-1.5 rounded-full bg-slate-100/80 px-3.5 py-1.5 dark:bg-slate-800/50">
                 <Calendar className="h-4 w-4 text-primary" />
                 <span>
                   {labels.joined} {joinYear}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 font-medium text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
+              <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3.5 py-1.5 font-semibold text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
                 <Star className="h-4 w-4 fill-current" />
                 <span>
                   {averageRating}{" "}
-                  <span className="text-sm font-medium text-muted-foreground">
-                    ({viewModel.reviews.length} {labels.reviewCountWord})
+                  <span className="font-medium opacity-80 ms-1">
+                    ({viewModel.reviews.length})
                   </span>
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="mb-2 flex flex-wrap justify-center gap-3">
+          {/* Action Buttons */}
+          <div className="flex shrink-0 flex-wrap justify-center sm:justify-end gap-3 pt-2">
             {viewModel.canEditProfile && onSettingsClick ? (
               <Button
                 variant="outline"
-                className="rounded-xl bg-background/90 shadow-sm backdrop-blur-sm"
+                className="h-11 rounded-[16px] shadow-sm backdrop-blur-sm px-5"
                 onClick={onSettingsClick}
               >
                 <Settings className="me-2 h-4 w-4" />
@@ -103,28 +106,17 @@ export function UnifiedProfileHeaderCard({
 
             {viewModel.canEditProfile && onEditProfileClick ? (
               <Button
-                className="rounded-xl bg-primary shadow-sm hover:bg-primary/90"
+                className="h-11 rounded-[16px] bg-primary shadow-sm hover:bg-primary/90 px-5"
                 onClick={onEditProfileClick}
               >
-                <Edit className="me-2 h-4 w-4" />
+                <Edit className="me-2 h-4 w-4 text-primary-foreground/90" />
                 {labels.editProfile}
               </Button>
             ) : null}
 
-            {viewModel.canChat && onChatWithSeller ? (
+            {viewModel.mode !== "owner" && viewModel.canCall ? (
               <Button
-                className="h-12 rounded-[14px] bg-primary px-5 text-base font-semibold text-primary-foreground shadow-xl hover:bg-primary/92"
-                onClick={onChatWithSeller}
-              >
-                <MessageSquare className="me-2 h-4.5 w-4.5 text-primary-foreground/90" />
-                {labels.chatWithSeller}
-              </Button>
-            ) : null}
-
-            {viewModel.canCall ? (
-              <Button
-                variant="outline"
-                className="h-12 rounded-[14px] border border-slate-300 bg-white px-5 text-base font-medium text-slate-700 shadow-md backdrop-blur-sm hover:bg-slate-50 hover:text-slate-800 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                className="h-[3.25rem] rounded-[18px] bg-primary px-6 text-[0.95rem] font-semibold text-primary-foreground shadow-[0_12px_28px_-16px_rgba(37,99,235,0.8)] transition-all hover:bg-primary/92 hover:-translate-y-0.5 active:translate-y-0"
                 disabled={!viewModel.profile.phone?.trim()}
                 onClick={() => {
                   if (!viewModel.profile.phone?.trim()) {
@@ -133,12 +125,33 @@ export function UnifiedProfileHeaderCard({
                   window.location.href = `tel:${viewModel.profile.phone}`;
                 }}
               >
-                <Phone className="me-2 h-4.5 w-4.5 text-slate-500 dark:text-slate-400" />
-                {viewModel.mode === "owner" ? labels.call : labels.callSeller}
+                <Phone className="me-2 h-4.5 w-4.5 text-primary-foreground/90" />
+                {labels.callSeller}
+              </Button>
+            ) : null}
+
+            {viewModel.mode !== "owner" && viewModel.canChat && onChatWithSeller ? (
+              <Button
+                variant="outline"
+                className="h-[3.25rem] rounded-[18px] border-2 border-slate-200 bg-white px-6 text-[0.95rem] font-semibold text-slate-700 shadow-[0_8px_20px_-16px_rgba(15,23,42,0.15)] transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 hover:-translate-y-0.5 active:translate-y-0"
+                onClick={onChatWithSeller}
+              >
+                <MessageSquare className="me-2 h-4.5 w-4.5 text-slate-500 transition-colors group-hover:text-slate-700 dark:text-slate-400" />
+                {labels.chatWithSeller}
               </Button>
             ) : null}
           </div>
         </div>
+
+        {/* Integrated About Me Section */}
+        {viewModel.profile.bio?.trim() && (
+          <div className="mt-8">
+            <h2 className="text-xl font-bold text-foreground mb-3 tracking-tight">{labels.aboutMe}</h2>
+            <p className="whitespace-pre-wrap text-[0.95rem] leading-relaxed text-slate-600 dark:text-slate-300">
+              {viewModel.profile.bio.trim()}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

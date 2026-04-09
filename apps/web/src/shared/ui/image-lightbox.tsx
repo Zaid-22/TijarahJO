@@ -48,11 +48,11 @@ export function ImageLightbox({
     };
 
     document.addEventListener("keydown", handler);
-    document.body.style.overflow = "hidden";
+    document.body.classList.add("lightbox-open");
 
     return () => {
       document.removeEventListener("keydown", handler);
-      document.body.style.overflow = "";
+      document.body.classList.remove("lightbox-open");
     };
   }, [open, onClose, goNext, goPrev]);
 
@@ -112,8 +112,7 @@ export function ImageLightbox({
           <img
             src={images[currentIndex]}
             alt={`${currentIndex + 1} of ${images.length}`}
-            className="max-h-full max-w-full object-contain transition-transform duration-300 select-none cursor-pointer"
-            style={{ transform: `scale(${zoom})` }}
+            className={`max-h-full max-w-full object-contain transition-transform duration-300 select-none cursor-pointer ${zoom > 1 ? "scale-200" : "scale-100"}`}
             draggable={false}
           />
         </button>

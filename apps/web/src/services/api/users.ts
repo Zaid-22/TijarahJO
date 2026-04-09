@@ -2,81 +2,18 @@ import { toPositiveIntegerId } from "../../utils/idValidation";
 import { apiRequest, debugError, debugLog } from "./client";
 import { locationsApi } from "./locations";
 import { readString, toIntegerOrDefault, toRecord } from "./normalizers";
-import { parseUserSchema, parseUsersCollection } from "./schemas/userSchema";
+import { parseUsersCollection } from "./schemas/userSchema";
 import { resolveCityId, resolveAreaId } from "./posts/lookups";
+import {
+  type AdminUserRecord,
+  type MutableUserFields,
+  type RawUser,
+  normalizeAdminUser,
+  normalizeUserProfile,
+  resolveMutableUserFields,
+} from "./users.shared";
 
-type RawUser = {
-  Id?: unknown;
-  id?: unknown;
-  UserID?: unknown;
-  userID?: unknown;
-  Email?: unknown;
-  email?: unknown;
-  FirstName?: unknown;
-  firstName?: unknown;
-  LastName?: unknown;
-  lastName?: unknown;
-  Phone?: unknown;
-  phone?: unknown;
-  City?: unknown;
-  city?: unknown;
-  Area?: unknown;
-  area?: unknown;
-  Bio?: unknown;
-  bio?: unknown;
-  Avatar?: unknown;
-  avatar?: unknown;
-  JoinedDate?: unknown;
-  joinedDate?: unknown;
-  JoinDate?: unknown;
-  joinDate?: unknown;
-  Status?: unknown;
-  status?: unknown;
-  RoleID?: unknown;
-  roleID?: unknown;
-  IsDeleted?: unknown;
-  isDeleted?: unknown;
-  CityId?: unknown;
-  cityId?: unknown;
-  AreaId?: unknown;
-  areaId?: unknown;
-};
-
-type UserProfileRecord = {
-  id: string;
-  userId?: number;
-  email: string;
-  firstName: string;
-  lastName: string;
-  phone: string;
-  city: string;
-  area: string;
-  bio: string;
-  avatar?: string;
-  joinedAt: string;
-  status: number;
-  roleId: number;
-  isDeleted: boolean;
-  name: string;
-};
-
-export type AdminUserRecord = {
-  rawStatus: number;
-  isDeleted: boolean;
-  id: string;
-  name: string;
-  email: string;
-  role: "admin" | "user";
-  status: "active" | "banned";
-  joinedDate: string;
-  joinedAt: string;
-  firstName: string;
-  lastName: string;
-  phone: string;
-  city: string;
-  avatar?: string;
-  raw: RawUser;
-};
+export type { AdminUserRecord } from "./users.shared";
 
 type DeleteUserResponse = {
   message?: unknown;
@@ -88,88 +25,6 @@ const DEFAULT_USER_ROLE_ID = 2;
 
 function normalizeUserId(userId: string): number | undefined {
   return toPositiveIntegerId(userId);
-}
-
-function normalizeUserProfile(
-  user: RawUser,
-  fallbackUserId: string,
-): UserProfileRecord | null {
-  const parsedUser = parseUserSchema(user, fallbackUserId);
-  if (!parsedUser) {
-    return null;
-  }
-
-  return {
-    id: parsedUser.id,
-    userId: parsedUser.userId,
-    email: parsedUser.email,
-    firstName: parsedUser.firstName,
-    lastName: parsedUser.lastName,
-    phone: parsedUser.phone,
-    city: parsedUser.city,
-    area: parsedUser.area,
-    bio: parsedUser.bio,
-    avatar: parsedUser.avatar,
-    joinedAt: parsedUser.joinedAt,
-    status: parsedUser.status,
-    roleId: parsedUser.roleId,
-    isDeleted: parsedUser.isDeleted,
-    name: `${parsedUser.firstName} ${parsedUser.lastName}`.trim(),
-  };
-}
-
-function normalizeAdminUser(user: RawUser): AdminUserRecord | null {
-  const parsedUser = parseUserSchema(user);
-  if (!parsedUser) {
-    return null;
-  }
-
-  return {
-    rawStatus: parsedUser.status,
-    isDeleted: parsedUser.isDeleted,
-    id: parsedUser.id,
-    name: `${parsedUser.firstName} ${parsedUser.lastName}`.trim(),
-    email: parsedUser.email,
-    role: parsedUser.roleId === 1 ? "admin" : "user",
-    status:
-      parsedUser.status === 1 && !parsedUser.isDeleted ? "active" : "banned",
-    joinedDate: parsedUser.joinedDate,
-    joinedAt: parsedUser.joinedAt,
-    firstName: parsedUser.firstName,
-    lastName: parsedUser.lastName,
-    phone: parsedUser.phone,
-    city: parsedUser.city,
-    avatar: parsedUser.avatar,
-    raw: parsedUser.raw as RawUser,
-  };
-}
-
-type MutableUserFields = {
-  email: string;
-  firstName: string;
-  lastName: string;
-  isDeleted: boolean;
-};
-
-function resolveMutableUserFields(
-  user: UserProfileRecord | null,
-): MutableUserFields | null {
-  if (!user) {
-    return null;
-  }
-
-  const email = user.email;
-  const firstName = user.firstName;
-  if (!email || !firstName) {
-    return null;
-  }
-
-  return {
-    email,
-    firstName,
-    lastName: user.lastName || "",
-    isDeleted: user.isDeleted,
-  };
 }
 
 async function updateUserWithAdminPatch(
@@ -508,12 +363,16 @@ export const usersApi = {
    */
   updateUserRole: async (
     userId: string,
-    role: "admin" | "user",
+    roleId: number,
   ): Promise<boolean> => {
-    const nextRole = role === "admin" ? 1 : 2;
+    if (!Number.isInteger(roleId) || roleId < 1) {
+      debugError("Failed to update user role: invalid role ID", roleId);
+      return false;
+    }
+
     return updateUserWithAdminPatch(
       userId,
-      { RoleID: nextRole },
+      { RoleID: roleId },
       "update user role",
     );
   },
