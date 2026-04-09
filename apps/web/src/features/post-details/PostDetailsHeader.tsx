@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Flag, Heart, Share2 } from "lucide-react";
+import { Flag, Heart, Share2, Scale } from "lucide-react";
 import { Button } from "../../shared/ui/button";
+import { useCompare } from "../../contexts/CompareContext";
 import { SubpageHeader } from "../../shared/ui/subpage-header";
 import { hasStoredAuthSessionHint } from "../../contexts/authContextUtils";
 import type { Language, Post } from "../../types";
@@ -34,6 +35,7 @@ export function PostDetailsHeader({
   onReport,
   backToListingsLabel,
 }: PostDetailsHeaderProps) {
+  const { addToCompare, removeFromCompare, isInCompare } = useCompare();
   const [optimisticFavorited, setOptimisticFavorited] = useState(isFavorited);
 
   useEffect(() => {
@@ -57,6 +59,38 @@ export function PostDetailsHeader({
       >
         <Share2 className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
       </Button>
+
+      {!isOwnPost && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className={`h-9 w-9 rounded-lg p-0 transition-all duration-200 hover:scale-110 hover:bg-background hover:shadow-sm sm:h-10 sm:w-10 ${
+            isInCompare(post.id) ? "text-primary bg-primary/10 shadow-inner" : ""
+          }`}
+          title={
+            isInCompare(post.id)
+              ? language === "ar"
+                ? "إزالة من المقارنة"
+                : "Remove from compare"
+              : language === "ar"
+                ? "أضف إلى المقارنة"
+                : "Add to compare"
+          }
+          onClick={() => {
+            if (isInCompare(post.id)) {
+              removeFromCompare(post.id);
+            } else {
+              addToCompare(post);
+            }
+          }}
+        >
+          <Scale
+            className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform ${
+              isInCompare(post.id) ? "scale-110 text-primary" : "text-primary"
+            }`}
+          />
+        </Button>
+      )}
 
       {!isOwnPost && (
         <Button
@@ -91,7 +125,7 @@ export function PostDetailsHeader({
               return;
             }
 
-            setOptimisticFavorited((previousValue) => !previousValue);
+            setOptimisticFavorited((previousValue: boolean) => !previousValue);
             onFavoriteToggle?.(post.id);
           }}
           title={resolvedFavorited ? "Remove from favorites" : "Add to favorites"}

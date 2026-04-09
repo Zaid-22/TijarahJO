@@ -10,7 +10,14 @@ export const ComparePanel = React.memo(function ComparePanel() {
   const { selectedProducts, removeFromCompare, clearCompare, compareCount } =
     useCompare();
 
-  if (compareCount === 0 || location.pathname === APP_ROUTE_PATHS.compare) return null;
+  const isComparisonHiddenRoute = 
+    location.pathname === APP_ROUTE_PATHS.compare || 
+    location.pathname === APP_ROUTE_PATHS.login || 
+    location.pathname === APP_ROUTE_PATHS.completeProfile ||
+    location.pathname === APP_ROUTE_PATHS.forgotPassword ||
+    location.pathname === APP_ROUTE_PATHS.favorites;
+
+  if (compareCount === 0 || isComparisonHiddenRoute) return null;
 
   const canCompare = compareCount >= 2;
 
