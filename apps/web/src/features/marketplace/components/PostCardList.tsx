@@ -15,6 +15,7 @@ import {
   Loader2,
   MessageCircle,
   Phone,
+  Scale,
   Sparkles,
   Star,
 } from "lucide-react";
@@ -26,6 +27,7 @@ import { getResponsiveImageProps } from "../../../shared/lib/thumbnail";
 import { PostCardPriceBadge } from "./PostCardPriceBadge";
 import { postCardMediaClass } from "./postCardMediaClass";
 import { usePostCardState, type PostCardSharedProps } from "./usePostCardState";
+import { useCompare } from "../../../contexts/CompareContext";
 import { api } from "../../../services/api";
 import {
   resolvePhoneDialogCopy,
@@ -75,6 +77,7 @@ export const PostCardList = React.memo(function PostCardList(
     useState<PhoneLookupStatus>("idle");
   const navigate = useNavigate();
   const location = useLocation();
+  const { addToCompare, removeFromCompare, isInCompare } = useCompare();
   const {
     labels,
     resolvedLanguage,
@@ -333,6 +336,35 @@ export const PostCardList = React.memo(function PostCardList(
               />
             </button>
           ) : null}
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              const compareProduct = {
+                id: String(post.id),
+                name: post.name,
+                price: post.price ?? 0,
+                image: post.image ?? "",
+                category: post.category ?? "",
+              };
+              if (isInCompare(compareProduct.id)) {
+                removeFromCompare(compareProduct.id);
+              } else {
+                addToCompare(compareProduct);
+              }
+            }}
+            aria-label={isInCompare(String(post.id)) ? "Remove from comparison" : "Add to comparison"}
+            title={isInCompare(String(post.id)) ? "Remove from comparison" : "Add to comparison"}
+            className={
+              isInCompare(String(post.id))
+                ? "inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[16px] border border-primary/30 bg-primary/10 text-primary shadow-none transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+                : "inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[16px] border border-slate-200 bg-white text-slate-400 shadow-none transition-colors hover:bg-slate-50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:border-white/10 dark:bg-slate-950 dark:text-slate-500 dark:hover:bg-slate-900 dark:hover:text-primary"
+            }
+          >
+            <Scale className="h-5 w-5" />
+          </button>
 
           {hasPhone ? (
             <span className="sr-only" dir="ltr">

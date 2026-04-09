@@ -5,6 +5,7 @@ import { Star } from "lucide-react";
 import { ImageWithFallback } from "./ImageWithFallback";
 import { getResponsiveImageProps } from "../../../shared/lib/thumbnail";
 import { PostCardFavoriteButton } from "./PostCardFavoriteButton";
+import { CompareButton } from "./CompareButton";
 import { PostCardPriceBadge } from "./PostCardPriceBadge";
 import { postCardMediaClass } from "./postCardMediaClass";
 import { usePostCardState, type PostCardSharedProps } from "./usePostCardState";
@@ -76,12 +77,23 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
           </div>
 
           {showFavoriteButton && (
-            <PostCardFavoriteButton
-              isFavorite={isFavorite}
-              label={labels.favoriteLabel}
-              onClick={handleFavoriteClick}
-              className="pointer-events-auto z-30 h-7 w-7"
-            />
+            <div className="flex items-center gap-1.5">
+              <CompareButton
+                product={{
+                  id: String(post.id),
+                  name: post.name,
+                  price: post.price ?? 0,
+                  image: post.image ?? "",
+                  category: post.category ?? "",
+                }}
+              />
+              <PostCardFavoriteButton
+                isFavorite={isFavorite}
+                label={labels.favoriteLabel}
+                onClick={handleFavoriteClick}
+                className="pointer-events-auto z-30"
+              />
+            </div>
           )}
         </div>
       </div>

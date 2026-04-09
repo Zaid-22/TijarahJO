@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import { SearchProvider, useSearch } from "../contexts/SearchContext";
+import { CompareProvider } from "../contexts/CompareContext";
 import {
   AppSettingsProvider,
   useAppSettings,
@@ -28,6 +29,7 @@ import { useNotificationPolling } from "./hooks/useNotificationPolling";
 import type { PublicSystemStatus } from "../services/api/system";
 
 import { Header } from "../features/marketplace/components/Header";
+import { ComparePanel } from "../features/marketplace/components/ComparePanel";
 import { AppRoutes } from "./routes/AppRoutes";
 
 function lazyImportWithRetry<TModule>(
@@ -172,7 +174,9 @@ export default function App() {
     <AppSettingsProvider>
       <UserProfileProvider>
         <SearchProvider>
-          <AppContent />
+          <CompareProvider>
+            <AppContent />
+          </CompareProvider>
         </SearchProvider>
       </UserProfileProvider>
     </AppSettingsProvider>
@@ -365,6 +369,7 @@ function AppContent() {
         </Suspense>
       ) : null}
       <ScrollToTop />
+      <ComparePanel />
     </div>
   );
 }

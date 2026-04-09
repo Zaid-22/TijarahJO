@@ -7,6 +7,7 @@
 import { authApi } from "./api/auth";
 import { categoriesApi } from "./api/categories";
 import { chatApi } from "./api/chat";
+import { compareApi } from "./api/compare";
 import { favoritesApi } from "./api/favorites";
 import { locationsApi } from "./api/locations";
 import { notificationsApi } from "./api/notifications";
@@ -25,6 +26,7 @@ export const api = {
   auth: authApi,
   posts: postsApi,
   categories: categoriesApi,
+  compare: compareApi,
   roles: rolesApi,
   favorites: favoritesApi,
   sellers: sellersApi,
@@ -39,3 +41,4 @@ export const api = {
   system: systemApi,
   admin: adminApi,
 };
+

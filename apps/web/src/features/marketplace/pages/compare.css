@@ -1,0 +1,54 @@
+/* Compare page animations & custom styles */
+
+@keyframes compare-shine {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes compare-pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px -8px rgba(99, 102, 241, 0.3); }
+  50% { box-shadow: 0 0 30px -5px rgba(99, 102, 241, 0.5); }
+}
+
+@keyframes compare-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.compare-card {
+  animation: compare-fade-up 0.5s ease-out both;
+}
+
+.compare-card:nth-child(1) { animation-delay: 0.05s; }
+.compare-card:nth-child(2) { animation-delay: 0.1s; }
+.compare-card:nth-child(3) { animation-delay: 0.15s; }
+.compare-card:nth-child(4) { animation-delay: 0.2s; }
+.compare-card:nth-child(5) { animation-delay: 0.25s; }
+.compare-card:nth-child(6) { animation-delay: 0.3s; }
+
+.compare-shine-text {
+  background: linear-gradient(
+    90deg,
+    currentColor 0%,
+    rgba(99, 102, 241, 0.8) 50%,
+    currentColor 100%
+  );
+  background-size: 200% auto;
+  animation: compare-shine 3s linear infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.compare-recommendation {
+  animation: compare-pulse-glow 3s ease-in-out infinite;
+}
+
+.compare-price-bar {
+  transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}

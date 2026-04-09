@@ -57,6 +57,9 @@ Active canonical migrations (current order):
 - `V202604081300__add_postcomments_userid_index.sql`
 - `V202604081400__postcomments_depth_guard.sql`
 - `V202604081500__seed_default_hero_banners.sql`
+- `V202604081600__repair_review_comment_index.sql`
+- `V202604081700__finalize_nvarchar_caps.sql`
+- `V202604081800__repair_postcomments_depth_trigger.sql`
 
 Legacy `Tb*` migration scripts were moved under `../archive/migrations-legacy/` and are excluded from bootstrap bundles.
 

@@ -24,7 +24,7 @@ GO
 -- Recreate dependent index
 CREATE NONCLUSTERED INDEX IX_Reviews_ReviewedUserID_Active
 ON dbo.Reviews (ReviewedUserID, IsDeleted, CreatedAt DESC, ReviewID DESC)
-INCLUDE (ReviewerUserID, Rating, Comment)
+INCLUDE (ReviewerID, Rating, Comment)
 WHERE IsDeleted = 0;
 GO
 

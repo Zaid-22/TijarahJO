@@ -61,6 +61,12 @@ const CategoryRouteWrapper = lazy(
   ),
 );
 
+const ComparePage = lazy(() =>
+  import("../../../features/marketplace/pages/ComparePage").then((m) => ({
+    default: m.default,
+  })),
+);
+
 function AllPostsMarketplaceRouteScreen() {
   const {
     appProps,
@@ -155,6 +161,10 @@ export const marketplaceCatalogRoutes: MarketplaceRouteDefinition[] = [
   {
     path: APP_ROUTE_PATHS.search,
     Screen: SearchResultsMarketplaceRouteScreen,
+  },
+  {
+    path: APP_ROUTE_PATHS.compare,
+    Screen: ComparePage,
   },
   {
     path: APP_ROUTE_PATHS.category,

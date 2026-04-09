@@ -13,6 +13,7 @@ export const APP_ROUTE_PATHS = {
   chatUser: "/chat/:userId",
   posts: "/posts",
   search: "/search",
+  compare: "/compare",
   category: "/category/:categoryName",
   postDetails: "/post/:id",
   sellerProfile: "/seller/:userId",

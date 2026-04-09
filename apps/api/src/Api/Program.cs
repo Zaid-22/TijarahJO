@@ -18,7 +18,9 @@ using TijarahJo.Api.Common.Configuration;
 using TijarahJo.Api.Common.Filters;
 using TijarahJo.Api.Common.Health;
 using TijarahJo.Api.Common.Services;
+using TijarahJo.Api.Common.Utils;
 using TijarahJo.Api.Startup;
+using TijarahJo.Infrastructure.Services;
 
 Console.WriteLine("--> STARTING PROGRAM.CS");
 var builder = WebApplication.CreateBuilder(args);
@@ -44,7 +46,9 @@ builder.Services.Configure<PasswordResetOptions>(builder.Configuration.GetSectio
 builder.Services.Configure<PasswordResetEmailOptions>(builder.Configuration.GetSection("PasswordResetEmail"));
 builder.Services.Configure<TwoFactorOptions>(builder.Configuration.GetSection("TwoFactor"));
 builder.Services.Configure<EmailTwoFactorOptions>(builder.Configuration.GetSection("EmailTwoFactor"));
+builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
 builder.Services.AddHttpClient<GoogleAuthService>();
+builder.Services.AddHttpClient<IProductCompareService, GeminiProductCompareService>();
 
 // ---------------------------------------------------------------------------
 // Forwarded headers (proxy support)
@@ -218,6 +222,25 @@ if (enableRateLimiting)
             return RateLimitPartition.GetFixedWindowLimiter($"auth:{partition}", _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            });
+        });
+
+        // AI comparison rate limit — admins are exempt for testing
+        options.AddPolicy("compare", httpContext =>
+        {
+            // Exempt admin users from rate limiting
+            if (ApiControllerHelpers.IsAdminUser(httpContext.User))
+            {
+                return RateLimitPartition.GetNoLimiter("admin:compare");
+            }
+
+            string partition = RateLimitPartitionResolver.Resolve(httpContext);
+            return RateLimitPartition.GetFixedWindowLimiter($"compare:{partition}", _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
                 Window = TimeSpan.FromMinutes(1),
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit = 0
