@@ -342,17 +342,17 @@ export const PostCardList = React.memo(function PostCardList(
             onClick={(e) => {
               e.stopPropagation();
               e.preventDefault();
-              const compareProduct = {
+              const comparePost = {
                 id: String(post.id),
                 name: post.name,
                 price: post.price ?? 0,
                 image: post.image ?? "",
                 category: post.category ?? "",
               };
-              if (isInCompare(compareProduct.id)) {
-                removeFromCompare(compareProduct.id);
+              if (isInCompare(comparePost.id)) {
+                removeFromCompare(comparePost.id);
               } else {
-                addToCompare(compareProduct);
+                addToCompare(comparePost);
               }
             }}
             aria-label={isInCompare(String(post.id)) ? "Remove from comparison" : "Add to comparison"}

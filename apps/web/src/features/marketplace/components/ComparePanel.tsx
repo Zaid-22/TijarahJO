@@ -1,14 +1,19 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { X, Scale, ArrowRight, Trash2, Plus } from "lucide-react";
+import { X, Scale, ArrowRight, Trash2, Plus, ArrowLeft } from "lucide-react";
 import { useCompare } from "../../../contexts/CompareContext";
 import { APP_ROUTE_PATHS } from "../../../app/routes/routeConfig";
+import { useAppSettings } from "../../../contexts/AppSettingsContext";
+import { marketplaceTranslations } from "../translations";
 
 export const ComparePanel = React.memo(function ComparePanel() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { selectedProducts, removeFromCompare, clearCompare, compareCount } =
+   const { selectedPosts, removeFromCompare, clearCompare, compareCount } =
     useCompare();
+  const { language } = useAppSettings();
+  const t = marketplaceTranslations[language];
+  const isRtl = language === "ar";
 
   const isComparisonHiddenRoute = 
     location.pathname === APP_ROUTE_PATHS.compare || 
@@ -29,15 +34,16 @@ export const ComparePanel = React.memo(function ComparePanel() {
 
   return (
     <div
-      className="fixed bottom-0 inset-x-0 z-50 animate-in slide-in-from-bottom duration-300"
+      className="fixed bottom-0 inset-x-0 z-50 animate-in slide-in-from-bottom duration-300 pb-[env(safe-area-inset-bottom)]"
       role="complementary"
-      aria-label="Product comparison panel"
+      aria-label={t.compareItems}
+      dir={isRtl ? "rtl" : "ltr"}
     >
       <div className="mx-auto max-w-4xl px-3 pb-3 sm:px-4 sm:pb-4">
         <div
           className="relative overflow-hidden rounded-2xl border border-border
             bg-background shadow-[0_20px_50px_rgba(0,0,0,0.15)] 
-            sm:px-5 sm:py-4"
+            px-3 py-3 sm:px-5 sm:py-4"
         >
           {/* Header */}
           <div className="mb-3 flex items-center justify-between">
@@ -47,52 +53,53 @@ export const ComparePanel = React.memo(function ComparePanel() {
               </div>
               <div>
                 <p className="text-sm font-bold text-foreground">
-                  Compare {selectedProducts[0]?.category || "Items"}
+                  {selectedPosts[0]?.category 
+                    ? t.compareCategory.replace("{category}", selectedPosts[0].category)
+                    : t.compareItems}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {compareCount}/3 selected
-                  {!canCompare && " — add 1 more"}
+                  {t.selectedCount.replace("{count}", compareCount.toString())}
+                  {!canCompare && t.addMoreToCompare}
                 </p>
               </div>
             </div>
             <button
               onClick={clearCompare}
               className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:bg-destructive/10 hover:text-destructive"
-              aria-label="Clear all selections"
+              aria-label={t.clearAll}
             >
               <Trash2 className="h-3.5 w-3.5" />
-              <span>{location.pathname.includes("/ar") ? "مسح" : "Clear"}</span>
+              <span>{t.clearAll}</span>
             </button>
           </div>
 
-          {/* Product Thumbnails */}
           <div className="flex items-center gap-3">
             <div className="flex flex-1 items-center gap-2 overflow-x-auto pb-1">
-              {selectedProducts.map((product) => (
+              {selectedPosts.map((post) => (
                 <div
-                  key={product.id}
+                  key={post.id}
                   className="group relative flex shrink-0 items-center gap-2.5 rounded-xl bg-accent p-1.5 pr-3 transition-colors"
                 >
                   <div className="relative">
                     <img
-                      src={product.image}
-                      alt={product.name}
+                      src={post.image}
+                      alt={post.name}
                       className="h-10 w-10 rounded-lg border border-border bg-card object-cover shadow-sm ring-2 ring-transparent transition-all group-hover:ring-primary/30"
                     />
                     <button
-                      onClick={() => removeFromCompare(product.id)}
+                      onClick={() => removeFromCompare(post.id)}
                       className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-all hover:bg-destructive hover:text-white"
-                      title="Remove product"
+                      title={t.removeProduct}
                     >
                       <X className="h-3 w-3" />
                     </button>
                   </div>
                   <div className="hidden min-w-0 flex-1 sm:block">
                     <p className="truncate text-[11px] font-bold text-foreground">
-                      {product.name}
+                      {post.name}
                     </p>
                     <p className="text-[10px] text-muted-foreground">
-                      {product.price.toLocaleString()} JOD
+                      {post.price.toLocaleString()} JOD
                     </p>
                   </div>
                 </div>
@@ -106,7 +113,7 @@ export const ComparePanel = React.memo(function ComparePanel() {
                     <Plus className="h-4 w-4" />
                   </div>
                   <span className="hidden text-[10px] italic text-muted-foreground/40 sm:block">
-                    Empty spot
+                    {t.emptyComparisonSpot}
                   </span>
                 </div>
               ))}
@@ -123,8 +130,12 @@ export const ComparePanel = React.memo(function ComparePanel() {
                     : "cursor-not-allowed bg-muted text-muted-foreground opacity-50 shadow-none"
                 }`}
               >
-                <span>Compare</span>
-                <ArrowRight className={`h-4 w-4 transition-transform ${canCompare ? "group-hover:translate-x-1" : ""}`} />
+                <span>{t.compareItems.split(' ')[0]}</span>
+                {isRtl ? (
+                   <ArrowLeft className={`h-4 w-4 transition-transform ${canCompare ? "group-hover:-translate-x-1" : ""}`} />
+                ) : (
+                   <ArrowRight className={`h-4 w-4 transition-transform ${canCompare ? "group-hover:translate-x-1" : ""}`} />
+                )}
               </button>
             </div>
           </div>

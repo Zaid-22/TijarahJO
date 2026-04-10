@@ -62,6 +62,8 @@ export function useAuthProviderController(): AuthContextType {
     }
     // Clear favorites when logging out to prevent guest mode from inheriting them
     localStorage.removeItem("tijarahjo_favorites");
+    // Clear comparison cache when logging out
+    sessionStorage.removeItem("tijarahjo_compare_items");
     // Note: AUTH_LOGOUT_KEY is intentionally NOT cleared here —
     // it is only cleared on explicit login/signup.
   }, []);

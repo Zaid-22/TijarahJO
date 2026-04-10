@@ -113,6 +113,14 @@ FeatureFlags__RequireRedis=false
 ConnectionStrings__Redis=localhost:6379
 ```
 
+#### Gemini AI Configuration (Required for Post Comparison)
+```bash
+Gemini__ApiKey=your-gemini-secure-api-key
+# Defaults (usually fine to omit):
+# Gemini__ModelName=gemini-2.5-flash
+# Gemini__FallbackModelName=gemini-3-flash-preview
+```
+
 #### File Storage (post image uploads)
 ```bash
 # Absolute or relative path for persisted uploads

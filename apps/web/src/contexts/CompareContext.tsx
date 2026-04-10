@@ -7,33 +7,45 @@ import {
   type ReactNode,
 } from "react";
 import { toast } from "sonner";
+import { useAuth } from "./AuthContext";
+import { useAppSettings } from "./AppSettingsContext";
+import { marketplaceTranslations } from "../features/marketplace/translations";
 
 const MAX_COMPARE_ITEMS = 3;
-const STORAGE_KEY = "tijarahjo_compare_items";
+const BASE_STORAGE_KEY = "tijarahjo_compare_items";
 
-export interface CompareProduct {
+function getStorageKey(userId?: string | null) {
+  return userId ? `${BASE_STORAGE_KEY}_${userId}` : `${BASE_STORAGE_KEY}_guest`;
+}
+
+export interface ComparePost {
   id: string;
   name: string;
   price: number;
   image: string;
   category: string;
+  location?: string;
+  averageRating?: number;
+  reviewCount?: number;
+  sellerId?: string;
 }
 
 interface CompareContextValue {
-  selectedProducts: CompareProduct[];
-  addToCompare: (product: CompareProduct) => void;
-  removeFromCompare: (productId: string) => void;
+  selectedPosts: ComparePost[];
+  addToCompare: (post: ComparePost) => void;
+  removeFromCompare: (postId: string) => void;
   clearCompare: () => void;
-  isInCompare: (productId: string) => boolean;
+  isInCompare: (postId: string) => boolean;
   canAddMore: boolean;
   compareCount: number;
 }
 
 const CompareContext = createContext<CompareContextValue | null>(null);
 
-function loadFromStorage(): CompareProduct[] {
+function loadFromStorage(userId?: string | null): ComparePost[] {
   try {
-    const stored = sessionStorage.getItem(STORAGE_KEY);
+    const key = getStorageKey(userId);
+    const stored = sessionStorage.getItem(key);
     if (stored) {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
@@ -44,84 +56,98 @@ function loadFromStorage(): CompareProduct[] {
   return [];
 }
 
-function saveToStorage(products: CompareProduct[]) {
+function saveToStorage(posts: ComparePost[], userId?: string | null) {
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+    const key = getStorageKey(userId);
+    sessionStorage.setItem(key, JSON.stringify(posts));
   } catch {
     // Ignore storage errors
   }
 }
 
 export function CompareProvider({ children }: { children: ReactNode }) {
-  const [selectedProducts, setSelectedProducts] = useState<CompareProduct[]>(
-    () => loadFromStorage()
-  );
+  const { user, loading: authLoading } = useAuth();
+  const { language } = useAppSettings();
+  const t = marketplaceTranslations[language as keyof typeof marketplaceTranslations] || marketplaceTranslations.en;
+  const [selectedPosts, setSelectedPosts] = useState<ComparePost[]>([]);
+  const [initialized, setInitialized] = useState(false);
 
+  // Sync state with storage whenever the user identity stabilizes/changes
   useEffect(() => {
-    saveToStorage(selectedProducts);
-  }, [selectedProducts]);
+    if (authLoading) return;
+
+    const items = loadFromStorage(user?.id);
+    setSelectedPosts(items);
+    setInitialized(true);
+  }, [user?.id, authLoading]);
+
+  // Persist current state to storage
+  useEffect(() => {
+    if (!initialized) return;
+    saveToStorage(selectedPosts, user?.id);
+  }, [selectedPosts, user?.id, initialized]);
 
   const addToCompare = useCallback(
-    (product: CompareProduct) => {
+    (post: ComparePost) => {
       // Use the current state value directly to avoid side-effects in the updater function
-      if (selectedProducts.some((p) => p.id === product.id)) {
-        toast.info("Product already in comparison");
+      if (selectedPosts.some((p) => p.id === post.id)) {
+        toast.info(t.postAlreadyInCompare);
         return;
       }
-      if (selectedProducts.length >= MAX_COMPARE_ITEMS) {
-        toast.warning("You can compare up to 3 products at a time");
+      if (selectedPosts.length >= MAX_COMPARE_ITEMS) {
+        toast.warning(t.compareMaxLimit);
         return;
       }
       
       if (
-        selectedProducts.length > 0 &&
-        selectedProducts[0].category !== product.category
+        selectedPosts.length > 0 &&
+        selectedPosts[0].category !== post.category
       ) {
-        toast.error(`You can only compare items from the "${selectedProducts[0].category}" category`, {
+        toast.error(t.compareCategoryMismatch, {
           id: "compare-category-mismatch"
         });
         return;
       }
       
-      toast.success(`Added "${product.name}" to comparison`, {
-        id: `compare-added-${product.id}`
+      toast.success(t.compareItemAdded.replace("{name}", post.name), {
+        id: `compare-added-${post.id}`
       });
-      setSelectedProducts((prev) => [...prev, product]);
+      setSelectedPosts((prev) => [...prev, post]);
     },
-    [selectedProducts]
+    [selectedPosts, t.compareCategoryMismatch, t.compareItemAdded, t.compareMaxLimit, t.postAlreadyInCompare]
   );
 
   const removeFromCompare = useCallback(
-    (productId: string) => {
-      const product = selectedProducts.find((p) => p.id === productId);
-      if (product) {
-        toast.error(`Removed "${product.name}" from comparison`, {
-          id: `compare-removed-${productId}`,
+    (postId: string) => {
+      const post = selectedPosts.find((p) => p.id === postId);
+      if (post) {
+        toast.error(t.compareItemRemoved.replace("{name}", post.name), {
+          id: `compare-removed-${postId}`,
         });
-        setSelectedProducts((prev) => prev.filter((p) => p.id !== productId));
+        setSelectedPosts((prev) => prev.filter((p) => p.id !== postId));
       }
     },
-    [selectedProducts]
+    [selectedPosts, t.compareItemRemoved]
   );
 
   const clearCompare = useCallback(() => {
-    setSelectedProducts([]);
-    toast.info("Comparison cleared");
-  }, []);
+    setSelectedPosts([]);
+    toast.info(t.compareCleared);
+  }, [t.compareCleared]);
 
   const isInCompare = useCallback(
-    (productId: string) => selectedProducts.some((p) => p.id === productId),
-    [selectedProducts]
+    (postId: string) => selectedPosts.some((p) => p.id === postId),
+    [selectedPosts]
   );
 
   const value: CompareContextValue = {
-    selectedProducts,
+    selectedPosts,
     addToCompare,
     removeFromCompare,
     clearCompare,
     isInCompare,
-    canAddMore: selectedProducts.length < MAX_COMPARE_ITEMS,
-    compareCount: selectedProducts.length,
+    canAddMore: selectedPosts.length < MAX_COMPARE_ITEMS,
+    compareCount: selectedPosts.length,
   };
 
   return (

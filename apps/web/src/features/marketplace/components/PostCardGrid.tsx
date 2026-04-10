@@ -79,12 +79,16 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
           {showFavoriteButton && (
             <div className="flex items-center gap-1.5">
               <CompareButton
-                product={{
+                post={{
                   id: String(post.id),
                   name: post.name,
                   price: post.price ?? 0,
                   image: post.image ?? "",
                   category: post.category ?? "",
+                  location: detailLocation || post.location || "",
+                  averageRating: sellerAverageRating || undefined,
+                  reviewCount: sellerReviewCount || undefined,
+                  sellerId: post.sellerId || "",
                 }}
               />
               <PostCardFavoriteButton

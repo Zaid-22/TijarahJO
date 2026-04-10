@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Suspense, lazy, useState } from "react";
 import { Button } from "../../../shared/ui/button";
 import { Logo } from "../../../shared/ui/logo";
-import { type Language, translations } from "../../../translations";
+import { type Language } from "../../../translations";
 import { useCatalogCategories } from "../../../shared/hooks/useCatalogCategories";
 import { HeaderMobileMenuSheet } from "./header/HeaderMobileMenuSheet";
 import { HeaderSearchInput } from "./header/HeaderSearchInput";
@@ -43,6 +43,7 @@ interface HeaderProps {
   onNotificationsNavigate?: (url: string) => void;
   darkMode?: boolean;
   isAdmin?: boolean;
+  isMaintenanceMode?: boolean;
   unreadMessagesCount?: number;
 }
 
@@ -70,9 +71,10 @@ export function Header({
   onNotificationsNavigate,
   darkMode = false,
   isAdmin = false,
+  isMaintenanceMode = false,
   unreadMessagesCount = 0,
 }: HeaderProps) {
-  const t = translations[language];
+
   const isRTL = language === "ar";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { categories } = useCatalogCategories({
@@ -130,13 +132,21 @@ export function Header({
                   onCategoryClick={onCategoryClick}
                 />
                 {showLogo && (
-                  <Link 
-                    to="/" 
-                    className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary hover:opacity-90 transition-opacity"
-                    aria-label={language === "ar" ? "العودة إلى الرئيسية" : "Go to homepage"}
-                  >
-                    <Logo size="md" darkMode={darkMode} />
-                  </Link>
+                  <div className="flex items-center gap-3">
+                    <Link 
+                      to="/" 
+                      className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary hover:opacity-90 transition-opacity"
+                      aria-label={language === "ar" ? "العودة إلى الرئيسية" : "Go to homepage"}
+                    >
+                      <Logo size="md" darkMode={darkMode} />
+                    </Link>
+                    {isAdmin && isMaintenanceMode && (
+                      <div className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold text-amber-600 border border-amber-500/20 uppercase tracking-wider animate-pulse whitespace-nowrap">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                        {language === "ar" ? "وضع الصيانة" : "Maintenance Mode"}
+                      </div>
+                    )}
+                  </div>
                 )}
               </>
             )}

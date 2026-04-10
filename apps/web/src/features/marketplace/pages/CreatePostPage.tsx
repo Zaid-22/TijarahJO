@@ -1,7 +1,7 @@
 import { CreatePostDialogContent } from "../components/CreatePostDialog";
 import { SubpageHeader } from "../../../shared/ui/subpage-header";
 import { PageShell } from "../../../shared/ui/page-shell";
-import { translations } from "../../../translations";
+
 import { Language } from "../../../types";
 import { UserProfile } from "../../../types";
 import { CreatePostInput } from "../../../app/routes/appRoutesUtils";
@@ -21,7 +21,7 @@ export function CreatePostPage({
   userProfile,
   darkMode = false,
 }: CreatePostPageProps) {
-  const t = translations[language];
+
   const isRTL = language === "ar";
 
   return (

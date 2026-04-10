@@ -1,7 +1,7 @@
 import { apiRequest } from "./client";
 
-export interface CompareProductDTO {
-  ProductId: number;
+export interface ComparePostDTO {
+  PostId: number;
   Name: string;
   Price: number;
   Category: string;
@@ -11,15 +11,20 @@ export interface CompareProductDTO {
   Views: number;
 }
 
-export interface ProductFeaturesDTO {
-  ProductName: string;
+export interface PostFeaturesDTO {
+  PostName: string;
   Features: string[];
 }
 
-export interface ProductProsConsDTO {
-  ProductName: string;
+export interface PostProsConsDTO {
+  PostName: string;
   Pros: string[];
   Cons: string[];
+}
+
+export interface PostSummaryDTO {
+  PostName: string;
+  Summary: string;
 }
 
 export interface BestForDTO {
@@ -28,19 +33,26 @@ export interface BestForDTO {
   DailyUse: string;
 }
 
-export interface CompareResponse {
-  Products: CompareProductDTO[];
-  PriceComparison: string;
-  FeatureDifferences: ProductFeaturesDTO[];
-  ProsCons: ProductProsConsDTO[];
-  BestFor: BestForDTO | null;
-  FinalRecommendation: string;
+export interface FinalRecommendationDTO {
+  WinnerName: string;
+  BestFor: string;
+  Reason: string;
 }
 
-async function compareProducts(productIds: number[]): Promise<CompareResponse | null> {
+export interface CompareResponse {
+  Posts: ComparePostDTO[];
+  PriceComparison: string;
+  PostSummaries: PostSummaryDTO[];
+  FeatureDifferences: PostFeaturesDTO[];
+  ProsCons: PostProsConsDTO[];
+  BestFor: BestForDTO | null;
+  FinalRecommendation: FinalRecommendationDTO | null;
+}
+
+async function comparePosts(postIds: number[], language: string = "en"): Promise<CompareResponse | null> {
   const response = await apiRequest<CompareResponse>("/compare", {
     method: "POST",
-    body: JSON.stringify({ ProductIds: productIds }),
+    body: JSON.stringify({ PostIds: postIds, Language: language }),
     timeoutMs: 60_000, // Increase timeout to 60s for AI generation
   });
 
@@ -49,10 +61,10 @@ async function compareProducts(productIds: number[]): Promise<CompareResponse | 
   }
 
   throw new Error(
-    response.error?.message ?? "Failed to compare products"
+    response.error?.message ?? "Failed to compare posts"
   );
 }
 
 export const compareApi = {
-  compareProducts,
+  comparePosts,
 };

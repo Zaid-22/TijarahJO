@@ -185,7 +185,6 @@ export function CreatePostDialogContent({
       name: formData.title,
       price: parseFloat(formData.price),
       category: formData.category,
-      status: "PUBLISHED",
       location: formData.location,
       area: formData.area,
       description: formData.description,

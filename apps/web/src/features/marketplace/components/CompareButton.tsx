@@ -1,27 +1,27 @@
 import React from "react";
 import { Scale } from "lucide-react";
-import { useCompare, type CompareProduct } from "../../../contexts/CompareContext";
+import { useCompare, type ComparePost } from "../../../contexts/CompareContext";
 import { cn } from "../../../shared/ui/utils";
 
 interface CompareButtonProps {
-  product: CompareProduct;
+  post: ComparePost;
   className?: string;
 }
 
 export const CompareButton = React.memo(function CompareButton({
-  product,
+  post,
   className = "",
 }: CompareButtonProps) {
   const { addToCompare, removeFromCompare, isInCompare } = useCompare();
-  const isSelected = isInCompare(product.id);
+  const isSelected = isInCompare(post.id);
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     if (isSelected) {
-      removeFromCompare(product.id);
+      removeFromCompare(post.id);
     } else {
-      addToCompare(product);
+      addToCompare(post);
     }
   };
 

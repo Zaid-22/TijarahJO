@@ -21,10 +21,10 @@ namespace TijarahJo.Api.Features.Compare
     [Authorize]
     public class CompareController(
         ILogger<CompareController> logger,
-        IProductCompareService compareService) : ControllerBase
+        IPostCompareService compareService) : ControllerBase
     {
         private readonly ILogger<CompareController> _logger = logger;
-        private readonly IProductCompareService _compareService = compareService;
+        private readonly IPostCompareService _compareService = compareService;
 
         [HttpPost]
         [EnableRateLimiting("compare")]
@@ -34,41 +34,42 @@ namespace TijarahJo.Api.Features.Compare
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<CompareResponse>> CompareProducts(
+        public async Task<ActionResult<CompareResponse>> ComparePosts(
             [FromBody] CompareRequest request,
             CancellationToken cancellationToken)
         {
-            if (request?.ProductIds == null || request.ProductIds.Count < 2 || request.ProductIds.Count > 3)
+            if (request?.PostIds == null || request.PostIds.Count < 2 || request.PostIds.Count > 3)
             {
                 return Problem(
                     statusCode: StatusCodes.Status400BadRequest,
-                    detail: "Please provide 2 or 3 product IDs for comparison.");
+                    detail: "Please provide 2 or 3 post IDs for comparison.");
             }
 
-            if (request.ProductIds.Distinct().Count() < 2)
+            if (request.PostIds.Distinct().Count() < 2)
             {
                 return Problem(
                     statusCode: StatusCodes.Status400BadRequest,
-                    detail: "Product IDs must be unique.");
+                    detail: "Post IDs must be unique.");
             }
 
             if (_logger.IsEnabled(LogLevel.Information))
             {
                 _logger.LogInformation(
-                    "User {UserId} comparing products: {ProductIds}",
+                    "User {UserId} comparing posts: {PostIds}",
                     User.FindFirstValue(ClaimTypes.NameIdentifier),
-                    request.ProductIds);
+                    request.PostIds);
             }
 
-            ProductCompareResult result = await _compareService.CompareAsync(
-                request.ProductIds,
+            PostCompareResult result = await _compareService.CompareAsync(
+                request.PostIds,
+                request.Language,
                 cancellationToken);
 
             if (!result.Success)
             {
                 return result.FailureReason switch
                 {
-                    CompareFailureReason.ProductNotFound => Problem(
+                    CompareFailureReason.PostNotFound => Problem(
                         statusCode: StatusCodes.Status404NotFound,
                         detail: result.Message),
                     CompareFailureReason.InvalidRequest => Problem(
@@ -85,9 +86,9 @@ namespace TijarahJo.Api.Features.Compare
 
             var response = new CompareResponse
             {
-                Products = [.. result.Products.Select(p => new CompareProductDTO
+                Posts = [.. result.Posts.Select(p => new ComparePostDTO
                 {
-                    ProductId = p.ProductId,
+                    PostId = p.PostId,
                     Name = p.Name,
                     Price = p.Price,
                     Category = p.Category,
@@ -97,14 +98,19 @@ namespace TijarahJo.Api.Features.Compare
                     Views = p.Views
                 })],
                 PriceComparison = result.PriceComparison,
-                FeatureDifferences = [.. result.FeatureDifferences.Select(fd => new ProductFeaturesDTO
+                PostSummaries = [.. result.PostSummaries.Select(ps => new PostSummaryDTO
                 {
-                    ProductName = fd.ProductName,
+                    PostName = ps.PostName,
+                    Summary = ps.Summary
+                })],
+                FeatureDifferences = [.. result.FeatureDifferences.Select(fd => new PostFeaturesDTO
+                {
+                    PostName = fd.PostName,
                     Features = fd.Features
                 })],
-                ProsCons = [.. result.ProsCons.Select(pc => new ProductProsConsDTO
+                ProsCons = [.. result.ProsCons.Select(pc => new PostProsConsDTO
                 {
-                    ProductName = pc.ProductName,
+                    PostName = pc.PostName,
                     Pros = pc.Pros,
                     Cons = pc.Cons
                 })],
@@ -116,7 +122,14 @@ namespace TijarahJo.Api.Features.Compare
                         DailyUse = result.BestFor.DailyUse
                     }
                     : null,
-                FinalRecommendation = result.FinalRecommendation
+                FinalRecommendation = result.FinalRecommendation != null
+                    ? new FinalRecommendationDTO
+                    {
+                        WinnerName = result.FinalRecommendation.WinnerName,
+                        BestFor = result.FinalRecommendation.BestFor,
+                        Reason = result.FinalRecommendation.Reason
+                    }
+                    : null
             };
 
             return Ok(response);

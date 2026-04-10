@@ -9,11 +9,11 @@ namespace TijarahJo.Application.Abstractions.Services;
 // ---------------------------------------------------------------------------
 
 /// <summary>
-/// Structured product data prepared for AI comparison.
+/// Structured post data prepared for AI comparison.
 /// </summary>
-public sealed class ProductForComparison
+public sealed class PostForComparison
 {
-    public int ProductId { get; init; }
+    public int PostId { get; init; }
     public string Name { get; init; } = string.Empty;
     public decimal Price { get; init; }
     public string Category { get; init; } = string.Empty;
@@ -24,22 +24,31 @@ public sealed class ProductForComparison
 }
 
 /// <summary>
-/// Comparison of features for a specific product.
+/// Comparison of features for a specific post.
 /// </summary>
-public sealed class ProductFeatures
+public sealed class PostFeatures
 {
-    public string ProductName { get; init; } = string.Empty;
+    public string PostName { get; init; } = string.Empty;
     public List<string> Features { get; init; } = [];
 }
 
 /// <summary>
-/// Pros and cons for a single product in the comparison.
+/// Pros and cons for a single post in the comparison.
 /// </summary>
-public sealed class ProductProsCons
+public sealed class PostProsCons
 {
-    public string ProductName { get; init; } = string.Empty;
+    public string PostName { get; init; } = string.Empty;
     public List<string> Pros { get; init; } = [];
     public List<string> Cons { get; init; } = [];
+}
+
+/// <summary>
+/// AI-generated summary for a single post.
+/// </summary>
+public sealed class PostSummary
+{
+    public string PostName { get; init; } = string.Empty;
+    public string Summary { get; init; } = string.Empty;
 }
 
 /// <summary>
@@ -52,41 +61,53 @@ public sealed class BestForRecommendation
     public string DailyUse { get; init; } = string.Empty;
 }
 
+/// <summary>
+/// Structured final recommendation from AI.
+/// </summary>
+public sealed class FinalRecommendationResult
+{
+    public string WinnerName { get; init; } = string.Empty;
+    public string BestFor { get; init; } = string.Empty;
+    public string Reason { get; init; } = string.Empty;
+}
+
 public enum CompareFailureReason
 {
     InvalidRequest,
-    ProductNotFound,
+    PostNotFound,
     AiServiceError,
     RateLimited,
     InternalError
 }
 
 /// <summary>
-/// Full result of an AI-powered product comparison.
+/// Full result of an AI-powered post comparison.
 /// </summary>
-public sealed class ProductCompareResult
+public sealed class PostCompareResult
 {
     public bool Success { get; init; }
     public CompareFailureReason? FailureReason { get; init; }
     public string? Message { get; init; }
 
-    // Products that were compared
-    public List<ProductForComparison> Products { get; init; } = [];
+    // Posts that were compared
+    public List<PostForComparison> Posts { get; init; } = [];
 
     // AI Analysis Sections
     public string PriceComparison { get; init; } = string.Empty;
-    public List<ProductFeatures> FeatureDifferences { get; init; } = [];
-    public List<ProductProsCons> ProsCons { get; init; } = [];
+    public List<PostSummary> PostSummaries { get; init; } = [];
+    public List<PostFeatures> FeatureDifferences { get; init; } = [];
+    public List<PostProsCons> ProsCons { get; init; } = [];
     public BestForRecommendation? BestFor { get; init; }
-    public string FinalRecommendation { get; init; } = string.Empty;
+    public FinalRecommendationResult? FinalRecommendation { get; init; }
 }
 
 /// <summary>
-/// Service that compares 2–3 products using AI.
+/// Service that compares 2–3 posts using AI.
 /// </summary>
-public interface IProductCompareService
+public interface IPostCompareService
 {
-    Task<ProductCompareResult> CompareAsync(
-        List<int> productIds,
+    Task<PostCompareResult> CompareAsync(
+        List<int> postIds,
+        string language = "en",
         CancellationToken cancellationToken = default);
 }

@@ -42,6 +42,7 @@
 ### Marketplace
 - Post creation, editing, status management (active / sold / deleted), and deletion
 - Category browsing (15+ categories) and full-text search
+- AI-Powered Post Comparison (side-by-side analysis, pros & cons, language-aware)
 - Image uploads (server-side file storage)
 - Favorites system and seller profiles
 - Post view tracking

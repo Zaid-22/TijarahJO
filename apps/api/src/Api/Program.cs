@@ -48,7 +48,7 @@ builder.Services.Configure<TwoFactorOptions>(builder.Configuration.GetSection("T
 builder.Services.Configure<EmailTwoFactorOptions>(builder.Configuration.GetSection("EmailTwoFactor"));
 builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
 builder.Services.AddHttpClient<GoogleAuthService>();
-builder.Services.AddHttpClient<IProductCompareService, GeminiProductCompareService>();
+builder.Services.AddHttpClient<IPostCompareService, GeminiPostCompareService>();
 
 // ---------------------------------------------------------------------------
 // Forwarded headers (proxy support)

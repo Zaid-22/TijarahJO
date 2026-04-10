@@ -340,12 +340,13 @@ function AppContent() {
       onNotificationsNavigate={(url) => navigate(url)}
       darkMode={darkMode}
       isAdmin={userHasAdminAccess(user)}
+      isMaintenanceMode={maintenanceStatus?.maintenanceMode ?? false}
       unreadMessagesCount={unreadNotificationsCount}
       authLoading={authLoading || isProfileLoading}
     />
   ) : null;
 
-  if (maintenanceStatus?.maintenanceMode && !isAuthRoute) {
+  if (maintenanceStatus?.maintenanceMode && !isAuthRoute && !userHasAdminAccess(user)) {
     return (
       <Suspense fallback={<div className="min-h-screen bg-background" />}>
         <MaintenanceScreen

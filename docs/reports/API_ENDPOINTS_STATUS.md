@@ -110,6 +110,10 @@
 
 - `GET /api/search`
 
+### Compare (`/api/v1/compare`)
+
+- `POST /api/v1/compare` (`[Authorize]`, supports optional `Language` payload parameter)
+
 ### Sellers (`/api/sellers`)
 
 - `GET /api/sellers/{sellerId}`
