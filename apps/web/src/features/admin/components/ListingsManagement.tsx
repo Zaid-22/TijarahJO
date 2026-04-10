@@ -338,23 +338,42 @@ export function ListingsManagement() {
                           <Eye className="w-4 h-4 text-muted-foreground" />
                         </Button>
                         {post.status === 0 ? (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Block Post"
-                            aria-label={`Block Post ${post.title}`}
-                            className="text-destructive hover:bg-destructive/10"
-                            onClick={() =>
-                              setActionPost({
-                                id: post.postID,
-                                title: post.title,
-                                newStatus: 1,
-                                label: "Blocked",
-                              })
-                            }
-                          >
-                            <Ban className="w-4 h-4" />
-                          </Button>
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Suspend Post"
+                              aria-label={`Suspend Post ${post.title}`}
+                              className="text-amber-600 hover:bg-amber-100"
+                              onClick={() =>
+                                setActionPost({
+                                  id: post.postID,
+                                  title: post.title,
+                                  newStatus: 3,
+                                  label: "Suspended",
+                                })
+                              }
+                            >
+                              <Clock className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Block Post"
+                              aria-label={`Block Post ${post.title}`}
+                              className="text-destructive hover:bg-destructive/10"
+                              onClick={() =>
+                                setActionPost({
+                                  id: post.postID,
+                                  title: post.title,
+                                  newStatus: 1,
+                                  label: "Blocked",
+                                })
+                              }
+                            >
+                              <Ban className="w-4 h-4" />
+                            </Button>
+                          </>
                         ) : (
                           <Button
                             variant="ghost"
@@ -438,6 +457,14 @@ export function ListingsManagement() {
             title: detailPost?.title || "",
             newStatus: 1,
             label: "Blocked",
+          })
+        }
+        onSuspend={(id) =>
+          setActionPost({
+            id,
+            title: detailPost?.title || "",
+            newStatus: 3,
+            label: "Suspended",
           })
         }
         onApprove={(id) =>

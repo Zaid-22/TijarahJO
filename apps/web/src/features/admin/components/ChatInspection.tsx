@@ -12,6 +12,8 @@ import {
 } from "../../../services/api/admin";
 import { formatCompactDateTime } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
+import { parseChatMessageContent } from "../../chat/chatMessageContent";
+
 
 export function ChatInspection() {
   const [convResult, setConvResult] = useState<AdminConversationListResult>({
@@ -120,9 +122,36 @@ export function ChatInspection() {
                       <p className="text-xs font-semibold mb-1 opacity-70">
                         {msg.senderName}
                       </p>
-                      <p className="text-sm whitespace-pre-wrap break-words">
-                        {msg.content}
-                      </p>
+                      {(() => {
+                        const parsed = parseChatMessageContent(msg.content);
+                        if (parsed.type === "image") {
+                          return (
+                            <div className="space-y-1.5">
+                              <button
+                                type="button"
+                                className="block w-full overflow-hidden rounded-lg border border-border/30 bg-black/5 hover:opacity-90 transition-opacity"
+                                onClick={() => window.open(parsed.imageUrl, "_blank")}
+                              >
+                                <img
+                                  src={parsed.imageUrl}
+                                  alt={parsed.caption || "Chat image"}
+                                  className="h-auto max-h-64 w-full object-cover"
+                                />
+                              </button>
+                              {parsed.caption && (
+                                <p className="text-sm whitespace-pre-wrap break-words">
+                                  {parsed.caption}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        }
+                        return (
+                          <p className="text-sm whitespace-pre-wrap break-words">
+                            {parsed.text}
+                          </p>
+                        );
+                      })()}
                       <p
                         className={`text-xs mt-1 ${
                           isUser1

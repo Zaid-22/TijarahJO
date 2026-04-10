@@ -15,13 +15,15 @@ type ListingDetailModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onBlock: (postId: number) => void;
+  onSuspend: (postId: number) => void;
   onApprove: (postId: number) => void;
 };
 
 const STATUS_MAP: Record<number, { label: string; color: string }> = {
   0: { label: "Active", color: "bg-emerald-100 text-emerald-800" },
   1: { label: "Blocked", color: "bg-red-100 text-red-800" },
-  3: { label: "Sold", color: "bg-blue-100 text-blue-800" },
+  2: { label: "Sold", color: "bg-blue-100 text-blue-800" },
+  3: { label: "Suspended", color: "bg-yellow-100 text-yellow-800" },
 };
 
 export function ListingDetailModal({
@@ -29,6 +31,7 @@ export function ListingDetailModal({
   open,
   onOpenChange,
   onBlock,
+  onSuspend,
   onApprove,
 }: ListingDetailModalProps) {
   if (!post) return null;
@@ -87,6 +90,19 @@ export function ListingDetailModal({
 
           {/* Actions */}
           <div className="flex items-center gap-2 pt-2 border-t border-border">
+            {post.status === 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-amber-600 border-amber-200 hover:bg-amber-50"
+                onClick={() => {
+                  onSuspend(post.postID);
+                  onOpenChange(false);
+                }}
+              >
+                Suspend
+              </Button>
+            )}
             {post.status !== 1 && (
               <Button
                 variant="destructive"
@@ -96,10 +112,10 @@ export function ListingDetailModal({
                   onOpenChange(false);
                 }}
               >
-                <Ban className="w-3.5 h-3.5 mr-1.5" /> Block Listing
+                <Ban className="w-3.5 h-3.5 mr-1.5" /> Block
               </Button>
             )}
-            {post.status === 1 && (
+            {post.status !== 0 && (
               <Button
                 variant="default"
                 size="sm"
@@ -108,7 +124,7 @@ export function ListingDetailModal({
                   onOpenChange(false);
                 }}
               >
-                <CheckCircle className="w-3.5 h-3.5 mr-1.5" /> Approve
+                <CheckCircle className="w-3.5 h-3.5 mr-1.5" /> Activate
               </Button>
             )}
             <Button

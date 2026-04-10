@@ -15,7 +15,6 @@ import {
   Settings2,
   LogOut,
   Menu,
-  X,
   Home,
   Rows,
   AlertTriangle,
@@ -75,26 +74,26 @@ function AdminLayoutInner() {
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      {/* Sidebar - Desktop */}
+      {/* Sidebar - Desktop & Mobile */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-border bg-card transform transition-transform duration-300 ease-in-out ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } md:relative md:translate-x-0`}
       >
         <div className="flex flex-col h-full">
-          {/* Logo / Header */}
-          <div className="flex h-16 items-center justify-between border-b border-border px-4">
-            <span className="text-xl font-bold text-primary">
+          {/* Sidebar Header */}
+          <div className="flex h-16 items-center justify-between pl-4 pr-2">
+            <span className="text-xl font-bold text-primary truncate">
               TijarahJo Admin
             </span>
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden"
-              aria-label="Close admin sidebar"
+              className="md:hidden h-10 w-10 bg-transparent text-foreground hover:bg-muted rounded-xl transition-all"
+              aria-label="Close sidebar"
               onClick={() => setSidebarOpen(false)}
             >
-              <X className="w-5 h-5" />
+              <Menu className="w-6 h-6" />
             </Button>
           </div>
 
@@ -170,6 +169,7 @@ function AdminLayoutInner() {
             </span>
           </div>
         </div>
+
         {/* Session Timeout Warning */}
         {showWarning && (
           <div className="bg-amber-100 border-b border-amber-300 px-6 py-2 flex items-center justify-between">
@@ -188,18 +188,34 @@ function AdminLayoutInner() {
             </Button>
           </div>
         )}
-        {/* Mobile Header */}
-        <div className="flex h-16 items-center border-b border-border bg-card px-4 md:hidden">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Open admin sidebar"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="w-6 h-6" />
-          </Button>
-          <span className="ml-4 text-lg font-semibold">Admin Dashboard</span>
-        </div>
+
+        {/* Mobile Header - Only show trigger when sidebar is closed */}
+        {!sidebarOpen && (
+          <div className="relative flex h-16 items-center border-b border-border bg-card px-4 md:hidden">
+            {/* Left Button */}
+            <div className="flex-1 flex justify-start z-10">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 bg-transparent text-foreground hover:bg-muted rounded-xl transition-all"
+                aria-label="Open sidebar"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="w-6 h-6" />
+              </Button>
+            </div>
+            
+            {/* Centered Title */}
+            <div className="absolute inset-x-0 flex justify-center pointer-events-none">
+              <span className="text-lg font-bold tracking-tight text-foreground">
+                Admin Dashboard
+              </span>
+            </div>
+            
+            {/* Right Placeholder for symmetry */}
+            <div className="flex-1" />
+          </div>
+        )}
 
         {/* Content Scroll Area */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
