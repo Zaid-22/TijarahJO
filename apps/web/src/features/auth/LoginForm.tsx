@@ -322,7 +322,7 @@ export function LoginForm({
                 error={errors.identifier}
                 disabled={isLoading}
                 type="text"
-                autoComplete="username"
+                autoComplete={isSignUp ? "off" : "username"}
                 icon={Mail}
                 focused={focusedField === "identifier"}
                 onChange={(value) => onFieldChange("identifier", value)}
@@ -343,7 +343,7 @@ export function LoginForm({
                 error={errors.password}
                 disabled={isLoading}
                 type="password"
-                autoComplete={isSignUp ? "new-password" : "current-password"}
+                autoComplete={isSignUp ? "off" : "current-password"}
                 icon={Lock}
                 focused={focusedField === "password"}
                 showToggle
@@ -382,7 +382,7 @@ export function LoginForm({
                 error={errors.confirmPassword}
                 disabled={isLoading}
                 type="password"
-                autoComplete="new-password"
+                autoComplete="off"
                 icon={Lock}
                 focused={focusedField === "confirmPassword"}
                 showToggle

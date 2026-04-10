@@ -22,7 +22,7 @@ interface AdvancedSearchFiltersProps {
   onApply: () => void;
   onClear: () => void;
   categoryDisabled?: boolean;
-  hideCategory?: boolean;
+  showCategory?: boolean;
   showApplyButton?: boolean;
 }
 
@@ -79,7 +79,7 @@ export function AdvancedSearchFilters({
   onApply,
   onClear,
   categoryDisabled = false,
-  hideCategory = false,
+  showCategory = false,
   showApplyButton = true,
 }: AdvancedSearchFiltersProps) {
   const { categories } = useCatalogCategories();
@@ -136,7 +136,7 @@ export function AdvancedSearchFilters({
         )}
       </div>
 
-      {!hideCategory ? (
+      {showCategory ? (
         <FilterGroup label={labels.category}>
           {categoryDisabled ? (
             <div className="w-full rounded-xl border border-border bg-muted/40 px-4 py-2.5 text-sm text-foreground">

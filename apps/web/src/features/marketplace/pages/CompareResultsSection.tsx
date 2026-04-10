@@ -8,6 +8,7 @@ import type { CompareResponse, PostProsConsDTO, PostFeaturesDTO, PostSummaryDTO 
 import type { ComparePost } from "../../../contexts/CompareContext";
 import { useAppSettings } from "../../../contexts/AppSettingsContext";
 import { marketplaceTranslations } from "../translations";
+import { getLocalizedLocation } from "../../auth/loginUtils";
 
 export type BestForCategory = "Budget" | "Performance" | "DailyUse";
 
@@ -62,10 +63,10 @@ export function CompareResultsSection({
                   className="compare-summary-card relative overflow-hidden rounded-xl border border-indigo-500/15 bg-accent/5 p-4 sm:p-5"
                 >
                   <div className="absolute top-0 right-0 h-16 w-16 rounded-bl-[2rem] bg-indigo-500/5" />
-                  <h3 className="line-clamp-2 text-sm font-bold text-foreground">
+                  <h3 className="line-clamp-2 text-start text-[15px] font-bold text-foreground">
                     {winnerPost.name}
                   </h3>
-                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground line-clamp-3">
+                  <p className="mt-2.5 text-start text-sm leading-relaxed text-foreground/80 line-clamp-6">
                     {ps.Summary}
                   </p>
                 </div>
@@ -176,7 +177,7 @@ export function CompareResultsSection({
 
       {/* ── Final Recommendation — Winner Card ── */}
       {result.FinalRecommendation && (
-        <section className="compare-card compare-recommendation rounded-2xl border-2 border-primary/30 bg-card p-6 shadow-sm sm:p-8">
+        <section className="compare-card compare-recommendation rounded-2xl border-2 border-primary/30 bg-card p-5 shadow-sm sm:p-6">
           <div className="mb-5 flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/20 ring-4 ring-amber-500/10">
               <Trophy className="h-6 w-6 text-amber-600 dark:text-amber-500" />
@@ -189,18 +190,22 @@ export function CompareResultsSection({
             </div>
           </div>
           <div className="mb-5 flex items-center gap-4">
-            <span className="text-3xl font-extrabold tracking-tight text-primary sm:text-4xl">
+            <span className="text-2xl font-bold tracking-tight text-primary sm:text-3xl">
               {result.FinalRecommendation.WinnerName}
             </span>
           </div>
           <div className="mb-6 space-y-2.5">
-            <div className="flex items-center gap-2.5 text-sm sm:text-base">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">✔</span>
-              <span className="text-foreground/90"><span className="font-semibold">{t.bestForLabel}:</span> {result.FinalRecommendation.BestFor}</span>
+            <div className="flex items-start gap-2.5 text-[15px]">
+              <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">✔</span>
+              <span className="leading-relaxed text-foreground/90">
+                <span className="font-bold text-foreground">{t.bestForLabel}:</span> {result.FinalRecommendation.BestFor}
+              </span>
             </div>
-            <div className="flex items-center gap-2.5 text-sm sm:text-base">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">✔</span>
-              <span className="text-foreground/90"><span className="font-semibold">{t.whyLabel}:</span> {result.FinalRecommendation.Reason}</span>
+            <div className="flex items-start gap-2.5 text-[15px]">
+              <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">✔</span>
+              <span className="leading-relaxed text-foreground/90">
+                <span className="font-bold text-foreground">{t.whyLabel}:</span> {result.FinalRecommendation.Reason}
+              </span>
             </div>
           </div>
           {(() => {
@@ -245,7 +250,7 @@ export function CompareResultsSection({
                   {post.location && (
                     <>
                       <span className="text-muted-foreground/40">•</span>
-                      <span className="truncate text-muted-foreground">{post.location}</span>
+                      <span className="truncate text-muted-foreground">{getLocalizedLocation(post.location, language)}</span>
                     </>
                   )}
                 </div>

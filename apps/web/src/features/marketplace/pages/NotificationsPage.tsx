@@ -66,6 +66,21 @@ function getNotificationType(
   return "system";
 }
 
+function formatNotificationBody(body: string, language: Language): string {
+  if (!body) return "";
+
+  // Check if it's a chat image URL or raw image reference
+  if (
+    body.includes("api/v1/chat/download-image") ||
+    body.includes("[chat-image]") ||
+    (body.includes("/uploads/chat-") && body.includes("url="))
+  ) {
+    return language === "ar" ? "أرسل صورة" : "Sent an image";
+  }
+
+  return body;
+}
+
 function getNotificationIcon(notificationType: string) {
   const type = getNotificationType(notificationType);
   switch (type) {
@@ -264,7 +279,7 @@ export function NotificationsPage({
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
-                      {notification.body}
+                      {formatNotificationBody(notification.body, language)}
                     </p>
                   </div>
                   {!notification.isRead && (

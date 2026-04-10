@@ -48,7 +48,7 @@ export function CategoryPage({
   const { categories } = useCatalogCategories();
 
   const [appliedSearchFilters, setAppliedSearchFilters] = useState<SearchFilters>(
-    {},
+    { sortBy: "views", sortOrder: "desc" },
   );
 
   const normalizedCategoryName = categoryName.trim().toLowerCase();
@@ -152,9 +152,8 @@ export function CategoryPage({
                 onFiltersChange={setAppliedSearchFilters}
                 onApply={() => {}}
                 onClear={() => {
-                  setAppliedSearchFilters({});
+                  setAppliedSearchFilters({ sortBy: "views", sortOrder: "desc" });
                 }}
-                hideCategory
                 showApplyButton={false}
               />
             </div>

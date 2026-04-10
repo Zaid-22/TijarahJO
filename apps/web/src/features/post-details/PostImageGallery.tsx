@@ -89,38 +89,38 @@ export function PostImageGallery({ post }: PostImageGalleryProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="absolute left-2 top-1/2 z-10 h-10 w-10 -translate-y-1/2 rounded-full border-2 border-white/20 bg-black/50 p-0 shadow-xl backdrop-blur-sm transition-all hover:scale-110 hover:bg-black/70 dark:border-white/15 dark:bg-slate-950/72 dark:hover:bg-slate-900/92 sm:left-4 sm:h-11 sm:w-11"
+                  className="absolute left-2 top-1/2 z-10 h-9 w-9 -translate-y-1/2 rounded-full border border-white/10 bg-black/30 p-0 shadow-lg backdrop-blur-sm transition-all hover:scale-110 hover:bg-black/50 dark:border-white/5 dark:bg-slate-930/50 dark:hover:bg-slate-900/80 sm:left-4 sm:h-11 sm:w-11"
                   onClick={prevImage}
                   aria-label="Previous image"
                 >
-                  <ChevronLeft className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
+                  <ChevronLeft className="h-4 w-4 text-white sm:h-6 sm:w-6" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="absolute right-2 top-1/2 z-10 h-10 w-10 -translate-y-1/2 rounded-full border-2 border-white/20 bg-black/50 p-0 shadow-xl backdrop-blur-sm transition-all hover:scale-110 hover:bg-black/70 dark:border-white/15 dark:bg-slate-950/72 dark:hover:bg-slate-900/92 sm:right-4 sm:h-11 sm:w-11"
+                  className="absolute right-2 top-1/2 z-10 h-9 w-9 -translate-y-1/2 rounded-full border border-white/10 bg-black/30 p-0 shadow-lg backdrop-blur-sm transition-all hover:scale-110 hover:bg-black/50 dark:border-white/5 dark:bg-slate-930/50 dark:hover:bg-slate-900/80 sm:right-4 sm:h-11 sm:w-11"
                   onClick={nextImage}
                   aria-label="Next image"
                 >
-                  <ChevronRight className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
+                  <ChevronRight className="h-4 w-4 text-white sm:h-6 sm:w-6" />
                 </Button>
 
-                <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full bg-background/88 px-3 py-2 shadow-lg backdrop-blur-sm dark:border dark:border-white/10 dark:bg-slate-950/88">
+                <div className="absolute bottom-3 left-1/2 z-10 hidden lg:flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/20 px-2 py-1.5 backdrop-blur-md shadow-sm dark:bg-white/10">
                   {displayImages.map((_, index) => (
                     <button
                       key={`gallery-dot-${displayImages[index] || "image"}-${index}`}
                       type="button"
                       onClick={() => setSelectedImage(index)}
-                      className="rounded-full p-1 transition-all hover:scale-125 active:scale-110"
+                      className="transition-all hover:scale-110 active:scale-95"
                       aria-label={`Go to image ${index + 1}`}
                     >
                       <span
-                        className={`block h-2.5 rounded-full transition-all ${
+                        className={`block h-1 rounded-full transition-all duration-300 ${
                           index === selectedImage
-                            ? "w-8 bg-primary"
-                            : "w-2.5 bg-muted-foreground/40 dark:bg-white/30"
+                            ? "w-4 bg-white"
+                            : "w-1 bg-white/40"
                         }`}
-                      />
+                       />
                     </button>
                   ))}
                 </div>
@@ -130,7 +130,7 @@ export function PostImageGallery({ post }: PostImageGalleryProps) {
         </div>
 
         {hasMultipleImages && (
-          <div className="flex gap-2 overflow-x-auto border-t border-border bg-muted/40 p-4 dark:border-white/10 dark:bg-slate-950/60">
+          <div className="flex gap-2 overflow-x-auto border-t border-border bg-muted/30 p-3 sm:p-4 dark:border-white/10 dark:bg-slate-950/60">
             {displayImages.map((img, index) => (
               <button
                 key={`gallery-thumb-${img || "image"}-${index}`}

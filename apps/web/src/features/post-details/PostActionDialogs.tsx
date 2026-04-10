@@ -117,12 +117,12 @@ export function PostActionDialogs({
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <EditPostDialog
           post={post}
-          onSave={(updatedPost) => {
-            if (onUpdatePost) {
-              void onUpdatePost(updatedPost);
-            }
-            setShowEditDialog(false);
-          }}
+            onSave={(updatedPost) => {
+              if (onUpdatePost) {
+                void onUpdatePost(updatedPost as UpdatePostInput);
+              }
+              setShowEditDialog(false);
+            }}
           onCancel={() => setShowEditDialog(false)}
           language={language}
         />
@@ -214,53 +214,65 @@ export function PostActionDialogs({
       </AlertDialog>
 
       <Dialog open={showPhoneDialog} onOpenChange={setShowPhoneDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent 
+          hideCloseButton
+          className="sm:max-w-[400px] p-0 overflow-hidden border-none shadow-2xl"
+        >
           <DialogTitle className="sr-only">
             {language === "ar" ? "رقم الهاتف" : "Phone Number"}
           </DialogTitle>
           <DialogDescription className="sr-only">
             {language === "ar"
-              ? "انقر على الرقم للاتصال بالبائع"
-              : "Click the number to call the seller"}
+              ? "انقر على الرقم للاتصال بالبائع مباشرة"
+              : "Click the number to call the seller directly"}
           </DialogDescription>
-          <div className="flex flex-col items-center justify-center space-y-6 p-4">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center bg-primary/10">
-              <Phone className="w-8 h-8 text-primary" />
-            </div>
-            <div className="text-center space-y-2">
-              <h3 className="text-2xl font-bold">
+          <div className="flex flex-col">
+            {/* Header section with subtle background */}
+            <div className="bg-muted/30 px-6 pt-8 pb-6 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <Phone className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold tracking-tight text-foreground">
                 {language === "ar" ? "رقم الهاتف" : "Phone Number"}
               </h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="mt-1.5 text-sm text-muted-foreground">
                 {language === "ar"
-                  ? "انقر على الرقم للاتصال بالبائع"
-                  : "Click the number to call the seller"}
+                  ? "انقر على الرقم للاتصال بالبائع مباشرة"
+                  : "Click the number to call the seller directly"}
               </p>
             </div>
-            <a
-              href={`tel:${sellerPhone || post.phone || "962700000000"}`}
-              aria-label={
-                language === "ar"
-                  ? `اتصل الآن ${sellerPhone || post.phone || "+962 7 0000 0000"}`
-                  : `Call now ${sellerPhone || post.phone || "+962 7 0000 0000"}`
-              }
-              className="flex h-[4.9rem] w-full items-center justify-between rounded-[22px] bg-primary px-5 text-primary-foreground shadow-[0_22px_50px_-28px_rgba(37,99,235,0.95)] transition-all hover:bg-primary/92 hover:shadow-[0_26px_58px_-28px_rgba(37,99,235,0.98)]"
-              dir="ltr"
-            >
-              <span className="truncate pe-4 text-[1.95rem] font-extrabold tracking-[-0.03em]">
-                {sellerPhone || post.phone || "+962 7 0000 0000"}
-              </span>
-              <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-white/14">
-                <Phone className="h-6 w-6" />
-              </span>
-            </a>
-            <div className="flex flex-col sm:flex-row gap-3 w-full pt-1">
+
+            {/* Action section */}
+            <div className="px-6 py-6 pb-8">
+              <a
+                href={`tel:${sellerPhone || post.phone || "962700000000"}`}
+                aria-label={
+                  language === "ar"
+                    ? `اتصل الآن ${sellerPhone || post.phone || "+962 7 0000 0000"}`
+                    : `Call now ${sellerPhone || post.phone || "+962 7 0000 0000"}`
+                }
+                className="group relative flex h-16 w-full items-center justify-between overflow-hidden rounded-2xl bg-primary px-6 text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
+                dir="ltr"
+              >
+                <div className="flex flex-col items-start">
+                  <span className="text-xs uppercase tracking-widest opacity-70 font-semibold mb-0.5">
+                    {language === "ar" ? "رقم البائع" : "Seller Phone"}
+                  </span>
+                  <span className="text-2xl font-bold tracking-tight">
+                    {sellerPhone || post.phone || "+962 7 0000 0000"}
+                  </span>
+                </div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 transition-transform group-hover:rotate-12">
+                  <Phone className="h-5 w-5" />
+                </div>
+              </a>
+
               <Button
-                variant="outline"
-                className="flex-1"
+                variant="ghost"
+                className="mt-4 w-full text-muted-foreground hover:text-foreground font-medium"
                 onClick={() => setShowPhoneDialog(false)}
               >
-                {language === "ar" ? "إغلاق" : "Close"}
+                {language === "ar" ? "رجوع" : "Go Back"}
               </Button>
             </div>
           </div>

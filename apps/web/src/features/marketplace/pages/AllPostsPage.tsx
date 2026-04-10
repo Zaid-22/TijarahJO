@@ -1,5 +1,4 @@
 import { PostResultsGrid } from "../components/PostResultsGrid";
-import { SubpageHeader } from "../../../shared/ui/subpage-header";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { MarketplaceDiscoveryControls } from "../components/MarketplaceDiscoveryControls";
 import { MarketplaceResultsPagination } from "../components/MarketplaceResultsPagination";
@@ -36,8 +35,10 @@ export function AllPostsPage({
   onRequireAuth,
 }: AllPostsPageProps) {
   const t = translations[language];
-  const isRTL = language === "ar";
   const [searchParams, setSearchParams] = useSearchParams();
+  const sortFromUrl = searchParams.get("sortBy") as "date" | "views" | "price" | null;
+  const initialSortBy = sortFromUrl || "views";
+
   const requestedPage = Number.parseInt(searchParams.get("page") || "1", 10);
   const initialPage =
     Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
@@ -54,8 +55,14 @@ export function AllPostsPage({
     [searchParams, setSearchParams],
   );
 
-  const [appliedSearchFilters, setAppliedSearchFilters] = useState<SearchFilters>({});
-  const [draftSearchFilters, setDraftSearchFilters] = useState<SearchFilters>({});
+  const [appliedSearchFilters, setAppliedSearchFilters] = useState<SearchFilters>({
+    sortBy: initialSortBy,
+    sortOrder: "desc",
+  });
+  const [draftSearchFilters, setDraftSearchFilters] = useState<SearchFilters>({
+    sortBy: initialSortBy,
+    sortOrder: "desc",
+  });
   const [showFilters, setShowFilters] = useState(false);
 
   const filteredPosts = useMemo(() => {
@@ -142,9 +149,11 @@ export function AllPostsPage({
                 onFiltersChange={setAppliedSearchFilters}
                 onApply={() => {}}
                 onClear={() => {
-                  setDraftSearchFilters({});
-                  setAppliedSearchFilters({});
+                  const defaultSort = { sortBy: initialSortBy, sortOrder: "desc" as const };
+                  setDraftSearchFilters(defaultSort);
+                  setAppliedSearchFilters(defaultSort);
                 }}
+                showCategory
                 showApplyButton={false}
               />
             </div>
@@ -178,10 +187,12 @@ export function AllPostsPage({
                       setShowFilters(false);
                     }}
                     onClear={() => {
-                      setDraftSearchFilters({});
-                      setAppliedSearchFilters({});
+                      const defaultSort = { sortBy: initialSortBy, sortOrder: "desc" as const };
+                      setDraftSearchFilters(defaultSort);
+                      setAppliedSearchFilters(defaultSort);
                       setShowFilters(false);
                     }}
+                    showCategory
                   />
                 ),
               }}
@@ -204,8 +215,9 @@ export function AllPostsPage({
                     : "Try adjusting your filters or search terms to find what you're looking for.",
                 actionLabel: t.clearFilters,
                 onAction: () => {
-                  setDraftSearchFilters({});
-                  setAppliedSearchFilters({});
+                  const defaultSort = { sortBy: initialSortBy, sortOrder: "desc" as const };
+                  setDraftSearchFilters(defaultSort);
+                  setAppliedSearchFilters(defaultSort);
                 },
               }}
               onRequireAuth={onRequireAuth}

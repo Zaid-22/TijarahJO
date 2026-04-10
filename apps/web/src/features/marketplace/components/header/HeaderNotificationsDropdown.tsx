@@ -58,6 +58,21 @@ function timeAgo(dateString: string, language: Language): string {
   return `${diffDays}d ago`;
 }
 
+function formatNotificationBody(body: string, language: Language): string {
+  if (!body) return "";
+
+  // Check if it's a chat image URL or raw image reference
+  if (
+    body.includes("api/v1/chat/download-image") ||
+    body.includes("[chat-image]") ||
+    (body.includes("/uploads/chat-") && body.includes("url="))
+  ) {
+    return language === "ar" ? "أرسل صورة" : "Sent an image";
+  }
+
+  return body;
+}
+
 export function HeaderNotificationsDropdown({
   language,
   unreadCount,
@@ -203,7 +218,7 @@ export function HeaderNotificationsDropdown({
                       {notification.title}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                      {notification.body}
+                      {formatNotificationBody(notification.body, language)}
                     </p>
                     <p className="text-xs text-muted-foreground/70 mt-1">
                       {timeAgo(notification.createdAt, language)}

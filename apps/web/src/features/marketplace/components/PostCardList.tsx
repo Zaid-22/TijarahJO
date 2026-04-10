@@ -26,6 +26,7 @@ import { ImageWithFallback } from "./ImageWithFallback";
 import { getResponsiveImageProps } from "../../../shared/lib/thumbnail";
 import { PostCardPriceBadge } from "./PostCardPriceBadge";
 import { postCardMediaClass } from "./postCardMediaClass";
+import { getLocalizedLocation } from "../../auth/loginUtils";
 import { usePostCardState, type PostCardSharedProps } from "./usePostCardState";
 import { useCompare } from "../../../contexts/CompareContext";
 import { api } from "../../../services/api";
@@ -232,7 +233,7 @@ export const PostCardList = React.memo(function PostCardList(
               price={post.price}
               currency={labels.currency}
               locale={priceLocale}
-              className="mb-2 w-fit rounded-none border-0 bg-transparent px-0 py-0 shadow-none backdrop-blur-0 supports-[backdrop-filter]:bg-transparent"
+              className="mb-2 shrink-0 border-white/45 bg-white/94 text-slate-950 shadow-[0_10px_18px_-14px_rgba(15,23,42,0.55)] supports-[backdrop-filter]:bg-white/86 px-2 py-0.5 scale-95"
             />
 
             <h3 className="line-clamp-2 text-base font-semibold leading-[1.12] tracking-[-0.018em] text-foreground sm:text-[1.18rem]">
@@ -248,7 +249,7 @@ export const PostCardList = React.memo(function PostCardList(
 
           <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
             <div className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-slate-100/90 px-2.5 py-1 font-medium dark:bg-slate-800/80">
-              <span className="truncate">{detailLocation}</span>
+              <span className="truncate">{getLocalizedLocation(detailLocation, resolvedLanguage) || "-"}</span>
             </div>
 
             {post.condition && (
@@ -375,54 +376,69 @@ export const PostCardList = React.memo(function PostCardList(
       </div>
 
       <Dialog open={showPhoneDialog} onOpenChange={setShowPhoneDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent 
+          hideCloseButton
+          className="sm:max-w-[400px] p-0 overflow-hidden border-none shadow-2xl"
+        >
           <DialogTitle className="sr-only">{phoneDialogCopy.title}</DialogTitle>
           <DialogDescription className="sr-only">
             {phoneDialogCopy.description}
           </DialogDescription>
-          <div className="flex flex-col items-center justify-center space-y-6 p-4 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-              <Phone className="h-8 w-8 text-primary" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-2xl font-bold">{phoneDialogCopy.title}</h3>
-              <p className="text-sm text-muted-foreground">
+          <div className="flex flex-col">
+            <div className="bg-muted/30 px-6 pt-8 pb-6 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <Phone className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold tracking-tight text-foreground">
+                {phoneDialogCopy.title}
+              </h3>
+              <p className="mt-1.5 text-sm text-muted-foreground">
                 {phoneDialogCopy.description}
               </p>
             </div>
-            <div className="w-full pt-2">
+
+            <div className="px-6 py-6 pb-8">
               {phoneDialogCopy.canCall ? (
                 <a
                   href={`tel:${trimmedPhone}`}
                   aria-label={`${phoneDialogCopy.callNowLabel} ${phoneDialogCopy.displayNumber}`}
-                  className="flex h-[4.9rem] w-full items-center justify-between rounded-[22px] bg-primary px-5 text-primary-foreground shadow-[0_22px_50px_-28px_rgba(37,99,235,0.95)] transition-all hover:bg-primary/92 hover:shadow-[0_26px_58px_-28px_rgba(37,99,235,0.98)]"
+                  className="group relative flex h-16 w-full items-center justify-between overflow-hidden rounded-2xl bg-primary px-6 text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
                   dir="ltr"
                 >
-                  <span className="truncate pe-4 text-[1.95rem] font-extrabold tracking-[-0.03em]">
-                    {phoneDialogCopy.displayNumber}
-                  </span>
-                  <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-white/14">
-                    <Phone className="h-6 w-6" />
-                  </span>
+                  <div className="flex flex-col items-start text-left">
+                    <span className="text-xs uppercase tracking-widest opacity-70 font-semibold mb-0.5">
+                      {resolvedLanguage === "ar" ? "رقم الهاتف" : "Phone Number"}
+                    </span>
+                    <span className="text-2xl font-bold tracking-tight">
+                      {phoneDialogCopy.displayNumber}
+                    </span>
+                  </div>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 transition-transform group-hover:rotate-12">
+                    <Phone className="h-5 w-5" />
+                  </div>
                 </a>
               ) : (
                 <div
-                  className="flex h-[4.9rem] w-full items-center justify-between rounded-[22px] border border-slate-200 bg-slate-100 px-5 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
+                  className="flex h-16 w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-6 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
                   dir="ltr"
                 >
-                  <span className="truncate pe-4 text-[1.55rem] font-bold tracking-[-0.03em]">
-                    {phoneDialogCopy.displayNumber}
-                  </span>
-                  <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-white/70 dark:bg-slate-800">
-                    <Phone className="h-6 w-6" />
-                  </span>
+                  <div className="flex flex-col items-start text-left">
+                    <span className="text-xs uppercase tracking-widest opacity-50 font-semibold mb-0.5">
+                      {resolvedLanguage === "ar" ? "رقم الهاتف" : "Phone Number"}
+                    </span>
+                    <span className="text-xl font-bold tracking-tight">
+                      {phoneDialogCopy.displayNumber}
+                    </span>
+                  </div>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
+                    <Phone className="h-5 w-5 opacity-40" />
+                  </div>
                 </div>
               )}
-            </div>
-            <div className="flex w-full flex-col gap-3 pt-1 sm:flex-row">
+
               <Button
-                variant="outline"
-                className="flex-1"
+                variant="ghost"
+                className="mt-4 w-full text-muted-foreground hover:text-foreground font-medium"
                 onClick={() => setShowPhoneDialog(false)}
               >
                 {phoneDialogCopy.closeLabel}

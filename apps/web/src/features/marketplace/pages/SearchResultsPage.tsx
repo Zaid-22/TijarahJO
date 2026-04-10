@@ -52,9 +52,12 @@ export function SearchResultsPage({
   );
   const [showFilters, setShowFilters] = useState(false);
   const [appliedSearchFilters, setAppliedSearchFilters] = useState<SearchFilters>(
-    {},
+    { sortBy: "views", sortOrder: "desc" },
   );
-  const [draftSearchFilters, setDraftSearchFilters] = useState<SearchFilters>({});
+  const [draftSearchFilters, setDraftSearchFilters] = useState<SearchFilters>({
+    sortBy: "views",
+    sortOrder: "desc",
+  });
 
   const {
     normalizedSearchQuery,
@@ -218,8 +221,9 @@ export function SearchResultsPage({
   }, [draftSearchFilters]);
 
   const clearAllFilters = useCallback(() => {
-    setDraftSearchFilters({});
-    setAppliedSearchFilters({});
+    const defaultSort = { sortBy: "views" as const, sortOrder: "desc" as const };
+    setDraftSearchFilters(defaultSort);
+    setAppliedSearchFilters(defaultSort);
     clearSearch();
   }, [clearSearch]);
 
@@ -262,8 +266,9 @@ export function SearchResultsPage({
                 onFiltersChange={setAppliedSearchFilters}
                 onApply={() => {}}
                 onClear={() => {
-                  setDraftSearchFilters({});
-                  setAppliedSearchFilters({});
+                  const defaultSort = { sortBy: "views" as const, sortOrder: "desc" as const };
+                  setDraftSearchFilters(defaultSort);
+                  setAppliedSearchFilters(defaultSort);
                 }}
                 showApplyButton={false}
               />
@@ -301,8 +306,9 @@ export function SearchResultsPage({
                     onFiltersChange={setDraftSearchFilters}
                     onApply={applySearchFilters}
                     onClear={() => {
-                      setDraftSearchFilters({});
-                      setAppliedSearchFilters({});
+                      const defaultSort = { sortBy: "views" as const, sortOrder: "desc" as const };
+                      setDraftSearchFilters(defaultSort);
+                      setAppliedSearchFilters(defaultSort);
                       setShowFilters(false);
                     }}
                   />

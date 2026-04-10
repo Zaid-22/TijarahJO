@@ -113,15 +113,19 @@ export function HeaderMobileMenuSheet({
         <Button
           variant="ghost"
           size="sm"
-          className="p-1 text-primary hover:bg-muted sm:p-2 md:hidden"
-          aria-label={language === "ar" ? "فتح القائمة" : "Open menu"}
+          className={cn(
+            "p-1 text-primary hover:bg-muted sm:p-2 md:hidden transition-all duration-300 z-[60]",
+            isOpen && "relative bg-muted rounded-lg"
+          )}
+          aria-label={language === "ar" ? "القائمة" : "Menu"}
         >
-          <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
+          <Menu className="w-5 h-5 sm:w-6 sm:h-6 transition-all duration-300" />
         </Button>
       </SheetTrigger>
       <SheetContent
         side={isRTL ? "right" : "left"}
-        className="w-80 overflow-y-auto border-border bg-background"
+        hideCloseButton
+        className="w-80 overflow-y-auto border-border bg-background pt-16"
       >
         <SheetHeader>
           <SheetTitle>{t.menu || "Menu"}</SheetTitle>

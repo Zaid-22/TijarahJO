@@ -7,6 +7,7 @@ import { api } from "../../../services/api";
 import type { CompareResponse } from "../../../services/api/compare";
 import { CompareResultsSection, type BestForCategory } from "./CompareResultsSection";
 import { marketplaceTranslations } from "../translations";
+import { getLocalizedLocation } from "../../auth/loginUtils";
 import "./compare.css";
 
 export default function ComparePage() {
@@ -78,7 +79,7 @@ export default function ComparePage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => navigate(-1)}
+              onClick={() => navigate("/")}
               className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted/60 text-muted-foreground transition-colors"
               aria-label="Go back"
             >
@@ -140,7 +141,7 @@ export default function ComparePage() {
                   </h3>
                   {post.location && (
                     <p className="mt-0.5 truncate text-xs text-muted-foreground sm:text-[13px]">
-                      {post.location}
+                      {getLocalizedLocation(post.location, language)}
                     </p>
                   )}
                   <div className="mt-2 flex items-center justify-between">

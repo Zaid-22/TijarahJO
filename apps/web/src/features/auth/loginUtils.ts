@@ -29,6 +29,19 @@ export const JORDAN_CITIES_AR: Record<string, string> = {
   Tafilah: "الطفيلة",
   "Ma'an": "معان",
   Balqa: "البلقاء",
+ 
+};
+
+export const getLocalizedLocation = (
+  location: string | undefined | null,
+  language: Language = "en",
+): string => {
+  if (!location) return "";
+  if (language !== "ar") return location;
+
+  const parts = location.split(",").map((p) => p.trim());
+  const translatedParts = parts.map((p) => JORDAN_CITIES_AR[p] || p);
+  return translatedParts.join("، ");
 };
 
 interface ParsedAuthIdentifier {

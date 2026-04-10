@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import { useEffect, useState, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { APP_CONFIG } from "../../../constants/appConfig";
 import { useAuth } from "../../../contexts/AuthContext";
 import { persistAuthSessionHint } from "../../../contexts/authContextUtils";
@@ -11,12 +11,8 @@ import { normalizeJordanPhone } from "../../../utils/phone";
 import { getLoginCopy } from "../loginCopy";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { resolveHasAdminAccessFromPayload } from "../../../contexts/authUtils";
-import { SubpageHeader } from "../../../shared/ui/subpage-header";
+
 import { LoginForm } from "../LoginForm";
-import {
-  buildCurrentPath,
-  resolveBackPathFromLocationState,
-} from "../../../shared/lib/backNavigation";
 import {
   extractApiCode,
   extractApiMessage,
@@ -187,7 +183,6 @@ export function LoginPage({
   onSuccess,
 }: LoginPageProps) {
   const navigate = useNavigate();
-  const location = useLocation();
   const { setSession } = useAuth();
   const copy = getLoginCopy(language);
   const googleAuthEnabled = APP_CONFIG.googleAuthEnabled;
@@ -204,14 +199,6 @@ export function LoginPage({
     areaNames,
     isLoadingAreas,
   } = useLocationOptions(state.values.city, language);
-  const isRTL = language === "ar";
-  const currentPath = buildCurrentPath(location.pathname, location.search);
-  const backPath = resolveBackPathFromLocationState({
-    locationState: location.state,
-    currentPath,
-    fallbackPath: "/",
-    blockedPathnames: ["/login", "/forgot-password"],
-  });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -346,20 +333,20 @@ export function LoginPage({
   }) => {
     localStorage.removeItem("tijarahjo_logged_out");
     persistAuthSessionHint();
-    
+
     // We already have a valid session cookie from the login/signup response.
-    // Sync the context state immediately to prevent AuthRouteElements from unmounting 
+    // Sync the context state immediately to prevent AuthRouteElements from unmounting
     // us prematurely, and prevent race conditions with checkAuth.
     // Optionally fetch the extended user metadata if needed.
     let finalUser = fallbackUser;
-    
+
     try {
       const currentUserResponse = await api.auth.getCurrentUser();
       if (currentUserResponse.success && currentUserResponse.data) {
         const authenticatedUser = typeof currentUserResponse.data === "object" && currentUserResponse.data !== null
           ? (currentUserResponse.data as Record<string, unknown>)
           : null;
-          
+
         if (authenticatedUser) {
            finalUser = {
              ...fallbackUser,
@@ -645,7 +632,7 @@ export function LoginPage({
     localStorage.removeItem("tijarahjo_logged_out");
     // Ensure the frontend probes the backend for the session upon return
     localStorage.setItem("tijarahjo_has_authenticated", "true");
-    
+
     const authModeStr = state.mode === "signUp" ? "signup" : "login";
     window.location.assign(api.auth.getGoogleAuthStartUrl(authModeStr));
   };
@@ -736,8 +723,8 @@ export function LoginPage({
     if (file.size > 10 * 1024 * 1024) {
       dispatch({
         type: "SET_GENERAL_ERROR",
-        error: language === "ar" 
-          ? "حجم الملف كبير جداً. الحد الأقصى هو 10 ميغابايت." 
+        error: language === "ar"
+          ? "حجم الملف كبير جداً. الحد الأقصى هو 10 ميغابايت."
           : "File size too large. Maximum size is 10MB.",
       });
       return;
@@ -827,12 +814,6 @@ export function LoginPage({
 
   return (
     <PageShell tone="account">
-      <SubpageHeader
-        onBack={() => navigate(backPath, { replace: true })}
-        isRTL={isRTL}
-        backLabel={isRTL ? "العودة إلى السوق" : "Back to marketplace"}
-        showLogo={false}
-      />
       {formComponent}
     </PageShell>
   );

@@ -34,8 +34,8 @@ export const CompareButton = React.memo(function CompareButton({
       className={cn(
         "pointer-events-auto z-30 inline-flex items-center justify-center rounded-full transition-all duration-200",
         isSelected
-          ? "bg-primary text-white shadow-lg shadow-primary/30 scale-105"
-          : "border border-white/45 bg-[linear-gradient(180deg,rgba(255,255,255,0.24),rgba(255,255,255,0.08))] text-slate-700 shadow-md backdrop-blur-2xl supports-[backdrop-filter]:bg-[linear-gradient(180deg,rgba(255,255,255,0.18),rgba(15,23,42,0.16))] hover:border-white/55 hover:text-primary dark:border-white/22 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.10),rgba(15,23,42,0.28))] dark:text-slate-300 dark:supports-[backdrop-filter]:bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(15,23,42,0.32))] dark:hover:text-primary",
+          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30 scale-105"
+          : "border border-white/30 bg-black/20 text-white shadow-md backdrop-blur-md hover:border-white/50 hover:bg-black/30 dark:border-white/20 dark:bg-black/40 dark:text-white dark:hover:bg-black/50",
         className || "h-9 w-9"
       )}
     >

@@ -21,6 +21,7 @@ import { normalizeSellerDisplayName } from "../../../utils/sellerDisplayName";
 import { logger } from "../../../shared/lib/logger";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { Breadcrumbs } from "../../../shared/ui/breadcrumbs";
+import { getLocalizedLocation } from "../../auth/loginUtils";
 import type {
   UpdatePostInput,
   UpdatePostStatusInput,
@@ -247,17 +248,16 @@ export function PostDetailsPage({
     String(post.sellerId || ""),
   );
 
-  const displayLocationLabel = useMemo(
-    () =>
-      resolveDisplayLocationLabel({
-        postArea: post.area,
-        postLocation: post.location,
-        sellerArea,
-        sellerCity,
-        jordanLabel: t.jordan,
-      }),
-    [post.area, post.location, sellerArea, sellerCity, t.jordan],
-  );
+  const displayLocationLabel = useMemo(() => {
+    const rawLabel = resolveDisplayLocationLabel({
+      postArea: post.area,
+      postLocation: post.location,
+      sellerArea,
+      sellerCity,
+      jordanLabel: t.jordan || (language === "ar" ? "الأردن" : "Jordan"),
+    });
+    return getLocalizedLocation(rawLabel, language);
+  }, [post.area, post.location, sellerArea, sellerCity, t.jordan, language]);
 
   const clientSideActiveCount = useMemo(
     () => countActiveListings(allPosts, post),

@@ -114,6 +114,14 @@ export function AppRoutes() {
       <LoadingState minHeightClassName="min-h-[80vh]" />
     );
 
+  if (isAuthLoading || isProfileLoading) {
+    return routeFallback;
+  }
+
+  if (shouldShowProfileCompletion && location.pathname !== APP_ROUTE_PATHS.completeProfile) {
+    return <Navigate to={APP_ROUTE_PATHS.completeProfile} replace />;
+  }
+
   return (
     <Suspense fallback={routeFallback}>
       <Routes>
@@ -172,10 +180,6 @@ export function AppRoutes() {
         }}
         onContinueAsGuest={() => setShowAuthModal(false)}
       />
-      {shouldShowProfileCompletion &&
-        location.pathname !== APP_ROUTE_PATHS.completeProfile && (
-        <Navigate to={APP_ROUTE_PATHS.completeProfile} replace />
-      )}
     </Suspense>
   );
 }

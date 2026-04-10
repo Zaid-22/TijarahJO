@@ -64,7 +64,13 @@ function HomeMarketplaceRouteScreen() {
 
         navigate(APP_ROUTE_PATHS.sell);
       }}
-      setShowAllPosts={(show: boolean) => show && navigate(APP_ROUTE_PATHS.posts)}
+      setShowAllPosts={(show: boolean, sortBy?: string) => {
+        if (!show) return;
+        const path = sortBy
+          ? `${APP_ROUTE_PATHS.posts}?sortBy=${sortBy}`
+          : APP_ROUTE_PATHS.posts;
+        navigate(path);
+      }}
       setSelectedCategoryForPage={(categoryName: string) =>
         categoryName &&
         navigate(APP_ROUTE_BUILDERS.category(categoryName))

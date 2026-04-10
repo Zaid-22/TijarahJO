@@ -1,9 +1,10 @@
 import React from "react";
 import { Badge } from "../../../shared/ui/badge";
 import { CardContent } from "../../../shared/ui/card";
-import { Star } from "lucide-react";
+import { Star, MapPin } from "lucide-react";
 import { ImageWithFallback } from "./ImageWithFallback";
 import { getResponsiveImageProps } from "../../../shared/lib/thumbnail";
+import { getLocalizedLocation } from "../../auth/loginUtils";
 import { PostCardFavoriteButton } from "./PostCardFavoriteButton";
 import { CompareButton } from "./CompareButton";
 import { PostCardPriceBadge } from "./PostCardPriceBadge";
@@ -25,6 +26,7 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
     showFavoriteButton,
     handleFavoriteClick,
     openPost,
+    resolvedLanguage,
   } = usePostCardState(props);
 
   const sellerAverageRating =
@@ -107,9 +109,12 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
           <h3 className="truncate text-sm font-semibold leading-tight text-foreground sm:text-[15px]">
             {post.name}
           </h3>
-          <p className="truncate text-[10px] font-medium text-muted-foreground sm:text-[11px]">
-            {detailLocation || post.location || "-"}
-          </p>
+          <div className="flex items-center gap-1.5 min-w-0" title={detailLocation || post.location || ""}>
+            <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/70" />
+            <span className="truncate text-[10px] font-medium text-muted-foreground sm:text-[11px]">
+              {getLocalizedLocation(detailLocation || post.location, resolvedLanguage) || "-"}
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center justify-between gap-2">

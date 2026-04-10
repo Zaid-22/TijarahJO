@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-import { Loader2, MapPin, Phone, User } from "lucide-react";
+import { Loader2, MapPin, Phone, User, ArrowLeft } from "lucide-react";
 import { api } from "../../../services/api";
+import { useAuth } from "../../../contexts/AuthContext";
 import { useAppSettings } from "../../../contexts/AppSettingsContext";
 import { useUserProfileContext } from "../../../contexts/UserProfileContext";
 import { useLocationOptions } from "../../../shared/hooks/useLocationOptions";
@@ -27,6 +28,7 @@ export function CompleteProfilePage() {
   const location = useLocation();
   const { language } = useAppSettings();
   const { userProfile, refreshProfile } = useUserProfileContext();
+  const { logout } = useAuth();
   const isRTL = language === "ar";
 
   const initialAvatar = isPlaceholderAvatar(userProfile?.avatar) ? "" : (userProfile?.avatar || "");
@@ -189,6 +191,11 @@ export function CompleteProfilePage() {
     }
   };
 
+  const handleBack = async () => {
+    await logout();
+    navigate("/login", { replace: true });
+  };
+
   const title = isRTL ? "أكمل ملفك الشخصي" : "Complete Your Profile";
   const subtitle = isRTL
     ? "الرجاء إكمال المعلومات التالية للمتابعة استخدام المنصة."
@@ -221,6 +228,19 @@ export function CompleteProfilePage() {
 
   return (
     <PageShell tone="account">
+      {/* Back Button */}
+      <div className={`absolute top-4 ${isRTL ? 'right-4' : 'left-4'} sm:top-8 sm:${isRTL ? 'right-8' : 'left-8'} z-50`}>
+        <Button
+          variant="ghost"
+          onClick={handleBack}
+          className="group flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+          aria-label={isRTL ? "العودة" : "Back"}
+        >
+          <ArrowLeft className={`h-5 w-5 transition-transform ${isRTL ? "rotate-180 group-hover:translate-x-1" : "group-hover:-translate-x-1"}`} />
+          <span className="text-sm font-medium">{isRTL ? "العودة" : "Back"}</span>
+        </Button>
+      </div>
+
       <div className="min-h-screen flex items-center justify-center px-4 py-8 sm:py-12">
         <div
           className="w-full max-w-lg animate-fade-in-up"

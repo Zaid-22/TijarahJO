@@ -52,10 +52,10 @@ export function PostSummaryCard({
             </h1>
 
             <div className={cn("flex items-baseline gap-2", isRTL ? "sm:justify-start" : "sm:justify-start")}>
-              <span className="text-3xl font-semibold text-foreground">
+              <span className="text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
                 {post.price.toLocaleString()}
               </span>
-              <span className={cn("text-lg text-muted-foreground", "ms-1")}>JOD</span>
+              <span className={cn("text-lg font-semibold text-slate-500 dark:text-slate-400", "ms-1")}>JOD</span>
             </div>
           </div>
 

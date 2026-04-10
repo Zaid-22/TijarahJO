@@ -25,7 +25,7 @@ type HomeDeferredSectionsProps = {
   setSearchQuery: (query: string) => void;
   setShowLoginPrompt: (show: boolean) => void;
   setShowCreatePost: (show: boolean) => void;
-  setShowAllPosts: (show: boolean) => void;
+  setShowAllPosts: (show: boolean, sortBy?: string) => void;
   setSelectedCategoryForPage: (category: string) => void;
   onPostClick: (id: string, origin?: string) => void;
   favoriteIds: string[];
@@ -83,7 +83,8 @@ export function HomeDeferredSections({
 
   const featuredPosts = useMemo(
     () => [...safeDisplayedPosts]
-      .filter((p) => p.status !== "SOLD")
+      .filter(isActivePost)
+      .sort((a, b) => (b.views || 0) - (a.views || 0))
       .slice(0, 10),
     [safeDisplayedPosts],
   );
@@ -168,7 +169,7 @@ export function HomeDeferredSections({
           favoriteIds={safeFavoriteIds}
           onFavoriteToggle={toggleFavorite}
           onPostClick={(id) => onPostClick(id, "featured")}
-          onViewAll={() => setShowAllPosts(true)}
+          onViewAll={() => setShowAllPosts(true, "views")}
           viewAllLabel={language === "ar" ? "عرض الكل" : "View All"}
           onRequireAuth={() => setShowLoginPrompt(true)}
         />
@@ -191,7 +192,7 @@ export function HomeDeferredSections({
           favoriteIds={safeFavoriteIds}
           onFavoriteToggle={toggleFavorite}
           onPostClick={(id) => onPostClick(id, "recent")}
-          onViewAll={() => setShowAllPosts(true)}
+          onViewAll={() => setShowAllPosts(true, "date")}
           viewAllLabel={language === "ar" ? "عرض الكل" : "View All"}
           onRequireAuth={() => setShowLoginPrompt(true)}
         />
