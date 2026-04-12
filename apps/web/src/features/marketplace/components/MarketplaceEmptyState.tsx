@@ -23,7 +23,7 @@ export function MarketplaceEmptyState({
     <div
       className={cn(
         "col-span-full flex flex-col items-center justify-center p-8 sm:p-12 text-center",
-        "w-full min-h-[40vh]",
+        "w-full min-h-96",
         className,
       )}
     >

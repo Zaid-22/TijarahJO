@@ -96,7 +96,7 @@ export function AppRoutes() {
   const redirectToLogin = () => navigate("/login");
   const requireAuth = (element: ReactElement) =>
     isAuthLoading ? (
-      <LoadingState minHeightClassName="min-h-[40vh]" />
+      <LoadingState minHeightClassName="min-h-96" />
     ) : isAuthenticated ? (
       element
     ) : (

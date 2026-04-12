@@ -6,6 +6,8 @@ interface MarketplaceProgressBarProps {
 }
 
 export function MarketplaceProgressBar({ progress, language }: MarketplaceProgressBarProps) {
+  const progressStyle = { width: `${progress}%` };
+
   return (
     <div className="mb-6 space-y-2">
       <div className="flex items-center justify-between text-sm font-medium">
@@ -19,7 +21,7 @@ export function MarketplaceProgressBar({ progress, language }: MarketplaceProgre
       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
         <div
           className="h-full bg-primary transition-all duration-500 ease-out"
-          style={{ width: `${progress}%` }}
+          style={progressStyle}
         />
       </div>
       {progress === 100 && (

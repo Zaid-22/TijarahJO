@@ -10,16 +10,10 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/users")]
-public class AdminUsersController : ControllerBase
+public class AdminUsersController(IAdminQueryHandler adminQueries, IAdminDataAccess adminData) : ControllerBase
 {
-    private readonly IAdminQueryHandler _adminQueries;
-    private readonly IAdminDataAccess _adminData;
-
-    public AdminUsersController(IAdminQueryHandler adminQueries, IAdminDataAccess adminData)
-    {
-        _adminQueries = adminQueries;
-        _adminData = adminData;
-    }
+    private readonly IAdminQueryHandler _adminQueries = adminQueries;
+    private readonly IAdminDataAccess _adminData = adminData;
 
     [HttpGet("{id}/details")]
     [Authorize(Policy = AuthorizationPolicies.UsersView)]
@@ -75,10 +69,40 @@ public class AdminUsersController : ControllerBase
 
         return Ok(new { Message = $"{affectedCount} users updated to {request.Status}.", AffectedCount = affectedCount });
     }
+
+    /// <summary>Suspend a user for a set duration (hours) or permanently (null).</summary>
+    [HttpPost("{id}/suspend")]
+    [Authorize(Policy = AuthorizationPolicies.UsersManage)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> SuspendUser(int id, [FromBody] SuspendUserRequest request)
+    {
+        int adminUserId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+        DateTime? suspendedUntil = request.DurationHours.HasValue
+            ? DateTime.UtcNow.AddHours(request.DurationHours.Value)
+            : null; // permanent ban
+
+        bool success = await _adminData.SuspendUserAsync(id, suspendedUntil, adminUserId, HttpContext.RequestAborted);
+        if (!success)
+            return NotFound(new { Message = "User not found." });
+
+        string message = suspendedUntil.HasValue
+            ? $"User suspended until {suspendedUntil.Value:yyyy-MM-dd HH:mm} UTC."
+            : "User permanently banned.";
+
+        return Ok(new { Message = message, SuspendedUntil = suspendedUntil });
+    }
 }
 
 public sealed class BulkUserStatusRequest
 {
-    public List<string> UserIds { get; set; } = new();
+    public List<string> UserIds { get; set; } = [];
     public string? Status { get; set; }
+}
+
+public sealed class SuspendUserRequest
+{
+    /// <summary>Hours to suspend. Null = permanent ban.</summary>
+    public double? DurationHours { get; set; }
 }

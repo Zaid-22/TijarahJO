@@ -139,7 +139,7 @@ export function formatChatPreviewText(
     return parsed.text;
   }
 
-  const photoLabel = language === "ar" ? "صورة" : "Photo";
+  const photoLabel = language === "ar" ? "أرسل صورة" : "Sent an image";
   if (parsed.caption) {
     return `${photoLabel}: ${parsed.caption}`;
   }

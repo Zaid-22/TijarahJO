@@ -298,7 +298,8 @@ public sealed class UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<
             entity.IsDeleted,
             entity.TwoFactorEnabled,
             entity.TwoFactorSecret,
-            entity.TwoFactorPendingSecret
+            entity.TwoFactorPendingSecret,
+            entity.SuspendedUntil
         );
     }
 

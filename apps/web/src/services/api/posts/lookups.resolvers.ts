@@ -449,23 +449,42 @@ export async function enrichPostsWithCategoryAndSeller(
       typeof (post?.City ?? post?.city) === "string"
         ? String(post?.City ?? post?.city).trim()
         : "";
-    if (!cityName && cityId !== null && cityId !== undefined) {
-      cityName = resolvedCities[String(cityId)]?.en || "";
+    let cityNameAr =
+      typeof (post?.LocationAr ?? post?.locationAr) === "string"
+        ? String(post?.LocationAr ?? post?.locationAr).trim()
+        : "";
+    if (cityId !== null && cityId !== undefined) {
+      const cityEntry = resolvedCities[String(cityId)];
+      if (!cityName && cityEntry) {
+        cityName = cityEntry.en || "";
+      }
+      if (!cityNameAr && cityEntry) {
+        cityNameAr = cityEntry.ar || "";
+      }
     }
 
     let areaName =
       typeof (post?.Area ?? post?.area) === "string"
         ? String(post?.Area ?? post?.area).trim()
         : "";
+    let areaNameAr =
+      typeof (post?.AreaAr ?? post?.areaAr) === "string"
+        ? String(post?.AreaAr ?? post?.areaAr).trim()
+        : "";
     if (
-      !areaName &&
       areaId !== null &&
       areaId !== undefined &&
       cityId !== null &&
       cityId !== undefined
     ) {
       const cityAreas = areasCacheByCityId[String(cityId)] || {};
-      areaName = cityAreas[String(areaId)]?.en || "";
+      const areaEntry = cityAreas[String(areaId)];
+      if (!areaName && areaEntry) {
+        areaName = areaEntry.en || "";
+      }
+      if (!areaNameAr && areaEntry) {
+        areaNameAr = areaEntry.ar || "";
+      }
     }
 
     return {
@@ -473,7 +492,9 @@ export async function enrichPostsWithCategoryAndSeller(
       Category: categoryName,
       Seller: sellerName,
       City: cityName || post?.City,
+      LocationAr: cityNameAr || post?.LocationAr || post?.locationAr,
       Area: areaName || post?.Area,
+      AreaAr: areaNameAr || post?.AreaAr || post?.areaAr,
       AverageRating:
         sellerRating && sellerRating.reviewCount > 0
           ? sellerRating.averageRating

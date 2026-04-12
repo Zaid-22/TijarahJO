@@ -1,5 +1,6 @@
 import { apiRequest, debugError } from "./client";
 import { toCamelCaseKeys } from "./admin";
+import { APP_CONFIG } from "../../constants/appConfig";
 
 export type BannerModel = {
   bannerID: number;
@@ -26,6 +27,26 @@ export type HeroBannerListResult = {
   banners: BannerModel[];
 };
 
+export function normalizeBannerImageUrl(imageUrl: string): string {
+  const trimmed = imageUrl.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  if (trimmed.startsWith("/uploads/")) {
+    return `${APP_CONFIG.backendHostUrl}${trimmed}`;
+  }
+
+  if (trimmed.startsWith("uploads/")) {
+    const backendHost = APP_CONFIG.backendHostUrl.endsWith("/")
+      ? APP_CONFIG.backendHostUrl.slice(0, -1)
+      : APP_CONFIG.backendHostUrl;
+    return `${backendHost}/${trimmed}`;
+  }
+
+  return trimmed;
+}
+
 export const bannersApi = {
   /**
    * Fetch all active hero banners for the homepage
@@ -39,7 +60,10 @@ export const bannersApi = {
       if (response.success && response.data) {
         const data = toCamelCaseKeys<HeroBannerListResult>(response.data);
         if (data.success && data.banners) {
-          return data.banners;
+          return data.banners.map((banner) => ({
+            ...banner,
+            imageUrl: normalizeBannerImageUrl(banner.imageUrl),
+          }));
         }
       }
       return [];

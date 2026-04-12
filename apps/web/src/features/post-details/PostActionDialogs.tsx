@@ -251,7 +251,7 @@ export function PostActionDialogs({
                     ? `اتصل الآن ${sellerPhone || post.phone || "+962 7 0000 0000"}`
                     : `Call now ${sellerPhone || post.phone || "+962 7 0000 0000"}`
                 }
-                className="group relative flex h-16 w-full items-center justify-between overflow-hidden rounded-2xl bg-primary px-6 text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
+                className="group relative flex h-16 w-full items-center justify-between overflow-hidden rounded-2xl bg-primary px-6 text-primary-foreground transition-all hover:bg-primary/90 active:scale-95"
                 dir="ltr"
               >
                 <div className="flex flex-col items-start">

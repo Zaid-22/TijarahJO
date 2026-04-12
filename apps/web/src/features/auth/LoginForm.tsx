@@ -15,7 +15,7 @@ import { AuthPhoneField } from "./AuthPhoneField";
 import { AuthSelectField } from "./AuthSelectField";
 import { AuthGoogleButton } from "./AuthGoogleButton";
 import { AuthAvatarUpload } from "./AuthAvatarUpload";
-import { JORDAN_CITIES, JORDAN_CITIES_AR } from "./loginUtils";
+
 import { AuthPageLayout } from "./components/AuthPageLayout";
 import type { Language } from "../../types";
 import {
@@ -34,6 +34,8 @@ interface LoginFormProps {
   canSubmit: boolean;
   values: LoginFormValues;
   errors: LoginFormErrors;
+  cityOptions: Array<{ value: string; label: string }>;
+  isLoadingCities?: boolean; // reserved for future skeleton/loading state
   areaOptions: Array<{ value: string; label: string }>;
   isAreaDisabled: boolean;
   copy: LoginCopy;
@@ -68,6 +70,8 @@ export function LoginForm({
   canSubmit,
   values,
   errors,
+  cityOptions,
+  isLoadingCities: _isLoadingCities,
   areaOptions,
   isAreaDisabled,
   copy,
@@ -94,10 +98,7 @@ export function LoginForm({
 }: LoginFormProps) {
   const isRTL = language === "ar";
 
-  const cityOptions = JORDAN_CITIES.map((city) => ({
-    value: city,
-    label: isRTL ? JORDAN_CITIES_AR[city] || city : city,
-  }));
+
 
   const canInteract = canSubmit && !isLoading;
   const submitButtonClassName = canInteract

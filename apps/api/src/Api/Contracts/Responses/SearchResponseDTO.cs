@@ -28,8 +28,14 @@ public sealed class SearchPostResponseDTO
     [JsonPropertyName("location")]
     public required string Location { get; init; }
 
+    [JsonPropertyName("locationAr")]
+    public string LocationAr { get; init; } = string.Empty;
+
     [JsonPropertyName("area")]
     public string? Area { get; init; }
+
+    [JsonPropertyName("areaAr")]
+    public string? AreaAr { get; init; }
 
     [JsonPropertyName("seller")]
     public required string Seller { get; init; }

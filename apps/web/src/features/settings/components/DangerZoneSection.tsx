@@ -1,4 +1,4 @@
-import { Trash2, LogOut } from "lucide-react";
+import { AlertTriangle, LogOut } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
 import {
   Card,
@@ -21,62 +21,71 @@ export function DangerZoneSection({
   onDeleteAccount,
 }: DangerZoneSectionProps) {
   return (
-    <Card className="border-destructive/30">
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/15">
-            <Trash2 className="w-5 h-5 text-destructive" />
+    <Card className="border-destructive/20 shadow-sm overflow-hidden bg-card/50">
+      <CardHeader className="pb-4 border-b border-destructive/10 bg-destructive/[0.02]">
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive shadow-inner">
+            <AlertTriangle className="w-6 h-6" />
           </div>
           <div>
-            <CardTitle className="text-destructive">
+            <CardTitle className="text-lg font-bold text-destructive tracking-tight">
               {text.dangerZone}
             </CardTitle>
-            <CardDescription>{text.dangerDesc}</CardDescription>
+            <CardDescription className="text-sm font-medium opacity-70">
+              {text.dangerDesc}
+            </CardDescription>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <LogOut className="w-4 h-4 text-destructive" />
-                <p className="font-medium text-destructive">{text.logout}</p>
-              </div>
-              <p className="text-sm text-muted-foreground">{text.logoutDesc}</p>
+      <CardContent className="p-0 divide-y divide-destructive/10">
+        {/* Logout Item */}
+        <div className="flex items-center justify-between p-5 transition-colors duration-200">
+          <div className="flex items-center gap-4 max-w-[70%]">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted/50 text-muted-foreground transition-colors">
+              <LogOut className="w-5 h-5" />
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-destructive/40 text-destructive hover:bg-destructive/15"
-              onClick={onLogout}
-              aria-label={text.logout}
-            >
-              <LogOut className="w-4 h-4" />
-            </Button>
+            <div className="min-w-0">
+              <p className="font-semibold text-foreground transition-colors truncate">
+                {text.logout}
+              </p>
+              <p className="text-xs text-muted-foreground line-clamp-1">
+                {text.logoutDesc}
+              </p>
+            </div>
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="rounded-xl px-4 font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive border border-transparent hover:border-destructive/20 transition-all active:scale-95"
+            onClick={onLogout}
+          >
+            {text.logout}
+          </Button>
         </div>
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <Trash2 className="w-4 h-4 text-destructive" />
-                <p className="font-medium text-destructive">{text.deleteAccount}</p>
-              </div>
-              <p className="text-sm text-muted-foreground">
+
+        {/* Delete Account Item */}
+        <div className="flex items-center justify-between p-5 transition-colors duration-200">
+          <div className="flex items-center gap-4 max-w-[70%]">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted/50 text-muted-foreground transition-colors">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-foreground transition-colors truncate">
+                {text.deleteAccount}
+              </p>
+              <p className="text-xs text-muted-foreground line-clamp-1">
                 {text.deleteAccountDesc}
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-destructive/40 text-destructive hover:bg-destructive/15"
-              aria-label={text.deleteAccount}
-              onClick={onDeleteAccount}
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-xl px-4 font-semibold border-destructive/20 text-destructive hover:bg-destructive hover:text-white dark:hover:bg-destructive/90 transition-all active:scale-95 shadow-sm"
+            onClick={onDeleteAccount}
+          >
+            {text.deleteAccount}
+          </Button>
         </div>
       </CardContent>
     </Card>

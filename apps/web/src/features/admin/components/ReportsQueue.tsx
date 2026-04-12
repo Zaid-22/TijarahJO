@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Flag,
   AlertTriangle,
@@ -6,6 +6,7 @@ import {
   XCircle,
   Eye,
   Clock,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../../../shared/ui/button";
@@ -17,24 +18,17 @@ import {
   CardTitle,
 } from "../../../shared/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "../../../shared/ui/dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "../../../shared/ui/select";
-import { Textarea } from "../../../shared/ui/textarea";
 import { api } from "../../../services/api";
 import { AdminReportItem } from "../../../services/api/admin";
 import { formatCompactDateTime } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
+import { ReportActionDialog } from "./ReportActionDialog";
 
 const STATUS_LABELS: Record<number, string> = {
   0: "Pending",
@@ -64,6 +58,8 @@ const REPORT_TYPE_COLORS: Record<string, string> = {
   CHAT: "bg-emerald-100 text-emerald-800",
 };
 
+
+
 function formatReportTargetLabel(report: AdminReportItem): string {
   const normalizedLabel = report.targetLabel?.trim();
   if (normalizedLabel) {
@@ -91,6 +87,8 @@ export function ReportsQueue() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Action dialog
   const [selectedReport, setSelectedReport] = useState<AdminReportItem | null>(
@@ -100,9 +98,13 @@ export function ReportsQueue() {
   const [newStatus, setNewStatus] = useState(0);
   const [resolutionNotes, setResolutionNotes] = useState("");
 
+  // Block user state
+  const [selectedSuspensionHours, setSelectedSuspensionHours] = useState<string>("24");
+  const [isSuspending, setIsSuspending] = useState(false);
+
   const pageSize = 25;
 
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     try {
       setIsLoading(true);
       const statusParam =
@@ -111,6 +113,7 @@ export function ReportsQueue() {
       const result = await api.admin.getReports(
         statusParam,
         typeParam,
+        searchQuery || undefined,
         page,
         pageSize,
       );
@@ -122,17 +125,26 @@ export function ReportsQueue() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [statusFilter, typeFilter, searchQuery, page]);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   useEffect(() => {
     void fetchReports();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, statusFilter, typeFilter]);
+  }, [fetchReports]);
 
   const openActionDialog = (report: AdminReportItem) => {
     setSelectedReport(report);
     setNewStatus(report.status);
     setResolutionNotes(report.resolutionNotes ?? "");
+    setSelectedSuspensionHours("24");
     setActionDialogOpen(true);
   };
 
@@ -150,6 +162,44 @@ export function ReportsQueue() {
     } catch (error) {
       logger.warn("[ReportsQueue] Update failed", error);
       toast.error("Failed to update report");
+    }
+  };
+
+  const handleBlockUser = async () => {
+    if (!selectedReport || selectedReport.reportType !== "USER") return;
+
+    const durationHours =
+      selectedSuspensionHours === "null"
+        ? null
+        : Number(selectedSuspensionHours);
+
+    setIsSuspending(true);
+    try {
+      const result = await api.admin.suspendUser(
+        selectedReport.targetID,
+        durationHours,
+      );
+
+      if (result.success) {
+        toast.success(result.message ?? "User blocked successfully");
+
+        // Auto-resolve the report
+        await api.admin.updateReportStatus(
+          selectedReport.reportID,
+          2, // Resolved
+          `User ${durationHours === null ? "permanently banned" : `suspended for ${durationHours}h`} via report #${selectedReport.reportID}`,
+        );
+
+        setActionDialogOpen(false);
+        await fetchReports();
+      } else {
+        toast.error(result.message ?? "Failed to block user");
+      }
+    } catch (error) {
+      logger.warn("[ReportsQueue] Block user failed", error);
+      toast.error("Failed to block user");
+    } finally {
+      setIsSuspending(false);
     }
   };
 
@@ -173,8 +223,18 @@ export function ReportsQueue() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3">
+      {/* Search + Filters */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="relative flex-1 min-w-[200px] max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search by name or email…"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
         <div className="w-40">
           <Select
             name="reportStatusFilter"
@@ -335,102 +395,20 @@ export function ReportsQueue() {
         </div>
       )}
 
-      {/* Review/Action Dialog */}
-      <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Review Report #{selectedReport?.reportID}</DialogTitle>
-          </DialogHeader>
-          {selectedReport && (
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Type:</span>{" "}
-                  <span className="font-medium">
-                    {selectedReport.reportType}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Target:</span>{" "}
-                  <span className="font-medium">
-                    {formatReportTargetLabel(selectedReport)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Reason:</span>{" "}
-                  <span className="font-medium">{selectedReport.reason}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Reporter:</span>{" "}
-                  <span className="font-medium">
-                    {selectedReport.reporterName}
-                  </span>
-                </div>
-              </div>
-              {selectedReport.description && (
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Description:</span>
-                  <p className="mt-1 border-l-2 border-border pl-3">
-                    {selectedReport.description}
-                  </p>
-                </div>
-              )}
-              <div>
-                <div
-                  id="report-status-update-label"
-                  className="text-sm font-medium text-foreground mb-1.5"
-                >
-                  Update Status
-                </div>
-                <Select
-                  name="reportStatusUpdate"
-                  value={String(newStatus)}
-                  onValueChange={(v) => setNewStatus(Number(v))}
-                >
-                  <SelectTrigger
-                    id="report-status-update"
-                    className="mt-1.5"
-                    aria-labelledby="report-status-update-label"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">Pending</SelectItem>
-                    <SelectItem value="1">Under Review</SelectItem>
-                    <SelectItem value="2">Resolved</SelectItem>
-                    <SelectItem value="3">Dismissed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label
-                  htmlFor="resolution-notes"
-                  className="text-sm font-medium text-foreground"
-                >
-                  Resolution Notes
-                </label>
-                <Textarea
-                  id="resolution-notes"
-                  className="mt-1.5"
-                  placeholder="Add notes about how this was resolved..."
-                  value={resolutionNotes}
-                  onChange={(e) => setResolutionNotes(e.target.value)}
-                  rows={3}
-                />
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setActionDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateStatus}>Save Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ReportActionDialog
+        open={actionDialogOpen}
+        onOpenChange={setActionDialogOpen}
+        report={selectedReport}
+        newStatus={newStatus}
+        onStatusChange={setNewStatus}
+        resolutionNotes={resolutionNotes}
+        onResolutionNotesChange={setResolutionNotes}
+        onSave={handleUpdateStatus}
+        isSuspending={isSuspending}
+        selectedSuspensionHours={selectedSuspensionHours}
+        onSuspensionHoursChange={setSelectedSuspensionHours}
+        onBlockUser={handleBlockUser}
+      />
     </div>
   );
 }

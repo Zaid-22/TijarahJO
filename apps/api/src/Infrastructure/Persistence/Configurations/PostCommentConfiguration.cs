@@ -8,10 +8,10 @@ public class PostCommentConfiguration : IEntityTypeConfiguration<PostCommentEnti
 {
     public void Configure(EntityTypeBuilder<PostCommentEntity> builder)
     {
-        builder.ToTable("PostComments");
+        builder.ToTable("PostComments", tb => tb.HasTrigger("TR_PostComments_MaxDepth"));
         builder.HasKey(e => e.CommentID);
         builder.Property(e => e.CommentID).ValueGeneratedOnAdd();
-        builder.Property(e => e.Content).HasMaxLength(2000).IsRequired();
+        builder.Property(e => e.Content).HasMaxLength(1000).IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnType("datetime2");
         builder.Property(e => e.UpdatedAt).HasColumnType("datetime2");
         builder.Property(e => e.IsDeleted).HasDefaultValue(false);
@@ -19,7 +19,7 @@ public class PostCommentConfiguration : IEntityTypeConfiguration<PostCommentEnti
         builder.HasOne<PostEntity>()
             .WithMany()
             .HasForeignKey(e => e.PostID)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne<UserEntity>()
             .WithMany()

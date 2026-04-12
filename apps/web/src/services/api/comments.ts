@@ -86,8 +86,8 @@ export const commentsApi = {
     const response = await apiRequest<unknown>(`/posts/${postId}/comments`, {
       method: "POST",
       body: JSON.stringify({
-        content,
-        parentCommentId,
+        Content: content,
+        ParentCommentId: parentCommentId,
       }),
     });
 
@@ -122,7 +122,7 @@ export const commentsApi = {
       {
         method: "PUT",
         body: JSON.stringify({
-          content,
+          Content: content,
         }),
       }
     );

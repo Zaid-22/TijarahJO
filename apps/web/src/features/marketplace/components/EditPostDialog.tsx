@@ -100,14 +100,61 @@ export function EditPostDialog({
 
   const { categories: catalogCategories, isLoading: isLoadingCategories } = useCatalogCategories();
   const categories = useMemo(() => {
-    const fromCatalog = catalogCategories
-      .map((entry: { name: string }) => entry.name.trim())
-      .filter((name: string) => name.length > 0);
-    if (fromCatalog.includes(post.category)) return fromCatalog;
-    return [post.category, ...fromCatalog].filter((entry: string, index: number, all: string[]) => all.indexOf(entry) === index);
-  }, [catalogCategories, post.category]);
+    const map = new Map<string, { value: string; label: string }>();
+    
+    if (post.category?.trim()) {
+      const c = post.category.trim();
+      map.set(c, { value: c, label: c });
+    }
 
-  const { cityNames, areaNames, isLoadingCities, isLoadingAreas } = useLocationOptions(formData.location, language);
+    catalogCategories.forEach(c => {
+      const name = c.name.trim();
+      if (name.length > 0) {
+        map.set(name, {
+          value: name,
+          label: language === "ar" && c.nameAr ? c.nameAr : name
+        });
+      }
+    });
+    
+    return Array.from(map.values());
+  }, [catalogCategories, post.category, language]);
+
+  const { cityNames, areaNames, isLoadingCities, isLoadingAreas, cities, areas } = useLocationOptions(formData.location, language);
+
+  // Automatically switch English/Arabic city names in formData to match current language
+  useEffect(() => {
+    const rawLoc = formData.location.trim().toLowerCase();
+    if (!rawLoc || cities.length === 0) return;
+
+    const matchedCity = cities.find(
+      (c) => c.cityName.toLowerCase() === rawLoc || c.cityNameAr?.toLowerCase() === rawLoc
+    );
+
+    if (matchedCity) {
+      const localizedName = language === "ar" && matchedCity.cityNameAr ? matchedCity.cityNameAr : matchedCity.cityName;
+      if (localizedName !== formData.location) {
+        setFormData(prev => ({ ...prev, location: localizedName }));
+      }
+    }
+  }, [formData.location, cities, language]);
+
+  // Automatically switch English/Arabic area names in formData to match current language
+  useEffect(() => {
+    const rawArea = formData.area.trim().toLowerCase();
+    if (!rawArea || areas.length === 0) return;
+
+    const matchedArea = areas.find(
+      (a) => a.areaName.toLowerCase() === rawArea || a.areaNameAr?.toLowerCase() === rawArea
+    );
+
+    if (matchedArea) {
+      const localizedArea = language === "ar" && matchedArea.areaNameAr ? matchedArea.areaNameAr : matchedArea.areaName;
+      if (localizedArea !== formData.area) {
+        setFormData(prev => ({ ...prev, area: localizedArea }));
+      }
+    }
+  }, [formData.area, areas, language]);
 
   const cityOptions = useMemo(() => {
     const normalizedOptionSet = new Set(cityNames.map((city: string) => city.trim().toLocaleLowerCase()).filter((c: string) => c.length > 0));

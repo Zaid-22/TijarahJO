@@ -8,7 +8,6 @@ import type { CompareResponse, PostProsConsDTO, PostFeaturesDTO, PostSummaryDTO 
 import type { ComparePost } from "../../../contexts/CompareContext";
 import { useAppSettings } from "../../../contexts/AppSettingsContext";
 import { marketplaceTranslations } from "../translations";
-import { getLocalizedLocation } from "../../auth/loginUtils";
 
 export type BestForCategory = "Budget" | "Performance" | "DailyUse";
 
@@ -63,7 +62,7 @@ export function CompareResultsSection({
                   className="compare-summary-card relative overflow-hidden rounded-xl border border-indigo-500/15 bg-accent/5 p-4 sm:p-5"
                 >
                   <div className="absolute top-0 right-0 h-16 w-16 rounded-bl-[2rem] bg-indigo-500/5" />
-                  <h3 className="line-clamp-2 text-start text-[15px] font-bold text-foreground">
+                  <h3 className="line-clamp-2 text-start text-sm font-bold text-foreground">
                     {winnerPost.name}
                   </h3>
                   <p className="mt-2.5 text-start text-sm leading-relaxed text-foreground/80 line-clamp-6">
@@ -91,7 +90,7 @@ export function CompareResultsSection({
               <ul className="space-y-2.5">
                 {fd.Features.map((feature, i) => (
                   <li key={i} className="flex items-start gap-2.5 text-sm">
-                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-[11px] font-bold text-blue-600 dark:bg-blue-500/30 dark:text-blue-300">
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-xs font-bold text-blue-600 dark:bg-blue-500/30 dark:text-blue-300">
                       {i + 1}
                     </span>
                     <span className="leading-relaxed text-foreground/80">{feature}</span>
@@ -106,7 +105,7 @@ export function CompareResultsSection({
       {/* ── Pros & Cons ── */}
       <section className="compare-card rounded-2xl border border-border/50 bg-card p-5 shadow-sm sm:p-6">
         <div className="mb-5 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-[#FFF6EE]">
+          <div className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-orange-50">
             <ThumbsUp className="h-5 w-5 text-orange-500" strokeWidth={2.5} />
           </div>
           <h2 className="text-xl font-bold text-foreground">{t.prosAndCons}</h2>
@@ -152,6 +151,7 @@ export function CompareResultsSection({
               { key: "DailyUse" as const, icon: Home, label: t.dailyUsePick || "Daily Use", activeColor: "violet" },
             ]).map(({ key, icon: Icon, label, activeColor }) => (
               <button
+                type="button"
                 key={key}
                 onClick={() => setActiveBestFor(key)}
                 className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-all ${
@@ -195,13 +195,13 @@ export function CompareResultsSection({
             </span>
           </div>
           <div className="mb-6 space-y-2.5">
-            <div className="flex items-start gap-2.5 text-[15px]">
+            <div className="flex items-start gap-2.5 text-sm">
               <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">✔</span>
               <span className="leading-relaxed text-foreground/90">
                 <span className="font-bold text-foreground">{t.bestForLabel}:</span> {result.FinalRecommendation.BestFor}
               </span>
             </div>
-            <div className="flex items-start gap-2.5 text-[15px]">
+            <div className="flex items-start gap-2.5 text-sm">
               <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">✔</span>
               <span className="leading-relaxed text-foreground/90">
                 <span className="font-bold text-foreground">{t.whyLabel}:</span> {result.FinalRecommendation.Reason}
@@ -216,11 +216,11 @@ export function CompareResultsSection({
               <div className="flex flex-wrap items-center gap-3.5">
                 <button type="button" 
                   onClick={() => winnerPost.sellerId ? navigate(`/chat/${encodeURIComponent(winnerPost.sellerId)}`, { state: { fromPath: "/compare" } }) : navigate(`/post/${winnerPost.id}`, { state: { fromPath: "/compare" } })}
-                  className="flex items-center justify-center gap-2 rounded-xl border border-input bg-background px-6 py-3 text-[15px] font-semibold text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                  className="flex items-center justify-center gap-2 rounded-xl border border-input bg-background px-6 py-3 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
                   {t.sendMessage} <MessageCircle className="h-[18px] w-[18px]" strokeWidth={2.2} />
                 </button>
                 <button type="button" onClick={() => navigate(`/post/${winnerPost.id}`, { state: { fromPath: "/compare" } })}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-[15px] font-semibold text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                  className="flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
                   {t.viewPost || "View Post"} <ArrowLeft className={`h-[18px] w-[18px] ${language === "ar" ? "" : "rotate-180"}`} strokeWidth={2.2} />
                 </button>
               </div>
@@ -248,14 +248,11 @@ export function CompareResultsSection({
                 <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
                   <span className="font-bold text-primary">{post.price > 0 ? `${post.price.toLocaleString()} JOD` : "—"}</span>
                   {post.location && (
-                    <>
-                      <span className="text-muted-foreground/40">•</span>
-                      <span className="truncate text-muted-foreground">{getLocalizedLocation(post.location, language)}</span>
-                    </>
+                      <span className="truncate text-muted-foreground">{post.location}</span>
                   )}
                 </div>
                 {post.averageRating && post.averageRating > 0 && (
-                  <div className="mt-1.5 flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                  <div className="mt-1.5 flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
                     <Star className="h-3 w-3 fill-current" />
                     <span>{post.averageRating.toFixed(1)}</span>
                     {post.reviewCount ? (

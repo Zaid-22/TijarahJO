@@ -383,6 +383,7 @@ export const adminApi = {
   getReports: async (
     status?: number,
     reportType?: string,
+    search?: string,
     page = 1,
     pageSize = 50,
   ): Promise<AdminReportListResult> => {
@@ -390,6 +391,7 @@ export const adminApi = {
       const params = new URLSearchParams();
       if (status !== undefined) params.set("status", String(status));
       if (reportType) params.set("reportType", reportType);
+      if (search?.trim()) params.set("search", search.trim());
       params.set("page", String(page));
       params.set("pageSize", String(pageSize));
       const response = await apiRequest<AdminReportListResult>(
@@ -468,6 +470,37 @@ export const adminApi = {
       body: JSON.stringify({ userIds, status }),
     });
     return response.success;
+  },
+
+  /**
+   * Suspend a user for a specific duration (hours) or permanently (null).
+   * durationHours = null → permanent ban (Status = BANNED)
+   * durationHours = 24  → suspended for 24 hours (SuspendedUntil set)
+   */
+  suspendUser: async (
+    userId: number,
+    durationHours: number | null,
+  ): Promise<{ success: boolean; message?: string; suspendedUntil?: string }> => {
+    try {
+      const response = await apiRequest<{ Message: string; SuspendedUntil?: string }>(
+        `/admin/users/${userId}/suspend`,
+        {
+          method: "POST",
+          body: JSON.stringify({ DurationHours: durationHours }),
+        },
+      );
+      if (response.success && response.data) {
+        return {
+          success: true,
+          message: response.data.Message,
+          suspendedUntil: response.data.SuspendedUntil,
+        };
+      }
+      return { success: false, message: "Failed to suspend user" };
+    } catch (error) {
+      debugError(`Failed to suspend user ${userId}:`, error);
+      return { success: false, message: "Failed to suspend user" };
+    }
   },
 
   ...adminLocationsApi,

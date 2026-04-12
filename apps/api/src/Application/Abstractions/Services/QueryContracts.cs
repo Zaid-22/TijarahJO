@@ -45,7 +45,9 @@ public sealed class PostListingRow
     public string PostDescription { get; init; } = string.Empty;
     public decimal Price { get; init; }
     public string City { get; init; } = string.Empty;
+    public string CityAr { get; init; } = string.Empty;
     public string Area { get; init; } = string.Empty;
+    public string AreaAr { get; init; } = string.Empty;
     public string SellerName { get; init; } = string.Empty;
     public string Phone { get; init; } = string.Empty;
     public string CategoryName { get; init; } = string.Empty;
@@ -53,7 +55,7 @@ public sealed class PostListingRow
     public DateTime UpdatedAt { get; init; }
     public long Views { get; init; }
     public string ClientStatus { get; init; } = "ACTIVE";
-    public IReadOnlyList<string> Images { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> Images { get; init; } = [];
 }
 
 public sealed class PostListingPageResult
@@ -61,7 +63,7 @@ public sealed class PostListingPageResult
     public int Page { get; init; }
     public int Limit { get; init; }
     public int TotalPosts { get; init; }
-    public IReadOnlyList<PostListingRow> Posts { get; init; } = Array.Empty<PostListingRow>();
+    public IReadOnlyList<PostListingRow> Posts { get; init; } = [];
 }
 
 public interface IPostListingQueryService
@@ -89,7 +91,9 @@ public sealed class SearchPostReadModel
     public required string Name { get; init; }
     public required decimal Price { get; init; }
     public required string Location { get; init; }
+    public string LocationAr { get; init; } = "الأردن";
     public string? Area { get; init; }
+    public string? AreaAr { get; init; }
     public required string Seller { get; init; }
     public required string SellerId { get; init; }
     public required string Category { get; init; }

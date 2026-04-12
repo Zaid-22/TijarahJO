@@ -8,67 +8,57 @@ interface PostCardSkeletonListProps {
 export const PostCardSkeletonList = React.memo(
   function PostCardSkeletonList({ hideCategoryBadge }: PostCardSkeletonListProps) {
     return (
-      <div className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card sm:flex-row shadow-sm">
-        <div className="relative w-full sm:w-64 aspect-square flex-shrink-0">
-          <Skeleton className="absolute inset-0 w-full h-full rounded-none" />
+      <article className="relative flex flex-col overflow-hidden rounded-[14px] bg-card shadow-sm ring-1 ring-black/5 dark:ring-white/5 sm:flex-row sm:h-[220px]">
+        {/* Image Area */}
+        <div className="pointer-events-none relative aspect-[16/10] w-full shrink-0 overflow-hidden bg-muted/30 sm:w-[220px] sm:aspect-auto xl:w-[240px]">
+          <Skeleton className="absolute inset-0 h-full w-full rounded-none" />
           
-          {!hideCategoryBadge && (
-            <div className="absolute top-3 left-3 z-10">
-              <Skeleton className="h-7 w-24 rounded-md bg-background/50" />
+          <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between p-2.5">
+            <div className="flex flex-wrap gap-1.5">
+              {!hideCategoryBadge && (
+                <Skeleton className="h-5 w-16 rounded-full bg-background/50 shadow-sm backdrop-blur-md" />
+              )}
             </div>
-          )}
+            <div className="flex gap-1.5 sm:hidden">
+              <Skeleton className="h-8 w-8 rounded-full bg-background/50 shadow-sm backdrop-blur-md" />
+            </div>
+          </div>
         </div>
 
-        <div className="flex-1 p-6 flex flex-col justify-between">
-          <div>
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div className="flex-1 w-full">
-                {/* Title */}
-                <Skeleton className="h-6 sm:h-7 w-3/4 mb-4" />
-                
-                <div className="mb-3 flex flex-wrap items-center gap-4">
-                  {/* Location */}
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-6 w-6 rounded-full" />
-                    <Skeleton className="h-4 sm:h-5 w-32" />
-                  </div>
-                  
-                  {/* Seller & Rating */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <Skeleton className="h-6 w-6 rounded-full" />
-                      <Skeleton className="h-4 sm:h-5 w-24" />
-                    </div>
-                    <Skeleton className="h-5 sm:h-6 w-16 rounded-full" />
-                  </div>
-                </div>
+        {/* Content Area */}
+        <div className="flex flex-1 flex-col p-3 sm:p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-5 w-3/4 sm:h-6" />
+              <div className="flex flex-wrap items-center gap-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-16" />
               </div>
+              <Skeleton className="h-4 w-3/4 hidden sm:block" />
+              <Skeleton className="h-4 w-1/2 hidden sm:block" />
+            </div>
 
-              {/* Favorite Button */}
-              <div className="flex-shrink-0">
-                <Skeleton className="h-10 w-10 rounded-full" />
-              </div>
+            <div className="hidden sm:flex gap-1.5 shrink-0">
+              <Skeleton className="h-9 w-9 rounded-full bg-muted/50" />
+              <Skeleton className="h-9 w-9 rounded-full bg-muted/50" />
             </div>
           </div>
 
-          <div className="flex items-center justify-between border-t border-border pt-4">
-            {/* Price */}
-            <div>
-              <div className="flex items-baseline gap-2">
-                <Skeleton className="h-8 sm:h-9 w-28" />
-                <Skeleton className="h-5 sm:h-6 w-10" />
+          <div className="mt-auto pt-4 flex flex-wrap items-end justify-between gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Skeleton className="h-6 w-24 rounded-md" />
+              <div className="flex items-center gap-1.5">
+                <Skeleton className="h-6 w-16 rounded-full" />
               </div>
             </div>
             
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              <Skeleton className="h-10 w-10 sm:h-11 sm:w-11 rounded-full" />
-              <Skeleton className="h-10 w-10 sm:h-11 sm:w-11 rounded-full" />
-              <Skeleton className="h-10 sm:h-11 w-24 sm:w-32 rounded-md" />
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Skeleton className="h-9 flex-1 sm:w-28 rounded-md" />
+              <Skeleton className="h-9 flex-1 sm:w-28 rounded-md" />
             </div>
           </div>
         </div>
-      </div>
+      </article>
     );
   }
 );

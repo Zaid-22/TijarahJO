@@ -186,6 +186,7 @@ export type AdminReportItem = {
   description: string | null;
   reporterUserID: number;
   reporterName: string;
+  reporterEmail: string;
   status: number;
   statusLabel: string;
   resolvedByUserID: number | null;

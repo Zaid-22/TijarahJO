@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading;
 using System.Threading.Tasks;
+using TijarahJo.Api.Common.Services;
+using TijarahJo.Api.Contracts.Requests;
+using TijarahJo.Api.Contracts.Responses;
 using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Api.Common.Authorization;
 
@@ -67,5 +70,31 @@ public sealed class AdminBannersController(IHeroBannerService heroBannerService)
         var success = await _heroBannerService.ToggleBannerActiveAsync(id, cancellationToken);
         if (!success) return NotFound();
         return Ok();
+    }
+
+    [HttpPost("upload-image")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult> UploadBannerImage(
+        [FromForm] UploadHeroBannerImageRequest request,
+        [FromServices] IPostImageFileStorageService storageService,
+        CancellationToken cancellationToken)
+    {
+        IFormFile? file = request.File;
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest(new ApiMessageResponse { Message = "File is empty or not provided." });
+        }
+
+        try
+        {
+            var storedFile = await storageService.SaveAsync(file, cancellationToken);
+            return Ok(new { Url = storedFile.PublicUrl });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new ApiMessageResponse { Message = ex.Message });
+        }
     }
 }

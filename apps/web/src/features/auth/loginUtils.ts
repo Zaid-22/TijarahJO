@@ -1,48 +1,7 @@
 import { normalizeJordanPhone } from "../../utils/phone";
 import type { Language } from "../../types";
 
-export const JORDAN_CITIES = [
-  "Amman",
-  "Irbid",
-  "Zarqa",
-  "Aqaba",
-  "Madaba",
-  "Jerash",
-  "Ajloun",
-  "Karak",
-  "Mafraq",
-  "Tafilah",
-  "Ma'an",
-  "Balqa",
-];
 
-export const JORDAN_CITIES_AR: Record<string, string> = {
-  Amman: "عمّان",
-  Irbid: "إربد",
-  Zarqa: "الزرقاء",
-  Aqaba: "العقبة",
-  Madaba: "مادبا",
-  Jerash: "جرش",
-  Ajloun: "عجلون",
-  Karak: "الكرك",
-  Mafraq: "المفرق",
-  Tafilah: "الطفيلة",
-  "Ma'an": "معان",
-  Balqa: "البلقاء",
- 
-};
-
-export const getLocalizedLocation = (
-  location: string | undefined | null,
-  language: Language = "en",
-): string => {
-  if (!location) return "";
-  if (language !== "ar") return location;
-
-  const parts = location.split(",").map((p) => p.trim());
-  const translatedParts = parts.map((p) => JORDAN_CITIES_AR[p] || p);
-  return translatedParts.join("، ");
-};
 
 interface ParsedAuthIdentifier {
   email: string | null;

@@ -1,5 +1,5 @@
 import { APP_CONFIG } from "../../constants/appConfig";
-import { categoryNameToArabic } from "../../data/categoryTranslations";
+
 import { Language, Post, UserProfile } from "../../types";
 import type { PostImageInput } from "../../types/api";
 import { matchPath } from "react-router-dom";
@@ -106,12 +106,9 @@ export function shouldLoadFavoritesForPath(pathname: string): boolean {
 
 export const getCategoryTranslation = (
   category: string,
-  language: Language,
+  _language: Language,
 ): string => {
-  if (language === "ar" && categoryNameToArabic[category]) {
-    return categoryNameToArabic[category];
-  }
-
+  // TODO: Wire this up to the dynamically loaded categories instead of a hardcoded map
   return category;
 };
 

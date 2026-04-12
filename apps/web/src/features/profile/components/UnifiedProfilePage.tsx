@@ -261,7 +261,7 @@ export function UnifiedProfilePage({
           <EditPostDialog
             post={postToEdit}
             onSave={(updatedPost) => {
-              void handleUpdatePost(updatedPost);
+              void handleUpdatePost(updatedPost as UpdatePostInput);
             }}
             onCancel={() => setPostToEdit(null)}
             language={language}

@@ -1,5 +1,5 @@
 import { apiRequest, debugError } from "./client";
-import { type BannerModel } from "./banners";
+import { normalizeBannerImageUrl, type BannerModel } from "./banners";
 import { toCamelCaseKeys } from "./admin";
 
 /** Payload shape for creating or updating a hero banner. */
@@ -25,6 +25,12 @@ export type BannerMutationResult = {
   message?: string;
 };
 
+export type BannerImageUploadResult = {
+  success: boolean;
+  url?: string;
+  message?: string;
+};
+
 type GetBannersResponse = {
   success: boolean;
   banners: BannerModel[];
@@ -39,7 +45,10 @@ export const adminBannersApi = {
       if (response.success && response.data) {
         const data = toCamelCaseKeys<GetBannersResponse>(response.data);
         if (data.success) {
-          return data.banners || [];
+          return (data.banners || []).map((banner) => ({
+            ...banner,
+            imageUrl: normalizeBannerImageUrl(banner.imageUrl),
+          }));
         }
       }
       return [];
@@ -123,6 +132,50 @@ export const adminBannersApi = {
     } catch (error) {
       debugError("adminApi.toggleBannerActive", error);
       return false;
+    }
+  },
+
+  uploadBannerImage: async (file: File): Promise<BannerImageUploadResult> => {
+    try {
+      const formData = new FormData();
+      formData.append("File", file, file.name);
+
+      const response = await apiRequest<{ Url?: string; url?: string }>(
+        "/admin/banners/upload-image",
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
+
+      if (!response.success) {
+        return {
+          success: false,
+          message: response.error?.message || "Failed to upload banner image",
+        };
+      }
+
+      const url = response.data?.Url?.trim() || response.data?.url?.trim();
+      if (!url) {
+        return {
+          success: false,
+          message: "Banner image upload did not return a URL",
+        };
+      }
+
+      return {
+        success: true,
+        url: normalizeBannerImageUrl(url),
+      };
+    } catch (error) {
+      debugError("adminApi.uploadBannerImage", error);
+      return {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to upload banner image",
+      };
     }
   },
 };

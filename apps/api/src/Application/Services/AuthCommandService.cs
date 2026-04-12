@@ -7,7 +7,12 @@ using TijarahJo.Application.Abstractions.DataAccess;
 
 namespace TijarahJo.Application.Services;
 
-public sealed class AuthCommandService : IAuthCommandService
+public sealed class AuthCommandService(
+    IUserDataAccess users,
+    IExternalIdentityDataAccess externalIdentities,
+    IRoleService roles,
+    ILocationReadService locations,
+    ILogger<AuthCommandService> logger) : IAuthCommandService
 {
     private const string DefaultUserRoleName = "User";
     private const string GoogleProviderName = "google";
@@ -16,25 +21,11 @@ public sealed class AuthCommandService : IAuthCommandService
     // preventing timing-based user-enumeration attacks.
     private static readonly string _dummyHash = PasswordHelper.HashPassword("dummy-timing-guard-password");
 
-    private readonly IUserDataAccess _users;
-    private readonly IExternalIdentityDataAccess _externalIdentities;
-    private readonly IRoleService _roles;
-    private readonly ILocationReadService _locations;
-    private readonly ILogger<AuthCommandService> _logger;
-
-    public AuthCommandService(
-        IUserDataAccess users,
-        IExternalIdentityDataAccess externalIdentities,
-        IRoleService roles,
-        ILocationReadService locations,
-        ILogger<AuthCommandService> logger)
-    {
-        _users = users;
-        _externalIdentities = externalIdentities;
-        _roles = roles;
-        _locations = locations;
-        _logger = logger;
-    }
+    private readonly IUserDataAccess _users = users;
+    private readonly IExternalIdentityDataAccess _externalIdentities = externalIdentities;
+    private readonly IRoleService _roles = roles;
+    private readonly ILocationReadService _locations = locations;
+    private readonly ILogger<AuthCommandService> _logger = logger;
 
     public async Task<AuthCommandResult> LoginAsync(LoginCommand command, CancellationToken cancellationToken = default)
     {
@@ -73,6 +64,12 @@ public sealed class AuthCommandService : IAuthCommandService
         if (user.Status != UserStatusPolicy.Active)
         {
             return Failure(AuthCommandFailureReason.UserInactive, "User account is banned or inactive.");
+        }
+
+        if (user.SuspendedUntil.HasValue && user.SuspendedUntil.Value > DateTime.UtcNow)
+        {
+            string until = user.SuspendedUntil.Value.ToString("yyyy-MM-dd HH:mm") + " UTC";
+            return Failure(AuthCommandFailureReason.UserInactive, $"Your account is suspended until {until}. Please try again later.");
         }
 
         if (PasswordHelper.NeedsRehash(user.HashedPassword))
@@ -200,12 +197,13 @@ public sealed class AuthCommandService : IAuthCommandService
         }
         catch (Exception ex) when (LooksLikeDuplicateIdentity(ex.Message))
         {
-            _logger.LogInformation(
-                ex,
-                "Signup rejected due to duplicate identity. email={Email} phone={Phone}",
-                normalizedEmail,
-                normalizedPhone
-            );
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Signup rejected due to duplicate identity. email={Email} phone={Phone}",
+                    normalizedEmail,
+                    normalizedPhone);
+            }
             return Failure(AuthCommandFailureReason.DuplicateIdentity, ResolveDuplicateIdentityMessage(ex.Message, isPhoneOnlySignup));
         }
         catch (Exception ex)
@@ -460,16 +458,10 @@ public sealed class AuthCommandService : IAuthCommandService
         return null;
     }
 
-    private sealed class GoogleIdentityLinkResolution
+    private sealed class GoogleIdentityLinkResolution(int? linkedUserId, AuthCommandResult? failure)
     {
-        public GoogleIdentityLinkResolution(int? linkedUserId, AuthCommandResult? failure)
-        {
-            LinkedUserId = linkedUserId;
-            Failure = failure;
-        }
-
-        public int? LinkedUserId { get; }
-        public AuthCommandResult? Failure { get; }
+        public int? LinkedUserId { get; } = linkedUserId;
+        public AuthCommandResult? Failure { get; } = failure;
     }
 
     private static string? NormalizeEmail(string? email)
@@ -479,7 +471,7 @@ public sealed class AuthCommandService : IAuthCommandService
 
     private static string BuildPhoneAliasEmail(string normalizedPhone)
     {
-        string digitsOnly = new string(normalizedPhone.Where(char.IsDigit).ToArray());
+        string digitsOnly = new([.. normalizedPhone.Where(char.IsDigit)]);
         return $"phone_{digitsOnly}@tijarahjo.local";
     }
 
@@ -534,9 +526,12 @@ public sealed class AuthCommandService : IAuthCommandService
         {
             await _users.UpdateUserAsync(user, user.UserID!.Value, cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _logger.LogDebug(ex, "Google profile hydration failed for user {UserId}.", user.UserID);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Google profile hydration failed for user {UserId}.", user.UserID);
+            }
         }
 
         return user;

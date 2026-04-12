@@ -196,7 +196,9 @@ export function LoginPage({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
+    cityNames,
     areaNames,
+    isLoadingCities,
     isLoadingAreas,
   } = useLocationOptions(state.values.city, language);
 
@@ -309,6 +311,11 @@ export function LoginPage({
     const validationErrors = validateForSubmit();
     return Object.values(validationErrors).every((value) => value === "");
   })();
+
+  const cityOptions = cityNames.map((cityName) => ({
+    value: cityName,
+    label: cityName,
+  }));
 
   const areaOptions = areaNames.map((areaName) => ({
     value: areaName,
@@ -769,6 +776,8 @@ export function LoginPage({
       canSubmit={canSubmit}
         values={state.values}
         errors={state.errors}
+        cityOptions={cityOptions}
+        isLoadingCities={isLoadingCities}
         areaOptions={areaOptions}
         isAreaDisabled={!state.values.city || isLoadingAreas || areaOptions.length === 0}
         copy={copy}

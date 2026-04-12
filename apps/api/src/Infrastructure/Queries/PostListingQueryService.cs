@@ -8,18 +8,13 @@ using TijarahJo.Infrastructure.DataAccess;
 
 namespace TijarahJo.Infrastructure.Queries;
 
-public sealed class PostListingQueryService : IPostListingQueryService
+public sealed class PostListingQueryService(DatabaseConnectionString connectionString) : IPostListingQueryService
 {
     private const char ImageSeparator = '\u001F';
     private const int MaxPageSize = 200;
     private static readonly ConcurrentDictionary<string, bool> FullTextCapabilityCache = new(StringComparer.OrdinalIgnoreCase);
 
-    private readonly string _connectionString;
-
-    public PostListingQueryService(DatabaseConnectionString connectionString)
-    {
-        _connectionString = connectionString.Value;
-    }
+    private readonly string _connectionString = connectionString.Value;
 
     public async Task<PostListingPageResult> QueryAsync(PostListingQuery query, CancellationToken cancellationToken = default)
     {
@@ -152,7 +147,9 @@ WITH FilteredPosts AS
         ISNULL(p.PostDescription, '') AS PostDescription,
         ISNULL(p.Price, 0) AS Price,
         ISNULL(ct.CityName, '') AS City,
+        ISNULL(ct.CityNameAr, '') AS CityAr,
         ISNULL(a.AreaName, '') AS Area,
+        ISNULL(a.AreaNameAr, '') AS AreaAr,
         ISNULL(u.Phone, '') AS Phone,
         p.CreatedAt,
         p.UpdatedAt,
@@ -188,7 +185,9 @@ SELECT
     fp.PostDescription,
     fp.Price,
     fp.City,
+    fp.CityAr,
     fp.Area,
+    fp.AreaAr,
     fp.SellerName,
     fp.Phone,
     fp.CategoryName,
@@ -224,7 +223,9 @@ OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY;";
                 PostDescription = reader.GetString(reader.GetOrdinal("PostDescription")),
                 Price = reader.GetDecimal(reader.GetOrdinal("Price")),
                 City = reader.GetString(reader.GetOrdinal("City")),
+                CityAr = reader.GetString(reader.GetOrdinal("CityAr")),
                 Area = reader.GetString(reader.GetOrdinal("Area")),
+                AreaAr = reader.GetString(reader.GetOrdinal("AreaAr")),
                 SellerName = reader.GetString(reader.GetOrdinal("SellerName")),
                 Phone = reader.GetString(reader.GetOrdinal("Phone")),
                 CategoryName = reader.GetString(reader.GetOrdinal("CategoryName")),
@@ -285,7 +286,7 @@ OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY;";
     {
         if (string.IsNullOrWhiteSpace(imagePayload))
         {
-            return new List<string>();
+            return [];
         }
 
         string[] parsedSegments = imagePayload.Contains(ImageSeparator)
@@ -318,7 +319,7 @@ OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY;";
         string[] rawSegments = imagePayload.Split(',', StringSplitOptions.RemoveEmptyEntries);
         if (rawSegments.Length == 0)
         {
-            return Array.Empty<string>();
+            return [];
         }
 
         var mergedSegments = new List<string>(rawSegments.Length);
@@ -353,7 +354,7 @@ OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY;";
             mergedSegments.Add(current);
         }
 
-        return mergedSegments.ToArray();
+        return [.. mergedSegments];
     }
 
     private static string BuildPrefixPattern(string rawValue)

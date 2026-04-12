@@ -1,21 +1,26 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using TijarahJo.Application.Abstractions.DataAccess;
 using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Domain.Models;
 
 namespace TijarahJo.Application.Services;
 
-public sealed class PostCommentService(IPostCommentDataAccess commentDataAccess, IPostDataAccess postDataAccess) : IPostCommentService
+public sealed class PostCommentService(
+    IPostCommentDataAccess commentDataAccess,
+    IPostDataAccess postDataAccess,
+    ILogger<PostCommentService> logger) : IPostCommentService
 {
     private readonly IPostCommentDataAccess _commentDataAccess = commentDataAccess;
     private readonly IPostDataAccess _postDataAccess = postDataAccess;
+    private readonly ILogger<PostCommentService> _logger = logger;
 
     // Rate limit: max 5 comments per user per minute
     private const int RateLimitMaxComments = 5;
     private static readonly TimeSpan RateLimitWindow = TimeSpan.FromMinutes(1);
-    private const int MaxContentLength = 2000;
+    private const int MaxContentLength = 1000;
 
     public async Task<PostCommentResult> AddCommentAsync(
         int postId, int userId, string? content, int? parentCommentId = null, CancellationToken cancellationToken = default)
@@ -123,13 +128,14 @@ public sealed class PostCommentService(IPostCommentDataAccess commentDataAccess,
                 Comment = created
             };
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to save comment for PostID={PostId}, UserID={UserId}", postId, userId);
             return new PostCommentResult
             {
                 Success = false,
                 FailureReason = PostCommentFailureReason.PersistenceFailed,
-                Message = "Failed to save comment."
+                Message = $"Failed to save comment: {ex.Message} | Inner: {ex.InnerException?.Message}"
             };
         }
     }

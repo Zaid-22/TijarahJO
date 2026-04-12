@@ -47,6 +47,7 @@ function toBannerFormState(
 export function AdminBannersManagement() {
   const [banners, setBanners] = useState<BannerModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [showBannerForm, setShowBannerForm] = useState(false);
   const [editingBannerId, setEditingBannerId] = useState<number | null>(null);
@@ -86,6 +87,26 @@ export function AdminBannersManagement() {
     setBannerForm(toBannerFormState(banner, banner.displayOrder));
     setShowBannerForm(true);
   };
+
+  const uploadBannerImage = useCallback(async (file: File) => {
+    setIsUploadingImage(true);
+    try {
+      const result = await adminApi.uploadBannerImage(file);
+      if (!result.success || !result.url) {
+        toast.error(result.message || "Failed to upload banner image");
+        return;
+      }
+
+      const imageUrl = result.url;
+      setBannerForm((prev) => ({
+        ...prev,
+        imageUrl,
+      }));
+      toast.success("Banner image uploaded");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  }, []);
 
   const toggleActive = async (id: number) => {
     const success = await adminApi.toggleBannerActive(id);
@@ -265,6 +286,7 @@ export function AdminBannersManagement() {
           </Badge>
           <Button
             size="sm"
+            variant={showBannerForm && editingBannerId === null ? "outline" : "default"}
             onClick={() => {
               if (showBannerForm && editingBannerId === null) {
                 setShowBannerForm(false);
@@ -275,8 +297,14 @@ export function AdminBannersManagement() {
             }}
             className="gap-2"
           >
-            <Plus className="w-4 h-4" />
-            Add Banner
+            {showBannerForm && editingBannerId === null ? (
+              "Cancel"
+            ) : (
+              <>
+                <Plus className="w-4 h-4" />
+                New Banner
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -286,7 +314,9 @@ export function AdminBannersManagement() {
         <BannerForm
           editingBannerId={editingBannerId}
           bannerForm={bannerForm}
+          isUploadingImage={isUploadingImage}
           onFormChange={setBannerForm}
+          onImageUpload={uploadBannerImage}
           onSave={saveBanner}
           onCancel={() => {
             setShowBannerForm(false);

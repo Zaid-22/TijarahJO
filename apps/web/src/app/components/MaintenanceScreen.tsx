@@ -106,7 +106,7 @@ export function MaintenanceScreen({
           >
             <Link
               to="/login"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-8 py-3.5 text-[0.95rem] font-bold text-white shadow-md transition-all hover:bg-primary/90 hover:shadow-lg active:scale-[0.98]"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-8 py-3.5 text-sm font-bold text-white shadow-md transition-all hover:bg-primary/90 hover:shadow-lg active:scale-95"
             >
               <span>{copy.adminAction}</span>
               <ArrowRight

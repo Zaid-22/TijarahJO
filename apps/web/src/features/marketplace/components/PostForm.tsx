@@ -43,7 +43,7 @@ interface PostFormProps {
   setFormData: (data: PostFormData | ((prev: PostFormData) => PostFormData)) => void;
   errors: PostFormErrors;
   setErrors: (dispatch: (prev: PostFormErrors) => PostFormErrors) => void;
-  categories: string[];
+  categories: { value: string; label: string }[];
   isLoadingCategories: boolean;
   cityOptions: string[];
   isLoadingCities: boolean;
@@ -146,8 +146,8 @@ export function PostForm({
               <SelectContent>
                 {categories.length > 0 ? (
                   categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
+                    <SelectItem key={category.value} value={category.value} className="text-start">
+                      {category.label}
                     </SelectItem>
                   ))
                 ) : (

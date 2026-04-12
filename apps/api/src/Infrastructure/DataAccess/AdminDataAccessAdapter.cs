@@ -608,7 +608,7 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
 
     private static readonly string[] _reportStatusLabels = ["Pending", "Under Review", "Resolved", "Dismissed"];
 
-    public async Task<AdminReportListResult> GetReportsAsync(int? status = null, string? reportType = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
+    public async Task<AdminReportListResult> GetReportsAsync(int? status = null, string? reportType = null, string? search = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -619,55 +619,67 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
             if (!string.IsNullOrWhiteSpace(reportType))
                 query = query.Where(r => r.ReportType == reportType);
 
-            int totalCount = await query.CountAsync(cancellationToken);
+            // Build joined query for search
+            var joined = from r in query
+                         join reporter in _dbContext.Users.AsNoTracking() on r.ReporterUserID equals reporter.UserID
+                         join resolver in _dbContext.Users.AsNoTracking() on r.ResolvedByUserID equals resolver.UserID into rg
+                         from resolver in rg.DefaultIfEmpty()
+                         select new { r, reporter, resolver };
 
-            var items = await (from r in query
-                              join reporter in _dbContext.Users.AsNoTracking() on r.ReporterUserID equals reporter.UserID
-                              join resolver in _dbContext.Users.AsNoTracking() on r.ResolvedByUserID equals resolver.UserID into rg
-                              from resolver in rg.DefaultIfEmpty()
-                              orderby r.CreatedAt descending
-                              select new AdminReportItem
-                              {
-                                  ReportID = r.ReportID,
-                                  ReportType = r.ReportType,
-                                  TargetID = r.TargetID,
-                                  TargetLabel =
-                                      r.ReportType == "LISTING"
-                                          ? _dbContext.Posts
-                                              .Where(post => post.PostID == r.TargetID)
-                                              .Select(post => post.PostTitle)
-                                              .FirstOrDefault()
-                                          : r.ReportType == "USER"
-                                              ? _dbContext.Users
-                                                  .Where(user => user.UserID == r.TargetID)
-                                                  .Select(user => (user.FirstName + " " + (user.LastName ?? "")).Trim())
-                                                  .FirstOrDefault()
-                                              : r.ReportType == "REVIEW"
-                                                  ? _dbContext.Reviews
-                                                      .Where(review => review.ReviewID == r.TargetID)
-                                                      .Select(review => review.Comment)
-                                                      .FirstOrDefault()
-                                                  : r.ReportType == "CHAT"
-                                                      ? _dbContext.Conversations
-                                                          .Where(conversation => conversation.ConversationID == r.TargetID)
-                                                          .Select(conversation => "Conversation #" + conversation.ConversationID)
-                                                          .FirstOrDefault()
-                                                      : null,
-                                  Reason = r.Reason,
-                                  Description = r.Description,
-                                  ReporterUserID = r.ReporterUserID,
-                                  ReporterName = (reporter.FirstName + " " + (reporter.LastName ?? "")).Trim(),
-                                  Status = r.Status,
-                                  StatusLabel = r.Status >= 0 && r.Status < _reportStatusLabels.Length ? _reportStatusLabels[r.Status] : "Unknown",
-                                  ResolvedByUserID = r.ResolvedByUserID,
-                                  ResolvedByName = resolver != null ? (resolver.FirstName + " " + (resolver.LastName ?? "")).Trim() : null,
-                                  ResolutionNotes = r.ResolutionNotes,
-                                  CreatedAt = r.CreatedAt,
-                                  ResolvedAt = r.ResolvedAt
-                              })
-                              .Skip((pageNumber - 1) * pageSize)
-                              .Take(pageSize)
-                              .ToListAsync(cancellationToken);
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim();
+                joined = joined.Where(x =>
+                    (x.reporter.FirstName + " " + (x.reporter.LastName ?? "")).Contains(term) ||
+                    x.reporter.Email.Contains(term));
+            }
+            int totalCount = await joined.CountAsync(cancellationToken);
+
+            var items = await joined
+                .OrderByDescending(x => x.r.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(x => new AdminReportItem
+                {
+                    ReportID = x.r.ReportID,
+                    ReportType = x.r.ReportType,
+                    TargetID = x.r.TargetID,
+                    TargetLabel =
+                        x.r.ReportType == "LISTING"
+                            ? _dbContext.Posts
+                                .Where(post => post.PostID == x.r.TargetID)
+                                .Select(post => post.PostTitle)
+                                .FirstOrDefault()
+                            : x.r.ReportType == "USER"
+                                ? _dbContext.Users
+                                    .Where(user => user.UserID == x.r.TargetID)
+                                    .Select(user => (user.FirstName + " " + (user.LastName ?? "")).Trim())
+                                    .FirstOrDefault()
+                                : x.r.ReportType == "REVIEW"
+                                    ? _dbContext.Reviews
+                                        .Where(review => review.ReviewID == x.r.TargetID)
+                                        .Select(review => review.Comment)
+                                        .FirstOrDefault()
+                                    : x.r.ReportType == "CHAT"
+                                        ? _dbContext.Conversations
+                                            .Where(c => c.ConversationID == x.r.TargetID)
+                                            .Select(c => "Conversation #" + c.ConversationID)
+                                            .FirstOrDefault()
+                                        : null,
+                    Reason = x.r.Reason,
+                    Description = x.r.Description,
+                    ReporterUserID = x.r.ReporterUserID,
+                    ReporterName = (x.reporter.FirstName + " " + (x.reporter.LastName ?? "")).Trim(),
+                    ReporterEmail = x.reporter.Email,
+                    Status = x.r.Status,
+                    StatusLabel = x.r.Status >= 0 && x.r.Status < _reportStatusLabels.Length ? _reportStatusLabels[x.r.Status] : "Unknown",
+                    ResolvedByUserID = x.r.ResolvedByUserID,
+                    ResolvedByName = x.resolver != null ? (x.resolver.FirstName + " " + (x.resolver.LastName ?? "")).Trim() : null,
+                    ResolutionNotes = x.r.ResolutionNotes,
+                    CreatedAt = x.r.CreatedAt,
+                    ResolvedAt = x.r.ResolvedAt
+                })
+                .ToListAsync(cancellationToken);
 
             return new AdminReportListResult { Reports = items, TotalCount = totalCount };
         }
@@ -692,6 +704,31 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
         if (!string.IsNullOrWhiteSpace(resolutionNotes))
             entity.ResolutionNotes = resolutionNotes;
 
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> SuspendUserAsync(int userId, System.DateTime? suspendedUntil, int adminUserId, CancellationToken cancellationToken = default)
+    {
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.UserID == userId, cancellationToken);
+        if (user == null) return false;
+
+        if (suspendedUntil.HasValue)
+        {
+            // Timed suspension — keep Status ACTIVE but set SuspendedUntil
+            user.SuspendedUntil = suspendedUntil.Value;
+        }
+        else
+        {
+            // Permanent ban
+            user.Status = 2; // BANNED
+            user.SuspendedUntil = null;
+        }
+
+        // Invalidate all active sessions immediately
+        user.LastInvalidatedAt = System.DateTime.UtcNow;
+
+        _dbContext.AuditActorUserId = adminUserId;
         await _dbContext.SaveChangesAsync(cancellationToken);
         return true;
     }

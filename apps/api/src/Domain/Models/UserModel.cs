@@ -21,7 +21,8 @@ namespace TijarahJo.Domain.Models;
             bool isdeleted,
             bool twoFactorEnabled = false,
             string? twoFactorSecret = null,
-            string? twoFactorPendingSecret = null)
+            string? twoFactorPendingSecret = null,
+            DateTime? suspendedUntil = null)
         {
             this.UserID = userid;
             this.HashedPassword = hashedpassword;
@@ -40,6 +41,7 @@ namespace TijarahJo.Domain.Models;
             this.TwoFactorEnabled = twoFactorEnabled;
             this.TwoFactorSecret = twoFactorSecret;
             this.TwoFactorPendingSecret = twoFactorPendingSecret;
+            this.SuspendedUntil = suspendedUntil;
         }
 
         public int? UserID { get; init; }
@@ -62,4 +64,5 @@ namespace TijarahJo.Domain.Models;
         public bool TwoFactorEnabled { get; init; }
         public string? TwoFactorSecret { get; init; }
         public string? TwoFactorPendingSecret { get; init; }
+        public DateTime? SuspendedUntil { get; init; }
     }

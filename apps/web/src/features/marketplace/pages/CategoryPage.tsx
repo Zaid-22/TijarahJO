@@ -124,6 +124,7 @@ export function CategoryPage({
       {/* Category Header Section */}
       <div className="mx-auto w-full max-w-[94rem] px-4 pt-6 sm:px-6 lg:px-8 xl:px-10">
         <button
+          type="button"
           onClick={onBack}
           className="mb-4 flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
         >

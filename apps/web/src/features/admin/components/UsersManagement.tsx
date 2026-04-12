@@ -7,6 +7,7 @@ import { api } from "../../../services/api";
 import { AdminUserRecord } from "../../../services/api/users";
 import { CreateUserDialog } from "./users/CreateUserDialog";
 import { UsersTable } from "./users/UsersTable";
+import { SuspendUserDialog } from "./users/SuspendUserDialog";
 import { CreateUserForm, initialCreateUserForm } from "./users/types";
 import { formatCompactDate } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
@@ -59,6 +60,12 @@ export function UsersManagement() {
     id: string;
     displayName: string;
   } | null>(null);
+  const [pendingSuspendUser, setPendingSuspendUser] = useState<{
+    id: string;
+    displayName: string;
+  } | null>(null);
+  const [suspendDurationHours, setSuspendDurationHours] = useState<string>("24");
+  const [isSuspending, setIsSuspending] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const filteredUsers = useMemo(
@@ -176,6 +183,33 @@ export function UsersManagement() {
       toast.error("Error creating user");
     } finally {
       setIsCreatingUser(false);
+    }
+  };
+
+  const handleSuspendUser = async () => {
+    if (!pendingSuspendUser) return;
+    const durationHours =
+      suspendDurationHours === "null" ? null : Number(suspendDurationHours);
+
+    setIsSuspending(true);
+    try {
+      const result = await api.admin.suspendUser(
+        parseInt(pendingSuspendUser.id, 10),
+        durationHours,
+      );
+
+      if (result.success) {
+        toast.success(result.message ?? "User suspended successfully");
+        setPendingSuspendUser(null);
+        await fetchUsers();
+      } else {
+        toast.error(result.message ?? "Failed to suspend user");
+      }
+    } catch (error) {
+      logger.warn("[UsersManagement] Suspend user failed", error);
+      toast.error("Failed to suspend user");
+    } finally {
+      setIsSuspending(false);
     }
   };
 
@@ -339,6 +373,13 @@ export function UsersManagement() {
             displayName: user.name || user.email,
           });
         }}
+        onSuspendRequest={(user) => {
+          setPendingSuspendUser({
+            id: user.id,
+            displayName: user.name || user.email,
+          });
+          setSuspendDurationHours("24");
+        }}
         formatJoinedDate={formatJoinedDate}
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
@@ -425,6 +466,18 @@ export function UsersManagement() {
           void handleDeleteUser(pendingDeleteUser.id);
           setPendingDeleteUser(null);
         }}
+      />
+
+      <SuspendUserDialog
+        open={pendingSuspendUser !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingSuspendUser(null);
+        }}
+        userName={pendingSuspendUser?.displayName}
+        durationHours={suspendDurationHours}
+        onDurationChange={setSuspendDurationHours}
+        onSuspend={() => void handleSuspendUser()}
+        isSuspending={isSuspending}
       />
     </div>
   );

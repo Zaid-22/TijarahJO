@@ -4,6 +4,7 @@ import {
   UserCheck,
   UserX,
   Eye,
+  ShieldBan,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -38,6 +39,7 @@ interface UsersTableProps {
   onChangeStatus: (userId: string, nextStatus: "active" | "banned") => void;
   onDeleteRequest: (user: AdminUserRecord) => void;
   onViewDetails: (userId: string) => void;
+  onSuspendRequest: (user: AdminUserRecord) => void;
   formatJoinedDate: (value?: string) => string;
   selectedIds?: Set<string>;
   onSelectionChange?: (ids: Set<string>) => void;
@@ -50,6 +52,7 @@ export function UsersTable({
   onChangeStatus,
   onDeleteRequest,
   onViewDetails,
+  onSuspendRequest,
   formatJoinedDate,
   selectedIds,
   onSelectionChange,
@@ -199,13 +202,23 @@ export function UsersTable({
                         View User Details
                       </DropdownMenuItem>
 
+                      {user.status !== "banned" && (
+                        <DropdownMenuItem
+                          onClick={() => onSuspendRequest(user)}
+                          className="text-amber-600 focus:text-amber-600 focus:bg-amber-50 dark:focus:bg-amber-950/50"
+                        >
+                          <ShieldBan className="w-4 h-4 mr-2" />
+                          Suspend User...
+                        </DropdownMenuItem>
+                      )}
+
                       {user.status !== "banned" ? (
                         <DropdownMenuItem
                           onClick={() => onChangeStatus(user.id, "banned")}
                           className="text-destructive focus:text-destructive"
                         >
                           <UserX className="w-4 h-4 mr-2" />
-                          Ban User
+                          Quick Ban
                         </DropdownMenuItem>
                       ) : (
                         <DropdownMenuItem

@@ -10,14 +10,9 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/reports")]
-public class AdminReportsQueueController : ControllerBase
+public class AdminReportsQueueController(IAdminDataAccess adminDataAccess) : ControllerBase
 {
-    private readonly IAdminDataAccess _adminDataAccess;
-
-    public AdminReportsQueueController(IAdminDataAccess adminDataAccess)
-    {
-        _adminDataAccess = adminDataAccess;
-    }
+    private readonly IAdminDataAccess _adminDataAccess = adminDataAccess;
 
     [HttpGet]
     [Authorize(Policy = AuthorizationPolicies.ReportsView)]
@@ -25,10 +20,11 @@ public class AdminReportsQueueController : ControllerBase
     public async Task<ActionResult> GetReports(
         [FromQuery] int? status = null,
         [FromQuery] string? reportType = null,
+        [FromQuery] string? search = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50)
     {
-        var result = await _adminDataAccess.GetReportsAsync(status, reportType, page, pageSize, HttpContext.RequestAborted);
+        var result = await _adminDataAccess.GetReportsAsync(status, reportType, search, page, pageSize, HttpContext.RequestAborted);
         return Ok(result);
     }
 

@@ -73,7 +73,7 @@ function AdminLayoutInner() {
   };
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    <div dir="ltr" className="flex min-h-screen bg-background text-foreground">
       {/* Sidebar - Desktop & Mobile */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-border bg-card transform transition-transform duration-300 ease-in-out ${

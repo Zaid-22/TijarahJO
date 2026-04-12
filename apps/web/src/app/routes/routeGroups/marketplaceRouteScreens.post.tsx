@@ -73,7 +73,7 @@ function PostDetailsMarketplaceRouteScreen() {
   } = useMarketplaceRouteContext();
 
   return (
-    <Suspense fallback={<LoadingState minHeightClassName="min-h-[40vh]" />}>
+    <Suspense fallback={<LoadingState minHeightClassName="min-h-96" />}>
       <PostDetailsRouteWrapper
         language={appProps.language}
         availablePosts={sharedPostRouteProps.availablePosts}

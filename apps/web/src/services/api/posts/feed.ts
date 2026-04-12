@@ -161,7 +161,7 @@ export async function getPostsFromFeed(
       error: {
         message: errorCode === "DATABASE_UNAVAILABLE" 
             ? "TijarahJo is currently undergoing maintenance (database unreachable). Please try again later."
-            : "Failed to fetch posts feed page.",
+            : "We're having trouble loading the marketplace feed right now. Please check your connection and refresh the page to try again.",
         code: errorCode === "DATABASE_UNAVAILABLE" 
             ? "DATABASE_UNAVAILABLE" 
             : "FEED_PAGE_FAILED",

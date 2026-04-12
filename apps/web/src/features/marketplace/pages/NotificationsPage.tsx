@@ -16,6 +16,7 @@ import { InfoPageIntroCard } from "../../../shared/ui/info-page";
 import { api } from "../../../services/api";
 import { formatRelativeTime } from "../../../shared/lib/dateTime";
 import type { AppNotification, Language } from "../../../types";
+import { formatChatPreviewText } from "../../chat/chatMessageContent";
 
 interface NotificationsPageProps {
   language: Language;
@@ -66,20 +67,7 @@ function getNotificationType(
   return "system";
 }
 
-function formatNotificationBody(body: string, language: Language): string {
-  if (!body) return "";
 
-  // Check if it's a chat image URL or raw image reference
-  if (
-    body.includes("api/v1/chat/download-image") ||
-    body.includes("[chat-image]") ||
-    (body.includes("/uploads/chat-") && body.includes("url="))
-  ) {
-    return language === "ar" ? "أرسل صورة" : "Sent an image";
-  }
-
-  return body;
-}
 
 function getNotificationIcon(notificationType: string) {
   const type = getNotificationType(notificationType);
@@ -279,7 +267,7 @@ export function NotificationsPage({
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
-                      {formatNotificationBody(notification.body, language)}
+                      {formatChatPreviewText(notification.body, language)}
                     </p>
                   </div>
                   {!notification.isRead && (

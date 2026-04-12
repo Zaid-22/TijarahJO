@@ -7,7 +7,6 @@ import { api } from "../../../services/api";
 import type { CompareResponse } from "../../../services/api/compare";
 import { CompareResultsSection, type BestForCategory } from "./CompareResultsSection";
 import { marketplaceTranslations } from "../translations";
-import { getLocalizedLocation } from "../../auth/loginUtils";
 import "./compare.css";
 
 export default function ComparePage() {
@@ -49,7 +48,7 @@ export default function ComparePage() {
 
   if (selectedPosts.length < 2) {
     return (
-      <div className="flex min-h-[70vh] flex-col items-center justify-center gap-5 px-4">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-5 px-4">
         <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
           <Scale className="h-10 w-10 text-primary" />
         </div>
@@ -140,9 +139,7 @@ export default function ComparePage() {
                     {post.name}
                   </h3>
                   {post.location && (
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground sm:text-[13px]">
-                      {getLocalizedLocation(post.location, language)}
-                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">{post.location}</p>
                   )}
                   <div className="mt-2 flex items-center justify-between">
                     <p className="text-lg font-extrabold tracking-tight text-primary sm:text-xl">
@@ -151,7 +148,7 @@ export default function ComparePage() {
                         : "Price not listed"}
                     </p>
                     {post.averageRating && post.averageRating > 0 && (
-                      <div className="flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                      <div className="flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
                         <Star className="h-3 w-3 fill-current" />
                         <span>{post.averageRating.toFixed(1)}</span>
                         {post.reviewCount ? (

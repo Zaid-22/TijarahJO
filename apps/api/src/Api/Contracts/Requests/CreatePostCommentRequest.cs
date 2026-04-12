@@ -5,7 +5,7 @@ namespace TijarahJo.Api.Contracts.Requests;
 public sealed class CreatePostCommentRequest
 {
     [Required]
-    [MaxLength(2000)]
+    [MaxLength(1000)]
     public string Content { get; set; } = string.Empty;
 
     /// <summary>

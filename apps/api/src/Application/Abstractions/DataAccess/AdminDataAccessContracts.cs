@@ -15,7 +15,7 @@ public sealed class DashboardStatsModel
     public int TotalReviews { get; init; }
     public double AverageRating { get; init; }
     public int SoldPosts { get; init; }
-    public System.Collections.Generic.IReadOnlyList<RecentAdminAction> RecentActions { get; init; } = System.Array.Empty<RecentAdminAction>();
+    public System.Collections.Generic.IReadOnlyList<RecentAdminAction> RecentActions { get; init; } = [];
 }
 
 public sealed class RecentAdminAction
@@ -49,15 +49,15 @@ public sealed class AdminPostItem
 
 public sealed class AdminPostListResult
 {
-    public System.Collections.Generic.IReadOnlyList<AdminPostItem> Posts { get; init; } = System.Array.Empty<AdminPostItem>();
+    public System.Collections.Generic.IReadOnlyList<AdminPostItem> Posts { get; init; } = [];
     public int TotalCount { get; init; }
 }
 
 public sealed class AdminUserDetails
 {
     public AdminUserProfile? User { get; init; }
-    public System.Collections.Generic.IReadOnlyList<AdminPostItem> RecentPosts { get; init; } = System.Array.Empty<AdminPostItem>();
-    public System.Collections.Generic.IReadOnlyList<TijarahJo.Domain.Models.ReviewModel> RecentReviews { get; init; } = System.Array.Empty<TijarahJo.Domain.Models.ReviewModel>();
+    public System.Collections.Generic.IReadOnlyList<AdminPostItem> RecentPosts { get; init; } = [];
+    public System.Collections.Generic.IReadOnlyList<TijarahJo.Domain.Models.ReviewModel> RecentReviews { get; init; } = [];
 }
 
 public sealed class AdminUserProfile
@@ -94,7 +94,7 @@ public sealed class AdminReviewItem
 
 public sealed class AdminReviewListResult
 {
-    public System.Collections.Generic.IReadOnlyList<AdminReviewItem> Reviews { get; init; } = System.Array.Empty<AdminReviewItem>();
+    public System.Collections.Generic.IReadOnlyList<AdminReviewItem> Reviews { get; init; } = [];
     public int TotalCount { get; init; }
 }
 
@@ -114,7 +114,7 @@ public sealed class AdminPostCommentItem
 
 public sealed class AdminPostCommentListResult
 {
-    public System.Collections.Generic.IReadOnlyList<AdminPostCommentItem> Comments { get; init; } = System.Array.Empty<AdminPostCommentItem>();
+    public System.Collections.Generic.IReadOnlyList<AdminPostCommentItem> Comments { get; init; } = [];
     public int TotalCount { get; init; }
 }
 
@@ -135,7 +135,7 @@ public sealed class AdminAuditLogItem
 
 public sealed class AdminAuditLogResult
 {
-    public System.Collections.Generic.IReadOnlyList<AdminAuditLogItem> Entries { get; init; } = System.Array.Empty<AdminAuditLogItem>();
+    public System.Collections.Generic.IReadOnlyList<AdminAuditLogItem> Entries { get; init; } = [];
     public int TotalCount { get; init; }
 }
 
@@ -169,8 +169,11 @@ public interface IAdminDataAccess
     Task<bool> DeleteAreaAsync(int areaId, CancellationToken cancellationToken = default);
 
     // Reports
-    Task<AdminReportListResult> GetReportsAsync(int? status = null, string? reportType = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
+    Task<AdminReportListResult> GetReportsAsync(int? status = null, string? reportType = null, string? search = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
     Task<bool> UpdateReportStatusAsync(int reportId, int newStatus, int adminUserId, string? resolutionNotes = null, CancellationToken cancellationToken = default);
+
+    // User Suspension
+    Task<bool> SuspendUserAsync(int userId, System.DateTime? suspendedUntil, int adminUserId, CancellationToken cancellationToken = default);
 }
 
 // ── Phase 3: System Settings ──
@@ -202,7 +205,7 @@ public sealed class AdminConversationItem
 
 public sealed class AdminConversationListResult
 {
-    public System.Collections.Generic.IReadOnlyList<AdminConversationItem> Conversations { get; init; } = System.Array.Empty<AdminConversationItem>();
+    public System.Collections.Generic.IReadOnlyList<AdminConversationItem> Conversations { get; init; } = [];
     public int TotalCount { get; init; }
 }
 
@@ -219,7 +222,7 @@ public sealed class AdminMessageItem
 public sealed class AdminConversationDetail
 {
     public AdminConversationItem Conversation { get; init; } = new();
-    public System.Collections.Generic.IReadOnlyList<AdminMessageItem> Messages { get; init; } = System.Array.Empty<AdminMessageItem>();
+    public System.Collections.Generic.IReadOnlyList<AdminMessageItem> Messages { get; init; } = [];
 }
 
 // ── Locations ──
@@ -237,7 +240,7 @@ public sealed class AdminCityItem
     public int CityID { get; init; }
     public string CityName { get; init; } = string.Empty;
     public string CityNameAr { get; init; } = string.Empty;
-    public System.Collections.Generic.IReadOnlyList<AdminAreaItem> Areas { get; init; } = System.Array.Empty<AdminAreaItem>();
+    public System.Collections.Generic.IReadOnlyList<AdminAreaItem> Areas { get; init; } = [];
 }
 
 // ── Reports ──
@@ -252,6 +255,7 @@ public sealed class AdminReportItem
     public string? Description { get; init; }
     public int ReporterUserID { get; init; }
     public string ReporterName { get; init; } = string.Empty;
+    public string ReporterEmail { get; init; } = string.Empty;
     public int Status { get; init; }
     public string StatusLabel { get; init; } = string.Empty;
     public int? ResolvedByUserID { get; init; }
@@ -263,6 +267,6 @@ public sealed class AdminReportItem
 
 public sealed class AdminReportListResult
 {
-    public System.Collections.Generic.IReadOnlyList<AdminReportItem> Reports { get; init; } = System.Array.Empty<AdminReportItem>();
+    public System.Collections.Generic.IReadOnlyList<AdminReportItem> Reports { get; init; } = [];
     public int TotalCount { get; init; }
 }

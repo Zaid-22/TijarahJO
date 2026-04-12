@@ -26,7 +26,7 @@ import { ImageWithFallback } from "./ImageWithFallback";
 import { getResponsiveImageProps } from "../../../shared/lib/thumbnail";
 import { PostCardPriceBadge } from "./PostCardPriceBadge";
 import { postCardMediaClass } from "./postCardMediaClass";
-import { getLocalizedLocation } from "../../auth/loginUtils";
+
 import { usePostCardState, type PostCardSharedProps } from "./usePostCardState";
 import { useCompare } from "../../../contexts/CompareContext";
 import { api } from "../../../services/api";
@@ -106,9 +106,11 @@ export const PostCardList = React.memo(function PostCardList(
     resolvedLanguage,
     "",
   );
-  const detailLocation = post.area
-    ? post.location + ", " + post.area
-    : post.location;
+  const isArabic = resolvedLanguage === "ar";
+  const displayLocation = isArabic ? post.locationAr || post.location : post.location;
+  const displayArea = isArabic ? post.areaAr || post.area : post.area;
+  const separator = isArabic ? "، " : ", ";
+  const detailLocation = displayArea ? displayLocation + separator + displayArea : displayLocation;
   const hasDescription = Boolean(post.description?.trim());
   const currentPath = buildCurrentPath(location.pathname, location.search);
   const trimmedSellerId = String(post.sellerId || "").trim();
@@ -188,7 +190,7 @@ export const PostCardList = React.memo(function PostCardList(
   };
 
   return (
-    <article className="group relative flex w-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-[22px] border border-slate-200/80 bg-white shadow-[0_18px_42px_-30px_rgba(15,23,42,0.24)] dark:border-slate-800/80 dark:bg-slate-900 sm:flex-row">
+    <article className="group relative flex w-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-[22px] border border-slate-200/80 bg-white shadow-lg dark:border-slate-800/80 dark:bg-slate-900 sm:flex-row">
       <button
         type="button"
         onClick={openPost}
@@ -200,7 +202,7 @@ export const PostCardList = React.memo(function PostCardList(
         <div
           className={
             postCardMediaClass +
-            " pointer-events-none rounded-[16px] border border-border/40 bg-muted/30 aspect-[16/10] overflow-hidden shadow-[0_14px_30px_-24px_rgba(15,23,42,0.28)] sm:h-full sm:min-h-[12.5rem]"
+            " pointer-events-none rounded-[16px] border border-border/40 bg-muted/30 aspect-[16/10] overflow-hidden shadow-md sm:h-full sm:min-h-[12.5rem]"
           }
         >
           <ImageWithFallback
@@ -233,10 +235,10 @@ export const PostCardList = React.memo(function PostCardList(
               price={post.price}
               currency={labels.currency}
               locale={priceLocale}
-              className="mb-2 shrink-0 border-white/45 bg-white/94 text-slate-950 shadow-[0_10px_18px_-14px_rgba(15,23,42,0.55)] supports-[backdrop-filter]:bg-white/86 px-2 py-0.5 scale-95"
+              className="mb-2 shrink-0 border-white/45 bg-white/94 text-slate-950 shadow-md supports-[backdrop-filter]:bg-white/86 px-2 py-0.5 scale-95"
             />
 
-            <h3 className="line-clamp-2 text-base font-semibold leading-[1.12] tracking-[-0.018em] text-foreground sm:text-[1.18rem]">
+            <h3 className="line-clamp-2 text-base font-semibold leading-[1.12] tracking-[-0.018em] text-foreground sm:text-lg">
               {post.name}
             </h3>
 
@@ -249,7 +251,7 @@ export const PostCardList = React.memo(function PostCardList(
 
           <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
             <div className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-slate-100/90 px-2.5 py-1 font-medium dark:bg-slate-800/80">
-              <span className="truncate">{getLocalizedLocation(detailLocation, resolvedLanguage) || "-"}</span>
+              <span className="truncate">{detailLocation || "-"}</span>
             </div>
 
             {post.condition && (
@@ -294,7 +296,7 @@ export const PostCardList = React.memo(function PostCardList(
             variant="outline"
             aria-label={labels.chatButton}
             title={labels.chatButton}
-            className="flex h-11 min-w-0 flex-[0.92] basis-[calc(46%-0.5rem)] items-center justify-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 text-[0.95rem] font-semibold text-slate-700 shadow-none transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 sm:basis-auto sm:px-4"
+            className="flex h-11 min-w-0 flex-[0.92] basis-[calc(46%-0.5rem)] items-center justify-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-none transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 sm:basis-auto sm:px-4"
             onClick={handleChatClick}
           >
             <MessageCircle className="h-[1.2rem] w-[1.2rem] text-slate-500 transition-colors group-hover:text-slate-700 dark:text-slate-400" />
@@ -304,7 +306,7 @@ export const PostCardList = React.memo(function PostCardList(
           <Button
             aria-label={labels.callButton}
             title={labels.callButton}
-            className="flex h-11 min-w-0 flex-[1.08] basis-[calc(54%-0.5rem)] items-center justify-center gap-2 rounded-[16px] bg-primary px-4 text-[0.95rem] font-semibold text-primary-foreground shadow-none transition-colors hover:bg-primary/92 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none dark:disabled:bg-slate-800 dark:disabled:text-slate-400 sm:basis-auto sm:px-4"
+            className="flex h-11 min-w-0 flex-[1.08] basis-[calc(54%-0.5rem)] items-center justify-center gap-2 rounded-[16px] bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-none transition-colors hover:bg-primary/92 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none dark:disabled:bg-slate-800 dark:disabled:text-slate-400 sm:basis-auto sm:px-4"
             onClick={handleCallClick}
             disabled={canResolvePhone === false || isResolvingPhone}
           >
@@ -349,6 +351,7 @@ export const PostCardList = React.memo(function PostCardList(
                 price: post.price ?? 0,
                 image: post.image ?? "",
                 category: post.category ?? "",
+                location: detailLocation || post.location || "",
               };
               if (isInCompare(comparePost.id)) {
                 removeFromCompare(comparePost.id);
@@ -402,7 +405,7 @@ export const PostCardList = React.memo(function PostCardList(
                 <a
                   href={`tel:${trimmedPhone}`}
                   aria-label={`${phoneDialogCopy.callNowLabel} ${phoneDialogCopy.displayNumber}`}
-                  className="group relative flex h-16 w-full items-center justify-between overflow-hidden rounded-2xl bg-primary px-6 text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
+                  className="group relative flex h-16 w-full items-center justify-between overflow-hidden rounded-2xl bg-primary px-6 text-primary-foreground transition-all hover:bg-primary/90 active:scale-95"
                   dir="ltr"
                 >
                   <div className="flex flex-col items-start text-left">

@@ -1,6 +1,7 @@
 import { Button } from "../../shared/ui/button";
 import type { Language } from "../../translations";
 import type { AppNotification } from "../../types";
+import { formatChatPreviewText } from "../chat/chatMessageContent";
 
 interface SettingsNotificationsPreviewProps {
   language: Language;
@@ -9,6 +10,7 @@ interface SettingsNotificationsPreviewProps {
   isMutationPending: boolean;
   onMarkNotificationAsRead?: (notificationId: number) => void;
   onMarkAllNotificationsAsRead?: () => void;
+  onViewAll?: () => void;
 }
 
 export function SettingsNotificationsPreview({
@@ -18,6 +20,7 @@ export function SettingsNotificationsPreview({
   isMutationPending,
   onMarkNotificationAsRead,
   onMarkAllNotificationsAsRead,
+  onViewAll,
 }: SettingsNotificationsPreviewProps) {
   return (
     <div className="space-y-3">
@@ -57,8 +60,8 @@ export function SettingsNotificationsPreview({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-medium text-sm">{notification.title}</p>
-                  <p className="text-xs text-muted-foreground break-words">
-                    {notification.body}
+                  <p className="text-xs text-muted-foreground line-clamp-2 break-words">
+                    {formatChatPreviewText(notification.body, language)}
                   </p>
                 </div>
                 {!notification.isRead ? (
@@ -75,6 +78,15 @@ export function SettingsNotificationsPreview({
               </div>
             </div>
           ))}
+          {notifications.length > 4 && (
+            <button
+              type="button"
+              onClick={onViewAll}
+              className="w-full text-center py-2 text-xs font-semibold text-primary hover:text-primary/80 transition-colors bg-muted/30 rounded-lg"
+            >
+              {language === "ar" ? "عرض جميع الإشعارات" : "View All Notifications"}
+            </button>
+          )}
         </div>
       )}
     </div>

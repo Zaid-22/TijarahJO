@@ -116,7 +116,7 @@ export function UnifiedProfileHeaderCard({
 
             {viewModel.mode !== "owner" && viewModel.canCall ? (
               <Button
-                className="h-[3.25rem] rounded-[18px] bg-primary px-6 text-[0.95rem] font-semibold text-primary-foreground shadow-[0_12px_28px_-16px_rgba(37,99,235,0.8)] transition-all hover:bg-primary/92 hover:-translate-y-0.5 active:translate-y-0"
+                className="h-[3.25rem] rounded-[18px] bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-xl shadow-blue-500/20 transition-all hover:bg-primary/92 hover:-translate-y-0.5 active:translate-y-0"
                 disabled={!viewModel.profile.phone?.trim()}
                 onClick={() => {
                   if (!viewModel.profile.phone?.trim()) {
@@ -133,7 +133,7 @@ export function UnifiedProfileHeaderCard({
             {viewModel.mode !== "owner" && viewModel.canChat && onChatWithSeller ? (
               <Button
                 variant="outline"
-                className="h-[3.25rem] rounded-[18px] border-2 border-slate-200 bg-white px-6 text-[0.95rem] font-semibold text-slate-700 shadow-[0_8px_20px_-16px_rgba(15,23,42,0.15)] transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 hover:-translate-y-0.5 active:translate-y-0"
+                className="h-[3.25rem] rounded-[18px] border-2 border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 hover:-translate-y-0.5 active:translate-y-0"
                 onClick={onChatWithSeller}
               >
                 <MessageSquare className="me-2 h-4.5 w-4.5 text-slate-500 transition-colors group-hover:text-slate-700 dark:text-slate-400" />
@@ -147,7 +147,7 @@ export function UnifiedProfileHeaderCard({
         {viewModel.profile.bio?.trim() && (
           <div className="mt-8">
             <h2 className="text-xl font-bold text-foreground mb-3 tracking-tight">{labels.aboutMe}</h2>
-            <p className="whitespace-pre-wrap text-[0.95rem] leading-relaxed text-slate-600 dark:text-slate-300">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-600 dark:text-slate-300">
               {viewModel.profile.bio.trim()}
             </p>
           </div>

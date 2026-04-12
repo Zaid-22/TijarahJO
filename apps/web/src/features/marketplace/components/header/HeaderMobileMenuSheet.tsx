@@ -125,7 +125,7 @@ export function HeaderMobileMenuSheet({
       <SheetContent
         side={isRTL ? "right" : "left"}
         hideCloseButton
-        className="w-80 overflow-y-auto border-border bg-background pt-16"
+        className="w-80 overflow-y-auto border-border bg-background"
       >
         <SheetHeader>
           <SheetTitle>{t.menu || "Menu"}</SheetTitle>
@@ -169,13 +169,6 @@ export function HeaderMobileMenuSheet({
                     onClick={() => closeAndRun(onShowAdminDashboard)}
                   />
                 )}
-                <div className="my-2 h-px bg-border" />
-                <MobileActionRow
-                  icon={LogOut}
-                  label={language === "ar" ? "تسجيل الخروج" : "Logout"}
-                  onClick={() => closeAndRun(onLogout)}
-                  danger
-                />
               </div>
             </div>
           ) : !authLoading ? (
@@ -213,6 +206,17 @@ export function HeaderMobileMenuSheet({
               })}
             </div>
           </div>
+
+          {!authLoading && isAuthenticated && (
+            <div className="mt-6 pt-4 border-t border-border">
+              <MobileActionRow
+                icon={LogOut}
+                label={language === "ar" ? "تسجيل الخروج" : "Logout"}
+                onClick={() => closeAndRun(onLogout)}
+                danger
+              />
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>

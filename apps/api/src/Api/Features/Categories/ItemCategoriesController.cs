@@ -17,7 +17,6 @@ public class ItemCategoriesController(ICategoryQueryHandler categoryQueries, ICa
 {
 
     [HttpGet("")]
-    [ResponseCache(Duration = 300)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IEnumerable<CategoryResponseDTO>>> GetAllCategories(

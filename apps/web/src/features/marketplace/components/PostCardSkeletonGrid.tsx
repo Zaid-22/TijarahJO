@@ -10,44 +10,39 @@ interface PostCardSkeletonGridProps {
 export const PostCardSkeletonGrid = React.memo(
   function PostCardSkeletonGrid({ hideCategoryBadge }: PostCardSkeletonGridProps) {
     return (
-      <div className="relative flex h-full flex-col overflow-hidden rounded-[24px] border border-border/60 bg-card shadow-sm sm:shadow-md">
-        <div className="px-3 pt-3">
-          <div className="relative aspect-[16/9] overflow-hidden rounded-[20px] border border-border/40 bg-muted/30 shadow-lg">
-            <Skeleton className="absolute inset-0 h-full w-full rounded-none" />
+      <article className="group relative flex h-full flex-col overflow-hidden rounded-[14px] bg-card shadow-md ring-1 ring-black/5 dark:ring-white/5">
+        <div className="pointer-events-none relative aspect-[4/5] w-full overflow-hidden bg-muted/30">
+          <Skeleton className="absolute inset-0 h-full w-full rounded-none" />
 
-            <div className="absolute bottom-2.5 right-2.5 z-10">
-              <Skeleton className="h-11 w-24 rounded-full bg-background/70" />
+          <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 p-2.5">
+            <div className="flex flex-wrap gap-1.5">
+              {!hideCategoryBadge && (
+                <Skeleton className="h-5 w-16 rounded-full bg-background/50 shadow-sm backdrop-blur-md" />
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <Skeleton className="h-8 w-8 rounded-full bg-background/50 shadow-sm backdrop-blur-md" />
+              <Skeleton className="h-8 w-8 rounded-full bg-background/50 shadow-sm backdrop-blur-md" />
+            </div>
+          </div>
+        </div>
+
+        <CardContent className="pointer-events-none relative z-20 flex flex-grow flex-col gap-2 px-2.5 pb-2.5 pt-2.5 sm:px-3 sm:pb-3">
+          <div className="space-y-1.5 pt-1">
+            <Skeleton className="h-4 w-4/5 sm:h-4" />
+            <div className="flex items-center gap-1.5 mt-2">
+              <Skeleton className="h-3 w-3 shrink-0 rounded-full" />
+              <Skeleton className="h-3 w-3/5" />
             </div>
           </div>
 
-          {!hideCategoryBadge && (
-            <div className="absolute top-3 left-3 z-10">
-              <Skeleton className="h-6 w-20 rounded-full bg-background/50" />
-            </div>
-          )}
-        </div>
-
-        {/* Favorite Button Skeleton */}
-        <div className="absolute right-5 top-5 z-20">
-          <Skeleton className="h-9 w-9 rounded-[18px] bg-background/70" />
-        </div>
-
-        <CardContent className="flex flex-grow flex-col px-4 pb-4 pt-3.5 sm:px-4.5 sm:pb-4.5 sm:pt-3.5">
-          <div className="flex-grow space-y-1">
-            <Skeleton className="mb-2 h-5 w-10/12 sm:h-6" />
-            <Skeleton className="mb-3 h-5 w-7/12 sm:h-6" />
-
-            <Skeleton className="h-4 w-5/12" />
-
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5">
-              <div className="flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-1">
-                <Skeleton className="h-3 w-3 rounded-full" />
-                <Skeleton className="h-3 w-14" />
-              </div>
-            </div>
+          <div className="flex items-center justify-between gap-2 mt-auto pt-1">
+            <Skeleton className="h-6 w-20 rounded-md" />
+            <Skeleton className="h-6 w-14 rounded-full" />
           </div>
         </CardContent>
-      </div>
+      </article>
     );
   }
 );

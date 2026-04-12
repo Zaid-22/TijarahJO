@@ -141,7 +141,7 @@ export function Header({
                       <Logo size="md" darkMode={darkMode} />
                     </Link>
                     {isAdmin && isMaintenanceMode && (
-                      <div className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold text-amber-600 border border-amber-500/20 uppercase tracking-wider animate-pulse whitespace-nowrap">
+                      <div className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-600 border border-amber-500/20 uppercase tracking-wider animate-pulse whitespace-nowrap">
                         <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                         {language === "ar" ? "وضع الصيانة" : "Maintenance Mode"}
                       </div>

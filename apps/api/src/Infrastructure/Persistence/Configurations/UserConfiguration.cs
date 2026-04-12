@@ -22,6 +22,7 @@ public class UserConfiguration : IEntityTypeConfiguration<UserEntity>
         builder.Property(e => e.Avatar).HasMaxLength(1000);
         builder.Property(e => e.JoinDate).HasColumnType("datetime2");
         builder.Property(e => e.UpdatedAt).HasColumnType("datetime2");
+        builder.Property(e => e.SuspendedUntil).HasColumnType("datetime2");
         builder.Property(e => e.TwoFactorEnabled).HasDefaultValue(false);
         builder.Property(e => e.TwoFactorSecret).HasMaxLength(512);
         builder.Property(e => e.TwoFactorPendingSecret).HasMaxLength(512);

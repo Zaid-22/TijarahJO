@@ -136,7 +136,7 @@ function CategoryMarketplaceRouteScreen() {
   } = useMarketplaceRouteContext();
 
   return (
-    <Suspense fallback={<LoadingState minHeightClassName="min-h-[40vh]" />}>
+    <Suspense fallback={<LoadingState minHeightClassName="min-h-96" />}>
       <CategoryRouteWrapper
         language={appProps.language}
         isAuthenticated={sharedUserRouteProps.isAuthenticated}

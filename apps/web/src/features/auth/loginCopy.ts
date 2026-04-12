@@ -107,7 +107,7 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       twoFactorTitle: "Two-Factor Verification",
       twoFactorSubtitle: "Enter the 6-digit code sent to your email.",
       twoFactorCodeLabel: "Verification Code",
-      twoFactorCodePlaceholder: "123456",
+      twoFactorCodePlaceholder: "",
       verifyTwoFactorButton: "Verify Code",
       verifyingTwoFactor: "Verifying...",
       cancelTwoFactor: "Back to Sign In",
@@ -195,7 +195,7 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       twoFactorSubtitle:
         "أدخل رمز التحقق المكوّن من 6 أرقام المرسل إلى بريدك الإلكتروني.",
       twoFactorCodeLabel: "رمز التحقق",
-      twoFactorCodePlaceholder: "123456",
+      twoFactorCodePlaceholder: "",
       verifyTwoFactorButton: "تأكيد الرمز",
       verifyingTwoFactor: "جارٍ التحقق...",
       cancelTwoFactor: "العودة لتسجيل الدخول",

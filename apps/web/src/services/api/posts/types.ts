@@ -65,12 +65,16 @@ export interface RawPost {
   price?: unknown;
   Location?: unknown;
   location?: unknown;
+  LocationAr?: unknown;
+  locationAr?: unknown;
   City?: unknown;
   city?: unknown;
   CityId?: unknown;
   cityId?: unknown;
   Area?: unknown;
   area?: unknown;
+  AreaAr?: unknown;
+  areaAr?: unknown;
   Phone?: unknown;
   phone?: unknown;
   AreaId?: unknown;

@@ -75,8 +75,10 @@ namespace TijarahJo.Api.Common.Services
                     Id = row.PostId.ToString(CultureInfo.InvariantCulture),
                     Name = row.PostTitle,
                     Price = row.Price,
-                    Location = string.IsNullOrWhiteSpace(row.City) ? "Jordan" : row.City,
+                    Location = row.City ?? string.Empty,
+                    LocationAr = row.CityAr ?? string.Empty,
                     Area = string.IsNullOrWhiteSpace(row.Area) ? null : row.Area,
+                    AreaAr = string.IsNullOrWhiteSpace(row.AreaAr) ? null : row.AreaAr,
                     Seller = row.SellerName,
                     SellerId = row.UserId.ToString(CultureInfo.InvariantCulture),
                     Category = row.CategoryName,
@@ -178,10 +180,16 @@ namespace TijarahJo.Api.Common.Services
         public decimal Price { get; init; }
 
         [JsonPropertyName("location")]
-        public string Location { get; init; } = "Jordan";
+        public string Location { get; init; } = string.Empty;
+
+        [JsonPropertyName("locationAr")]
+        public string LocationAr { get; init; } = string.Empty;
 
         [JsonPropertyName("area")]
         public string? Area { get; init; }
+
+        [JsonPropertyName("areaAr")]
+        public string? AreaAr { get; init; }
 
         [JsonPropertyName("seller")]
         public string Seller { get; init; } = string.Empty;

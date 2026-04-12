@@ -192,7 +192,7 @@ export function AdminDashboard() {
           fallback={
             <LoadingState
               label="Loading charts..."
-              minHeightClassName="min-h-[320px]"
+              minHeightClassName="min-h-80"
             />
           }
         >

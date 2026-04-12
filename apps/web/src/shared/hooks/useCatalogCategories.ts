@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../../services/api";
 import { STORAGE_KEYS } from "../../constants";
-import { DEFAULT_CATEGORIES } from "../../data/defaultCategories";
 import type { Category } from "../../types/api";
 import { logger } from "../lib/logger";
 
@@ -34,7 +33,7 @@ function normalizeStoredCategories(value: unknown): Category[] | null {
 
 function getInitialCatalogCategories(): Category[] {
   if (typeof window === "undefined") {
-    return [...DEFAULT_CATEGORIES].sort(byCategoryName);
+    return [];
   }
 
   try {
@@ -49,7 +48,7 @@ function getInitialCatalogCategories(): Category[] {
     // Fall back to baked-in categories if cache parsing fails.
   }
 
-  return [...DEFAULT_CATEGORIES].sort(byCategoryName);
+  return [];
 }
 
 function saveCatalogCategories(categories: Category[]) {

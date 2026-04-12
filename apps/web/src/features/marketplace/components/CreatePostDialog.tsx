@@ -67,22 +67,59 @@ export function CreatePostDialogContent({
   const objectUrlsRef = useRef<Set<string>>(new Set());
   const { categories: catalogCategories, isLoading: isLoadingCategories } = useCatalogCategories();
   
-  const categories = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          catalogCategories
-            .map((category) => category.name.trim())
-            .filter((name) => name.length > 0),
-        ),
-      ),
-    [catalogCategories],
-  );
+  const categories = useMemo(() => {
+    const valid = catalogCategories.filter(c => c.name.trim().length > 0);
+    const map = new Map<string, { value: string; label: string }>();
+    valid.forEach(c => {
+      const name = c.name.trim();
+      if (!map.has(name)) {
+        map.set(name, {
+          value: name,
+          label: language === "ar" && c.nameAr ? c.nameAr : name
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [catalogCategories, language]);
 
-  const { cityNames, areaNames, isLoadingCities, isLoadingAreas } = useLocationOptions(
+  const { cityNames, areaNames, isLoadingCities, isLoadingAreas, cities, areas } = useLocationOptions(
     formData.location,
     language,
   );
+
+  // Automatically switch English/Arabic city names in formData to match current language
+  useEffect(() => {
+    const rawLoc = formData.location.trim().toLowerCase();
+    if (!rawLoc || cities.length === 0) return;
+
+    const matchedCity = cities.find(
+      (c) => c.cityName.toLowerCase() === rawLoc || c.cityNameAr?.toLowerCase() === rawLoc
+    );
+
+    if (matchedCity) {
+      const localizedName = language === "ar" && matchedCity.cityNameAr ? matchedCity.cityNameAr : matchedCity.cityName;
+      if (localizedName !== formData.location) {
+        setFormData(prev => ({ ...prev, location: localizedName }));
+      }
+    }
+  }, [formData.location, cities, language]);
+
+  // Automatically switch English/Arabic area names in formData to match current language
+  useEffect(() => {
+    const rawArea = formData.area.trim().toLowerCase();
+    if (!rawArea || areas.length === 0) return;
+
+    const matchedArea = areas.find(
+      (a) => a.areaName.toLowerCase() === rawArea || a.areaNameAr?.toLowerCase() === rawArea
+    );
+
+    if (matchedArea) {
+      const localizedArea = language === "ar" && matchedArea.areaNameAr ? matchedArea.areaNameAr : matchedArea.areaName;
+      if (localizedArea !== formData.area) {
+        setFormData(prev => ({ ...prev, area: localizedArea }));
+      }
+    }
+  }, [formData.area, areas, language]);
 
   const cityOptions = useMemo(() => {
     const normalizedOptionSet = new Set(

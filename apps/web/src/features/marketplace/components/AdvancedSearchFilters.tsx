@@ -3,6 +3,7 @@ import { SlidersHorizontal, X, ChevronDown } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
 import { useCatalogCategories } from "../../../shared/hooks/useCatalogCategories";
+import { useLocationOptions } from "../../../shared/hooks/useLocationOptions";
 import { resolveCategoryName } from "../../../shared/lib/categoryVisuals";
 import type { Language } from "../../../types";
 
@@ -26,35 +27,6 @@ interface AdvancedSearchFiltersProps {
   showApplyButton?: boolean;
 }
 
-const JORDAN_CITIES = [
-  "Amman",
-  "Irbid",
-  "Zarqa",
-  "Aqaba",
-  "Madaba",
-  "Jerash",
-  "Ajloun",
-  "Karak",
-  "Mafraq",
-  "Tafilah",
-  "Ma'an",
-  "Balqa",
-];
-
-const JORDAN_CITIES_AR: Record<string, string> = {
-  Amman: "عمّان",
-  Irbid: "إربد",
-  Zarqa: "الزرقاء",
-  Aqaba: "العقبة",
-  Madaba: "مادبا",
-  Jerash: "جرش",
-  Ajloun: "عجلون",
-  Karak: "الكرك",
-  Mafraq: "المفرق",
-  Tafilah: "الطفيلة",
-  "Ma'an": "معان",
-  Balqa: "البلقاء",
-};
 
 const SORT_OPTIONS_EN = [
   { value: "date-desc", label: "Newest First" },
@@ -83,6 +55,7 @@ export function AdvancedSearchFilters({
   showApplyButton = true,
 }: AdvancedSearchFiltersProps) {
   const { categories } = useCatalogCategories();
+  const { cityNames } = useLocationOptions("", language);
   const isRTL = language === "ar";
   const sortOptions = language === "ar" ? SORT_OPTIONS_AR : SORT_OPTIONS_EN;
   const currentSort = `${filters.sortBy || "date"}-${filters.sortOrder || "desc"}`;
@@ -177,9 +150,9 @@ export function AdvancedSearchFilters({
             className="w-full appearance-none rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none transition-colors"
           >
             <option value="">{labels.allCities}</option>
-            {JORDAN_CITIES.map((city) => (
+            {cityNames.map((city) => (
               <option key={city} value={city}>
-                {language === "ar" ? JORDAN_CITIES_AR[city] || city : city}
+                {city}
               </option>
             ))}
           </select>

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 function toInteger(value, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.trunc(parsed) : fallback;
@@ -384,6 +385,7 @@ function createMarketplaceApiMock(options = {}) {
         apiPath.startsWith("/reviews") ||
         apiPath.startsWith("/sellers") ||
         apiPath.startsWith("/post-images") ||
+        apiPath.startsWith("/cities") ||
         apiPath.startsWith("/notifications");
 
       if (!isApiRequest) {
@@ -450,6 +452,29 @@ function createMarketplaceApiMock(options = {}) {
 
       if (apiPath.startsWith("/notifications") && method === "GET") {
         await fulfillJson(route, 200, []);
+        return;
+      }
+
+      if (apiPath === "/cities" && method === "GET") {
+        await fulfillJson(route, 200, [
+          { CityId: 1, CityName: "Amman", CityNameAr: "عمان" },
+          { CityId: 2, CityName: "Irbid", CityNameAr: "إربد" }
+        ]);
+        return;
+      }
+
+      if (apiPath.startsWith("/cities/") && apiPath.endsWith("/areas") && method === "GET") {
+        const cityId = toInteger(apiPath.split("/")[2], 1);
+        if (cityId === 1) {
+          await fulfillJson(route, 200, [
+            { AreaId: 3, CityId: 1, AreaName: "Khalda", AreaNameAr: "خلدا" },
+            { AreaId: 4, CityId: 1, AreaName: "Abdoun", AreaNameAr: "عبدون" }
+          ]);
+        } else {
+          await fulfillJson(route, 200, [
+            { AreaId: 5, CityId: 2, AreaName: "Downtown", AreaNameAr: "وسط البلد" }
+          ]);
+        }
         return;
       }
 
@@ -632,8 +657,8 @@ function createMarketplaceApiMock(options = {}) {
           title: normalizeString(body.PostTitle) || "Untitled Post",
           description: normalizeString(body.PostDescription),
           price: Number(body.Price) || 0,
-          city: normalizeString(body.City) || "Amman",
-          area: normalizeString(body.Area),
+          city: normalizeString(body.City || body.city) || "Amman",
+          area: normalizeString(body.Area || body.area) || "Khalda",
           createdAt: normalizeString(body.CreatedAt) || nowIso(),
           views: 0,
           status: toInteger(body.Status, 0),
@@ -691,8 +716,8 @@ function createMarketplaceApiMock(options = {}) {
         targetPost.description =
           normalizeString(body.PostDescription) || targetPost.description;
         targetPost.price = Number(body.Price) || targetPost.price;
-        targetPost.city = normalizeString(body.City) || targetPost.city;
-        targetPost.area = normalizeString(body.Area) || targetPost.area;
+        targetPost.city = normalizeString(body.City || body.city) || targetPost.city || "Amman";
+        targetPost.area = normalizeString(body.Area || body.area) || targetPost.area || "Khalda";
         targetPost.status = toInteger(body.Status, targetPost.status);
         targetPost.categoryId = toInteger(body.CategoryID, targetPost.categoryId);
         const matchedCategory = findCategoryById(targetPost.categoryId);
@@ -770,6 +795,43 @@ function createMarketplaceApiMock(options = {}) {
         return;
       }
 
+      if (apiPath === "/post-images/upload" && method === "POST") {
+        if (!sessionAuthenticated) {
+          await fulfillJson(route, 401, { Message: "Unauthorized" });
+          return;
+        }
+
+        const body = readBody(route);
+        // Playwright's route payload reading might not parse multipart/form-data nicely,
+        // so we derive postId from the URL if possible or just parse a fallback.
+        const postIdValue = toInteger(url.searchParams.get("postId"), 0) || toInteger(body.PostID, nextPostId - 1);
+        const postId = postIdValue > 0 ? postIdValue : nextPostId - 1;
+        const imageUrl = `https://example.com/mock-upload-${Date.now()}.png`;
+
+        const row = {
+          PostImageID: nextPostImageId++,
+          PostID: postId,
+          PostImageURL: imageUrl,
+          UploadedAt: nowIso(),
+          IsDeleted: false,
+        };
+
+        const postIdKey = String(postId);
+        const rows = postImagesByPostId.get(postIdKey) || [];
+        rows.push(row);
+        postImagesByPostId.set(postIdKey, rows);
+
+        const post = posts.find((item) => item.postId === postId);
+        if (post) {
+          post.images = rows
+            .filter((imageRow) => !imageRow.IsDeleted)
+            .map((imageRow) => imageRow.PostImageURL);
+        }
+
+        await fulfillJson(route, 200, row);
+        return;
+      }
+
       if (apiPath.startsWith("/post-images/") && method === "DELETE") {
         if (!sessionAuthenticated) {
           await fulfillJson(route, 401, { Message: "Unauthorized" });
@@ -798,7 +860,12 @@ function createMarketplaceApiMock(options = {}) {
         return;
       }
 
-      await fulfillJson(route, 200, {});
+      // Fallback for unhandled API requests
+      if (debugMockApi) {
+        // eslint-disable-next-line no-console
+        console.warn(`[mock-api] Unhandled mock route: ${method} ${apiPath}`);
+      }
+      await route.continue();
     });
   }
 

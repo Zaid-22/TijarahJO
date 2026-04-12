@@ -230,10 +230,21 @@ export function HomeHeroSection({
                 isActive
                   ? "opacity-100 z-10"
                   : "opacity-0 z-0"
-              } ${banner.bgClass} ${banner.textClass}`;
+              } ${banner.bgClass.startsWith('#') ? '' : banner.bgClass} ${banner.textClass.startsWith('#') ? '' : banner.textClass}`;
+              const slideStyle = banner.bgClass.startsWith('#') ? { backgroundColor: banner.bgClass } : {};
+              const textStyle = banner.textClass.startsWith('#') ? { color: banner.textClass } : {};
+              const isLightBg = banner.bgClass.startsWith('#')
+                ? parseInt(banner.bgClass.slice(1), 16) > 0x888888
+                : banner.bgClass.includes('50') || banner.bgClass.includes('100') || banner.bgClass.includes('200') || banner.bgClass.includes('white') || banner.bgClass.includes('sky') || banner.bgClass.includes('amber');
+              const buttonStyle = isLightBg
+                ? { backgroundColor: 'rgb(15, 23, 42)', color: 'rgb(255, 255, 255)' }
+                : { backgroundColor: 'rgb(255, 255, 255)', color: 'rgb(15, 23, 42)' };
+              const slideInner = (
+                <div style={slideStyle} className="absolute inset-0 h-full w-full"></div>
+              );
               const slideContent = (
                 <div className={`relative w-full h-full flex flex-col md:flex-row items-center justify-center md:justify-between px-6 sm:px-12 lg:px-24 py-6 md:py-0 gap-4 md:gap-0 ${isRTL ? 'md:flex-row-reverse' : ''}`}>
-                  <div className={`flex flex-col items-center md:items-start text-center md:text-start space-y-3 sm:space-y-4 max-w-lg z-10 ${isRTL ? 'md:items-end md:text-end' : ''}`}>
+                <div className={`flex flex-col items-center md:items-start text-center md:text-start space-y-3 sm:space-y-4 max-w-lg z-10 ${isRTL ? 'md:items-end md:text-end' : ''}`} style={textStyle}>
                     <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold tracking-tight leading-tight">
                       {resolveLocalizedBannerCopy(
                         language,
@@ -248,7 +259,10 @@ export function HomeHeroSection({
                         banner.subtitle,
                       )}
                     </p>
-                    <div className={`px-6 py-2.5 sm:py-3 mt-2 sm:mt-4 font-semibold text-sm sm:text-base rounded-full shadow-lg transition-transform hover:scale-105 ${banner.bgClass.includes('slate') || banner.bgClass.includes('0f172a') ? 'bg-primary text-primary-foreground' : 'bg-slate-900 text-white dark:bg-primary dark:text-primary-foreground'}`}>
+                    <div
+                      className="px-6 py-2.5 sm:py-3 mt-2 sm:mt-4 font-semibold text-sm sm:text-base rounded-full shadow-lg transition-transform hover:scale-105"
+                      style={buttonStyle}
+                    >
                       {resolveLocalizedBannerCopy(
                         language,
                         banner.buttonTextAr,
@@ -297,6 +311,7 @@ export function HomeHeroSection({
                   tabIndex={isActive ? 0 : -1}
                   disabled={!isActive}
                 >
+                  {slideInner}
                   {slideContent}
                 </button>
               ) : (
@@ -308,6 +323,7 @@ export function HomeHeroSection({
                   aria-label={slideLabel}
                   aria-hidden={!isActive}
                 >
+                  {slideInner}
                   {slideContent}
                 </div>
               );

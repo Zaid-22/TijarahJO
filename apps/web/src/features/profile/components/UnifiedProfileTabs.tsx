@@ -47,21 +47,21 @@ export function UnifiedProfileTabs({
           <TabsList className="h-auto w-full min-w-0 flex-nowrap justify-start gap-2 overflow-x-auto whitespace-nowrap bg-transparent p-1 sm:flex-wrap sm:gap-3 md:w-fit hide-scrollbar">
             <TabsTrigger
               value="active"
-              className="flex-none h-auto rounded-[14px] border border-transparent px-4 py-2.5 text-[0.95rem] font-semibold text-muted-foreground shadow-none data-[state=active]:bg-card dark:data-[state=active]:bg-muted/50 data-[state=active]:text-primary data-[state=active]:border-border/60 data-[state=active]:shadow-sm transition-all"
+              className="flex-none h-auto rounded-[14px] border border-transparent px-4 py-2.5 text-sm font-semibold text-muted-foreground shadow-none data-[state=active]:bg-card dark:data-[state=active]:bg-muted/50 data-[state=active]:text-primary data-[state=active]:border-border/60 data-[state=active]:shadow-sm transition-all"
             >
               <span>{labels.activeListings}</span>
               <span className="opacity-80 ms-1.5">({viewModel.activeListings.length})</span>
             </TabsTrigger>
             <TabsTrigger
               value="sold"
-              className="flex-none h-auto rounded-[14px] border border-transparent px-4 py-2.5 text-[0.95rem] font-semibold text-muted-foreground shadow-none data-[state=active]:bg-card dark:data-[state=active]:bg-muted/50 data-[state=active]:text-primary data-[state=active]:border-border/60 data-[state=active]:shadow-sm transition-all"
+              className="flex-none h-auto rounded-[14px] border border-transparent px-4 py-2.5 text-sm font-semibold text-muted-foreground shadow-none data-[state=active]:bg-card dark:data-[state=active]:bg-muted/50 data-[state=active]:text-primary data-[state=active]:border-border/60 data-[state=active]:shadow-sm transition-all"
             >
               <span>{labels.soldListings}</span>
               <span className="opacity-80 ms-1.5">({viewModel.soldListings.length})</span>
             </TabsTrigger>
             <TabsTrigger
               value="reviews"
-              className="flex-none h-auto rounded-[14px] border border-transparent px-4 py-2.5 text-[0.95rem] font-semibold text-muted-foreground shadow-none data-[state=active]:bg-card dark:data-[state=active]:bg-muted/50 data-[state=active]:text-primary data-[state=active]:border-border/60 data-[state=active]:shadow-sm transition-all"
+              className="flex-none h-auto rounded-[14px] border border-transparent px-4 py-2.5 text-sm font-semibold text-muted-foreground shadow-none data-[state=active]:bg-card dark:data-[state=active]:bg-muted/50 data-[state=active]:text-primary data-[state=active]:border-border/60 data-[state=active]:shadow-sm transition-all"
             >
               <span>{labels.reviews}</span>
               <span className="opacity-80 ms-1.5">({viewModel.reviews.length})</span>
