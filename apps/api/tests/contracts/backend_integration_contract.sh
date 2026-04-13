@@ -148,12 +148,23 @@ email_other="integration_${timestamp}_other@example.com"
 
 call_api "preflight.swagger" "GET" "/swagger/index.html" "200"
 
-signup_owner_payload="$(jq -nc --arg e "$email_owner" '{Email:$e,Password:"P@ssw0rd123",FirstName:"Owner",LastName:"Test",Phone:"+962790001001",City:"Amman",Area:"Abdali"}')"
+# Resolve location IDs for signup
+call_api "locations.cities.signup" "GET" "/api/v1/cities" "200"
+signup_city_id="$(printf "%s" "$LAST_BODY" | jq -r '.[] | select(.CityName=="Amman") | .CityId // empty')"
+if ! [[ "$signup_city_id" =~ ^[0-9]+$ ]]; then signup_city_id="1"; fi
+
+call_api "locations.areas.signup" "GET" "/api/v1/cities/${signup_city_id}/areas" "200"
+signup_area_id="$(printf "%s" "$LAST_BODY" | jq -r '.[0].AreaId // empty')"
+if ! [[ "$signup_area_id" =~ ^[0-9]+$ ]]; then signup_area_id="1"; fi
+signup_area2_id="$(printf "%s" "$LAST_BODY" | jq -r '.[1].AreaId // empty')"
+if ! [[ "$signup_area2_id" =~ ^[0-9]+$ ]]; then signup_area2_id="$signup_area_id"; fi
+
+signup_owner_payload="$(jq -nc --arg e "$email_owner" --arg p "+962700${timestamp: -6}" --argjson city "$signup_city_id" --argjson area "$signup_area_id" '{Email:$e,Password:"P@ssw0rd123",FirstName:"Owner",LastName:"Test",Phone:$p,CityId:$city,AreaId:$area}')"
 call_api "auth.signup.owner" "POST" "/api/v1/auth/signup" "201" "$signup_owner_payload"
 owner_token="$(extract_jwt_cookie)"
 assert_jq "auth.signup.owner.token.absent" '(.Token // null) == null'
 
-signup_other_payload="$(jq -nc --arg e "$email_other" '{Email:$e,Password:"P@ssw0rd123",FirstName:"Other",LastName:"User",Phone:"+962790001002",City:"Amman",Area:"Khalda"}')"
+signup_other_payload="$(jq -nc --arg e "$email_other" --arg p "+962701${timestamp: -6}" --argjson city "$signup_city_id" --argjson area "$signup_area2_id" '{Email:$e,Password:"P@ssw0rd123",FirstName:"Other",LastName:"User",Phone:$p,CityId:$city,AreaId:$area}')"
 call_api "auth.signup.other" "POST" "/api/v1/auth/signup" "201" "$signup_other_payload"
 other_token="$(extract_jwt_cookie)"
 assert_jq "auth.signup.other.token.absent" '(.Token // null) == null'
@@ -167,7 +178,20 @@ else
   log_pass "categories.first.id ($category_id)"
 fi
 
-create_post_payload="$(jq -nc --argjson c "$category_id" '{PostID:null,UserID:0,CategoryID:$c,PostTitle:"Integration Contract Post",PostDescription:"Created by backend integration contract test",Price:25.5,Status:0,CreatedAt:(now|todateiso8601),IsDeleted:false,City:"Amman",Area:"Abdoun"}')"
+# Resolve location IDs dynamically
+call_api "locations.cities" "GET" "/api/v1/cities" "200"
+amman_city_id="$(printf "%s" "$LAST_BODY" | jq -r '.[] | select(.CityName=="Amman") | .CityId // empty')"
+if ! [[ "$amman_city_id" =~ ^[0-9]+$ ]]; then
+  amman_city_id="1"
+fi
+
+call_api "locations.areas" "GET" "/api/v1/cities/${amman_city_id}/areas" "200"
+abdoun_area_id="$(printf "%s" "$LAST_BODY" | jq -r '.[0].AreaId // empty')"
+if ! [[ "$abdoun_area_id" =~ ^[0-9]+$ ]]; then
+  abdoun_area_id="1"
+fi
+
+create_post_payload="$(jq -nc --argjson c "$category_id" --argjson city "$amman_city_id" --argjson area "$abdoun_area_id" '{CategoryID:$c,PostTitle:"Integration Contract Post",PostDescription:"Created by backend integration contract test",Price:25.5,CityId:$city,AreaId:$area}')"
 call_api "posts.create.owner" "POST" "/api/v1/posts" "201" "$create_post_payload" "$owner_token"
 post_id="$(printf "%s" "$LAST_BODY" | jq -r '.PostID // .postID // empty')"
 assert_jq "posts.create.owner.id.present" '.PostID != null or .postID != null'

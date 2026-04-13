@@ -146,7 +146,16 @@ call_api "posts.pagination.removed" "GET" "/api/v1/posts/pagination?pageNumber=1
 
 call_api "users.all.restricted" "GET" "/api/v1/users" "401,403"
 
-signup_payload="$(jq -nc --arg e "$email" '{Email:$e,Password:"P@ssw0rd123",FirstName:"Smoke",LastName:"Test",Phone:"+962790000099",City:"Amman",Area:"Abdali"}')"
+# Resolve location IDs for signup
+call_api "locations.cities.smoke" "GET" "/api/v1/cities" "200"
+smoke_city_id="$(printf "%s" "$LAST_BODY" | jq -r '.[] | select(.CityName=="Amman") | .CityId // empty')"
+if ! [[ "$smoke_city_id" =~ ^[0-9]+$ ]]; then smoke_city_id="1"; fi
+
+call_api "locations.areas.smoke" "GET" "/api/v1/cities/${smoke_city_id}/areas" "200"
+smoke_area_id="$(printf "%s" "$LAST_BODY" | jq -r '.[0].AreaId // empty')"
+if ! [[ "$smoke_area_id" =~ ^[0-9]+$ ]]; then smoke_area_id="1"; fi
+
+signup_payload="$(jq -nc --arg e "$email" --arg p "+962702${timestamp: -6}" --argjson city "$smoke_city_id" --argjson area "$smoke_area_id" '{Email:$e,Password:"P@ssw0rd123",FirstName:"Smoke",LastName:"Test",Phone:$p,CityId:$city,AreaId:$area}')"
 call_api "auth.signup" "POST" "/api/v1/auth/signup" "201" "$signup_payload"
 token="$(extract_jwt_cookie)"
 assert_jq "auth.signup.token.absent" '(.Token // null) == null'

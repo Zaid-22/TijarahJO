@@ -86,7 +86,7 @@ echo "Running frontend API contract checks against $BASE_URL"
 
 call_api "preflight.swagger" "GET" "/swagger/index.html" "200"
 
-call_api "posts.feed" "GET" "/api/posts/feed?page=1&limit=10&includeDeleted=false" "200"
+call_api "posts.feed" "GET" "/api/v1/posts/feed?page=1&limit=10&includeDeleted=false" "200"
 assert_jq "posts.feed.contract" '.success==true and (.posts|type=="array") and (.pagination|type=="object")'
 assert_jq "posts.feed.pagination.contract" '.pagination.currentPage|type=="number"'
 
@@ -94,22 +94,22 @@ first_post_id="$(printf "%s" "$LAST_BODY" | jq -r '.posts[0].id // empty')"
 if [ -n "$first_post_id" ]; then
   log_pass "posts.feed.first.id.present ($first_post_id)"
   assert_jq "posts.feed.first.shape" '.posts[0] | has("name") and has("price") and has("status") and has("images")'
-  call_api "posts.by-id" "GET" "/api/posts/${first_post_id}" "200"
+  call_api "posts.by-id" "GET" "/api/v1/posts/${first_post_id}" "200"
   assert_jq "posts.by-id.contract" '.PostID != null and .CategoryID != null and .PostTitle != null'
 else
-  log_fail "posts.feed.first.id.present" "No posts returned from /api/posts/feed"
+  log_fail "posts.feed.first.id.present" "No posts returned from /api/v1/posts/feed"
 fi
 
-call_api "categories.all" "GET" "/api/categories" "200"
+call_api "categories.all" "GET" "/api/v1/categories" "200"
 assert_jq "categories.all.contract" 'type=="array"'
 assert_jq "categories.first.contract" 'length == 0 or (.[0].CategoryID != null and .[0].CategoryName != null)'
 
-call_api "search.basic" "GET" "/api/search?query=test&page=1&limit=5" "200"
+call_api "search.basic" "GET" "/api/v1/search?query=test&page=1&limit=5" "200"
 assert_jq "search.basic.contract" '.success==true and (.posts|type=="array")'
 
-call_api "posts.all.removed" "GET" "/api/posts/All" "404"
+call_api "posts.all.removed" "GET" "/api/v1/posts/All" "404"
 
-call_api "posts.pagination.removed" "GET" "/api/posts/pagination?pageNumber=1&rowsPerPage=5&includeDeleted=false" "404"
+call_api "posts.pagination.removed" "GET" "/api/v1/posts/pagination?pageNumber=1&rowsPerPage=5&includeDeleted=false" "404"
 
 print_summary
 
