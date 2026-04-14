@@ -84,7 +84,7 @@ Scope: `TijarahJo-frontend/src` static assessment (83 files).
 | `src/pages/SettingsPage.tsx` | page | 563 | 1 | 0 | refactor | medium | Large file (563 lines) |
 | `src/routes/AppRoutes.tsx` | route | 761 | 1 | 2 | refactor | medium | Large file (761 lines) |
 | `src/services/api.ts` | service | 2492 | 18 | 102 | rewrite | high | Very large file (2492 lines); High any usage (102) |
-| `src/services/api/client.ts` | service | 182 | 1 | 2 | keep | low | No major issues by static heuristics |
+| `src/services/api/v1/client.ts` | service | 182 | 1 | 2 | keep | low | No major issues by static heuristics |
 | `src/services/chatService.ts` | service | 153 | 1 | 0 | keep | low | No major issues by static heuristics |
 | `src/styles/globals.css` | style | 380 | 1 | 0 | refactor | low | Moderate-large file (380 lines) |
 | `src/translations.ts` | other | 122 | 13 | 0 | keep | low | No major issues by static heuristics |
@@ -142,7 +142,7 @@ Scope: `TijarahJo-frontend/src` static assessment (83 files).
 
 - `src/services/api.ts` refactor completed:
   - reduced to thin orchestrator (`74` lines)
-  - endpoint domains split across `src/services/api/*` modules
+  - endpoint domains split across `src/services/api/v1/*` modules
 - `src/pages/LoginPage.tsx` refactor completed:
   - reduced from `1012` to `576` lines
   - extracted reusable auth input UI and auth parsing/validation utilities:

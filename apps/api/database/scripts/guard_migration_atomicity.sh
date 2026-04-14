@@ -9,10 +9,7 @@ MIGRATIONS_DIR="$SCRIPT_DIR/migrations"
 # Legacy and earlier canonical migrations remain immutable; this gate is forward-looking.
 ATOMICITY_VERSION_FLOOR="${MIGRATION_ATOMICITY_VERSION_FLOOR:-202602201100}"
 
-if ! command -v rg >/dev/null 2>&1; then
-  echo "Error: rg (ripgrep) is required for guard_migration_atomicity.sh" >&2
-  exit 0
-fi
+
 
 if [[ ! -d "$MIGRATIONS_DIR" ]]; then
   echo "Error: migrations directory not found at $MIGRATIONS_DIR" >&2
@@ -36,7 +33,7 @@ while IFS= read -r file; do
     continue
   fi
 
-  if rg -qi -- '--\s*ATOMICITY_EXCEPTION' "$file"; then
+  if grep -Eqi -- '--[[:space:]]*ATOMICITY_EXCEPTION' "$file"; then
     echo "Atomicity guard: skipping exception-marked migration $base_name"
     skipped=$((skipped + 1))
     continue
@@ -44,27 +41,27 @@ while IFS= read -r file; do
 
   missing=()
 
-  if ! rg -qi 'SET\s+XACT_ABORT\s+ON' "$file"; then
+  if ! grep -Eqi 'SET[[:space:]]+XACT_ABORT[[:space:]]+ON' "$file"; then
     missing+=("SET XACT_ABORT ON")
   fi
 
-  if ! rg -qi 'BEGIN\s+TRY' "$file"; then
+  if ! grep -Eqi 'BEGIN[[:space:]]+TRY' "$file"; then
     missing+=("BEGIN TRY")
   fi
 
-  if ! rg -qi 'BEGIN\s+CATCH' "$file"; then
+  if ! grep -Eqi 'BEGIN[[:space:]]+CATCH' "$file"; then
     missing+=("BEGIN CATCH")
   fi
 
-  if ! rg -qi 'BEGIN\s+TRAN(?:SACTION)?' "$file"; then
+  if ! grep -Eqi 'BEGIN[[:space:]]+TRAN(SACTION)?' "$file"; then
     missing+=("BEGIN TRANSACTION")
   fi
 
-  if ! rg -qi 'COMMIT\s+TRAN(?:SACTION)?' "$file"; then
+  if ! grep -Eqi 'COMMIT[[:space:]]+TRAN(SACTION)?' "$file"; then
     missing+=("COMMIT TRANSACTION")
   fi
 
-  if ! rg -qi 'ROLLBACK\s+TRAN(?:SACTION)?' "$file"; then
+  if ! grep -Eqi 'ROLLBACK[[:space:]]+TRAN(SACTION)?' "$file"; then
     missing+=("ROLLBACK TRANSACTION")
   fi
 

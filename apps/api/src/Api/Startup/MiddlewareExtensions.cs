@@ -70,6 +70,22 @@ public static class MiddlewareExtensions
         return app;
     }
 
+    public static WebApplication UseTijarahJoSecurityHeaders(this WebApplication app)
+    {
+        app.Use(async (context, next) =>
+        {
+            var headers = context.Response.Headers;
+            headers.XContentTypeOptions = "nosniff";
+            headers.XFrameOptions = "DENY";
+            headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+            headers["X-Permitted-Cross-Domain-Policies"] = "none";
+            headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+            await next();
+        });
+
+        return app;
+    }
+
     public static WebApplication UseTijarahJoTokenBlacklist(this WebApplication app)
     {
         app.UseMiddleware<TokenBlacklistMiddleware>();

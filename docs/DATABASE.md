@@ -339,7 +339,7 @@ erDiagram
 
 - `BlacklistedTokens` stores revoked JWT `jti` values so logout and forced invalidation can block previously issued cookies.
 - `VerificationChallenges` stores hashed verification state for flows such as login challenges, setup confirmation, and password reset verification.
-- There is no active `RefreshTokens` table in the current schema; session renewal is handled through the authenticated `/api/auth/refresh` path plus JWT cookie rotation and blacklisting.
+- There is no active `RefreshTokens` table in the current schema; session renewal is handled through the authenticated `/api/v1/auth/refresh` path plus JWT cookie rotation and blacklisting.
 
 ## Data Lifecycle Conventions
 

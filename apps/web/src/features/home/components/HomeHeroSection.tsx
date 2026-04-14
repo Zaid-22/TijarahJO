@@ -183,10 +183,10 @@ export function HomeHeroSection({
 
   if (banners.length === 0) {
     return (
-      <section className="relative w-full overflow-hidden bg-gradient-to-b from-muted/30 to-background">
+      <section className="relative w-full overflow-hidden bg-linear-to-b from-muted/30 to-background">
         <div className="relative w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 pt-4 sm:pt-6 pb-2">
           {/* Main banner skeleton matching exact dimensions */}
-          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl bg-muted animate-pulse w-full min-h-96 sm:min-h-80 md:min-h-0 md:aspect-[21/8]" />
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl bg-muted animate-pulse w-full min-h-96 sm:min-h-80 md:min-h-0 md:aspect-21/8" />
           
           {/* Pagination dots skeleton matching exact margin/padding */}
           <div className="flex items-center justify-center gap-2 mt-3 sm:mt-4 pb-2">
@@ -203,7 +203,7 @@ export function HomeHeroSection({
 
   return (
     <section
-      className="relative w-full overflow-hidden bg-gradient-to-b from-muted/30 to-background"
+      className="relative w-full overflow-hidden bg-linear-to-b from-muted/30 to-background"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       aria-roledescription="carousel"
@@ -216,7 +216,7 @@ export function HomeHeroSection({
       <div className="relative w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 pt-4 sm:pt-6 pb-2">
         <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl">
           {/* Aspect ratio wrapper — responsive for mobile, taller or aspect based */}
-          <div className="relative w-full min-h-96 sm:min-h-80 md:min-h-0 md:aspect-[21/8]">
+          <div className="relative w-full min-h-96 sm:min-h-80 md:min-h-0 md:aspect-21/8">
             {banners.map((banner, index) => {
               const isActive = index === currentIndex;
               const slideLabel = `${language === "ar" ? "الشريحة" : "Slide"} ${index + 1} ${language === "ar" ? "من" : "of"} ${totalSlides}: ${resolveLocalizedBannerCopy(
@@ -271,7 +271,7 @@ export function HomeHeroSection({
                     </div>
                   </div>
 
-                  <div className="relative w-[180px] h-[180px] sm:w-[220px] sm:h-[220px] md:w-[280px] md:h-[280px] lg:w-[350px] lg:h-[350px] flex-shrink-0 z-0">
+                  <div className="relative w-[180px] h-[180px] sm:w-[220px] sm:h-[220px] md:w-[280px] md:h-[280px] lg:w-[350px] lg:h-[350px] shrink-0 z-0">
                     {(isActive || index === ((currentIndex + 1) % totalSlides)) && (
                       <picture>
                         {banner.imageSrcSet && (
@@ -381,7 +381,7 @@ export function HomeHeroSection({
                 className="group flex items-center justify-center rounded-full p-1 sm:p-2 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               >
                 <span
-                  className={`block rounded-full flex-shrink-0 transition-all duration-300 group-focus-visible:ring-2 group-focus-visible:ring-primary group-focus-visible:ring-offset-2 ${
+                  className={`block rounded-full shrink-0 transition-all duration-300 group-focus-visible:ring-2 group-focus-visible:ring-primary group-focus-visible:ring-offset-2 ${
                     index === currentIndex
                       ? "w-8 h-2.5 bg-primary shadow-md"
                       : "w-2.5 h-2.5 bg-muted-foreground/30 group-hover:bg-muted-foreground/50"

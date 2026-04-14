@@ -301,6 +301,8 @@ else
 if (!app.Environment.IsDevelopment())
     app.UseHsts();
 
+app.UseTijarahJoSecurityHeaders();
+
 // CORS must be registered before static files so uploaded images get
 // Access-Control-Allow-Origin headers (static files short-circuit the pipeline).
 app.UseCors("AllowAll");

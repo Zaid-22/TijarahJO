@@ -54,7 +54,7 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
       />
 
       <div
-        className={postCardMediaClass + " pointer-events-none relative aspect-[4/5] overflow-hidden bg-muted/30"}
+        className={postCardMediaClass + " pointer-events-none relative aspect-4/5 overflow-hidden bg-muted/30"}
       >
         <ImageWithFallback
           src={imageProps.src || post.image}
@@ -71,12 +71,12 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
         <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 p-2.5">
           <div className="flex flex-wrap gap-1.5">
             {post.status === "SOLD" && (
-              <Badge className="border-white/20 bg-slate-950/60 px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-slate-950/45">
+              <Badge className="border-white/20 bg-slate-950/60 px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm backdrop-blur-md supports-backdrop-filter:bg-slate-950/45">
                 {labels.soldOut}
               </Badge>
             )}
             {post.condition && post.status !== "SOLD" && (
-              <Badge className="border-white/45 bg-white/88 px-2 py-0.5 text-xs font-semibold text-slate-900 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-white/70">
+              <Badge className="border-white/45 bg-white/88 px-2 py-0.5 text-xs font-semibold text-slate-900 shadow-sm backdrop-blur-md supports-backdrop-filter:bg-white/70">
                 {post.condition}
               </Badge>
             )}
@@ -91,11 +91,14 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
                   price: post.price ?? 0,
                   image: post.image ?? "",
                   category: post.category ?? "",
+                  categoryId: post.categoryId || "",
                   location: detailLocation || post.location || "",
                   averageRating: sellerAverageRating || undefined,
                   reviewCount: sellerReviewCount || undefined,
                   sellerId: post.sellerId || "",
                 }}
+                isAuthenticated={props.isAuthenticated}
+                onRequireAuth={props.onRequireAuth}
               />
               <PostCardFavoriteButton
                 isFavorite={isFavorite}
@@ -108,7 +111,7 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
         </div>
       </div>
 
-      <CardContent className="pointer-events-none relative z-20 flex flex-grow flex-col gap-2 px-2.5 pb-2.5 pt-2.5 sm:px-3 sm:pb-3">
+      <CardContent className="pointer-events-none relative z-20 flex grow flex-col gap-2 px-2.5 pb-2.5 pt-2.5 sm:px-3 sm:pb-3">
         <div className="space-y-1.5">
           <h3 className="truncate text-sm font-semibold leading-tight text-foreground sm:text-sm">
             {post.name}
@@ -126,7 +129,7 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
             price={post.price}
             currency={labels.currency}
             locale={priceLocale}
-            className="shrink-0 border-white/45 bg-white/94 text-slate-950 shadow-md supports-[backdrop-filter]:bg-white/86 px-2 py-0.5 scale-95"
+            className="shrink-0 border-white/45 bg-white/94 text-slate-950 shadow-md supports-backdrop-filter:bg-white/86 px-2 py-0.5 scale-95"
           />
 
           {hasSellerRating ? (

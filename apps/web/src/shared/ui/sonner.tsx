@@ -307,7 +307,7 @@ export function Toaster({
   return (
     <div
       className={cn(
-        "pointer-events-none fixed z-[120] flex w-[calc(100vw-2rem)] max-w-sm flex-col gap-3 sm:max-w-md",
+        "pointer-events-none fixed z-120 flex w-[calc(100vw-2rem)] max-w-sm flex-col gap-3 sm:max-w-md",
         getViewportClasses(position),
         className,
       )}

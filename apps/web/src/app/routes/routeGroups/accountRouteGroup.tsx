@@ -34,6 +34,11 @@ const EditProfilePage = lazy(() =>
 const ProfilePage = lazy(() =>
   import("../../../features/profile/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
 );
+const ComparePage = lazy(() =>
+  import("../../../features/marketplace/pages/ComparePage").then((m) => ({
+    default: m.default,
+  })),
+);
 
 interface AccountRouteGroupParams {
   appProps: BaseAppRouteProps;
@@ -285,6 +290,11 @@ export function renderAccountRouteGroup({
             language={appProps.language}
           />,
         )}
+      />
+
+      <Route
+        path={APP_ROUTE_PATHS.compare}
+        element={requireAuth(<ComparePage />)}
       />
     </>
   );

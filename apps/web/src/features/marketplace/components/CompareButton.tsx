@@ -6,11 +6,15 @@ import { cn } from "../../../shared/ui/utils";
 interface CompareButtonProps {
   post: ComparePost;
   className?: string;
+  isAuthenticated?: boolean;
+  onRequireAuth?: () => void;
 }
 
 export const CompareButton = React.memo(function CompareButton({
   post,
   className = "",
+  isAuthenticated = false,
+  onRequireAuth,
 }: CompareButtonProps) {
   const { addToCompare, removeFromCompare, isInCompare } = useCompare();
   const isSelected = isInCompare(post.id);
@@ -21,6 +25,10 @@ export const CompareButton = React.memo(function CompareButton({
     if (isSelected) {
       removeFromCompare(post.id);
     } else {
+      if (!isAuthenticated) {
+        onRequireAuth?.();
+        return;
+      }
       addToCompare(post);
     }
   };

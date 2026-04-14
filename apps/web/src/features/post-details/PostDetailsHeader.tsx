@@ -80,6 +80,10 @@ export function PostDetailsHeader({
             if (isInCompare(post.id)) {
               removeFromCompare(post.id);
             } else {
+              if (!canUseAuthenticatedActions) {
+                onRequireAuth?.();
+                return;
+              }
               addToCompare(post);
             }
           }}

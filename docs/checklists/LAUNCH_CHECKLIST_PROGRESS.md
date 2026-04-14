@@ -1,7 +1,7 @@
 # Launch Checklist Progress Report
 
-**Date:** 2026-04-02  
-**Status:** Active launch-hardening snapshot
+**Date:** 2026-04-14  
+**Status:** Launch Hardening — Final Phase
 
 This file is a lightweight progress view. The canonical launch gate list remains:
 
@@ -16,29 +16,41 @@ This file is a lightweight progress view. The canonical launch gate list remains
 - Frontend signed-in refresh behavior is documented and aligned with current runtime behavior
 - API endpoint inventory is maintained in `docs/reports/API_ENDPOINTS_STATUS.md`
 - Database schema, migrations, and bundle workflows are documented under `apps/api/database/` and `docs/DATABASE.md`
+- **Full RBAC authorization** with 16 granular policies active across all controllers
+- **File-based image upload** with WebP optimization, thumbnails, and content moderation
+- **Security headers** (HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy)
+- **PBKDF2-SHA256** password hashing with 100k iterations
+- **Rate limiting** on auth and API endpoints
+- **CSRF protection** for cookie-authenticated requests
+- **40+ lazy-loaded routes/components** for frontend performance
+- **Structured JSON logging** for production
+- **Health check endpoints** (`/health/live`, `/health/ready`)
+- **`.env.production`** created for frontend deployment
+- **`appsettings.Production.json`** with complete production template
 
-## In Progress / Needs Continued Validation
+## Audit Results (2026-04-14)
 
-- Launch checklist items still need explicit verification rather than assumption-based completion
-- Production deployment hardening still needs full operational review
-- Some launch-readiness items remain checklist-driven rather than evidence-backed
+| Category | Done | Remaining |
+|----------|------|-----------|
+| Code Items | ~70 | ~5 |
+| Ops/Infra Tasks | 0 | ~10 |
+| Manual Testing | ~11 | ~10 |
 
-## Remaining High-Signal Launch Areas
+## Remaining Code Tasks
 
-1. Production security hardening
-   - Secret management
-   - HTTPS/TLS edge strategy
-   - production CORS review
+1. Account lockout after failed login attempts
+2. Content-Security-Policy header (requires per-app tuning)
+3. Database index review and optimization
+4. Code cleanup (unused imports, commented code)
 
-2. Operational readiness
-   - backup/restore confidence
-   - deployment runbook validation
-   - production monitoring/logging expectations
+## Remaining Ops/Deployment Tasks
 
-3. Quality verification
-   - end-to-end launch smoke coverage
-   - launch-critical permission and ownership testing
-   - explicit production configuration review
+1. Choose hosting platform and provision environments
+2. SSL certificates
+3. Database backups and restore testing
+4. CI/CD pipeline
+5. External monitoring/alerting (APM, log aggregation)
+6. Replace placeholder domains in production config files
 
 ## How to Use This File
 

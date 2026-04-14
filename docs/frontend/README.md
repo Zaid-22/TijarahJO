@@ -18,4 +18,4 @@ These docs were generated during debugging/fix campaigns and are retained for hi
 - Prefer active code and `../README.md` as the source of truth for current behavior.
 - Use archived docs only when investigating history/regressions.
 
-Last Updated: 2026-04-02
+Last Updated: 2026-04-14

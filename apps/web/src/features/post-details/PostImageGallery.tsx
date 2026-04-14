@@ -53,7 +53,7 @@ export function PostImageGallery({ post }: PostImageGalleryProps) {
     <>
       <Card className="overflow-hidden shadow-2xl">
         <div className="relative w-full bg-muted">
-          <div className="relative aspect-[4/3] w-full min-h-72 overflow-hidden sm:aspect-[16/10] sm:min-h-[20rem] lg:min-h-[22rem]">
+          <div className="relative aspect-4/3 w-full min-h-72 overflow-hidden sm:aspect-16/10 sm:min-h-80 lg:min-h-88">
             {hasMultipleImages &&
               displayImages.map((img, idx) => {
                 const isAdjacent =
@@ -139,7 +139,7 @@ export function PostImageGallery({ post }: PostImageGalleryProps) {
                   setSelectedImage(index);
                   setLightboxOpen(true);
                 }}
-                className={`h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all hover:scale-105 active:scale-95 ${
+                className={`h-20 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition-all hover:scale-105 active:scale-95 ${
                   index === selectedImage
                     ? "border-primary"
                     : "border-transparent"

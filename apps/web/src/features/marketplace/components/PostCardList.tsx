@@ -198,11 +198,11 @@ export const PostCardList = React.memo(function PostCardList(
         className="absolute inset-0 z-10 rounded-[22px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       />
 
-      <div className="px-3 pt-3 sm:w-[13.25rem] sm:flex-shrink-0 sm:pb-3 xl:w-[14.5rem]">
+      <div className="px-3 pt-3 sm:w-53 sm:shrink-0 sm:pb-3 xl:w-58">
         <div
           className={
             postCardMediaClass +
-            " pointer-events-none rounded-[16px] border border-border/40 bg-muted/30 aspect-[16/10] overflow-hidden shadow-md sm:h-full sm:min-h-[12.5rem]"
+            " pointer-events-none rounded-[16px] border border-border/40 bg-muted/30 aspect-16/10 overflow-hidden shadow-md sm:h-full sm:min-h-50"
           }
         >
           <ImageWithFallback
@@ -215,11 +215,11 @@ export const PostCardList = React.memo(function PostCardList(
             height={236}
             className="absolute inset-0 block h-full min-h-full w-full min-w-full object-cover object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/[0.03] via-transparent to-black/[0.1]" />
+          <div className="absolute inset-0 bg-linear-to-b from-black/3 via-transparent to-black/10" />
 
           {post.status === "SOLD" && (
             <div className="absolute left-3 top-3 z-10">
-              <Badge className="border-white/35 bg-slate-950/55 px-3 py-1 text-xs font-semibold text-white shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-slate-950/40">
+              <Badge className="border-white/35 bg-slate-950/55 px-3 py-1 text-xs font-semibold text-white shadow-sm backdrop-blur-md supports-backdrop-filter:bg-slate-950/40">
                 {labels.soldOut}
               </Badge>
             </div>
@@ -228,14 +228,14 @@ export const PostCardList = React.memo(function PostCardList(
         </div>
       </div>
 
-      <div className="pointer-events-none relative z-20 flex min-w-0 flex-1 flex-col justify-between px-4 pb-4 pt-4 sm:px-5 sm:pb-4 sm:pt-[1.125rem]">
+      <div className="pointer-events-none relative z-20 flex min-w-0 flex-1 flex-col justify-between px-4 pb-4 pt-4 sm:px-5 sm:pb-4 sm:pt-4.5">
         <div>
           <div className="mb-2.5">
             <PostCardPriceBadge
               price={post.price}
               currency={labels.currency}
               locale={priceLocale}
-              className="mb-2 shrink-0 border-white/45 bg-white/94 text-slate-950 shadow-md supports-[backdrop-filter]:bg-white/86 px-2 py-0.5 scale-95"
+              className="mb-2 shrink-0 border-white/45 bg-white/94 text-slate-950 shadow-md supports-backdrop-filter:bg-white/86 px-2 py-0.5 scale-95"
             />
 
             <h3 className="line-clamp-2 text-base font-semibold leading-[1.12] tracking-[-0.018em] text-foreground sm:text-lg">
@@ -256,21 +256,21 @@ export const PostCardList = React.memo(function PostCardList(
 
             {post.condition && (
               <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100/90 px-2.5 py-1 font-medium dark:bg-slate-800/80">
-                <Sparkles className="h-3.5 w-3.5 flex-shrink-0 text-primary/80" />
+                <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary/80" />
                 <span>{post.condition}</span>
               </div>
             )}
 
             {postedAgo && (
               <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100/90 px-2.5 py-1 font-medium dark:bg-slate-800/80">
-                <Clock3 className="h-3.5 w-3.5 flex-shrink-0 text-primary/80" />
+                <Clock3 className="h-3.5 w-3.5 shrink-0 text-primary/80" />
                 <span>{postedAgo}</span>
               </div>
             )}
 
             {typeof post.views === "number" && post.views > 0 && (
               <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100/90 px-2.5 py-1 font-medium dark:bg-slate-800/80">
-                <Eye className="h-3.5 w-3.5 flex-shrink-0 text-primary/80" />
+                <Eye className="h-3.5 w-3.5 shrink-0 text-primary/80" />
                 <span>
                   {post.views} {labels.views}
                 </span>
@@ -278,7 +278,7 @@ export const PostCardList = React.memo(function PostCardList(
             )}
 
             {hasSellerRating && (
-              <div className="flex flex-shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+              <div className="flex shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
                 <Star className="h-3 w-3 fill-current" />
                 <span>
                   {sellerAverageRating?.toFixed(1)}
@@ -326,8 +326,8 @@ export const PostCardList = React.memo(function PostCardList(
               title={labels.favoriteLabel}
               className={
                 isFavorite
-                  ? "inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[16px] border border-rose-200 bg-rose-50 text-rose-500 shadow-none transition-colors hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:border-rose-900/70 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-950/60"
-                  : "inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[16px] border border-slate-200 bg-white text-slate-400 shadow-none transition-colors hover:bg-slate-50 hover:text-rose-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:border-white/10 dark:bg-slate-950 dark:text-slate-500 dark:hover:bg-slate-900 dark:hover:text-rose-300"
+                  ? "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-rose-200 bg-rose-50 text-rose-500 shadow-none transition-colors hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:border-rose-900/70 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-950/60"
+                  : "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-slate-200 bg-white text-slate-400 shadow-none transition-colors hover:bg-slate-50 hover:text-rose-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:border-white/10 dark:bg-slate-950 dark:text-slate-500 dark:hover:bg-slate-900 dark:hover:text-rose-300"
               }
             >
               <Heart
@@ -345,12 +345,16 @@ export const PostCardList = React.memo(function PostCardList(
             onClick={(e) => {
               e.stopPropagation();
               e.preventDefault();
+              if (requireAuthForProtectedAction() === false) {
+                return;
+              }
               const comparePost = {
                 id: String(post.id),
                 name: post.name,
                 price: post.price ?? 0,
                 image: post.image ?? "",
                 category: post.category ?? "",
+                categoryId: post.categoryId || "",
                 location: detailLocation || post.location || "",
               };
               if (isInCompare(comparePost.id)) {
@@ -363,8 +367,8 @@ export const PostCardList = React.memo(function PostCardList(
             title={isInCompare(String(post.id)) ? "Remove from comparison" : "Add to comparison"}
             className={
               isInCompare(String(post.id))
-                ? "inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[16px] border border-primary/30 bg-primary/10 text-primary shadow-none transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
-                : "inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[16px] border border-slate-200 bg-white text-slate-400 shadow-none transition-colors hover:bg-slate-50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:border-white/10 dark:bg-slate-950 dark:text-slate-500 dark:hover:bg-slate-900 dark:hover:text-primary"
+                ? "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-primary/30 bg-primary/10 text-primary shadow-none transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+                : "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-slate-200 bg-white text-slate-400 shadow-none transition-colors hover:bg-slate-50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:border-white/10 dark:bg-slate-950 dark:text-slate-500 dark:hover:bg-slate-900 dark:hover:text-primary"
             }
           >
             <Scale className="h-5 w-5" />

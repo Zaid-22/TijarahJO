@@ -1,99 +1,74 @@
-# 🚀 Quick Launch Checklist - Top Priorities
+# 🚀 Quick Launch Checklist — Remaining Priorities
 
-## 🔴 CRITICAL - Do These First (Before Launch)
+**Last Updated:** 2026-04-14  
+**Status:** Most critical items are complete. See below for what's left.
 
-### Security (Do Immediately)
-- [ ] Move JWT signing key to environment variable (currently hardcoded)
-- [ ] Move database connection string to environment variable
-- [ ] Enable `[Authorize]` on all protected endpoints
-- [ ] Add ownership checks to update/delete operations
-- [ ] Configure HTTPS and update CORS for production domain
-
-### Functionality (Do Immediately)
-- [ ] Implement image upload endpoint (replace base64 storage)
-- [ ] Test that users cannot edit/delete other users' posts
-- [ ] Replace all `alert()` calls with toast notifications
-- [ ] Add comprehensive form validation
-
-### Database (Do Immediately)
-- [ ] Run duplicate check and cleanup script
-- [ ] Add CASCADE DELETE for post images
-- [ ] Set up automated backups
-- [ ] Verify all foreign key constraints
-
-### Configuration (Do Immediately)
-- [ ] Create `appsettings.Production.json`
-- [ ] Move all secrets to environment variables
-- [ ] Create production environment configuration
-- [ ] Update CORS for production frontend URL
+> This is a condensed view. See [`LAUNCH_READINESS_CHECKLIST.md`](LAUNCH_READINESS_CHECKLIST.md) for the full audit.
 
 ---
 
-## 🟡 IMPORTANT - Do These Soon
+## ✅ Already Completed (Code-Level)
 
-- [ ] Remove debug console.log statements
-- [ ] Add comprehensive error handling
-- [ ] Set up application monitoring
-- [ ] Create deployment documentation
-- [ ] Test all features end-to-end
-- [ ] Optimize database queries and add indexes
-- [ ] Set up staging environment
+These items from the original checklist are **done and verified** in the codebase:
 
----
-
-## 🟢 NICE TO HAVE - Can Do Later
-
-- [ ] Automated testing suite
-- [ ] CDN for images
-- [ ] Advanced monitoring
-- [ ] Code documentation
-
----
-
-## 📋 Testing Checklist (Before Launch)
-
-### Must Test:
-- [x] User registration works
-- [x] User login works
-- [x] Create post works
-- [x] Edit post works
-- [x] Delete post works
-- [ ] Cannot edit other user's post ❌ (Authorization not enabled)
-- [ ] Cannot delete other user's post ❌ (Authorization not enabled)
-- [ ] Image upload works ❌ (Not implemented yet)
-- [ ] Form validation works
-- [ ] Error handling works
+- [x] JWT signing key from environment variable (validated ≥ 32 bytes at startup)
+- [x] Database connection string from environment variable
+- [x] `[Authorize]` active on all protected endpoints (16 granular RBAC policies)
+- [x] Ownership checks on update/delete operations
+- [x] HTTPS enforcement + HSTS
+- [x] Security headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy)
+- [x] CORS locked down for production (throws if not configured)
+- [x] File-based image upload (posts, avatars, chat — with WebP optimization + thumbnails)
+- [x] Base64 storage replaced with FormData uploads
+- [x] Toast notifications (sonner library, no raw `alert()`)
+- [x] Form validation with per-field error indicators
+- [x] `appsettings.Production.json` configured
+- [x] `.env.production` created for frontend
+- [x] All secrets stored as empty placeholders (env-var driven)
+- [x] PBKDF2-SHA256 password hashing (100k iterations)
+- [x] Rate limiting on auth endpoints
+- [x] 40+ lazy-loaded routes/components
+- [x] Structured JSON logging for production
+- [x] Health check endpoints (`/health/live`, `/health/ready`)
+- [x] Debug logs gated behind environment check
 
 ---
 
-## ⚡ Quick Start Order
+## 🟡 Remaining Code Tasks
 
-1. **Day 1-2: Security**
-   - Fix JWT and connection string security
-   - Enable authorization
-   - Add ownership checks
-
-2. **Day 3-4: Image Upload**
-   - Implement file upload endpoint
-   - Replace base64 storage
-   - Test image functionality
-
-3. **Day 5: Validation & Error Handling**
-   - Replace alerts with toasts
-   - Add form validation
-   - Improve error messages
-
-4. **Day 6: Database & Testing**
-   - Clean database
-   - Run comprehensive tests
-   - Fix any bugs found
-
-5. **Day 7: Configuration & Deployment**
-   - Set up production config
-   - Deploy to staging
-   - Final testing
+| # | Task | Priority |
+|---|------|----------|
+| 1 | Account lockout after failed login attempts | Should fix |
+| 2 | Content-Security-Policy header | Should fix |
+| 3 | Database index review for high-frequency queries | Should fix |
+| 4 | Code cleanup (unused imports, commented code) | Nice to have |
 
 ---
 
-**See `LAUNCH_READINESS_CHECKLIST.md` for complete detailed checklist.**
+## 🔴 Remaining Manual Testing
 
+| # | Test | Status |
+|---|------|--------|
+| 1 | Try to edit another user's post (should fail) | Not tested |
+| 2 | Try to delete another user's post (should fail) | Not tested |
+| 3 | Test with expired token | Not tested |
+| 4 | Test with invalid/missing required fields | Not tested |
+| 5 | Test role-based access (admin vs user) | Not tested |
+
+---
+
+## 🔧 Remaining Ops/Deployment Tasks
+
+| # | Task | Notes |
+|---|------|-------|
+| 1 | Choose hosting platform | Azure, AWS, DigitalOcean, etc. |
+| 2 | Set up staging + production environments | — |
+| 3 | SSL certificates | Hosting provider |
+| 4 | Database backups | Automated schedule |
+| 5 | CI/CD pipeline | GitHub Actions or similar |
+| 6 | External monitoring/alerting | Sentry, Application Insights, etc. |
+| 7 | Replace placeholder domains in config | `your-production-domain.com` → real domain |
+
+---
+
+**See [`LAUNCH_READINESS_CHECKLIST.md`](LAUNCH_READINESS_CHECKLIST.md) for the full detailed checklist with file-level evidence.**

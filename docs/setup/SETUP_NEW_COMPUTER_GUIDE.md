@@ -182,5 +182,5 @@ Check:
 - `docs/setup/BACKEND_SETUP_STEP_BY_STEP.md`
 - `apps/api/src/Api/ENVIRONMENT_VARIABLES.md`
 
-**Last Updated:** 2026-04-02
+**Last Updated:** 2026-04-14
 **Version:** 2.0

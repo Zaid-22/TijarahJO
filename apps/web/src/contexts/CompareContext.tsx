@@ -24,6 +24,7 @@ export interface ComparePost {
   price: number;
   image: string;
   category: string;
+  categoryId?: string;
   location?: string;
   averageRating?: number;
   reviewCount?: number;

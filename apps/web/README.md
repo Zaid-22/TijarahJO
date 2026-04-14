@@ -175,16 +175,16 @@ The application will be available at **http://localhost:5173**
 
 | Group | Endpoints |
 |-------|-----------|
-| **Auth** | `/api/auth/*` — login, signup, logout, me, refresh, Google OAuth |
+| **Auth** | `/api/v1/auth/*` — login, signup, logout, me, refresh, Google OAuth |
 | **2FA** | `/api/v1/auth/2fa/*` — status, setup/start, setup/confirm, verify-login, disable |
 | **Password Reset** | `/api/v1/auth/forgot-password/*` — request, confirm |
-| **Posts** | `/api/posts/*` — feed, CRUD, status, views |
-| **Post Images** | `/api/post-images/*` — CRUD, file upload |
-| **Categories** | `/api/categories/*` — list, CRUD (admin) |
+| **Posts** | `/api/v1/posts/*` — feed, CRUD, status, views |
+| **Post Images** | `/api/v1/post-images/*` — CRUD, file upload |
+| **Categories** | `/api/v1/categories/*` — list, CRUD (admin) |
 | **Favorites** | `/api/v1/favorites/*` — list, add, remove |
 | **Chat** | `/api/v1/chat/*` + `/chatHub` — messages, history, presence, upload |
-| **Search** | `/api/search` — full-text search |
-| **Sellers** | `/api/sellers/*` — profile, top sellers |
+| **Search** | `/api/v1/search` — full-text search |
+| **Sellers** | `/api/v1/sellers/*` — profile, top sellers |
 | **Reviews** | `/api/v1/reviews/*` — list, create |
 | **Notifications** | `/api/v1/notifications/*` — list, read, push subscriptions |
 | **Admin** | `/api/v1/admin/*` — dashboard, users, posts, analytics, reports, settings |

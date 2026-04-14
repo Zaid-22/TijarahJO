@@ -1,6 +1,6 @@
 # Auth Runtime QA Matrix
 
-Date: 2026-04-02
+Date: 2026-04-14
 Scope: Frontend auth runtime behavior under network flaps and session revalidation.
 
 ## Preconditions

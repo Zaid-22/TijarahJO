@@ -11,19 +11,17 @@ if [[ -d "$ACTIVE_PROCEDURES_DIR" ]]; then
   ACTIVE_SOURCE_DIRS+=("$ACTIVE_PROCEDURES_DIR")
 fi
 
-if ! command -v rg >/dev/null 2>&1; then
-  echo "Warning: rg (ripgrep) is required for guard_no_duplicate_procs.sh. Skipping procedure guards." >&2
-  exit 0
-fi
+
+
 
 TMP_MATCHES="$(mktemp)"
 trap 'rm -f "$TMP_MATCHES"' EXIT
 
-rg -noP \
-  "(?i)(?:create\\s+(?:or\\s+alter\\s+)?procedure|alter\\s+procedure)\\s+\\[?(?:dbo)\\]?\\.\\[?([A-Za-z0-9_]+)\\]?" \
-  "${ACTIVE_SOURCE_DIRS[@]}" \
-  --glob '!**/legacy/**' \
-  --replace '$1' > "$TMP_MATCHES" || true
+grep -rnoEi \
+  "(create\s+(or\s+alter\s+)?procedure|alter\s+procedure)\s+\[?(dbo)?\]?\.\[?([A-Za-z0-9_]+)\]?" \
+  "${ACTIVE_SOURCE_DIRS[@]}" --include='*.sql' \
+  | grep -v '/legacy/' \
+  | sed -E 's/.*\.\[?([A-Za-z0-9_]+)\]?.*/\1/' > "$TMP_MATCHES" || true
 
 if [[ ! -s "$TMP_MATCHES" ]]; then
   echo "SQL proc guard: no procedure definitions found in active sources."

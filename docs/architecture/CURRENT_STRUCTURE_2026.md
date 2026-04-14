@@ -81,7 +81,7 @@ final project primary/
 - `docs/architecture/` — active architecture documents
   - `docs/architecture/adr/` — architecture decision records
   - `docs/architecture/PATH_CONVENTIONS.md` — path and dependency boundary rules
-- `docs/api/` — API conventions (versioning, route contracts)
+- `docs/api/v1/` — API conventions (versioning, route contracts)
 - `docs/backend/` — backend operational notes & runbooks
 - `docs/frontend/` — frontend technical docs (ID system, auth QA matrix)
 - `docs/setup/` — environment and onboarding guides
@@ -100,4 +100,4 @@ final project primary/
 | `make ci-local` | Full local CI mirror |
 | `make sql-bundles` | Regenerate consolidated SQL bundles |
 
-Updated: 2026-04-02
+Updated: 2026-04-14

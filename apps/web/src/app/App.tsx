@@ -359,13 +359,13 @@ function AppContent() {
   }
 
   const shouldShowComparePanel = 
-    !isAuthRoute && !COMPARISON_EXCLUDED_SEGMENTS.has(primarySegment);
+    isAuthenticated && !isAuthRoute && !COMPARISON_EXCLUDED_SEGMENTS.has(primarySegment);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-3 focus:py-2 focus:rounded-md focus:bg-primary focus:text-primary-foreground"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-100 focus:px-3 focus:py-2 focus:rounded-md focus:bg-primary focus:text-primary-foreground"
       >
         {language === "ar"
           ? "تخطي إلى المحتوى الرئيسي"

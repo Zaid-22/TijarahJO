@@ -43,15 +43,14 @@ for path in "${forbidden_paths[@]}"; do
   fi
 done
 
-if command -v rg >/dev/null 2>&1; then
-  stale_refs="$(rg -n --hidden --glob '!docs/**/archive/**' --glob '!docs/archive/**' --glob '!.git/**' \
-    '\./(run-dev|bootstrap_db|verify_all_apis|kill-port|test_delete_post_with_chat)\.sh' \
-    README.md README-RUN.md docs apps scripts Makefile .github 2>/dev/null || true)"
-  if [[ -n "$stale_refs" ]]; then
-    echo "FAIL: found stale root-script references (expected ./scripts/...):"
-    echo "$stale_refs"
-    violations=1
-  fi
+stale_refs="$(grep -rn '\./\(run-dev\|bootstrap_db\|verify_all_apis\|kill-port\|test_delete_post_with_chat\)\.sh' \
+  README.md README-RUN.md docs apps scripts Makefile .github \
+  --include='*.md' --include='*.sh' --include='*.yml' --include='Makefile' \
+  2>/dev/null | grep -v '/archive/' || true)"
+if [[ -n "$stale_refs" ]]; then
+  echo "FAIL: found stale root-script references (expected ./scripts/...):"
+  echo "$stale_refs"
+  violations=1
 fi
 
 if [[ "$missing" -ne 0 || "$violations" -ne 0 ]]; then

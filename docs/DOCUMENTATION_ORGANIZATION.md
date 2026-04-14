@@ -68,4 +68,4 @@ Historical docs are tracked through archive indices:
 
 Treat `docs/architecture/CURRENT_STRUCTURE_2026.md` as the authoritative structure reference.
 
-Last Updated: 2026-04-02
+Last Updated: 2026-04-14

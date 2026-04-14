@@ -104,7 +104,7 @@ make ci-local                  # Full local CI mirror
 | [`docs/architecture/PATH_CONVENTIONS.md`](docs/architecture/PATH_CONVENTIONS.md) | Path ownership & boundaries |
 | [`docs/setup/SETUP_NEW_COMPUTER_GUIDE.md`](docs/setup/SETUP_NEW_COMPUTER_GUIDE.md) | Full setup guide |
 | [`docs/reports/API_ENDPOINTS_STATUS.md`](docs/reports/API_ENDPOINTS_STATUS.md) | API endpoint inventory |
-| [`apps/api/src/Api/ENVIRONMENT_VARIABLES.md`](apps/api/src/Api/ENVIRONMENT_VARIABLES.md) | Environment config reference |
+| [`ENVIRONMENT_VARIABLES.md`](apps/api/src/Api/ENVIRONMENT_VARIABLES.md) | Environment config reference |
 
 ## Technology Stack
 
@@ -118,4 +118,4 @@ make ci-local                  # Full local CI mirror
 
 ---
 
-Last Updated: 2026-04-02
+Last Updated: 2026-04-14

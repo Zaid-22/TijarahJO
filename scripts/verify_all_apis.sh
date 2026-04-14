@@ -297,18 +297,22 @@ invalid_location_email="apitest_${ts}_invalid_location@example.com"
 
 invalid_location_signup_payload="$(jq -nc --arg e "$invalid_location_email" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"InvalidLoc",Phone:"+962790009999",AreaId:1}')"
 require_api "auth.signup.location_requires_city" "POST" "/api/v1/auth/signup" "400" "$invalid_location_signup_payload"
-if printf "%s" "$LAST_BODY" | rg -qi "cityid is required"; then
+if printf "%s" "$LAST_BODY" | grep -qi "cityid is required"; then
   log_ok "auth.signup.location_requires_city.contract"
 else
   log_fail "auth.signup.location_requires_city.contract" "Expected error mentioning CityId requirement. body=$LAST_BODY"
 fi
 
+phone1="+9627900${ts: -5}1"
+phone2="+9627900${ts: -5}2"
+phone3="+9627900${ts: -5}3"
+
 if is_positive_int "$location_city_id" && is_positive_int "$location_area_id"; then
-  signup1_payload="$(jq -nc --arg e "$email1" --argjson city "$location_city_id" --argjson area "$location_area_id" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"User1",Phone:"+962790000001",CityId:$city,AreaId:$area}')"
+  signup1_payload="$(jq -nc --arg e "$email1" --arg ph "$phone1" --argjson city "$location_city_id" --argjson area "$location_area_id" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"User1",Phone:$ph,CityId:$city,AreaId:$area}')"
 elif is_positive_int "$location_city_id"; then
-  signup1_payload="$(jq -nc --arg e "$email1" --argjson city "$location_city_id" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"User1",Phone:"+962790000001",CityId:$city}')"
+  signup1_payload="$(jq -nc --arg e "$email1" --arg ph "$phone1" --argjson city "$location_city_id" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"User1",Phone:$ph,CityId:$city}')"
 else
-  signup1_payload="$(jq -nc --arg e "$email1" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"User1",Phone:"+962790000001"}')"
+  signup1_payload="$(jq -nc --arg e "$email1" --arg ph "$phone1" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"User1",Phone:$ph}')"
 fi
 require_api "auth.signup.user1" "POST" "/api/v1/auth/signup" "201" "$signup1_payload"
 token1=""
@@ -316,11 +320,11 @@ user1_id="$(printf "%s" "$LAST_BODY" | jq -r '.User.Id // .User.UserID // .User.
 assert_jq_or_abort "auth.signup.user1.token.absent" '(.Token // null) == null'
 
 if is_positive_int "$location_city_id" && is_positive_int "$location_area_id"; then
-  signup2_payload="$(jq -nc --arg e "$email2" --argjson city "$location_city_id" --argjson area "$location_area_id" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"User2",Phone:"+962790000002",CityId:$city,AreaId:$area}')"
+  signup2_payload="$(jq -nc --arg e "$email2" --arg ph "$phone2" --argjson city "$location_city_id" --argjson area "$location_area_id" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"User2",Phone:$ph,CityId:$city,AreaId:$area}')"
 elif is_positive_int "$location_city_id"; then
-  signup2_payload="$(jq -nc --arg e "$email2" --argjson city "$location_city_id" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"User2",Phone:"+962790000002",CityId:$city}')"
+  signup2_payload="$(jq -nc --arg e "$email2" --arg ph "$phone2" --argjson city "$location_city_id" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"User2",Phone:$ph,CityId:$city}')"
 else
-  signup2_payload="$(jq -nc --arg e "$email2" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"User2",Phone:"+962790000002"}')"
+  signup2_payload="$(jq -nc --arg e "$email2" --arg ph "$phone2" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"User2",Phone:$ph}')"
 fi
 require_api "auth.signup.user2" "POST" "/api/v1/auth/signup" "201" "$signup2_payload"
 token2=""
@@ -628,11 +632,11 @@ require_api "users.update.user2" "PUT" "/api/v1/users/$user2_id" "200" "$user2_m
 
 # 8. Delete test user without dependencies (user3)
 if is_positive_int "$location_city_id" && is_positive_int "$location_area_id"; then
-  signup3_payload="$(jq -nc --arg e "$email3" --argjson city "$location_city_id" --argjson area "$location_area_id" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"DeleteMe",Phone:"+962790000003",CityId:$city,AreaId:$area}')"
+  signup3_payload="$(jq -nc --arg e "$email3" --arg ph "$phone3" --argjson city "$location_city_id" --argjson area "$location_area_id" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"DeleteMe",Phone:$ph,CityId:$city,AreaId:$area}')"
 elif is_positive_int "$location_city_id"; then
-  signup3_payload="$(jq -nc --arg e "$email3" --argjson city "$location_city_id" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"DeleteMe",Phone:"+962790000003",CityId:$city}')"
+  signup3_payload="$(jq -nc --arg e "$email3" --arg ph "$phone3" --argjson city "$location_city_id" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"DeleteMe",Phone:$ph,CityId:$city}')"
 else
-  signup3_payload="$(jq -nc --arg e "$email3" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"DeleteMe",Phone:"+962790000003"}')"
+  signup3_payload="$(jq -nc --arg e "$email3" --arg ph "$phone3" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"DeleteMe",Phone:$ph}')"
 fi
 require_api "auth.signup.user3" "POST" "/api/v1/auth/signup" "201" "$signup3_payload"
 assert_jq_or_abort "auth.signup.user3.token.absent" '(.Token // null) == null'

@@ -1,6 +1,6 @@
 # TijarahJo Frontend - Current Project Snapshot
 
-**Reviewed:** 2026-04-02  
+**Reviewed:** 2026-04-14  
 **Status:** Active frontend integrated with the current backend API
 
 ## Overview
@@ -40,7 +40,7 @@ The active frontend follows the current repo structure under `apps/web/src/`:
 - Frontend local dev URL: `http://localhost:5173`
 - Canonical backend API base URL: `http://localhost:5033/api/v1`
 - Production web Docker build uses `VITE_API_BASE_URL=/api`
-- Session recovery uses cookie-backed JWT auth plus `/api/auth/refresh`
+- Session recovery uses cookie-backed JWT auth plus `/api/v1/auth/refresh`
 - Signed-in hard refresh should keep the page shell visible without flashing a logged-out header state
 
 ## Current Quality Signals

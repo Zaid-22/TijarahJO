@@ -45,7 +45,7 @@ Expected behavior:
 - `health/live` checks process liveness only.
 - `health/ready` checks dependency readiness (currently database connectivity).
 - Canonical API route prefix is `/api/v1`.
-- Selected compatibility aliases under `/api/...` remain active; use `docs/reports/API_ENDPOINTS_STATUS.md` for the current inventory.
+- Selected compatibility aliases under `/api/v1/...` remain active; use `docs/reports/API_ENDPOINTS_STATUS.md` for the current inventory.
 
 ## Manual Path
 
@@ -73,7 +73,7 @@ Problem: categories/roles endpoints return empty arrays
 - Solution: apply `apps/api/database/bundles/seed_data.sql`
 
 Problem: signed-in frontend refresh shows auth/session issues
-- Solution: verify `/api/auth/me`, `/api/auth/refresh`, and the frontend auth runtime behavior documented in `docs/frontend/AUTH_RUNTIME_QA_MATRIX.md`
+- Solution: verify `/api/v1/auth/me`, `/api/v1/auth/refresh`, and the frontend auth runtime behavior documented in `docs/frontend/AUTH_RUNTIME_QA_MATRIX.md`
 
 Problem: migration error after partial manual run
 - Solution: rerun in canonical order: schema -> migrations -> seeds
@@ -83,4 +83,4 @@ Problem: migration error after partial manual run
 For startup mode behavior (strict Redis vs degraded vs no Redis), see:
 - `docs/backend/OPERATIONS_RUNBOOK.md`
 
-Last Reviewed: 2026-04-02
+Last Reviewed: 2026-04-14

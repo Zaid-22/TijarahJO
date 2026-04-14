@@ -201,7 +201,7 @@ TijarahJo is a **C2C (Consumer-to-Consumer) marketplace** platform similar to OL
 ├────────────────────────────────────────┤
 │ UK   Login          NVARCHAR(50)    │
 │ UK   Email             NVARCHAR(255)   │ -- Auth email
-│ NN   PasswordHash      NVARCHAR(255)   │ -- BCrypt
+│ NN   PasswordHash      NVARCHAR(255)   │ -- PBKDF2-SHA256
 │      PasswordSalt      NVARCHAR(255)   │ -- If needed
 ├────────────────────────────────────────┤
 │ NN   IsActive          BIT             │
@@ -290,7 +290,7 @@ TijarahJo is a **C2C (Consumer-to-Consumer) marketplace** platform similar to OL
 
 ## 2.6 Entity: RefreshToken
 
-> **Status**: Legacy concept only. The current runtime uses a JWT cookie plus `/api/auth/refresh` and token blacklisting; this table is not part of the active schema.
+> **Status**: Legacy concept only. The current runtime uses a JWT cookie plus `/api/v1/auth/refresh` and token blacklisting; this table is not part of the active schema.
 
 ```
 ┌────────────────────────────────────────┐

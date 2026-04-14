@@ -38,7 +38,7 @@ Services:
 
 The web container proxies:
 
-- `/api/*` -> API service
+- `/api/v1/*` -> API service
 - `/chatHub` -> API SignalR hub
 - `/uploads/*` -> API static uploads
 
@@ -61,7 +61,7 @@ The API serves them from:
 ## 4. Auth and Session Notes
 
 - Runtime auth is cookie-backed JWT authentication
-- Session recovery is supported through `/api/auth/refresh`
+- Session recovery is supported through `/api/v1/auth/refresh`
 - `JWT_SIGNING_KEY` must be set before startup
 - Compose currently wires the API to SQL Server using the `sa` login via `DATABASE_CONNECTION_STRING`
 
@@ -71,4 +71,4 @@ The API serves them from:
 - For real production, terminate HTTPS at a trusted edge/load balancer and route to `web` on port `80`.
 - Review `docs/backend/OPERATIONS_RUNBOOK.md` before treating this as a deployable operational standard.
 
-**Last Reviewed:** 2026-04-02
+**Last Reviewed:** 2026-04-14

@@ -67,7 +67,7 @@ Represents a registered user.
 |-----------|------|-------------|
 | **UserID** (PK) | INT | Unique identifier |
 | Email | NVARCHAR | Primary email address |
-| HashedPassword | NVARCHAR | BCrypt hashed password |
+| HashedPassword | NVARCHAR | PBKDF2-SHA256 hashed password |
 | FirstName | NVARCHAR | First name |
 | LastName | NVARCHAR? | Last name (optional) |
 | Phone | NVARCHAR? | Phone number (+962 format) |
@@ -517,4 +517,4 @@ Reference table for user status codes.
 
 ---
 
-Last Updated: 2026-04-02
+Last Updated: 2026-04-14

@@ -5,13 +5,17 @@ import { useCompare } from "../../../contexts/CompareContext";
 import { APP_ROUTE_PATHS } from "../../../app/routes/routeConfig";
 import { useAppSettings } from "../../../contexts/AppSettingsContext";
 import { marketplaceTranslations } from "../translations";
+import type { Language } from "../../../types";
+import { useCatalogCategories } from "../../../shared/hooks/useCatalogCategories";
+import { resolveCategoryName } from "../../../shared/lib/categoryVisuals";
 
 export const ComparePanel = React.memo(function ComparePanel() {
   const navigate = useNavigate();
   const location = useLocation();
-   const { selectedPosts, removeFromCompare, clearCompare, compareCount } =
+    const { selectedPosts, removeFromCompare, clearCompare, compareCount } =
     useCompare();
   const { language } = useAppSettings();
+  const { categories } = useCatalogCategories();
   const t = marketplaceTranslations[language];
   const isRtl = language === "ar";
 
@@ -31,6 +35,22 @@ export const ComparePanel = React.memo(function ComparePanel() {
       navigate(APP_ROUTE_PATHS.compare);
     }
   };
+
+  const getLocalizedCategory = () => {
+    if (!selectedPosts[0]) return t.compareItems;
+    
+    const firstPost = selectedPosts[0];
+    if (firstPost.categoryId) {
+      const category = categories.find(c => String(c.id) === firstPost.categoryId);
+      if (category) {
+        return resolveCategoryName(category, language as Language);
+      }
+    }
+    
+    return firstPost.category;
+  };
+
+  const localizedCategory = getLocalizedCategory();
 
   return (
     <div
@@ -53,8 +73,8 @@ export const ComparePanel = React.memo(function ComparePanel() {
               </div>
               <div>
                 <p className="text-sm font-bold text-foreground">
-                  {selectedPosts[0]?.category 
-                    ? t.compareCategory.replace("{category}", selectedPosts[0].category)
+                  {selectedPosts[0] 
+                    ? t.compareCategory.replace("{category}", localizedCategory)
                     : t.compareItems}
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -79,9 +99,9 @@ export const ComparePanel = React.memo(function ComparePanel() {
               {selectedPosts.map((post) => (
                 <div
                   key={post.id}
-                  className="group relative flex shrink-0 items-center gap-2.5 rounded-xl bg-accent p-1.5 pr-3 transition-colors"
+                  className="group relative flex shrink-0 items-center gap-2.5 rounded-xl bg-accent p-1.5 pe-3 transition-colors"
                 >
-                  <div className="relative">
+                  <div className="relative shrink-0">
                     <img
                       src={post.image}
                       alt={post.name}
@@ -90,13 +110,13 @@ export const ComparePanel = React.memo(function ComparePanel() {
                     <button
                       type="button"
                       onClick={() => removeFromCompare(post.id)}
-                      className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-all hover:bg-destructive hover:text-white"
+                      className="absolute -top-1.5 inset-inline-end-[-6px] flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-all hover:bg-destructive hover:text-white"
                       title={t.removeProduct}
                     >
                       <X className="h-3 w-3" />
                     </button>
                   </div>
-                  <div className="hidden min-w-0 flex-1 sm:block">
+                  <div className="hidden min-w-[120px] max-w-[200px] flex-1 sm:block">
                     <p className="truncate text-xs font-bold text-foreground">
                       {post.name}
                     </p>
@@ -122,7 +142,7 @@ export const ComparePanel = React.memo(function ComparePanel() {
             </div>
 
             {/* Action Button */}
-            <div className="flex shrink-0 items-center pl-2 border-l border-border/20">
+            <div className="flex shrink-0 items-center ps-2 border-s border-border/20">
               <button
                 type="button"
                 onClick={handleCompare}
@@ -145,7 +165,7 @@ export const ComparePanel = React.memo(function ComparePanel() {
           </div>
 
           {/* Gradient accent */}
-          <div className="pointer-events-none absolute -top-px left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+          <div className="pointer-events-none absolute -top-px left-0 right-0 h-px bg-linear-to-r from-transparent via-primary/50 to-transparent" />
         </div>
       </div>
     </div>
