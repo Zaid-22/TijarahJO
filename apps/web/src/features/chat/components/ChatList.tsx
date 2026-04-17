@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { cn } from "@/shared/ui/utils";
 import type { Language } from "../../../types";
 import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
@@ -23,6 +24,7 @@ export function ChatList({
   onSelectUser,
   language = "en",
 }: ChatListProps) {
+  const [avatarLoadErrors, setAvatarLoadErrors] = useState<Record<number, boolean>>({});
   const labels = {
     messages: language === "ar" ? "الرسائل" : "Messages",
     noConversations:
@@ -31,6 +33,13 @@ export function ChatList({
       language === "ar" ? `فتح محادثة مع ${name}` : `Open chat with ${name}`,
   };
   const dateLocale = language === "ar" ? "ar-JO" : "en-US";
+  const avatarCacheKey = chats
+    .map((chat) => `${chat.userId}:${chat.avatar ?? ""}`)
+    .join("|");
+
+  useEffect(() => {
+    setAvatarLoadErrors({});
+  }, [avatarCacheKey]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-md backdrop-blur-sm">
@@ -45,83 +54,94 @@ export function ChatList({
             {labels.noConversations}
           </div>
         ) : (
-          chats.map((chat) => (
-            <button
-              type="button"
-              key={chat.userId}
-              onClick={() => onSelectUser(chat.userId)}
-              className={cn(
-                "group flex w-full items-center border-b border-border/40 px-4 py-3 transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-                "text-start",
-                selectedUserId === chat.userId
-                  ? "bg-primary/10"
-                  : "",
-              )}
-              aria-label={labels.openChatWith(chat.displayName)}
-            >
-              <div
+          chats.map((chat) => {
+            const avatarSrc = resolveAvatarSrc(chat.avatar);
+            const showAvatarImage = Boolean(avatarSrc) && !avatarLoadErrors[chat.userId];
+
+            return (
+              <button
+                type="button"
+                key={chat.userId}
+                onClick={() => onSelectUser(chat.userId)}
                 className={cn(
-                  "flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border/60 overflow-hidden",
-                  resolveAvatarSrc(chat.avatar)
-                    ? "bg-transparent text-foreground"
-                    : "bg-muted text-muted-foreground font-medium text-lg transition-colors group-hover:text-foreground",
-                  "me-3",
+                  "group flex w-full items-center border-b border-border/40 px-4 py-3 transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                  "text-start",
+                  selectedUserId === chat.userId
+                    ? "bg-primary/10"
+                    : "",
                 )}
+                aria-label={labels.openChatWith(chat.displayName)}
               >
-                {resolveAvatarSrc(chat.avatar) ? (
-                  <img
-                    src={resolveAvatarSrc(chat.avatar)!}
-                    alt={chat.displayName}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  getAvatarInitial(chat.displayName)
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="mb-1 flex items-baseline justify-between gap-2">
-                  <h4
+                <div
+                  className={cn(
+                    "flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-border/60 overflow-hidden",
+                    showAvatarImage
+                      ? "bg-transparent text-foreground"
+                      : "bg-muted text-muted-foreground font-medium text-lg transition-colors group-hover:text-foreground",
+                    "me-3",
+                  )}
+                >
+                  {showAvatarImage ? (
+                    <img
+                      src={avatarSrc || undefined}
+                      alt={chat.displayName}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-full w-full object-cover"
+                      onError={() =>
+                        setAvatarLoadErrors((prev) => ({
+                          ...prev,
+                          [chat.userId]: true,
+                        }))
+                      }
+                    />
+                  ) : (
+                    getAvatarInitial(chat.displayName)
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="mb-1 flex items-baseline justify-between gap-2">
+                    <h4
+                      className={cn(
+                        "truncate text-sm",
+                        !chat.isRead
+                          ? "font-semibold text-foreground"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {chat.displayName}
+                    </h4>
+                    <span
+                      className={cn(
+                        "whitespace-nowrap text-xs text-muted-foreground",
+                        "ms-2",
+                      )}
+                    >
+                      {formatCompactTime(chat.timestamp, dateLocale)}
+                    </span>
+                  </div>
+                  <p
                     className={cn(
                       "truncate text-sm",
                       !chat.isRead
-                        ? "font-semibold text-foreground"
+                        ? "text-foreground font-medium"
                         : "text-muted-foreground",
                     )}
                   >
-                    {chat.displayName}
-                  </h4>
-                  <span
+                    {chat.lastMessage}
+                  </p>
+                </div>
+                {!chat.isRead && (
+                  <div
                     className={cn(
-                      "whitespace-nowrap text-xs text-muted-foreground",
+                      "h-2.5 w-2.5 rounded-full bg-primary",
                       "ms-2",
                     )}
-                  >
-                    {formatCompactTime(chat.timestamp, dateLocale)}
-                  </span>
-                </div>
-                <p
-                  className={cn(
-                    "truncate text-sm",
-                    !chat.isRead
-                      ? "text-foreground font-medium"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  {chat.lastMessage}
-                </p>
-              </div>
-              {!chat.isRead && (
-                <div
-                  className={cn(
-                    "h-2.5 w-2.5 rounded-full bg-primary",
-                    "ms-2",
-                  )}
-                ></div>
-              )}
-            </button>
-          ))
+                  ></div>
+                )}
+              </button>
+            );
+          })
         )}
       </div>
     </div>

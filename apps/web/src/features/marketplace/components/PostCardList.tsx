@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+/* eslint-disable max-lines */
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Badge } from "../../../shared/ui/badge";
 import { Button } from "../../../shared/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "../../../shared/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -9,8 +11,6 @@ import {
   DialogTitle,
 } from "../../../shared/ui/dialog";
 import {
-  Clock3,
-  Eye,
   Heart,
   Loader2,
   MessageCircle,
@@ -34,6 +34,43 @@ import {
   resolvePhoneDialogCopy,
   type PhoneLookupStatus,
 } from "./postCardPhoneDialog";
+import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
+import { normalizeSellerDisplayName } from "../../../utils/sellerDisplayName";
+
+const sellerAvatarCache = new Map<string, string | null>();
+const sellerAvatarRequestCache = new Map<string, Promise<string | null>>();
+
+async function getSellerAvatar(sellerId: string): Promise<string | null> {
+  const normalizedSellerId = sellerId.trim();
+  if (!normalizedSellerId) {
+    return null;
+  }
+
+  if (sellerAvatarCache.has(normalizedSellerId)) {
+    return sellerAvatarCache.get(normalizedSellerId) ?? null;
+  }
+
+  const pendingRequest = sellerAvatarRequestCache.get(normalizedSellerId);
+  if (pendingRequest) {
+    return pendingRequest;
+  }
+
+  const request = api.sellers
+    .getSellerProfile(normalizedSellerId)
+    .then((sellerProfile) => {
+      const avatar = String(sellerProfile?.seller?.avatar || "").trim() || null;
+      sellerAvatarCache.set(normalizedSellerId, avatar);
+      sellerAvatarRequestCache.delete(normalizedSellerId);
+      return avatar;
+    })
+    .catch(() => {
+      sellerAvatarRequestCache.delete(normalizedSellerId);
+      return null;
+    });
+
+  sellerAvatarRequestCache.set(normalizedSellerId, request);
+  return request;
+}
 
 function toLocalJordanMaskedPhone(value: string, fallback: string): string {
   const digitsOnly = value.replace(/\D/g, "");
@@ -74,6 +111,7 @@ export const PostCardList = React.memo(function PostCardList(
   const [resolvedPhone, setResolvedPhone] = useState("");
   const [isResolvingPhone, setIsResolvingPhone] = useState(false);
   const [showPhoneDialog, setShowPhoneDialog] = useState(false);
+  const [sellerAvatar, setSellerAvatar] = useState<string | null>(null);
   const [phoneLookupStatus, setPhoneLookupStatus] =
     useState<PhoneLookupStatus>("idle");
   const navigate = useNavigate();
@@ -83,6 +121,7 @@ export const PostCardList = React.memo(function PostCardList(
     labels,
     resolvedLanguage,
     priceLocale,
+    isOwner,
     showFavoriteButton,
     handleFavoriteClick,
     requireAuthForProtectedAction,
@@ -114,6 +153,7 @@ export const PostCardList = React.memo(function PostCardList(
   const hasDescription = Boolean(post.description?.trim());
   const currentPath = buildCurrentPath(location.pathname, location.search);
   const trimmedSellerId = String(post.sellerId || "").trim();
+  const sellerDisplayName = normalizeSellerDisplayName(post.seller, trimmedSellerId);
   const trimmedPhone = String(resolvedPhone || post.phone || "").trim();
   const hasChatTarget = trimmedSellerId.length > 0;
   const hasPhone = trimmedPhone.length > 0;
@@ -125,9 +165,38 @@ export const PostCardList = React.memo(function PostCardList(
     phoneLookupStatus,
   );
 
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!trimmedSellerId) {
+      setSellerAvatar(null);
+      return;
+    }
+
+    const cachedAvatar = sellerAvatarCache.get(trimmedSellerId);
+    if (cachedAvatar !== undefined) {
+      setSellerAvatar(cachedAvatar);
+      return;
+    }
+
+    void getSellerAvatar(trimmedSellerId).then((avatar) => {
+      if (!cancelled) {
+        setSellerAvatar(avatar);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [trimmedSellerId]);
+
   const handleChatClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     event.preventDefault();
+
+    if (isOwner) {
+      return;
+    }
 
     if (requireAuthForProtectedAction() === false) {
       return;
@@ -235,12 +304,30 @@ export const PostCardList = React.memo(function PostCardList(
               price={post.price}
               currency={labels.currency}
               locale={priceLocale}
-              className="mb-2 shrink-0 border-white/45 bg-white/94 text-slate-950 shadow-md supports-backdrop-filter:bg-white/86 px-2 py-0.5 scale-95"
+              variant="inline"
+              className="mb-2 shrink-0"
             />
 
-            <h3 className="line-clamp-2 text-base font-semibold leading-[1.12] tracking-[-0.018em] text-foreground sm:text-lg">
-              {post.name}
-            </h3>
+            <div className="space-y-1.5">
+              <h3 className="line-clamp-2 text-base font-semibold leading-[1.12] tracking-[-0.018em] text-foreground sm:text-lg">
+                {post.name}
+              </h3>
+
+              <div
+                className="flex max-w-full items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200"
+              >
+                <Avatar className="h-7 w-7 border border-white/70 shadow-sm dark:border-white/10">
+                  <AvatarImage
+                    src={resolveAvatarSrc(sellerAvatar) || undefined}
+                    alt={sellerDisplayName}
+                  />
+                  <AvatarFallback className="bg-primary/10 text-[0.8rem] font-semibold text-primary">
+                    {getAvatarInitial(sellerDisplayName)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="truncate">{sellerDisplayName}</span>
+              </div>
+            </div>
 
             {hasDescription && (
               <p className="mt-2 line-clamp-2 max-w-none text-sm leading-6 text-muted-foreground">
@@ -263,14 +350,12 @@ export const PostCardList = React.memo(function PostCardList(
 
             {postedAgo && (
               <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100/90 px-2.5 py-1 font-medium dark:bg-slate-800/80">
-                <Clock3 className="h-3.5 w-3.5 shrink-0 text-primary/80" />
                 <span>{postedAgo}</span>
               </div>
             )}
 
             {typeof post.views === "number" && post.views > 0 && (
               <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100/90 px-2.5 py-1 font-medium dark:bg-slate-800/80">
-                <Eye className="h-3.5 w-3.5 shrink-0 text-primary/80" />
                 <span>
                   {post.views} {labels.views}
                 </span>
@@ -291,88 +376,91 @@ export const PostCardList = React.memo(function PostCardList(
           </div>
         </div>
 
-        <div className="pointer-events-auto relative z-30 mt-4 flex flex-wrap items-stretch gap-2.5 sm:inline-grid sm:w-auto sm:grid-cols-[9.5rem_10.5rem_auto] sm:gap-3">
+        <div className="pointer-events-auto relative z-30 mt-4 flex flex-wrap items-stretch gap-2.5">
           <Button
-            variant="outline"
             aria-label={labels.chatButton}
             title={labels.chatButton}
-            className="flex h-11 min-w-0 flex-[0.92] basis-[calc(46%-0.5rem)] items-center justify-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-none transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 sm:basis-auto sm:px-4"
+            className="flex h-11 min-w-0 flex-[0.92] basis-[calc(46%-0.5rem)] items-center justify-center gap-2 rounded-[16px] bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-none transition-colors hover:bg-primary/92 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none dark:disabled:bg-slate-800 dark:disabled:text-slate-400 sm:min-w-38 sm:flex-[0_0_auto] sm:px-4"
             onClick={handleChatClick}
+            disabled={isOwner}
           >
-            <MessageCircle className="h-[1.2rem] w-[1.2rem] text-slate-500 transition-colors group-hover:text-slate-700 dark:text-slate-400" />
+            <MessageCircle className="h-[1.2rem] w-[1.2rem] text-primary-foreground" />
             <span>{labels.chatButton}</span>
           </Button>
 
           <Button
+            variant="outline"
             aria-label={labels.callButton}
             title={labels.callButton}
-            className="flex h-11 min-w-0 flex-[1.08] basis-[calc(54%-0.5rem)] items-center justify-center gap-2 rounded-[16px] bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-none transition-colors hover:bg-primary/92 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none dark:disabled:bg-slate-800 dark:disabled:text-slate-400 sm:basis-auto sm:px-4"
+            className="flex h-11 min-w-0 flex-[1.08] basis-[calc(54%-0.5rem)] items-center justify-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-none transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:disabled:border-white/10 dark:disabled:bg-slate-800 dark:disabled:text-slate-400 sm:min-w-42 sm:flex-[0_0_auto] sm:px-4"
             onClick={handleCallClick}
             disabled={canResolvePhone === false || isResolvingPhone}
           >
             {isResolvingPhone ? (
-              <Loader2 className="h-[1.2rem] w-[1.2rem] animate-spin text-primary-foreground" />
+              <Loader2 className="h-[1.2rem] w-[1.2rem] animate-spin text-slate-700 dark:text-slate-200" />
             ) : (
-              <Phone className="h-[1.05rem] w-[1.05rem] text-primary-foreground" />
+              <Phone className="h-[1.05rem] w-[1.05rem] text-slate-500 dark:text-slate-400" />
             )}
             <span>{labels.callButton}</span>
           </Button>
 
-          {showFavoriteButton ? (
-            <button
-              type="button"
-              onClick={handleFavoriteClick}
-              aria-label={labels.favoriteLabel}
-              title={labels.favoriteLabel}
-              className={
-                isFavorite
-                  ? "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-rose-200 bg-rose-50 text-rose-500 shadow-none transition-colors hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:border-rose-900/70 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-950/60"
-                  : "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-slate-200 bg-white text-slate-400 shadow-none transition-colors hover:bg-slate-50 hover:text-rose-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:border-white/10 dark:bg-slate-950 dark:text-slate-500 dark:hover:bg-slate-900 dark:hover:text-rose-300"
-              }
-            >
-              <Heart
+          <div className="flex items-center gap-2.5 sm:flex-[0_0_auto]">
+            {showFavoriteButton ? (
+              <button
+                type="button"
+                onClick={handleFavoriteClick}
+                aria-label={labels.favoriteLabel}
+                title={labels.favoriteLabel}
                 className={
                   isFavorite
-                    ? "h-5 w-5 fill-current stroke-[2.1]"
-                    : "h-5 w-5 stroke-[2.1]"
+                    ? "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-rose-200 bg-rose-50 text-rose-500 shadow-none transition-colors hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:border-rose-900/70 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-950/60"
+                    : "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-slate-200 bg-white text-slate-400 shadow-none transition-colors hover:bg-slate-50 hover:text-rose-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:border-white/10 dark:bg-slate-950 dark:text-slate-500 dark:hover:bg-slate-900 dark:hover:text-rose-300"
                 }
-              />
-            </button>
-          ) : null}
+              >
+                <Heart
+                  className={
+                    isFavorite
+                      ? "h-5 w-5 fill-current stroke-[2.1]"
+                      : "h-5 w-5 stroke-[2.1]"
+                  }
+                />
+              </button>
+            ) : null}
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              if (requireAuthForProtectedAction() === false) {
-                return;
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                if (requireAuthForProtectedAction() === false) {
+                  return;
+                }
+                const comparePost = {
+                  id: String(post.id),
+                  name: post.name,
+                  price: post.price ?? 0,
+                  image: post.image ?? "",
+                  category: post.category ?? "",
+                  categoryId: post.categoryId || "",
+                  location: detailLocation || post.location || "",
+                };
+                if (isInCompare(comparePost.id)) {
+                  removeFromCompare(comparePost.id);
+                } else {
+                  addToCompare(comparePost);
+                }
+              }}
+              aria-label={isInCompare(String(post.id)) ? "Remove from comparison" : "Add to comparison"}
+              title={isInCompare(String(post.id)) ? "Remove from comparison" : "Add to comparison"}
+              className={
+                isInCompare(String(post.id))
+                  ? "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-primary/30 bg-primary/10 text-primary shadow-none transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+                  : "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-slate-200 bg-white text-slate-400 shadow-none transition-colors hover:bg-slate-50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:border-white/10 dark:bg-slate-950 dark:text-slate-500 dark:hover:bg-slate-900 dark:hover:text-primary"
               }
-              const comparePost = {
-                id: String(post.id),
-                name: post.name,
-                price: post.price ?? 0,
-                image: post.image ?? "",
-                category: post.category ?? "",
-                categoryId: post.categoryId || "",
-                location: detailLocation || post.location || "",
-              };
-              if (isInCompare(comparePost.id)) {
-                removeFromCompare(comparePost.id);
-              } else {
-                addToCompare(comparePost);
-              }
-            }}
-            aria-label={isInCompare(String(post.id)) ? "Remove from comparison" : "Add to comparison"}
-            title={isInCompare(String(post.id)) ? "Remove from comparison" : "Add to comparison"}
-            className={
-              isInCompare(String(post.id))
-                ? "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-primary/30 bg-primary/10 text-primary shadow-none transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
-                : "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-slate-200 bg-white text-slate-400 shadow-none transition-colors hover:bg-slate-50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:border-white/10 dark:bg-slate-950 dark:text-slate-500 dark:hover:bg-slate-900 dark:hover:text-primary"
-            }
-          >
-            <Scale className="h-5 w-5" />
-          </button>
+            >
+              <Scale className="h-5 w-5" />
+            </button>
+          </div>
 
           {hasPhone ? (
             <span className="sr-only" dir="ltr">
@@ -383,7 +471,7 @@ export const PostCardList = React.memo(function PostCardList(
       </div>
 
       <Dialog open={showPhoneDialog} onOpenChange={setShowPhoneDialog}>
-        <DialogContent 
+        <DialogContent
           hideCloseButton
           className="sm:max-w-[400px] p-0 overflow-hidden border-none shadow-2xl"
         >
@@ -393,8 +481,8 @@ export const PostCardList = React.memo(function PostCardList(
           </DialogDescription>
           <div className="flex flex-col">
             <div className="bg-muted/30 px-6 pt-8 pb-6 text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                <Phone className="h-6 w-6 text-primary" />
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10">
+                <Phone className="h-6 w-6 text-emerald-600" />
               </div>
               <h3 className="text-xl font-bold tracking-tight text-foreground">
                 {phoneDialogCopy.title}
@@ -409,11 +497,11 @@ export const PostCardList = React.memo(function PostCardList(
                 <a
                   href={`tel:${trimmedPhone}`}
                   aria-label={`${phoneDialogCopy.callNowLabel} ${phoneDialogCopy.displayNumber}`}
-                  className="group relative flex h-16 w-full items-center justify-between overflow-hidden rounded-2xl bg-primary px-6 text-primary-foreground transition-all hover:bg-primary/90 active:scale-95"
+                  className="group relative flex h-16 w-full items-center justify-between overflow-hidden rounded-2xl bg-linear-to-r from-emerald-500 to-teal-500 px-6 text-white shadow-md transition-all hover:from-emerald-600 hover:to-teal-600 hover:shadow-lg active:scale-95"
                   dir="ltr"
                 >
-                  <div className="flex flex-col items-start text-left">
-                    <span className="text-xs uppercase tracking-widest opacity-70 font-semibold mb-0.5">
+                  <div className="flex flex-col items-start text-left font-sans">
+                    <span className="text-xs uppercase tracking-widest text-emerald-50 font-semibold mb-0.5">
                       {resolvedLanguage === "ar" ? "رقم الهاتف" : "Phone Number"}
                     </span>
                     <span className="text-2xl font-bold tracking-tight">
@@ -421,7 +509,7 @@ export const PostCardList = React.memo(function PostCardList(
                     </span>
                   </div>
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 transition-transform group-hover:rotate-12">
-                    <Phone className="h-5 w-5" />
+                    <Phone className="h-5 w-5 text-white" />
                   </div>
                 </a>
               ) : (

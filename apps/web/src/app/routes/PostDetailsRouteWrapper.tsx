@@ -1,4 +1,5 @@
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { SearchX } from "lucide-react";
 import { PostDetailsPage } from "../../features/post-details/pages/PostDetailsPage";
 import { Language, Post, UserProfile } from "../../types";
 import { deferredToast } from "../../utils/toast";
@@ -110,16 +111,30 @@ export function PostDetailsRouteWrapper({
 
   if (!resolvedPost) {
     return (
-      <div className="p-10 text-center text-muted-foreground">
-        {labels.postNotFound}{" "}
-        <Button
-          variant="link"
-          onClick={onNavigateHome}
-          className="text-primary"
-        >
-          {labels.goHome}
-        </Button>
-      </div>
+      <PageShell>
+        <div className="flex h-[70vh] w-full flex-col items-center justify-center px-4">
+          <div className="flex flex-col items-center max-w-sm text-center">
+            <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-muted/50 ring-8 ring-muted/20">
+              <SearchX className="h-10 w-10 text-muted-foreground/60" />
+            </div>
+            <h2 className="mb-2 text-2xl font-semibold tracking-tight text-foreground">
+              {labels.postNotFound}
+            </h2>
+            <p className="mb-8 text-sm text-muted-foreground leading-relaxed">
+              {language === "ar" 
+                ? "عذراً، هذا المنشور غير متوفر. قد يكون تم حذفه أو أنك لا تملك صلاحية للوصول إليه." 
+                : "Sorry, this post is unavailable. It may have been deleted, or you might not have permission to view it."}
+            </p>
+            <Button
+              size="lg"
+              onClick={onNavigateHome}
+              className="px-8 rounded-full shadow-sm hover:shadow-md transition-all"
+            >
+              {labels.goHome}
+            </Button>
+          </div>
+        </div>
+      </PageShell>
     );
   }
 

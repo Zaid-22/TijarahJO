@@ -102,6 +102,9 @@ export function ReportsQueue() {
   const [selectedSuspensionHours, setSelectedSuspensionHours] = useState<string>("24");
   const [isSuspending, setIsSuspending] = useState(false);
 
+  // Block post state
+  const [isBlockingPost, setIsBlockingPost] = useState(false);
+
   const pageSize = 25;
 
   const fetchReports = useCallback(async () => {
@@ -200,6 +203,39 @@ export function ReportsQueue() {
       toast.error("Failed to block user");
     } finally {
       setIsSuspending(false);
+    }
+  };
+
+  const handleBlockPost = async () => {
+    if (!selectedReport || selectedReport.reportType !== "LISTING") return;
+
+    setIsBlockingPost(true);
+    try {
+      const success = await api.admin.updatePostStatus(
+        selectedReport.targetID,
+        1, // 1 = BLOCKED according to updatePostStatus comments
+      );
+
+      if (success) {
+        toast.success("Post blocked successfully");
+
+        // Auto-resolve the report
+        await api.admin.updateReportStatus(
+          selectedReport.reportID,
+          2, // Resolved
+          `Post blocked via report #${selectedReport.reportID}`
+        );
+
+        setActionDialogOpen(false);
+        await fetchReports();
+      } else {
+        toast.error("Failed to block post");
+      }
+    } catch (error) {
+      logger.warn("[ReportsQueue] Block post failed", error);
+      toast.error("Failed to block post");
+    } finally {
+      setIsBlockingPost(false);
     }
   };
 
@@ -408,6 +444,8 @@ export function ReportsQueue() {
         selectedSuspensionHours={selectedSuspensionHours}
         onSuspensionHoursChange={setSelectedSuspensionHours}
         onBlockUser={handleBlockUser}
+        isBlockingPost={isBlockingPost}
+        onBlockPost={handleBlockPost}
       />
     </div>
   );

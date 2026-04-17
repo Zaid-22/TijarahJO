@@ -69,7 +69,7 @@ public sealed class UserQueryHandlerTests
     }
 
     [Fact]
-    public async Task GetByIdAsync_RedactsContactAndProfileFields_ForNonOwnerNonAdmin()
+    public async Task GetByIdAsync_RedactsPrivateFields_ButKeepsPublicAvatar_ForNonOwnerNonAdmin()
     {
         var users = new FakeUserDataAccess
         {
@@ -88,7 +88,7 @@ public sealed class UserQueryHandlerTests
         Assert.NotNull(result.User);
         Assert.Null(result.User!.Phone);
         Assert.Null(result.User.Bio);
-        Assert.Null(result.User.Avatar);
+        Assert.Equal("avatar.png", result.User.Avatar);
     }
 
     [Fact]

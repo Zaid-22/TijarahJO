@@ -448,9 +448,11 @@ export function LoginForm({
           <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
             {title}
           </h2>
-          <p className="text-sm text-muted-foreground">
-            {subtitle}
-          </p>
+          {subtitle && (
+            <p className="text-sm text-muted-foreground">
+              {subtitle}
+            </p>
+          )}
         </div>
         {formContent}
         {footer}

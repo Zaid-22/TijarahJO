@@ -229,8 +229,8 @@ export function PostActionDialogs({
           <div className="flex flex-col">
             {/* Header section with subtle background */}
             <div className="bg-muted/30 px-6 pt-8 pb-6 text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                <Phone className="h-6 w-6 text-primary" />
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10">
+                <Phone className="h-6 w-6 text-emerald-600" />
               </div>
               <h3 className="text-xl font-bold tracking-tight text-foreground">
                 {language === "ar" ? "رقم الهاتف" : "Phone Number"}
@@ -238,7 +238,7 @@ export function PostActionDialogs({
               <p className="mt-1.5 text-sm text-muted-foreground">
                 {language === "ar"
                   ? "انقر على الرقم للاتصال بالبائع مباشرة"
-                  : "Click the number to call the seller directly"}
+                  : "Click the button below to call the seller"}
               </p>
             </div>
 
@@ -251,11 +251,11 @@ export function PostActionDialogs({
                     ? `اتصل الآن ${sellerPhone || post.phone || "+962 7 0000 0000"}`
                     : `Call now ${sellerPhone || post.phone || "+962 7 0000 0000"}`
                 }
-                className="group relative flex h-16 w-full items-center justify-between overflow-hidden rounded-2xl bg-primary px-6 text-primary-foreground transition-all hover:bg-primary/90 active:scale-95"
+                className="group relative flex h-16 w-full items-center justify-between overflow-hidden rounded-2xl bg-linear-to-r from-emerald-500 to-teal-500 px-6 text-white shadow-md transition-all hover:from-emerald-600 hover:to-teal-600 hover:shadow-lg active:scale-95"
                 dir="ltr"
               >
-                <div className="flex flex-col items-start">
-                  <span className="text-xs uppercase tracking-widest opacity-70 font-semibold mb-0.5">
+                <div className="flex flex-col items-start font-sans">
+                  <span className="text-xs uppercase tracking-widest text-emerald-50 font-semibold mb-0.5">
                     {language === "ar" ? "رقم البائع" : "Seller Phone"}
                   </span>
                   <span className="text-2xl font-bold tracking-tight">
@@ -263,7 +263,7 @@ export function PostActionDialogs({
                   </span>
                 </div>
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 transition-transform group-hover:rotate-12">
-                  <Phone className="h-5 w-5" />
+                  <Phone className="h-5 w-5 text-white" />
                 </div>
               </a>
 

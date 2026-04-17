@@ -232,13 +232,16 @@ export function AdvancedSearchFilters({
       </FilterGroup>
 
       {showApplyButton ? (
-        <Button
-          className="w-full rounded-xl shadow-md"
-          size="lg"
-          onClick={onApply}
-        >
-          {labels.apply}
-        </Button>
+        <div className="-mx-5 mt-2 border-t border-border/70 bg-card/95 px-5 pt-4 pb-1 backdrop-blur-sm sm:-mx-6 sm:px-6">
+          <Button
+            type="button"
+            className="w-full rounded-xl shadow-md"
+            size="lg"
+            onClick={onApply}
+          >
+            {labels.apply}
+          </Button>
+        </div>
       ) : null}
     </div>
   );

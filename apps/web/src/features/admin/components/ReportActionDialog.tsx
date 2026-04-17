@@ -1,4 +1,5 @@
-import { ShieldBan } from "lucide-react";
+import { ShieldBan, ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "../../../shared/ui/button";
 import {
   Dialog,
@@ -50,6 +51,8 @@ interface ReportActionDialogProps {
   selectedSuspensionHours: string;
   onSuspensionHoursChange: (hours: string) => void;
   onBlockUser: () => void;
+  isBlockingPost?: boolean;
+  onBlockPost?: () => void;
 }
 
 export function ReportActionDialog({
@@ -65,6 +68,8 @@ export function ReportActionDialog({
   selectedSuspensionHours,
   onSuspensionHoursChange,
   onBlockUser,
+  isBlockingPost,
+  onBlockPost,
 }: ReportActionDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -139,6 +144,46 @@ export function ReportActionDialog({
                       <>
                         <ShieldBan className="w-3.5 h-3.5 mr-1.5" />
                         Block User
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {report.reportType === "LISTING" && (
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <ShieldBan className="w-4 h-4 text-foreground" />
+                    <span className="text-sm font-semibold text-foreground">Block Reported Post</span>
+                  </div>
+                  <Link
+                    to={`/post/${report.targetID}`}
+                    target="_blank"
+                    className="text-xs text-primary hover:underline flex items-center gap-1"
+                  >
+                    View Post <ExternalLink className="w-3 h-3" />
+                  </Link>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  This will hide the post from the marketplace. The report will be auto-resolved.
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onBlockPost}
+                    disabled={isBlockingPost}
+                    className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                    aria-label="Block Post"
+                  >
+                    {isBlockingPost ? (
+                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    ) : (
+                      <>
+                        <ShieldBan className="w-3.5 h-3.5 mr-1.5" />
+                        Block Post
                       </>
                     )}
                   </Button>

@@ -49,13 +49,13 @@ export function MaintenanceScreen({
   return (
     <div
       dir={isArabic ? "rtl" : "ltr"}
-      className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,_#f8fbff_0%,_#eef3ff_55%,_#ffffff_100%)] text-slate-950"
+      className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,#f8fbff_0%,#eef3ff_55%,#ffffff_100%)] text-slate-950"
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_center,_rgba(59,130,246,0.12),_transparent_62%)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.12),transparent_62%)]" />
 
       <div className="mx-auto flex min-h-screen max-w-3xl items-center px-6 py-10 sm:px-8 lg:px-10">
         <section
-          className={`w-full rounded-[2rem] border border-slate-200/80 bg-white/95 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-sm sm:p-12 animate-in fade-in slide-in-from-bottom-6 duration-1000 ${textAlignClass}`}
+          className={`w-full rounded-4xl border border-slate-200/80 bg-white/95 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-sm sm:p-12 animate-in fade-in slide-in-from-bottom-6 duration-1000 ${textAlignClass}`}
         >
           <div className={`mb-8 flex ${isArabic ? "justify-start sm:justify-end" : "justify-start"}`}>
             <Logo size="md" />

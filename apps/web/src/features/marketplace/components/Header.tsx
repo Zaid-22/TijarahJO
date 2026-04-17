@@ -1,4 +1,4 @@
-import { ArrowLeft, MessageCircle, Plus } from "lucide-react";
+import { ArrowLeft, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Suspense, lazy, useState } from "react";
 import { Button } from "../../../shared/ui/button";
@@ -94,9 +94,9 @@ export function Header({
     "hidden h-10 w-10 rounded-full border border-border/60 bg-background/40 sm:flex";
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/20 bg-background/80 shadow-md backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 transition-all duration-300">
+    <header className="sticky top-0 z-50 border-b border-border/20 bg-background/80 shadow-md backdrop-blur-xl supports-backdrop-filter:bg-background/60 transition-all duration-300">
       <div className="relative mx-auto max-w-7xl px-3 sm:px-4 lg:px-8">
-        <div className="flex h-16 items-center justify-between gap-3 sm:h-[4.5rem] sm:gap-5">
+        <div className="flex h-16 items-center justify-between gap-3 sm:h-18 sm:gap-5">
           {/* Left section: Logo & Mobile Menu */}
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             {showBackButton ? (
@@ -133,8 +133,8 @@ export function Header({
                 />
                 {showLogo && (
                   <div className="flex items-center gap-3">
-                    <Link 
-                      to="/" 
+                    <Link
+                      to="/"
                       className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary hover:opacity-90 transition-opacity"
                       aria-label={language === "ar" ? "العودة إلى الرئيسية" : "Go to homepage"}
                     >
@@ -194,13 +194,10 @@ export function Header({
             {shouldShowAuthenticatedActions && (
               <Button
                 size="sm"
-                className="h-10 rounded-full bg-primary px-2 text-primary-foreground shadow-lg hover:bg-primary/95 hover:shadow-xl active:scale-95 sm:px-5"
+                className="h-10 rounded-full bg-primary px-4 text-primary-foreground shadow-lg active:scale-95 sm:px-6"
                 onClick={onShowCreatePost}
               >
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                <span
-                  className={`text-sm font-semibold ms-1 sm:ms-2`}
-                >
+                <span className="text-sm font-semibold">
                   <span className="sr-only sm:not-sr-only">
                     {language === "ar" ? "إنشاء منشور" : "Create Post"}
                   </span>

@@ -101,7 +101,6 @@ public sealed class UserQueryHandler : IUserQueryHandler
             Email = string.Empty,
             Phone = null,
             Bio = null,
-            Avatar = null,
             Status = 0,
             RoleID = 0,
             IsDeleted = false

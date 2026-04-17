@@ -28,7 +28,7 @@ function HomeRouteLoadingFallback() {
     <div className="min-h-screen bg-background">
       <section className="relative w-full overflow-hidden">
         <div className="relative w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 pt-4 sm:pt-6 pb-2">
-          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-muted/60 w-full min-h-96 sm:min-h-80 md:min-h-0 md:aspect-[21/8]" />
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-muted/60 w-full min-h-96 sm:min-h-80 md:min-h-0 md:aspect-21/8" />
           <div className="flex items-center justify-center gap-2 mt-3 sm:mt-4 pb-2">
             <div className="w-8 h-2.5 rounded-full bg-muted/80" />
             <div className="w-2.5 h-2.5 rounded-full bg-muted/80" />

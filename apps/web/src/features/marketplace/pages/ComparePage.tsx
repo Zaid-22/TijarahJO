@@ -134,15 +134,15 @@ export default function ComparePage() {
                     <Scale className="h-10 w-10 text-muted-foreground/30" />
                   </div>
                 )}
-                <div className="p-3.5 sm:p-4">
-                  <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground sm:text-base">
+                <div className="space-y-2 p-4 sm:p-5">
+                  <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground sm:text-[1.05rem]">
                     {post.name}
                   </h3>
                   {post.location && (
-                    <p className="mt-1 text-xs text-muted-foreground">{post.location}</p>
+                    <p className="text-sm text-muted-foreground">{post.location}</p>
                   )}
-                  <div className="mt-2 flex items-center justify-between">
-                    <p className="text-lg font-extrabold tracking-tight text-primary sm:text-xl">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xl font-extrabold tracking-tight text-primary sm:text-2xl">
                       {post.price > 0
                         ? `${post.price.toLocaleString()} JOD`
                         : "Price not listed"}

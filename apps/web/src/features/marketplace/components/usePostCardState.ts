@@ -95,6 +95,7 @@ export function usePostCardState({
     resolvedLanguage,
     labels,
     priceLocale,
+    isOwner,
     showFavoriteButton,
     handleFavoriteClick,
     requireAuthForProtectedAction,

@@ -5,6 +5,7 @@ interface PostCardPriceBadgeProps {
   currency: string;
   locale: string;
   className?: string;
+  variant?: "badge" | "inline";
 }
 
 export function PostCardPriceBadge({
@@ -12,18 +13,35 @@ export function PostCardPriceBadge({
   currency,
   locale,
   className,
+  variant = "badge",
 }: PostCardPriceBadgeProps) {
   return (
     <div
       className={cn(
-        "inline-flex items-end gap-1.5 rounded-full border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(255,255,255,0.84))] px-3 py-1.5 text-slate-950 shadow-xl backdrop-blur-xl supports-[backdrop-filter]:bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(255,255,255,0.72))]",
+        variant === "inline"
+          ? "inline-flex items-end gap-1.5 px-0 py-0 text-black"
+          : "inline-flex items-end gap-1.5 rounded-full border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(255,255,255,0.84))] px-3 py-1.5 text-black shadow-xl backdrop-blur-xl supports-backdrop-filter:bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(255,255,255,0.72))]",
         className,
       )}
     >
-      <span className="text-lg font-semibold leading-none tracking-[-0.03em] sm:text-xl">
+      <span
+        className={cn(
+          "leading-none tracking-[-0.03em]",
+          variant === "inline"
+            ? "text-xl font-bold sm:text-2xl"
+            : "text-lg font-semibold sm:text-xl",
+        )}
+      >
         {price.toLocaleString(locale)}
       </span>
-      <span className="pb-0.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+      <span
+        className={cn(
+          "text-slate-500",
+          variant === "inline"
+            ? "pb-0 text-sm font-bold tracking-[0.02em]"
+            : "pb-0.5 text-xs font-semibold uppercase tracking-[0.14em]",
+        )}
+      >
         {currency}
       </span>
     </div>

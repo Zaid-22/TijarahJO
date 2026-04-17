@@ -73,7 +73,7 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       signInTitle: "Sign In",
       signUpSubtitle:
         "Create your TijarahJo account to start buying and selling",
-      signInSubtitle: "Sign in to access your TijarahJo account",
+      signInSubtitle: "",
       firstNameLabel: "First Name",
       firstNamePlaceholder: "First name",
       lastNameLabel: "Last Name",
@@ -160,7 +160,7 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       signUpTitle: "إنشاء حساب",
       signInTitle: "تسجيل الدخول",
       signUpSubtitle: "أنشئ حسابك في تجارة جو لبدء البيع والشراء",
-      signInSubtitle: "سجّل الدخول للوصول إلى حسابك في تجارة جو",
+      signInSubtitle: "",
       firstNameLabel: "الاسم الأول",
       firstNamePlaceholder: "الاسم الأول",
       lastNameLabel: "اسم العائلة",
