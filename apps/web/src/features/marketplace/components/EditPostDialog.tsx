@@ -34,7 +34,7 @@ type EditableImageEntry =
 
 interface EditPostDialogProps {
   post: Post;
-  onSave: (post: UpdatePostInput) => void;
+  onSave: (post: UpdatePostInput) => void | Promise<void>;
   onCancel: () => void;
   language?: Language;
 }
@@ -212,6 +212,11 @@ export function EditPostDialog({
   const handleSubmit = () => {
     if (isSubmitting) return;
 
+    // Images are only required if the original post had no images either.
+    // When editing an existing post that already has images on the server,
+    // allow saving even if the dialog slider never pre-populated them.
+    const originalHasImage =
+      (post.images?.length ?? 0) > 0 || Boolean(post.image);
     const newErrors = {
       title: !formData.title.trim(),
       price: !formData.price || parseFloat(formData.price) < 0.01,
@@ -219,7 +224,7 @@ export function EditPostDialog({
       location: !formData.location,
       area: !formData.area,
       description: !formData.description.trim(),
-      images: images.length === 0,
+      images: images.length === 0 && !originalHasImage,
     };
 
     setErrors(newErrors);

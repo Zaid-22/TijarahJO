@@ -366,7 +366,18 @@ test("backend live journey: auth, search, favorites, and post CRUD", async ({
   await openSearchResult(page, createdPostTitle);
 
   await page.getByRole("button", { name: /edit post/i }).first().click();
-  await page.locator("#edit-name").fill(updatedPostTitle);
+  await page.locator("#title").fill(updatedPostTitle);
+  
+  await page.setInputFiles("#image-upload", {
+    name: "updated.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(PNG_ONE_BY_ONE_BASE64, "base64"),
+  });
+  // Wait shortly for the UI to register the uploaded file
+  await expect(page.getByText(/images uploaded/i)).toBeVisible({
+    timeout: 10_000,
+  });
+
   await Promise.all([
     page.waitForResponse(
       (response) =>
