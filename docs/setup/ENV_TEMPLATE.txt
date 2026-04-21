@@ -18,6 +18,7 @@ JWT_SIGNING_KEY=CHANGE_ME_MIN_32_CHAR_SECRET
 DB_RUNTIME_PRINCIPAL=app
 DB_APP_LOGIN=tijarahjo_app
 DB_APP_PASSWORD=CHANGE_ME_APP_DB_PASSWORD
+APPLY_DEV_SEEDS=false
 
 # Optional explicit connection string (overrides DB_HOST/DB_NAME/DB_USER/DB_PASSWORD)
 # DATABASE_CONNECTION_STRING=Data Source=localhost,1433;Database=TijarahJoDB;User Id=sa;Password=CHANGE_ME;TrustServerCertificate=True;Encrypt=True;
@@ -61,6 +62,20 @@ PasswordResetEmail__FromName=TijarahJo Security
 PasswordResetEmail__LogCodesWhenEmailDisabled=true
 
 # -----------------------------------------------------------------------------
+# Email Two-Factor Authentication (optional)
+# -----------------------------------------------------------------------------
+
+EmailTwoFactor__Enabled=false
+EmailTwoFactor__ResendApiKey=
+EmailTwoFactor__FromAddress=no-reply@tijarahjo.local
+EmailTwoFactor__FromName="TijarahJo Security"
+EmailTwoFactor__LogCodesWhenEmailDisabled=true
+
+# TOTP / Two-Factor local secrets (required outside development)
+TwoFactor__SecretEncryptionKey=CHANGE_ME_MIN_32_CHAR_SECRET
+TwoFactor__ChallengeSigningKey=CHANGE_ME_MIN_32_CHAR_SECRET
+
+# -----------------------------------------------------------------------------
 # Frontend runtime
 # -----------------------------------------------------------------------------
 
@@ -73,7 +88,7 @@ VITE_HOME_SEARCH_LIMIT=200
 VITE_ALL_POSTS_SEARCH_LIMIT=200
 VITE_SEARCH_RESULTS_LIMIT=100
 # Optional CSP override for production builds:
-# VITE_CSP_CONNECT_SRC_EXTRA=
+VITE_CSP_CONNECT_SRC_EXTRA=
 
 # Optional debug flags
 VITE_DEBUG_API=false
@@ -82,4 +97,11 @@ VITE_DEBUG_LOGIN=false
 VITE_DEBUG_PROFILE=false
 VITE_DEBUG_CHAT=false
 
-Last Updated: 2026-04-02
+# -----------------------------------------------------------------------------
+# AI / External APIs (Required for Post Comparison)
+# -----------------------------------------------------------------------------
+
+Gemini__ApiKey=
+YouTube__ApiKey=
+
+Last Updated: 2026-04-21
