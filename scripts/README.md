@@ -11,5 +11,6 @@ Canonical operational entrypoints for local development and verification.
 - `./scripts/load_test_api.sh`: concurrent API load probe with latency/success thresholds (feed, search, top-sellers; default profile: `CONCURRENCY=10`, `REQUESTS_PER_PROBE=30`, `WARMUP_REQUESTS=5`)
 - `./scripts/test_delete_post_with_chat.sh`: focused regression scenario
 - `./scripts/kill-port.sh`: kill process by port for local recovery
+- `./scripts/provision_admin.sh`: create or promote an admin account in the database
 - `./scripts/contracts/export_openapi.sh`: export OpenAPI from running backend
 - `./scripts/contracts/generate_web_types.sh`: generate TypeScript contracts from OpenAPI

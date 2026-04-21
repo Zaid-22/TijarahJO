@@ -25,7 +25,7 @@
 │       │   ├── Api/             # Controllers, hubs, startup, contracts
 │       │   ├── Application/     # Business logic & service layer
 │       │   ├── Domain/          # Domain entities & interfaces
-│       │   ├── Infrastructure/  # Data access, EF Core, repositories
+│       │   ├── Infrastructure/  # Data access, external services (Gemini AI, YouTube API)
 │       │   └── Bootstrap/       # DI composition root
 │       ├── database/            # SQL scripts, migrations & bundles
 │       └── tests/               # Unit, integration & contract tests
@@ -43,6 +43,7 @@
 - Post creation, editing, status management (active / sold / deleted), and deletion
 - Category browsing (15+ categories) and full-text search
 - AI-Powered Post Comparison (side-by-side analysis, pros & cons, language-aware)
+- YouTube Video Recommendations for compared products
 - Image uploads (server-side file storage)
 - Favorites system and seller profiles
 - Post view tracking
@@ -56,7 +57,7 @@
 
 ### Communication
 - Real-time chat via SignalR (with image uploads)
-- In-app notifications with push subscription support
+- In-app notifications
 - User reviews and ratings
 
 ### Admin Panel
@@ -100,6 +101,7 @@ make ci-local                  # Full local CI mirror
 | Document | Purpose |
 |----------|---------|
 | [`docs/README.md`](docs/README.md) | Documentation index |
+| [`docs/DATABASE.md`](docs/DATABASE.md) | Database schema, ERD, lifecycle conventions |
 | [`docs/architecture/CURRENT_STRUCTURE_2026.md`](docs/architecture/CURRENT_STRUCTURE_2026.md) | Canonical project structure |
 | [`docs/architecture/PATH_CONVENTIONS.md`](docs/architecture/PATH_CONVENTIONS.md) | Path ownership & boundaries |
 | [`docs/setup/SETUP_NEW_COMPUTER_GUIDE.md`](docs/setup/SETUP_NEW_COMPUTER_GUIDE.md) | Full setup guide |
@@ -118,4 +120,4 @@ make ci-local                  # Full local CI mirror
 
 ---
 
-Last Updated: 2026-04-14
+Last Updated: 2026-04-21

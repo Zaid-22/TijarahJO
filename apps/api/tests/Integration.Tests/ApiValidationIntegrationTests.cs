@@ -348,24 +348,45 @@ public sealed class ApiValidationIntegrationTests
         return categories[0].CategoryID;
     }
 
+    private static async Task<(int CityId, int AreaId)> GetFirstCityAndAreaAsync(HttpClient client)
+    {
+        HttpResponseMessage citiesResponse = await client.GetAsync("/api/v1/cities");
+        string citiesContent = await citiesResponse.Content.ReadAsStringAsync();
+        Assert.True(citiesResponse.IsSuccessStatusCode, $"Fetching cities failed ({(int)citiesResponse.StatusCode}): {citiesContent}");
+
+        List<CityResponse>? cities = JsonSerializer.Deserialize<List<CityResponse>>(citiesContent, JsonOptions);
+        Assert.NotNull(cities);
+        Assert.NotEmpty(cities!);
+        int cityId = cities![0].CityId;
+        Assert.True(cityId > 0, "Expected a valid city ID in seed data.");
+
+        HttpResponseMessage areasResponse = await client.GetAsync($"/api/v1/cities/{cityId}/areas");
+        string areasContent = await areasResponse.Content.ReadAsStringAsync();
+        Assert.True(areasResponse.IsSuccessStatusCode, $"Fetching areas failed ({(int)areasResponse.StatusCode}): {areasContent}");
+
+        List<AreaResponse>? areas = JsonSerializer.Deserialize<List<AreaResponse>>(areasContent, JsonOptions);
+        Assert.NotNull(areas);
+        Assert.NotEmpty(areas!);
+        int areaId = areas![0].AreaId;
+        Assert.True(areaId > 0, "Expected a valid area ID in seed data.");
+
+        return (cityId, areaId);
+    }
+
     private static async Task<int> CreatePostAsync(HttpClient client, string token, int categoryId)
     {
+        (int cityId, int areaId) = await GetFirstCityAndAreaAsync(client);
+
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/posts");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Content = JsonContent.Create(new
         {
-            PostID = (int?)null,
-            UserID = 0,
             CategoryID = categoryId,
             PostTitle = $"Integration Status Test {Guid.NewGuid():N}",
             PostDescription = "Integration test post.",
             Price = 15.0m,
-            Status = 0,
-            CreatedAt = DateTime.UtcNow,
-            IsDeleted = false,
-            Views = 0L,
-            CityId = (int?)null,
-            AreaId = (int?)null
+            CityId = cityId,
+            AreaId = areaId
         });
 
         HttpResponseMessage response = await client.SendAsync(request);
@@ -389,6 +410,16 @@ public sealed class ApiValidationIntegrationTests
     private sealed class CategoryResponse
     {
         public int CategoryID { get; set; }
+    }
+
+    private sealed class CityResponse
+    {
+        public int CityId { get; set; }
+    }
+
+    private sealed class AreaResponse
+    {
+        public int AreaId { get; set; }
     }
 
     private sealed class PostResponse
