@@ -1,9 +1,9 @@
 # API Endpoints Status Report
 
 **Base URL:** `http://localhost:5033`
-**Reviewed:** 2026-04-14
+**Reviewed:** 2026-04-21
 **Last live verification source:** `./scripts/verify_all_apis.sh` + CI backend checks
-**Last live verification date:** 2026-03-24
+**Last live verification date:** 2026-04-21
 
 ## Summary
 
@@ -113,6 +113,7 @@
 ### Compare (`/api/v1/compare`)
 
 - `POST /api/v1/compare` (`[Authorize]`, supports optional `Language` payload parameter)
+- `POST /api/v1/compare/videos` (`[Authorize]`, YouTube video recommendations for compared posts)
 
 ### Sellers (`/api/v1/sellers`)
 
@@ -139,59 +140,78 @@
 ### Admin (`/api/v1/admin`)
 
 #### Dashboard & Analytics
-- `GET /api/v1/admin/dashboard` — KPI summary
-- `GET /api/v1/admin/analytics/overview` — analytics overview
-- `GET /api/v1/admin/analytics/revenue` — revenue metrics
-- `GET /api/v1/admin/analytics/users` — user growth
-- `GET /api/v1/admin/analytics/posts` — post activity
+- `GET /api/v1/admin/dashboard/stats` — KPI summary
+- `GET /api/v1/admin/analytics` — analytics overview
 
 #### User Management
-- `GET /api/v1/admin/users` — list all users
-- `GET /api/v1/admin/users/{id}` — user details
-- `PUT /api/v1/admin/users/{id}/status` — block/unblock user
-- `PUT /api/v1/admin/users/{id}/role` — change user role
-- `DELETE /api/v1/admin/users/{id}` — delete user
+- `GET /api/v1/admin/users/{id}/details` — user details
+- `PUT /api/v1/admin/users/bulk-status` — bulk update user status
+- `POST /api/v1/admin/users/{id}/suspend` — suspend user with reason and duration
 
 #### Post Management
 - `GET /api/v1/admin/posts` — list all posts
-- `PUT /api/v1/admin/posts/{id}/status` — change post status
+- `PATCH /api/v1/admin/posts/{id}/status` — change post status
 - `DELETE /api/v1/admin/posts/{id}` — delete post
+
+#### Post Comments Moderation
+- `GET /api/v1/admin/post-comments` — list post comments
+- `DELETE /api/v1/admin/post-comments/{id}` — delete comment
 
 #### Reports & Moderation
 - `GET /api/v1/admin/reports` — reports queue
-- `PUT /api/v1/admin/reports/{id}/resolve` — resolve report
+- `PUT /api/v1/admin/reports/{id}/status` — update report status
 
 #### Conversations
 - `GET /api/v1/admin/conversations` — list conversations
+- `GET /api/v1/admin/conversations/{id}/messages` — view conversation messages
 
 #### Reviews
 - `GET /api/v1/admin/reviews` — list reviews
 - `DELETE /api/v1/admin/reviews/{id}` — delete review
 
 #### Fraud Detection
-- `GET /api/v1/admin/fraud/suspicious-users` — flagged users
-- `GET /api/v1/admin/fraud/suspicious-posts` — flagged posts
+- `GET /api/v1/admin/fraud/signals` — fraud signals report
 
 #### Audit Log
 - `GET /api/v1/admin/audit-log` — list audit entries
 
 #### Permissions & Roles
 - `GET /api/v1/admin/permissions` — list permissions
-- `PUT /api/v1/admin/permissions/{id}` — update permission
+- `GET /api/v1/admin/permissions/role/{roleId}` — get role permissions
+- `PUT /api/v1/admin/permissions/role/{roleId}` — update role permissions
 
 #### Settings
 - `GET /api/v1/admin/settings` — system settings
-- `PUT /api/v1/admin/settings` — update settings
+- `PUT /api/v1/admin/settings/{key}` — update setting by key
 
 #### Search
-- `GET /api/v1/admin/search/users` — search users
-- `GET /api/v1/admin/search/posts` — search posts
+- `GET /api/v1/admin/search` — search users and posts
 
 #### Locations (Admin)
-- `GET /api/v1/admin/locations` — manage locations
-- `POST /api/v1/admin/locations` — create location
-- `PUT /api/v1/admin/locations/{id}` — update location
-- `DELETE /api/v1/admin/locations/{id}` — delete location
+- `GET /api/v1/admin/locations/cities` — list cities
+- `POST /api/v1/admin/locations/cities` — create city
+- `PUT /api/v1/admin/locations/cities/{id}` — update city
+- `DELETE /api/v1/admin/locations/cities/{id}` — delete city
+- `POST /api/v1/admin/locations/areas` — create area
+- `PUT /api/v1/admin/locations/areas/{id}` — update area
+- `DELETE /api/v1/admin/locations/areas/{id}` — delete area
+
+#### Banners
+- `GET /api/v1/admin/banners` — list banners
+- `POST /api/v1/admin/banners` — create banner
+- `PUT /api/v1/admin/banners/{id}` — update banner
+- `DELETE /api/v1/admin/banners/{id}` — delete banner
+- `PATCH /api/v1/admin/banners/{id}/toggle` — toggle banner active status
+- `POST /api/v1/admin/banners/upload-image` — upload banner image
+
+#### Data Hygiene
+- `GET /api/v1/admin/data-hygiene/report` — data hygiene report
+- `GET /api/v1/admin/data-hygiene/history` — cleanup history
+- `POST /api/v1/admin/data-hygiene/scan` — trigger scan
+- `POST /api/v1/admin/data-hygiene/approve/{cycleId}` — approve cleanup cycle
+
+#### Image Optimization
+- `POST /api/v1/admin/image-optimization/optimize-existing` — optimize existing images
 
 ### Health (`/health`)
 

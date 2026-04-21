@@ -8,6 +8,7 @@ This folder contains the maintained project documentation.
 docs/
 ├── README.md
 ├── DOCUMENTATION_ORGANIZATION.md
+├── DATABASE.md                  # Database schema, ERD, lifecycle conventions
 ├── api/                         # API conventions & versioning
 ├── architecture/                # Structure, ADRs, path conventions
 │   ├── adr/
@@ -32,6 +33,13 @@ docs/
 - Path ownership and boundaries: `architecture/PATH_CONVENTIONS.md`
 - Architectural decisions: `architecture/adr/README.md`
 - Historical artifacts: `architecture/archive/`
+
+## Database (`DATABASE.md`)
+
+- Entity relationship diagram (Mermaid)
+- Schema enforcement notes
+- Auth persistence model
+- Data lifecycle conventions (soft-delete strategy, background cleanup)
 
 ## API (`api/`)
 
@@ -86,6 +94,7 @@ API-specific documentation for contracts, endpoint conventions, route versioning
 | Review path conventions | `architecture/PATH_CONVENTIONS.md` |
 | Check API endpoints | `reports/API_ENDPOINTS_STATUS.md` |
 | Configure environment | `apps/api/src/Api/ENVIRONMENT_VARIABLES.md` |
+| View database schema | `DATABASE.md` |
 | Launch prep | `checklists/LAUNCH_READINESS_CHECKLIST.md` |
 | Backend quick start | `backend/QUICK_START.md` |
 | Frontend docs | `frontend/README.md` |
@@ -97,4 +106,4 @@ API-specific documentation for contracts, endpoint conventions, route versioning
 3. Prefer one canonical document per topic; link instead of duplicating.
 4. Mark legacy documents clearly and move them into section `archive/` folders.
 
-Last Updated: 2026-04-14
+Last Updated: 2026-04-21

@@ -534,7 +534,6 @@ TijarahJo is a **C2C (Consumer-to-Consumer) marketplace** platform similar to OL
 │ NN   Name            NVARCHAR(100)     │
 │ NN   SearchQuery     NVARCHAR(MAX)     │ -- JSON: {category, price, location...}
 │ NN   NotifyByEmail   BIT               │
-│ NN   NotifyByPush    BIT               │
 │      NotifyFrequency TINYINT           │ -- 0=Instant,1=Daily,2=Weekly
 ├────────────────────────────────────────┤
 │ NN   IsActive        BIT               │
@@ -873,8 +872,6 @@ TijarahJo is a **C2C (Consumer-to-Consumer) marketplace** platform similar to OL
 ├────────────────────────────────────────────┤
 │ NN   IsRead              BIT               │
 │      ReadAt              DATETIME2         │
-│ NN   IsPushed            BIT               │ -- Sent to device
-│      PushedAt            DATETIME2         │
 ├────────────────────────────────────────────┤
 │ NN   CreatedAt           DATETIME2         │
 │      ExpiresAt           DATETIME2         │

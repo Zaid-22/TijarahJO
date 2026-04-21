@@ -210,24 +210,6 @@ erDiagram
         datetime2 CreatedAt
         datetime2 ReadAt
         nvarchar PayloadJson
-    }
-
-    PushSubscriptions {
-        int PushSubscriptionID PK "IDENTITY"
-        int UserID FK
-        nvarchar Endpoint
-        binary EndpointHash "PERSISTED"
-        nvarchar P256DH
-        nvarchar Auth
-        nvarchar UserAgent
-        bit IsActive
-        datetime2 CreatedAt
-        datetime2 UpdatedAt
-        datetime2 LastSuccessAt
-        datetime2 LastFailureAt
-        nvarchar LastFailureReason
-    }
-
     %% ==========================================
     %% Moderation & Audit
     %% ==========================================
@@ -318,7 +300,6 @@ erDiagram
     Users |o--o{ Notifications : "triggers (Sender)"
     Conversations |o--o{ Notifications : "related to"
     Messages |o--o{ Notifications : "related to"
-    Users ||--o{ PushSubscriptions : "registers"
 
     %% Moderation & System
     Users ||--o{ Reports : "submits (Reporter)"
@@ -351,7 +332,6 @@ All user-facing entities use an `IsDeleted BIT` flag for soft deletion. Hard-del
 |-------|--------------|-----------|
 | `BlacklistedTokens` | **Hard DELETE** | Expired JWTs have zero value; rows purged by `DataCleanupBackgroundService` |
 | `VerificationChallenges` | **Hard DELETE** | Expired 2FA/reset codes; purged automatically |
-| `PushSubscriptions` | **Hard DELETE** | Inactive endpoints (>90 days); dead browser subscriptions |
 | Everything else | **Soft DELETE** (`IsDeleted = 1`) | Audit trail, undo capability, legal compliance |
 
 ### Cascade Soft-Delete Rules
@@ -370,8 +350,7 @@ Runs every **6 hours** with a 2-minute startup delay. Performs:
 
 1. **Purge expired `BlacklistedTokens`** — hard DELETE where `ExpiresAt ≤ now`
 2. **Purge expired `VerificationChallenges`** — hard DELETE where `ExpiresAt < now`
-3. **Purge dead `PushSubscriptions`** — hard DELETE where `IsActive = 0` AND `UpdatedAt < 90 days ago`
-4. **Soft-delete stale `Notifications`** — SET `IsDeleted = 1` where `IsRead = 1` AND `ReadAt < 30 days ago`
+3. **Soft-delete stale `Notifications`** — SET `IsDeleted = 1` where `IsRead = 1` AND `ReadAt < 30 days ago`
 
 All deletes use batch processing (1000 rows/batch) to avoid lock escalation.
 

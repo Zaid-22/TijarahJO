@@ -8,6 +8,7 @@ This file defines the current documentation map and maintenance rules.
 docs/
 ├── README.md
 ├── DOCUMENTATION_ORGANIZATION.md
+├── DATABASE.md                 # Database schema, ERD, lifecycle
 ├── api/                    # API conventions & versioning
 ├── architecture/           # Structure, ADRs, path conventions
 │   ├── adr/
@@ -47,6 +48,7 @@ docs/
 
 - Primary docs index: `docs/README.md`
 - Current repository/file structure: `docs/architecture/CURRENT_STRUCTURE_2026.md`
+- Database schema & ERD: `docs/DATABASE.md`
 - Environment variables: `apps/api/src/Api/ENVIRONMENT_VARIABLES.md`
 
 ## Consistency Rules
@@ -68,4 +70,4 @@ Historical docs are tracked through archive indices:
 
 Treat `docs/architecture/CURRENT_STRUCTURE_2026.md` as the authoritative structure reference.
 
-Last Updated: 2026-04-14
+Last Updated: 2026-04-21

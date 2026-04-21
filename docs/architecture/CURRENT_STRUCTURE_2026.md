@@ -55,7 +55,7 @@ final project primary/
     - `Features/` — feature folders:
       - `Admin/` — 13 admin controllers (analytics, audit log, conversations, dashboard, fraud detection, locations, permissions, posts, reports queue, reviews, search, settings, users)
       - `Auth/` — AuthController, OAuthController, PasswordResetController, TwoFactorController
-      - `Categories/`, `Chat/`, `Favorites/`, `Locations/`
+      - `Categories/`, `Chat/`, `Compare/`, `Favorites/`, `Locations/`
       - `Notifications/`, `Posts/`, `Reviews/`, `Roles/`
       - `Search/`, `Sellers/`, `Users/`
     - `Hubs/` — SignalR ChatHub
@@ -64,7 +64,7 @@ final project primary/
     - `Startup/` — service registration & middleware pipeline
   - `apps/api/src/Application/` (`TijarahJo.Application.csproj`) — Business logic
   - `apps/api/src/Domain/` (`TijarahJo.Domain.csproj`) — Entities & interfaces
-  - `apps/api/src/Infrastructure/` (`TijarahJo.Infrastructure.csproj`) — EF Core, repositories
+  - `apps/api/src/Infrastructure/` (`TijarahJo.Infrastructure.csproj`) — Data access, external services (Gemini AI, YouTube API)
   - `apps/api/src/Bootstrap/` — DI composition root
 - **Tests:**
   - Unit tests: `apps/api/tests/Api.Tests/`
@@ -78,6 +78,7 @@ final project primary/
 
 ## Documentation (`docs/`)
 
+- `docs/DATABASE.md` — canonical database schema, ERD, lifecycle conventions
 - `docs/architecture/` — active architecture documents
   - `docs/architecture/adr/` — architecture decision records
   - `docs/architecture/PATH_CONVENTIONS.md` — path and dependency boundary rules
@@ -100,4 +101,4 @@ final project primary/
 | `make ci-local` | Full local CI mirror |
 | `make sql-bundles` | Regenerate consolidated SQL bundles |
 
-Updated: 2026-04-14
+Updated: 2026-04-21
