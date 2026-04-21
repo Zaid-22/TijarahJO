@@ -16,7 +16,6 @@ import {
   LogOut,
   Menu,
   Home,
-  Rows,
   AlertTriangle,
   Image,
 } from "lucide-react";
@@ -26,15 +25,10 @@ import { userHasAdminPermission } from "../../../contexts/authUtils";
 import { AdminGlobalSearch } from "./AdminGlobalSearch";
 import { AdminNotificationsBell } from "./AdminNotificationsBell";
 import { useSessionTimeout } from "../hooks/useSessionTimeout";
-import { DensityProvider, useDensity } from "../hooks/useDensity";
 import { ADMIN_PERMISSIONS } from "../adminPermissions";
 
 export function AdminLayout() {
-  return (
-    <DensityProvider>
-      <AdminLayoutInner />
-    </DensityProvider>
-  );
+  return <AdminLayoutInner />;
 }
 
 function AdminLayoutInner() {
@@ -43,7 +37,6 @@ function AdminLayoutInner() {
   const navigate = useNavigate();
   const location = useLocation();
   const { showWarning, minutesLeft, resetTimer } = useSessionTimeout();
-  const { density, toggleDensity } = useDensity();
 
   const navItems = [
     { label: "Dashboard", path: "/admin", icon: LayoutDashboard },
@@ -73,10 +66,10 @@ function AdminLayoutInner() {
   };
 
   return (
-    <div dir="ltr" className="flex min-h-screen bg-background text-foreground">
+    <div dir="ltr" className="flex h-screen overflow-hidden bg-background text-foreground">
       {/* Sidebar - Desktop & Mobile */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-border bg-card transform transition-transform duration-300 ease-in-out ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 flex flex-col border-r border-border bg-card transform transition-transform duration-300 ease-in-out ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } md:relative md:translate-x-0`}
       >
@@ -150,15 +143,6 @@ function AdminLayoutInner() {
         <div className="hidden md:flex h-14 items-center border-b border-border bg-card px-6 gap-4">
           <AdminGlobalSearch />
           <div className="ml-auto flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleDensity}
-              title={`Switch to ${density === "comfortable" ? "compact" : "comfortable"} view`}
-              aria-label="Toggle table density"
-            >
-              <Rows className="w-4 h-4" />
-            </Button>
             <AdminNotificationsBell />
             <span className="text-xs text-muted-foreground">
               Press{" "}

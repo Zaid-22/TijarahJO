@@ -49,12 +49,3 @@ public sealed class NotificationMarkReadAllResponseDTO
     [JsonPropertyName("updatedCount")]
     public int UpdatedCount { get; set; }
 }
-
-public sealed class PushNotificationConfigResponseDTO
-{
-    [JsonPropertyName("enabled")]
-    public bool Enabled { get; set; }
-
-    [JsonPropertyName("publicKey")]
-    public string PublicKey { get; set; } = string.Empty;
-}

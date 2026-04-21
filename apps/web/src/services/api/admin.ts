@@ -1,4 +1,6 @@
+/* eslint-disable max-lines */
 import { apiRequest, debugError } from "./client";
+import { toCamelCaseKeys } from "./utils";
 import type {
   AdminDashboardStats,
   AdminPostFilter,
@@ -19,25 +21,12 @@ import { adminLocationsApi } from "./admin-locations";
 // Re-export all types so existing consumers don't break
 export type * from "./admin.types";
 
-/**
- * Recursively converts all object keys from PascalCase to camelCase.
- * The backend uses `PropertyNamingPolicy = null` which preserves PascalCase,
- * but the frontend types expect camelCase.
- */
-export function toCamelCaseKeys<T>(obj: unknown): T {
-  if (Array.isArray(obj)) {
-    return obj.map((item) => toCamelCaseKeys(item)) as T;
-  }
-  if (obj !== null && typeof obj === "object" && !(obj instanceof Date)) {
-    const result: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-      const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
-      result[camelKey] = toCamelCaseKeys(value);
-    }
-    return result as T;
-  }
-  return obj as T;
-}
+// Re-export shared utility so existing `import { toCamelCaseKeys } from "./admin"` still works
+export { toCamelCaseKeys } from "./utils";
+
+export type AdminDeletePostCommentResult =
+  | { success: true; alreadyDeleted: boolean; message?: string }
+  | { success: false; message: string };
 
 export const adminApi = {
   /**
@@ -148,6 +137,21 @@ export const adminApi = {
   },
 
   /**
+   * Soft-delete a post (admin moderation action, sets IsDeleted = true)
+   */
+  softDeletePost: async (postId: number): Promise<boolean> => {
+    try {
+      const response = await apiRequest(`/admin/posts/${postId}`, {
+        method: "DELETE",
+      });
+      return response.success;
+    } catch (error) {
+      debugError(`Failed to delete post ${postId}:`, error);
+      return false;
+    }
+  },
+
+  /**
    * Get detailed profile for a specific user, including recent posts and reviews
    */
   getUserDetails: async (userId: number): Promise<AdminUserDetails | null> => {
@@ -222,6 +226,7 @@ export const adminApi = {
     page = 1,
     pageSize = 50,
     searchQuery = "",
+    userId?: number,
   ): Promise<AdminPostCommentListResult> => {
     try {
       const params = new URLSearchParams();
@@ -229,6 +234,9 @@ export const adminApi = {
       params.set("pageSize", pageSize.toString());
       if (searchQuery.trim()) {
         params.set("search", searchQuery.trim());
+      }
+      if (userId !== undefined) {
+        params.set("userId", userId.toString());
       }
 
       const response = await apiRequest<AdminPostCommentListResult>(
@@ -254,15 +262,43 @@ export const adminApi = {
   /**
    * Soft-delete a post comment (moderation action)
    */
-  deletePostComment: async (commentId: number): Promise<boolean> => {
+  deletePostComment: async (
+    commentId: number,
+  ): Promise<AdminDeletePostCommentResult> => {
     try {
-      const response = await apiRequest(`/admin/post-comments/${commentId}`, {
-        method: "DELETE",
-      });
-      return response.success;
+      const response = await apiRequest<{ message?: string; Message?: string }>(
+        `/admin/post-comments/${commentId}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      if (response.success) {
+        return {
+          success: true,
+          alreadyDeleted: false,
+          message: response.data?.message ?? response.data?.Message,
+        };
+      }
+
+      if (response.error.code === "HTTP_404") {
+        return {
+          success: true,
+          alreadyDeleted: true,
+          message: response.error.message,
+        };
+      }
+
+      return {
+        success: false,
+        message: response.error.message || "Failed to delete post comment",
+      };
     } catch (error) {
       debugError(`Failed to delete post comment ${commentId}:`, error);
-      return false;
+      return {
+        success: false,
+        message: "Failed to delete post comment",
+      };
     }
   },
 

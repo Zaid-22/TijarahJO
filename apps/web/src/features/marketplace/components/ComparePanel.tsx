@@ -63,21 +63,21 @@ export const ComparePanel = React.memo(function ComparePanel() {
         <div
           className="relative overflow-hidden rounded-2xl border border-border
             bg-background shadow-2xl 
-            px-3 py-3 sm:px-5 sm:py-4"
+            px-3 py-3 sm:px-4 sm:py-3 lg:px-5 lg:py-4"
         >
           {/* Header */}
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary ring-1 ring-primary shadow-sm">
-                <Scale className="h-5 w-5 text-primary-foreground" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary ring-1 ring-primary shadow-sm lg:h-10 lg:w-10">
+                <Scale className="h-4.5 w-4.5 text-primary-foreground lg:h-5 lg:w-5" />
               </div>
-              <div>
-                <p className="text-sm font-bold text-foreground">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-foreground">
                   {selectedPosts[0] 
                     ? t.compareCategory.replace("{category}", localizedCategory)
                     : t.compareItems}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="truncate text-xs text-muted-foreground">
                   {t.selectedCount.replace("{count}", compareCount.toString())}
                   {!canCompare && t.addMoreToCompare}
                 </p>
@@ -94,29 +94,31 @@ export const ComparePanel = React.memo(function ComparePanel() {
             </button>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex flex-1 items-center gap-2 overflow-x-auto pb-1">
+          <div className="flex items-center gap-2 lg:gap-3">
+            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-1">
               {selectedPosts.map((post) => (
                 <div
                   key={post.id}
-                  className="group relative flex shrink-0 items-center gap-2.5 rounded-xl bg-accent p-1.5 pe-3 transition-colors"
+                  className="group shrink-0 lg:flex lg:items-center lg:gap-2.5 lg:rounded-xl lg:bg-accent lg:p-1.5 lg:pe-3"
                 >
-                  <div className="relative shrink-0">
+                  <div className="compare-panel-thumb-wrapper relative h-10 w-10 shrink-0">
                     <img
                       src={post.image}
                       alt={post.name}
-                      className="h-10 w-10 rounded-lg border border-border bg-card object-cover shadow-sm ring-2 ring-transparent transition-all group-hover:ring-primary/30"
+                      className="compare-panel-thumb-img block h-10 w-10 rounded-xl border border-border bg-card object-cover shadow-sm ring-2 ring-transparent transition-all group-hover:ring-primary/30"
                     />
+                    {/* X badge — 18×18 px, pinned to top-right corner */}
                     <button
                       type="button"
                       onClick={() => removeFromCompare(post.id)}
-                      className="absolute -top-1.5 inset-inline-end-[-6px] flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-all hover:bg-destructive hover:text-white"
                       title={t.removeProduct}
+                      aria-label={t.removeProduct}
+                      className="compare-remove-btn absolute -right-1.5 -top-1.5 z-20 flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 border-white bg-slate-700 p-0 text-white shadow transition-colors hover:bg-red-500"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="compare-remove-btn-icon h-2.5 w-2.5" strokeWidth={3} />
                     </button>
                   </div>
-                  <div className="hidden min-w-[120px] max-w-[200px] flex-1 sm:block">
+                  <div className="hidden min-w-[120px] max-w-[180px] flex-1 xl:block">
                     <p className="truncate text-xs font-bold text-foreground">
                       {post.name}
                     </p>
@@ -129,12 +131,12 @@ export const ComparePanel = React.memo(function ComparePanel() {
               {[...Array(3 - compareCount)].map((_, i) => (
                 <div
                   key={`empty-${i}`}
-                  className="flex h-12 w-12 items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 sm:w-auto sm:px-3 sm:justify-start sm:gap-3"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 xl:w-auto xl:px-3 xl:justify-start xl:gap-3"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-dashed border-border/40 text-muted-foreground/40">
                     <Plus className="h-4 w-4" />
                   </div>
-                  <span className="hidden text-xs italic text-muted-foreground/40 sm:block">
+                  <span className="hidden text-xs italic text-muted-foreground/40 xl:block">
                     {t.emptyComparisonSpot}
                   </span>
                 </div>
@@ -142,13 +144,13 @@ export const ComparePanel = React.memo(function ComparePanel() {
             </div>
 
             {/* Action Button */}
-            <div className="flex shrink-0 items-center ps-2 border-s border-border/20">
+            <div className="flex shrink-0 items-center border-s border-border/20 ps-2">
               <button
                 type="button"
                 onClick={handleCompare}
                 disabled={!canCompare}
                 aria-label={t.compareItems}
-                className={`group flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold shadow-lg transition-all active:scale-95 ${
+                className={`group flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold shadow-lg transition-all active:scale-95 lg:px-5 ${
                   canCompare
                     ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-primary/20 hover:shadow-xl"
                     : "cursor-not-allowed bg-muted text-muted-foreground opacity-50 shadow-none"

@@ -1,17 +1,22 @@
-import { useState, useEffect } from "react";
-import { Bell, X, Flag, AlertTriangle, Clock } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Bell, Flag, AlertTriangle, Clock } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
 import { api } from "../../../services/api";
 import { logger } from "../../../shared/lib/logger";
+import { useAuth } from "../../../contexts/AuthContext";
 
 type AdminNotification = {
   id: string;
   type: "report" | "flagged" | "system";
   title: string;
   message: string;
+  count: number;
   timestamp: Date;
   read: boolean;
 };
+
+const ADMIN_NOTIFICATION_READ_STATE_KEY = "admin-notifications-read-state";
+const ADMIN_NOTIFICATION_REFRESH_MS = 60_000;
 
 const ICON_MAP = {
   report: Flag,
@@ -25,69 +30,138 @@ const COLOR_MAP = {
   system: "text-blue-500",
 };
 
+function getReadStateKey(adminUserId: string | undefined): string {
+  return `${ADMIN_NOTIFICATION_READ_STATE_KEY}:${adminUserId || "anonymous"}`;
+}
+
+function loadReadState(storageKey: string): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) {
+      return {};
+    }
+
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object"
+      ? (parsed as Record<string, number>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveReadState(storageKey: string, nextState: Record<string, number>) {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(nextState));
+  } catch {
+    // Ignore storage failures; the notification UI can still work in-memory.
+  }
+}
+
+function isCountRead(readState: Record<string, number>, id: string, count: number) {
+  return (readState[id] ?? 0) >= count;
+}
+
 export function AdminNotificationsBell() {
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const readStateKey = getReadStateKey(user?.id);
 
-  // Fetch pending counts on mount
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const stats = await api.admin.getStats();
+      const readState = loadReadState(readStateKey);
+      const items: AdminNotification[] = [];
+
+      // Reports-based notifications
+      if (stats.totalReviews > 0) {
+        const count = stats.totalReviews;
+        items.push({
+          id: "pending-reviews",
+          type: "system",
+          title: "Reviews to moderate",
+          message: `${count} reviews in the system`,
+          count,
+          timestamp: new Date(),
+          read: isCountRead(readState, "pending-reviews", count),
+        });
+      }
+
+      if (stats.blockedListings > 0) {
+        const count = stats.blockedListings;
+        items.push({
+          id: "blocked-listings",
+          type: "flagged",
+          title: "Blocked listings",
+          message: `${count} listings currently blocked`,
+          count,
+          timestamp: new Date(),
+          read: isCountRead(readState, "blocked-listings", count),
+        });
+      }
+
+      if (stats.newUsersThisWeek > 0) {
+        const count = stats.newUsersThisWeek;
+        items.push({
+          id: "new-users",
+          type: "system",
+          title: "New registrations",
+          message: `${count} new users this week`,
+          count,
+          timestamp: new Date(),
+          read: isCountRead(readState, "new-users", count),
+        });
+      }
+
+      setNotifications(items);
+    } catch (error) {
+      logger.warn("[AdminNotificationsBell] fetch failed", error);
+    }
+  }, [readStateKey]);
+
   useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const stats = await api.admin.getStats();
-        const items: AdminNotification[] = [];
+    void fetchNotifications();
+    const intervalId = window.setInterval(
+      fetchNotifications,
+      ADMIN_NOTIFICATION_REFRESH_MS,
+    );
 
-        // Reports-based notifications
-        if (stats.totalReviews > 0) {
-          items.push({
-            id: "pending-reviews",
-            type: "system",
-            title: "Reviews to moderate",
-            message: `${stats.totalReviews} reviews in the system`,
-            timestamp: new Date(),
-            read: false,
-          });
-        }
+    return () => window.clearInterval(intervalId);
+  }, [fetchNotifications]);
 
-        if (stats.blockedListings > 0) {
-          items.push({
-            id: "blocked-listings",
-            type: "flagged",
-            title: "Blocked listings",
-            message: `${stats.blockedListings} listings currently blocked`,
-            timestamp: new Date(),
-            read: false,
-          });
-        }
+  useEffect(() => {
+    if (isOpen) {
+      void fetchNotifications();
+    }
+  }, [fetchNotifications, isOpen]);
 
-        if (stats.newUsersThisWeek > 0) {
-          items.push({
-            id: "new-users",
-            type: "system",
-            title: "New registrations",
-            message: `${stats.newUsersThisWeek} new users this week`,
-            timestamp: new Date(),
-            read: false,
-          });
-        }
-
-        setNotifications(items);
-      } catch (error) {
-        logger.warn("[AdminNotificationsBell] fetch failed", error);
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") {
+        void fetchNotifications();
       }
     };
-    void fetchNotifications();
-  }, []);
+
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () =>
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+  }, [fetchNotifications]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCountLabel = unreadCount > 99 ? "99+" : String(unreadCount);
 
-  const dismissNotification = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
-    );
-  };
 
   const dismissAll = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setNotifications((prev) => {
+      const nextReadState = { ...loadReadState(readStateKey) };
+      prev.forEach((notification) => {
+        nextReadState[notification.id] = notification.count;
+      });
+      saveReadState(readStateKey, nextReadState);
+
+      return prev.map((n) => ({ ...n, read: true }));
+    });
   };
 
   return (
@@ -100,8 +174,8 @@ export function AdminNotificationsBell() {
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs font-bold text-white">
-            {unreadCount}
+          <span className="absolute -top-1 -right-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-xs font-bold leading-none text-white">
+            {unreadCountLabel}
           </span>
         )}
       </Button>
@@ -125,27 +199,25 @@ export function AdminNotificationsBell() {
                   className="text-xs h-6"
                   onClick={dismissAll}
                 >
-                  Mark all read
+                  Clear all
                 </Button>
               )}
             </div>
             <div className="max-h-72 overflow-y-auto">
-              {notifications.length === 0 ? (
+              {notifications.filter(n => !n.read).length === 0 ? (
                 <div className="p-6 text-center text-sm text-muted-foreground">
                   No notifications
                 </div>
               ) : (
-                notifications.map((n) => {
+                notifications.filter(n => !n.read).map((n) => {
                   const Icon = ICON_MAP[n.type];
                   return (
                     <div
                       key={n.id}
-                      className={`flex items-start gap-3 px-4 py-3 border-b border-border last:border-b-0 transition-colors ${
-                        n.read ? "opacity-60" : "bg-muted/30"
-                      }`}
+                      className="flex items-start gap-3 px-4 py-3 border-b border-border last:border-b-0 transition-colors bg-muted/30"
                     >
                       <Icon
-                        className={`w-4 h-4 mt-0.5 flex-shrink-0 ${COLOR_MAP[n.type]}`}
+                        className={`w-4 h-4 mt-0.5 shrink-0 ${COLOR_MAP[n.type]}`}
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">
@@ -155,16 +227,7 @@ export function AdminNotificationsBell() {
                           {n.message}
                         </p>
                       </div>
-                      {!n.read && (
-                        <button
-                          type="button"
-                          onClick={() => dismissNotification(n.id)}
-                          className="p-0.5 rounded hover:bg-muted flex-shrink-0"
-                          aria-label={`Dismiss ${n.title} notification`}
-                        >
-                          <X className="w-3.5 h-3.5 text-muted-foreground" />
-                        </button>
-                      )}
+
                     </div>
                   );
                 })

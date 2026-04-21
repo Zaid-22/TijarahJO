@@ -61,6 +61,7 @@ export type AdminUserDetails = {
     joinedDate?: string;
     roleID?: number;
     status?: number;
+    suspendedUntil?: string | null;
     avatar?: string;
     [key: string]: unknown;
   };

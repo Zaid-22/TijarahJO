@@ -63,6 +63,19 @@
   object-position: center;
 }
 
+.compare-overview-image {
+  max-height: 150px;
+}
+
+@media (min-width: 640px) {
+  .compare-overview-image {
+    aspect-ratio: auto;
+    height: 100%;
+    max-height: none;
+    min-height: 140px;
+  }
+}
+
 /* On small screens, keep images even more compact */
 @media (max-width: 639px) {
   .compare-image-container {
@@ -94,6 +107,53 @@
 /* Recommendation card styles (Animations removed for professional look) */
 .compare-price-bar {
   transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Compare Panel thumbnail ── */
+
+.compare-panel-thumb-wrapper {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.compare-panel-thumb-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  object-fit: cover;
+  display: block;
+}
+
+.compare-remove-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid white;
+  background: #374151;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20;
+  padding: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  min-width: unset;
+  min-height: unset;
+}
+
+.compare-remove-btn:hover {
+  background: #ef4444;
+}
+
+.compare-remove-btn-icon {
+  width: 10px;
+  height: 10px;
 }
 
 /* ── Respect reduced motion ── */

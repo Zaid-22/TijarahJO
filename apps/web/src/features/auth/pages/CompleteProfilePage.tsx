@@ -23,6 +23,38 @@ function isPlaceholderAvatar(src: string | undefined | null): boolean {
   return !resolveAvatarSrc(src);
 }
 
+function getPhoneValidationError(
+  value: string,
+  isRTL: boolean,
+  requireComplete = false,
+) {
+  const digits = value.replace(/\D/g, "");
+  const invalidPrefixMessage = isRTL
+    ? "يجب أن يبدأ الرقم بـ 77 أو 78 أو 79"
+    : "Phone number must start with 77, 78, or 79";
+  const requiredMessage = isRTL
+    ? "رقم هاتف أردني صحيح مطلوب"
+    : "Valid Jordan phone required";
+
+  if (!digits) {
+    return requireComplete ? requiredMessage : "";
+  }
+
+  if (digits[0] !== "7") {
+    return invalidPrefixMessage;
+  }
+
+  if (digits.length >= 2 && !["7", "8", "9"].includes(digits[1])) {
+    return invalidPrefixMessage;
+  }
+
+  if ((requireComplete || digits.length === 9) && !normalizeJordanPhone(digits)) {
+    return requiredMessage;
+  }
+
+  return "";
+}
+
 export function CompleteProfilePage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -117,8 +149,9 @@ export function CompleteProfilePage() {
     if (!trimmedLastName) {
       newErrors.lastName = isRTL ? "اسم العائلة مطلوب" : "Last name is required";
     }
-    if (!normalizedPhone || normalizedPhone.length < 12) {
-      newErrors.phone = isRTL ? "رقم هاتف أردني صحيح مطلوب" : "Valid Jordan phone required";
+    const phoneError = getPhoneValidationError(phone, isRTL, true);
+    if (!normalizedPhone || normalizedPhone.length < 12 || phoneError) {
+      newErrors.phone = phoneError;
     }
     if (!city) {
       newErrors.city = isRTL ? "المدينة مطلوبة" : "City is required";
@@ -344,9 +377,28 @@ export function CompleteProfilePage() {
                 autoComplete="tel"
                 icon={Phone}
                 focused={focusedField === "phone"}
-                onChange={setPhone}
+                onChange={(value) => {
+                  setPhone(value);
+                  const phoneError = getPhoneValidationError(value, isRTL);
+                  setErrors((prev) => {
+                    if (!phoneError && !prev.phone) {
+                      return prev;
+                    }
+
+                    return {
+                      ...prev,
+                      phone: phoneError,
+                    };
+                  });
+                }}
                 onFocus={() => setFocusedField("phone")}
-                onBlur={() => setFocusedField(null)}
+                onBlur={() => {
+                  setFocusedField(null);
+                  setErrors((prev) => ({
+                    ...prev,
+                    phone: getPhoneValidationError(phone, isRTL, true),
+                  }));
+                }}
                 isRTL={isRTL}
               />
 

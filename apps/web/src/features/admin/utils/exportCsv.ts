@@ -5,6 +5,7 @@
 export function exportToCsv(filename: string, rows: Record<string, unknown>[]) {
   if (rows.length === 0) return;
 
+  const utf8Bom = "\uFEFF";
   const headers = Object.keys(rows[0]);
   const csvLines: string[] = [headers.join(",")];
 
@@ -21,8 +22,8 @@ export function exportToCsv(filename: string, rows: Record<string, unknown>[]) {
     csvLines.push(values.join(","));
   }
 
-  const csvString = csvLines.join("\n");
-  const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+  const csvString = `${utf8Bom}${csvLines.join("\r\n")}`;
+  const blob = new Blob([csvString], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
 
   const link = document.createElement("a");

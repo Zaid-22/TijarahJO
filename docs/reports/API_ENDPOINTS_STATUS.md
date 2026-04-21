@@ -130,9 +130,6 @@
 - `GET /api/v1/notifications/unread-count` (`[Authorize]`)
 - `PUT /api/v1/notifications/{notificationId}/read` (`[Authorize]`)
 - `PUT /api/v1/notifications/read-all` (`[Authorize]`)
-- `GET /api/v1/notifications/push-config` (`[AllowAnonymous]`)
-- `POST /api/v1/notifications/push-subscriptions` (`[Authorize]`)
-- `DELETE /api/v1/notifications/push-subscriptions` (`[Authorize]`)
 
 ### Locations (`/api/v1/locations`)
 

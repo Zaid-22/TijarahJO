@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Badge } from "../../../shared/ui/badge";
 import { Button } from "../../../shared/ui/button";
@@ -36,6 +36,15 @@ import {
 } from "./postCardPhoneDialog";
 import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
 import { normalizeSellerDisplayName } from "../../../utils/sellerDisplayName";
+
+/** Detect if the current device is a phone (capable of making calls). */
+function isMobilePhone(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return /Android.*Mobile|iPhone|iPod|Windows Phone|BlackBerry|Opera Mini|IEMobile/i.test(
+    ua,
+  );
+}
 
 const sellerAvatarCache = new Map<string, string | null>();
 const sellerAvatarRequestCache = new Map<string, Promise<string | null>>();
@@ -114,6 +123,8 @@ export const PostCardList = React.memo(function PostCardList(
   const [sellerAvatar, setSellerAvatar] = useState<string | null>(null);
   const [phoneLookupStatus, setPhoneLookupStatus] =
     useState<PhoneLookupStatus>("idle");
+  const [phoneCopied, setPhoneCopied] = useState(false);
+  const isPhone = useMemo(() => isMobilePhone(), []);
   const navigate = useNavigate();
   const location = useLocation();
   const { addToCompare, removeFromCompare, isInCompare } = useCompare();
@@ -150,7 +161,6 @@ export const PostCardList = React.memo(function PostCardList(
   const displayArea = isArabic ? post.areaAr || post.area : post.area;
   const separator = isArabic ? "، " : ", ";
   const detailLocation = displayArea ? displayLocation + separator + displayArea : displayLocation;
-  const hasDescription = Boolean(post.description?.trim());
   const currentPath = buildCurrentPath(location.pathname, location.search);
   const trimmedSellerId = String(post.sellerId || "").trim();
   const sellerDisplayName = normalizeSellerDisplayName(post.seller, trimmedSellerId);
@@ -258,6 +268,35 @@ export const PostCardList = React.memo(function PostCardList(
     setShowPhoneDialog(true);
   };
 
+  const handlePhoneNumberClick = useCallback(
+    async (e: React.MouseEvent) => {
+      if (isPhone) return; // let tel: link work
+      e.preventDefault();
+      try {
+        await navigator.clipboard.writeText(trimmedPhone);
+        setPhoneCopied(true);
+        setTimeout(() => setPhoneCopied(false), 2000);
+      } catch {
+        const ta = document.createElement("textarea");
+        ta.value = trimmedPhone;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        setPhoneCopied(true);
+        setTimeout(() => setPhoneCopied(false), 2000);
+      }
+    },
+    [isPhone, trimmedPhone],
+  );
+
+  const handlePhoneDialogClose = (open: boolean) => {
+    if (!open) setPhoneCopied(false);
+    setShowPhoneDialog(open);
+  };
+
   return (
     <article className="group relative flex w-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-[22px] border border-slate-200/80 bg-white shadow-lg dark:border-slate-800/80 dark:bg-slate-900 sm:flex-row">
       <button
@@ -321,19 +360,13 @@ export const PostCardList = React.memo(function PostCardList(
                     src={resolveAvatarSrc(sellerAvatar) || undefined}
                     alt={sellerDisplayName}
                   />
-                  <AvatarFallback className="bg-primary/10 text-[0.8rem] font-semibold text-primary">
+                  <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
                     {getAvatarInitial(sellerDisplayName)}
                   </AvatarFallback>
                 </Avatar>
                 <span className="truncate">{sellerDisplayName}</span>
               </div>
             </div>
-
-            {hasDescription && (
-              <p className="mt-2 line-clamp-2 max-w-none text-sm leading-6 text-muted-foreground">
-                {post.description}
-              </p>
-            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
@@ -443,6 +476,12 @@ export const PostCardList = React.memo(function PostCardList(
                   category: post.category ?? "",
                   categoryId: post.categoryId || "",
                   location: detailLocation || post.location || "",
+                  views: post.views,
+                  averageRating: sellerAverageRating || undefined,
+                  reviewCount: sellerReviewCount || undefined,
+                  sellerId: post.sellerId || "",
+                  sellerName: sellerDisplayName,
+                  sellerAvatar,
                 };
                 if (isInCompare(comparePost.id)) {
                   removeFromCompare(comparePost.id);
@@ -470,73 +509,96 @@ export const PostCardList = React.memo(function PostCardList(
         </div>
       </div>
 
-      <Dialog open={showPhoneDialog} onOpenChange={setShowPhoneDialog}>
+      <Dialog open={showPhoneDialog} onOpenChange={handlePhoneDialogClose}>
         <DialogContent
           hideCloseButton
-          className="sm:max-w-[400px] p-0 overflow-hidden border-none shadow-2xl"
+          className="sm:max-w-[380px] border border-border/60 bg-background p-0 shadow-xl"
         >
           <DialogTitle className="sr-only">{phoneDialogCopy.title}</DialogTitle>
           <DialogDescription className="sr-only">
-            {phoneDialogCopy.description}
+            {isPhone
+              ? phoneDialogCopy.description
+              : resolvedLanguage === "ar"
+                ? "انقر على الرقم لنسخه"
+                : "Click the number to copy it"}
           </DialogDescription>
           <div className="flex flex-col">
-            <div className="bg-muted/30 px-6 pt-8 pb-6 text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10">
-                <Phone className="h-6 w-6 text-emerald-600" />
-              </div>
+            <div className="border-b border-border/60 px-6 pb-5 pt-6 text-center">
               <h3 className="text-xl font-bold tracking-tight text-foreground">
-                {phoneDialogCopy.title}
+                {resolvedLanguage === "ar" ? "رقم الهاتف" : "Phone Number"}
               </h3>
               <p className="mt-1.5 text-sm text-muted-foreground">
-                {phoneDialogCopy.description}
+                {isPhone
+                  ? resolvedLanguage === "ar"
+                    ? "انقر على الرقم للاتصال بالبائع مباشرة"
+                    : "Tap the number below to call the seller directly"
+                  : resolvedLanguage === "ar"
+                    ? "انقر على الرقم لنسخه"
+                    : "Click the number to copy it to clipboard"}
               </p>
             </div>
 
-            <div className="px-6 py-6 pb-8">
+            <div className="px-6 py-6">
               {phoneDialogCopy.canCall ? (
                 <a
-                  href={`tel:${trimmedPhone}`}
-                  aria-label={`${phoneDialogCopy.callNowLabel} ${phoneDialogCopy.displayNumber}`}
-                  className="group relative flex h-16 w-full items-center justify-between overflow-hidden rounded-2xl bg-linear-to-r from-emerald-500 to-teal-500 px-6 text-white shadow-md transition-all hover:from-emerald-600 hover:to-teal-600 hover:shadow-lg active:scale-95"
+                  href={isPhone ? `tel:${trimmedPhone}` : "#"}
+                  onClick={(e) => void handlePhoneNumberClick(e)}
+                  aria-label={
+                    isPhone
+                      ? `${phoneDialogCopy.callNowLabel} ${phoneDialogCopy.displayNumber}`
+                      : resolvedLanguage === "ar"
+                        ? `نسخ الرقم ${phoneDialogCopy.displayNumber}`
+                        : `Copy number ${phoneDialogCopy.displayNumber}`
+                  }
+                  className={`flex min-h-16 w-full items-center justify-center rounded-2xl border px-6 py-4 text-center transition-all duration-300 cursor-pointer ${
+                    phoneCopied
+                      ? "border-green-500 bg-green-500/10 text-green-700 dark:text-green-400"
+                      : "border-border bg-muted/30 text-foreground hover:bg-muted/50"
+                  }`}
                   dir="ltr"
                 >
-                  <div className="flex flex-col items-start text-left font-sans">
-                    <span className="text-xs uppercase tracking-widest text-emerald-50 font-semibold mb-0.5">
-                      {resolvedLanguage === "ar" ? "رقم الهاتف" : "Phone Number"}
+                  <div className="flex flex-col items-center font-sans">
+                    <span className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                      {phoneCopied
+                        ? resolvedLanguage === "ar"
+                          ? "✓ تم النسخ"
+                          : "✓ Copied!"
+                        : resolvedLanguage === "ar"
+                          ? "رقم البائع"
+                          : "Seller Phone"}
                     </span>
-                    <span className="text-2xl font-bold tracking-tight">
+                    <span className="mt-1 text-2xl font-bold tracking-tight">
                       {phoneDialogCopy.displayNumber}
                     </span>
-                  </div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 transition-transform group-hover:rotate-12">
-                    <Phone className="h-5 w-5 text-white" />
+                    {!isPhone && !phoneCopied && (
+                      <span className="mt-1.5 text-xs text-muted-foreground/70">
+                        {resolvedLanguage === "ar" ? "انقر للنسخ" : "Click to copy"}
+                      </span>
+                    )}
                   </div>
                 </a>
               ) : (
                 <div
-                  className="flex h-16 w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-6 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
+                  className="flex min-h-16 w-full items-center justify-center rounded-2xl border border-border bg-muted/30 px-6 py-4 text-center text-muted-foreground"
                   dir="ltr"
                 >
-                  <div className="flex flex-col items-start text-left">
-                    <span className="text-xs uppercase tracking-widest opacity-50 font-semibold mb-0.5">
-                      {resolvedLanguage === "ar" ? "رقم الهاتف" : "Phone Number"}
+                  <div className="flex flex-col items-center font-sans">
+                    <span className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                      {resolvedLanguage === "ar" ? "رقم البائع" : "Seller Phone"}
                     </span>
-                    <span className="text-xl font-bold tracking-tight">
+                    <span className="mt-1 text-2xl font-bold tracking-tight">
                       {phoneDialogCopy.displayNumber}
                     </span>
-                  </div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
-                    <Phone className="h-5 w-5 opacity-40" />
                   </div>
                 </div>
               )}
 
               <Button
                 variant="ghost"
-                className="mt-4 w-full text-muted-foreground hover:text-foreground font-medium"
-                onClick={() => setShowPhoneDialog(false)}
+                className="mt-3 w-full font-medium text-muted-foreground hover:text-foreground"
+                onClick={() => handlePhoneDialogClose(false)}
               >
-                {phoneDialogCopy.closeLabel}
+                {resolvedLanguage === "ar" ? "رجوع" : "Go Back"}
               </Button>
             </div>
           </div>

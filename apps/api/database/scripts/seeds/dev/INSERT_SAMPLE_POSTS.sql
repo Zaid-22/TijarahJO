@@ -1,244 +1,822 @@
+-- =============================================================================
+-- TijarahJo Sample Post Seed Data
+-- Generated from the local sample post source folders.
+--
+-- This file is self-contained for database rows: it creates one disabled fake
+-- user account per sample post, upserts the post, and upserts its PostImages
+-- rows with /uploads/post-images/sample-* URLs.
+--
+-- The physical image files must exist in the API uploads/post-images folder
+-- when the app serves these URLs.
+-- =============================================================================
+
 USE TijarahJoDB;
 GO
+
 SET XACT_ABORT ON;
-BEGIN TRY
-    BEGIN TRANSACTION;
+GO
 
-    -- =========================================================================
-    -- 1. Create 6 sample users (password = Admin@123 for all)
-    -- =========================================================================
-    DECLARE @PW NVARCHAR(200) = 'PBKDF2_SHA256$100000$4IVh016LywSFAR2xrkIA/A==$hL3YTmKQbHp+Efo+qJj7CFM0YgkA3O2o6DNh+R4XkB8=';
-    DECLARE @UserRole INT = (SELECT TOP 1 RoleID FROM dbo.Roles WHERE RoleName=N'User');
-    DECLARE @Now DATETIME2 = SYSUTCDATETIME();
+BEGIN TRANSACTION;
 
-    -- Amman IDs
-    DECLARE @AmmanId INT = (SELECT CityID FROM dbo.Cities WHERE CityName=N'Amman');
-    DECLARE @IrbidId INT = (SELECT CityID FROM dbo.Cities WHERE CityName=N'Irbid');
-    DECLARE @ZarqaId INT = (SELECT CityID FROM dbo.Cities WHERE CityName=N'Zarqa');
-    DECLARE @AqabaId INT = (SELECT CityID FROM dbo.Cities WHERE CityName=N'Aqaba');
+IF OBJECT_ID(N'tempdb..#SamplePosts', N'U') IS NOT NULL DROP TABLE #SamplePosts;
+IF OBJECT_ID(N'tempdb..#SampleImages', N'U') IS NOT NULL DROP TABLE #SampleImages;
 
-    -- Area IDs
-    DECLARE @Sweifieh INT = (SELECT AreaID FROM dbo.Areas WHERE AreaName=N'Sweifieh' AND CityID=@AmmanId);
-    DECLARE @Abdali  INT = (SELECT AreaID FROM dbo.Areas WHERE AreaName=N'Abdali'  AND CityID=@AmmanId);
-    DECLARE @Abdoun  INT = (SELECT AreaID FROM dbo.Areas WHERE AreaName=N'Abdoun'  AND CityID=@AmmanId);
-    DECLARE @WestAmm INT = (SELECT AreaID FROM dbo.Areas WHERE AreaName=N'West Amman' AND CityID=@AmmanId);
-    DECLARE @Jubaiha INT = (SELECT AreaID FROM dbo.Areas WHERE AreaName=N'Jubaiha' AND CityID=@AmmanId);
-    DECLARE @IrbidCC INT = (SELECT TOP 1 AreaID FROM dbo.Areas WHERE CityID=@IrbidId);
-    DECLARE @ZarqaCC INT = (SELECT TOP 1 AreaID FROM dbo.Areas WHERE CityID=@ZarqaId);
+CREATE TABLE #SamplePosts
+(
+    SourceKey NVARCHAR(200) NOT NULL PRIMARY KEY,
+    UserEmail NVARCHAR(255) NOT NULL,
+    Phone NVARCHAR(20) NOT NULL DEFAULT N'',
+    FirstName NVARCHAR(100) NOT NULL,
+    LastName NVARCHAR(100) NULL,
+    CategoryName NVARCHAR(100) NOT NULL,
+    PostTitle NVARCHAR(200) NOT NULL,
+    Price DECIMAL(18,2) NULL,
+    PostDescription NVARCHAR(4000) NULL,
+    CityName NVARCHAR(100) NOT NULL DEFAULT N'Amman',
+    AreaName NVARCHAR(100) NOT NULL DEFAULT N'Jubaiha'
+);
 
-    MERGE dbo.Users AS target
-    USING ( VALUES
-        (@PW, 'user2@tijarahjo.local', N'Ahmad',  N'Al-Masri', '0791234567', @AmmanId, @Sweifieh, @Now, 1, @UserRole, 0),
-        (@PW, 'user3@tijarahjo.local', N'Sarah',  N'Haddad',   '0787654321', @IrbidId, @IrbidCC,  @Now, 1, @UserRole, 0),
-        (@PW, 'user4@tijarahjo.local', N'Omar',   N'Zaid',     '0771122334', @AmmanId, @WestAmm,  @Now, 1, @UserRole, 0),
-        (@PW, 'user5@tijarahjo.local', N'Laila',  N'Khoury',   '0799988776', @AmmanId, @Abdali,   @Now, 1, @UserRole, 0),
-        (@PW, 'user6@tijarahjo.local', N'Tareq',  N'Nassar',   '0785554443', @ZarqaId, @ZarqaCC,  @Now, 1, @UserRole, 0),
-        (@PW, 'user7@tijarahjo.local', N'Nour',   N'Qasem',    '0778889990', @AmmanId, @Abdoun,   @Now, 1, @UserRole, 0)
-    ) AS source (HashedPassword, Email, FirstName, LastName, Phone, CityID, AreaID, JoinDate, Status, RoleID, IsDeleted)
-    ON target.Email = source.Email
-    WHEN MATCHED THEN UPDATE SET FirstName=source.FirstName, LastName=source.LastName, Phone=source.Phone, CityID=source.CityID, AreaID=source.AreaID
-    WHEN NOT MATCHED BY TARGET THEN
-        INSERT (HashedPassword, Email, FirstName, LastName, Phone, CityID, AreaID, JoinDate, Status, RoleID, IsDeleted)
-        VALUES (source.HashedPassword, source.Email, source.FirstName, source.LastName, source.Phone, source.CityID, source.AreaID, source.JoinDate, source.Status, source.RoleID, source.IsDeleted);
+CREATE TABLE #SampleImages
+(
+    SourceKey NVARCHAR(200) NOT NULL,
+    PostImageURL NVARCHAR(2048) NOT NULL,
+    SortOrder INT NOT NULL
+);
 
-    -- Resolve UserIDs
-    DECLARE @U2 INT=(SELECT UserID FROM dbo.Users WHERE Email='user2@tijarahjo.local');
-    DECLARE @U3 INT=(SELECT UserID FROM dbo.Users WHERE Email='user3@tijarahjo.local');
-    DECLARE @U4 INT=(SELECT UserID FROM dbo.Users WHERE Email='user4@tijarahjo.local');
-    DECLARE @U5 INT=(SELECT UserID FROM dbo.Users WHERE Email='user5@tijarahjo.local');
-    DECLARE @U6 INT=(SELECT UserID FROM dbo.Users WHERE Email='user6@tijarahjo.local');
-    DECLARE @U7 INT=(SELECT UserID FROM dbo.Users WHERE Email='user7@tijarahjo.local');
+INSERT INTO #SamplePosts
+    (SourceKey, UserEmail, FirstName, LastName, CategoryName, PostTitle, Price, PostDescription)
+VALUES
+(N'books-and-stationery-1', N'sample-post-books-and-stationery-1@tijarahjo.local', N'يوسف', N'الخالدي', N'Books & Stationery', N'كتاب توفيل و كتب تاسيس', 2.00, N'كتاب توفيل ب 2.5
+كتب تاسيس انجليزي ب 2 الكتاب
+يوجد خدمه توصيل'),
+(N'books-and-stationery-2', N'sample-post-books-and-stationery-2@tijarahjo.local', N'نور', N'الحسن', N'Books & Stationery', N'كتب طبية للبيع كل كتاب اله سعر التواصل على الواتساب', 50.00, N'كتب طبية للبيع مستعمل بحالة الوكالة كل كتاب اله سعر التواصل على الواتساب السعر قابل للتفاوض'),
+(N'books-and-stationery-3', N'sample-post-books-and-stationery-3@tijarahjo.local', N'ريم', N'العمري', N'Books & Stationery', N'Diary of a wimpy kid roald dahl BOOKS', 20.00, N'some books are not used and some books are , بعض الكتب مستعملة
+6 (Diary of a wimpy kid books) /6كتب
+3 (roald dahl books ) 3 كتب'),
+(N'books-and-stationery-4', N'sample-post-books-and-stationery-4@tijarahjo.local', N'عمر', N'الزيدي', N'Books & Stationery', N'كتاب Cambridge IGCSE Chemistry – النسخة الرابعة – حالة ممتازه', 9.00, N'كتاب Cambridge IGCSE Chemistry Coursebook – الطبعة الرابعة بحالة ممتازة دون أي تمزقات أو ملاحظات، مناسب للدراسة والمراجعة ويُعد من أفضل المراجع لمنهج الكيمياء. السعر 10 دنانير قابل للتفاوض، ويتوفر توصيل داخل عمّان. موقعي في الجبيهة – عمّان، ويمكن ترتيب توصيل سريع وسهل عند الطلب'),
+(N'books-and-stationery-5', N'sample-post-books-and-stationery-5@tijarahjo.local', N'سارة', N'النعيمي', N'Books & Stationery', N'لطلاب الادب الانجليزي: ثلاث كتب دراسية للبيع بنصف السعر الاصلي', 10.00, N'The Norton Anthology: American Literature, 7th Edition, Volume A
 
-    -- Category IDs
-    DECLARE @CatElec  INT=(SELECT TOP 1 CategoryID FROM dbo.Categories WHERE CategoryName=N'Electronics');
-    DECLARE @CatPhone INT=(SELECT TOP 1 CategoryID FROM dbo.Categories WHERE CategoryName=N'Mobile Phones & Tablets');
-    DECLARE @CatPC    INT=(SELECT TOP 1 CategoryID FROM dbo.Categories WHERE CategoryName=N'Computers & Laptops');
-    DECLARE @CatAppl  INT=(SELECT TOP 1 CategoryID FROM dbo.Categories WHERE CategoryName=N'Home Appliances');
-    DECLARE @CatFurn  INT=(SELECT TOP 1 CategoryID FROM dbo.Categories WHERE CategoryName=N'Furniture');
-    DECLARE @CatCar   INT=(SELECT TOP 1 CategoryID FROM dbo.Categories WHERE CategoryName=N'Vehicles');
-    DECLARE @CatFash  INT=(SELECT TOP 1 CategoryID FROM dbo.Categories WHERE CategoryName=N'Fashion & Clothing');
-    DECLARE @CatRE    INT=(SELECT TOP 1 CategoryID FROM dbo.Categories WHERE CategoryName=N'Real Estate');
-    DECLARE @CatSport INT=(SELECT TOP 1 CategoryID FROM dbo.Categories WHERE CategoryName=N'Sports & Fitness');
-    DECLARE @CatBook  INT=(SELECT TOP 1 CategoryID FROM dbo.Categories WHERE CategoryName=N'Books & Stationery');
-    DECLARE @CatServ  INT=(SELECT TOP 1 CategoryID FROM dbo.Categories WHERE CategoryName=N'Services');
-    DECLARE @CatOther INT=(SELECT TOP 1 CategoryID FROM dbo.Categories WHERE CategoryName=N'Other');
+The Norton Anthology: American Literature, 7th Edition, Volume B
 
-    DECLARE @PID INT;
+Oxford Practical English Usage, Michael Swan, 3rd Edition
 
-    -- =========================================================================
-    -- 2. Posts for User 2 (Ahmad) — 15 posts, full profile showcase
-    -- =========================================================================
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U2,@CatPhone,N'iPhone 15 Pro Max 256GB',N'Brand new condition, Natural Titanium color. Comes with original box, cable, and Apple leather case. Battery health 100%. Face ID works flawlessly.',2850,0,DATEADD(DAY,-30,@Now),@Now,@AmmanId,@Sweifieh,0,342);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=600&h=400&fit=crop',0,@Now),(@PID,'https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=600&h=400&fit=crop',0,@Now);
+الكتاب الواحد ب10 دنانير، الثلاث كتب معا ب 25 دينار
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U2,@CatPC,N'MacBook Air M2 2022',N'Space Gray, 8GB RAM, 256GB SSD. Used for 6 months only. Perfect for students and professionals.',2200,0,DATEADD(DAY,-28,@Now),@Now,@AmmanId,@Sweifieh,0,287);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600&h=400&fit=crop',0,@Now);
+المكان: عمان القويسمة.
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U2,@CatCar,N'Toyota Camry 2020 Hybrid',N'Pearl white, full option, JBL sound system. Only 35K KM. Serious buyers only.',22000,0,DATEADD(DAY,-25,@Now),@Now,@AmmanId,@Sweifieh,0,498);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=600&h=400&fit=crop',0,@Now),(@PID,'https://images.unsplash.com/photo-1549317661-bd32c8ce0afa?w=600&h=400&fit=crop',0,@Now),(@PID,'https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?w=600&h=400&fit=crop',0,@Now);
+خدمة التوصيل الى مجمع رغدان متوفرة بسعر رمزي'),
+(N'books-and-stationery-6', N'sample-post-books-and-stationery-6@tijarahjo.local', N'خالد', N'الرشيدي', N'Books & Stationery', N'علم نفسك اللغة الانجليزية من خلال كتب و سيديات', 100.00, N'برنامج بريطاني كامل لتعلم اللغة الإنجليزية بشكل ذاتي
+ثلاث مستويات : مبتدئ متوسط متقدم
+لكل مستوى كتب و سيديات خاصة به
+تعلم من خلال الحوارات و مصطلحات الحياة اليومية
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U2,@CatFurn,N'IKEA KALLAX Shelf Unit',N'White, 4x4 cube shelf. Great for books and storage. Like new.',45,0,DATEADD(DAY,-22,@Now),@Now,@AmmanId,@Sweifieh,0,120);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1594620302200-9a762244a156?w=600&h=400&fit=crop',0,@Now);
+سعر البرنامج الأصلي فوق ال600 دينار
+سعر البيع 100 دينار فقط'),
+(N'books-and-stationery-7', N'sample-post-books-and-stationery-7@tijarahjo.local', N'لينا', N'المصري', N'Books & Stationery', N'كتب تخصص صيدلة مستعملة كيمياء عضوية، أساسيات الكيمياء العضوية، فسيولوجية الانسان، علم الاجتماع', 8.00, N'كتب تخصص صيدلة مستعملة
+كيمياء عضوية،
+أساسيات الكيمياء العضوية،
+فسيولوجية الانسان،
+مقدمة في علم الاجتماع.
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U2,@CatElec,N'Sony WH-1000XM5 Headphones',N'Industry leading noise cancellation. Silver color. Comes with carrying case.',180,0,DATEADD(DAY,-20,@Now),@Now,@AmmanId,@Sweifieh,0,215);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=400&fit=crop',0,@Now);
+العنوان:
+عمان / مرج الحمام - دوار الجندي / إسكان سلطة المصادر الطبيعة
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U2,@CatRE,N'Apartment for Rent – Sweifieh',N'3BR/2BA, 150sqm, 3rd floor with elevator. Unfurnished. Near Cozmo supermarket.',450,0,DATEADD(DAY,-18,@Now),@Now,@AmmanId,@Sweifieh,0,380);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&h=400&fit=crop',0,@Now),(@PID,'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop',0,@Now);
+السعر: 8 دنانير الأربع كتب مع بعض'),
+(N'books-and-stationery-8', N'sample-post-books-and-stationery-8@tijarahjo.local', N'أحمد', N'الشمري', N'Books & Stationery', N'للبيع كتب مستعملة بحالة ممتازة، منهاج مدرسي امريكي', 30.00, N'السلام عليكم ورحمة الله وبركاته
+للبيع كتب مستعملة بحالة ممتازة وسعر ممتاز، منهاج مدرسي امريكي
+ACT American international schools, GR1 ~GR12
+متوفر بعمان'),
+(N'computers-and-laptops-1', N'sample-post-computers-and-laptops-1@tijarahjo.local', N'فيصل', N'الدوسري', N'Computers & Laptops', N'شنته كتف لابتوب اوكادي T-68-حجم 13.3" Okade T68 13.3" Business Laptop bag', 18.00, N'شنته كتف لابتوب اوكادي T68-حجم 13.3" Okade T68 13.3" Business Laptop bag
+حقيبة كمبيوتر محمول ملونة مقاومة للصدمات ومقاومة للماء خفيفة ورقيقة للسفر للعمل والمدارس حقيبة كتف للرجال والنساء
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U2,@CatSport,N'Treadmill NordicTrack T6.5',N'Foldable, incline control, Bluetooth speakers. Barely used.',350,0,DATEADD(DAY,-15,@Now),@Now,@AmmanId,@Sweifieh,0,95);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1576678927484-cc907957088c?w=600&h=400&fit=crop',0,@Now);
+اهلا وسهلا فيكم بشركة هاي تك
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U2,@CatAppl,N'Dyson V15 Detect Vacuum',N'Laser dust detection, powerful suction. 1 year warranty remaining.',280,3,DATEADD(DAY,-14,@Now),@Now,@AmmanId,@Sweifieh,0,170);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1558317374-067fb5f30001?w=600&h=400&fit=crop',0,@Now);
+بتقدروا تزورونا بمعرضنا بالجاردنز ش وصفي التل. مجمع 73 معرض هاي تك HIGH TECH
+أوقات الدوام يوميا من 9ص-10م ويوم الجمعه من 4م-10م
+خدمة التوصيل متوفرة لجميع مناطق المملكة ب 3 دنانير خلال 24-48 ساعه'),
+(N'computers-and-laptops-2', N'sample-post-computers-and-laptops-2@tijarahjo.local', N'منى', N'العتيبي', N'Computers & Laptops', N'Lenovo Thinkpads and Thinkbooks for sale', 225.00, N'Various Lenovo Thinkpad laptops and Thinkbook laptops for sale.
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U2,@CatPhone,N'Samsung Galaxy S24 Ultra',N'Titanium Black, 512GB. S Pen included. Under warranty until Dec 2026.',3200,0,DATEADD(DAY,-12,@Now),@Now,@AmmanId,@Sweifieh,0,410);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=600&h=400&fit=crop',0,@Now);
+See photos for specifications of the laptops.
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U2,@CatFash,N'Nike Air Jordan 1 Retro High',N'Size 43 EU. Worn twice only. University Blue colorway.',120,0,DATEADD(DAY,-10,@Now),@Now,@AmmanId,@Sweifieh,0,310);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=400&fit=crop',0,@Now);
+1. Lenovo Thinkbook 13s.
+# Intel Core i5 11th
+# 8 GB Ram
+# 256GB SSD NVMe storage
+# 1Gb Intel Iris Xe GPU
+# very good condition
+# 146 battery cycles
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U2,@CatElec,N'Apple Watch Series 9 45mm',N'GPS + Cellular. Midnight aluminum case with sport band.',250,0,DATEADD(DAY,-8,@Now),@Now,@AmmanId,@Sweifieh,0,190);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&h=400&fit=crop',0,@Now);
+Price: 225 jod
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U2,@CatBook,N'University Textbooks Bundle',N'Engineering textbooks: Calculus, Physics, Programming in C++. Good condition.',35,3,DATEADD(DAY,-7,@Now),@Now,@AmmanId,@Sweifieh,0,60);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600&h=400&fit=crop',0,@Now);
+2. Lenovo Thinkpad L15
+# Amd Ryzen 7 Pro
+# 32 GB Ram
+# 256GB SSD Storage
+# 1GB Amd GPU
+# 426 battery cycles'),
+(N'computers-and-laptops-3', N'sample-post-computers-and-laptops-3@tijarahjo.local', N'زياد', N'الحربي', N'Computers & Laptops', N'Lenovo laptop with accessories (cooling fan wireless lenovo mouse and red dragon headset)', 650.00, N'Brand/Model: Lenovo LOQ 15IAX9E used for 5 months feels like new
+• Processor (CPU): Intel Core i7-12650HX (12th Generation)
+• Graphics Card (GPU): NVIDIA GeForce RTX 4050 (6GB)
+• Memory (RAM): 16GB DDR5
+• Storage: 512GB NVMe SSD
+• Display: 15.6-inch FHD (Full HD), 144Hz Refresh Rate
+• Operating System: Original Windows included'),
+(N'computers-and-laptops-4', N'sample-post-computers-and-laptops-4@tijarahjo.local', N'هند', N'الغامدي', N'Computers & Laptops', N'Yasoomade YS-C003 Shoulder and Handbag Laptop Bag', 29.00, N'اكسسوارت الكمبيوتر بأسعار مميزة !
+Yasoomade YS-C003 Shoulder and Handbag Laptop Bag-حقيبة لابتوب
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U2,@CatServ,N'Home Painting Service',N'Professional interior/exterior painting. Free color consultation. 5+ years experience in Amman.',0,0,DATEADD(DAY,-5,@Now),@Now,@AmmanId,@Sweifieh,0,75);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1562259929-b4e1fd3aef09?w=600&h=400&fit=crop',0,@Now);
+Interior Slot Pocket,Cell Phone Pocket,Interior Zipper Pocket
+Polyester- Canvas
+Size: 17"
+Compartment,Computer Interlayer
+You Can Use it As Backpack Or Shoulder
+موقعنا الجاردنز ش وصفي التل. مجمع 73 شركة هاي تك بجانب ابو شقرا للعطور
+https://maps.app.goo.gl/YsBmRHnVppfmD6TB8
+خدمة التوصيل لجميع مناطق المملكة
+Visit us to our Showroom located At Al Gardenz Wasfi Altal St. Bldg #73'),
+(N'computers-and-laptops-5', N'sample-post-computers-and-laptops-5@tijarahjo.local', N'طارق', N'السبيعي', N'Computers & Laptops', N'Laptop HP Pavilion x360 Laptop - 14-EK0033DX-Cor لابتوب أتش بي اي فايف جيل 12 بلف 360درجة شاشة تتش', 549.00, N'Sub Brand
+Sub Brand Lightweight
+Processor Specifications
+Processor Generation 12th Generation
+Processor Family Intel Core i5-1235U
+Processor Speed 3.30 Ghz up to 4.4 GHz
+Processor Cache 12MB
+Number of Cores 10 Cores - 12 Threads
+Memory
+RAM Capacity 8GB
+Memory Type DDR4
+Storage
+Storage Capacity 512GB SSD PCIe NVMeTM M.2 SSD
+Storage Type SSD
+Graphic Card
+Graphic Manufacturer Intel
+Graphic Model Intel Iris Plus Graphics
+Graphic Memory Source Integrated
+Display Specifications
+Display Size 14.0" Touch Screen
+Display Technology diagonal HD SVA micro-edge WLED-backlit multitouch
+Display Resolution 1366 x 768
+Touch Screen YES
+Inputs & Outputs
+Keyboard Full-size island-style natural silver keyboard
+Ports 1x SuperSpeed USB Type-C 10Gbps signaling rate (USB Power DeliveryDisplayPortTM 1.4HPSleep and Charge)(42)(50)(64)2x SuperSpeed USB Type-A 5Gbps signaling rate1x Headphone/microphone combo1x AC smart pin1x HDMI 2.1
+Optical Drive NA
+Camera HP TrueVision HD Camera with integrated digital microphone
+Audio Audio by Bang & Olufsen; Dual speakers; HP Audio Boost
+Connectivity
+Networking Realtek Wi-Fi 5 (2x2) and Bluetooth 5 Combo (MU-MIMO supported)Intel Wi-Fi 6 AX 201 (2x2) and Bluetooth 5 combo (Supporting Gigabit file transfer speeds)
+Battery Specifications
+Battery Number of Cells 3
+Operation System
+Operation System Windows 11 Home 64
+General Information
+Warranty
+أكبر تشكيلة من كافة الماركات الأشهر عالميا على أجهزة الحاسوب و اللابتوب المستعمل والجديد بأقل الأسعار.
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U2,@CatCar,N'Honda Civic 2019 Sport',N'Red, sunroof, lane assist, 55K KM. Accident-free.',16500,0,DATEADD(DAY,-3,@Now),@Now,@AmmanId,@Sweifieh,0,260);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=600&h=400&fit=crop',0,@Now),(@PID,'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop',0,@Now);
+خيارات متعددة وأسعار متنوعة تلبي احتياجات الجمبيع.
+مواصفات عالية وتشكيلة تلبي جميع الاختيارات.
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U2,@CatOther,N'Moving Sale – Everything Must Go',N'Multiple household items: kitchen tools, decor, small appliances. WhatsApp for full list.',0,0,DATEADD(DAY,-1,@Now),@Now,@AmmanId,@Sweifieh,0,55);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&h=400&fit=crop',0,@Now);
+خدمة التوصيل متوفرة لجميع المحافظات في المملكة.
+خدمة ما بعد البيع دعم فني متواصل اونلاين على مدار ساعات العمل
 
-    -- =========================================================================
-    -- 3. Posts for User 3 (Sarah – Irbid) — 8 posts
-    -- =========================================================================
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U3,@CatFash,N'Zara Winter Coat – Size M',N'Black wool coat, worn once. Perfect for winter.',55,0,DATEADD(DAY,-27,@Now),@Now,@IrbidId,@IrbidCC,0,130);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1539533113208-f6df8cc8b543?w=600&h=400&fit=crop',0,@Now);
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U3,@CatPhone,N'iPad Air 5th Gen WiFi',N'64GB, Space Gray. With Magic Keyboard and Apple Pencil 2.',550,0,DATEADD(DAY,-24,@Now),@Now,@IrbidId,@IrbidCC,0,200);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=600&h=400&fit=crop',0,@Now);
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U3,@CatBook,N'Arabic Literature Collection',N'15 classic Arabic novels including works by Naguib Mahfouz.',25,0,DATEADD(DAY,-20,@Now),@Now,@IrbidId,@IrbidCC,0,45);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=600&h=400&fit=crop',0,@Now);
+------------------------------------------------------------
+موقعنا عمان شارع الجاردنز بجانب مسجد الطباع مجمع رقم 90 بنفس مجمع كارفور الطابق الأول على الدرج الكهربائي .'),
+(N'computers-and-laptops-6', N'sample-post-computers-and-laptops-6@tijarahjo.local', N'داليا', N'الجهني', N'Computers & Laptops', N'Dell Latitude 5490', 249.99, N'عرض مميز لفترة محدودة
+Dell Latitude 5490
+جهاز عملي وأداء قوي بتصميم احترافي يناسب العمل والدراسة والاستخدام اليومي.
+أداء سريع بمعالج Intel Core i7
+تشغيل سلس وتعدد مهام بكفاءة عالية
+تصميم متين من فئة الأعمال
+مناسب للأعمال المكتبية، الدراسة، والاستخدام المنزلي
+السعر: 249.99 دينار أردني
+توصيل مجاني لجميع مناطق المملكة
+مستعمل أوروبي – كأنه جديد
+شامل الوندوز الأصلي والبرامج الاساسية
+شنتة لابتوب فاخرة
+ماوس وايرليس
+الشاحن الاصلي
+للطلب والاستفسار: اضغط لإظهار رقم الهاتف 9627955585XX (اتصال / واتساب)
+Professional Laptop for Work & Study
+Dell Latitude 5490
+Powerful performance, durable design, and reliable quality — all at an unbeatable price.
+Fast Intel Core i7 Performance
+Smooth Multitasking & Daily Use
+Solid Build – Business Class Laptop
+Perfect for Office, Study & Home Use
+Price: 249.99 JD
+Free Delivery All Across Jordan
+Used European – Like New'),
+(N'mobile-phones-and-tablets-1', N'sample-post-mobile-phones-and-tablets-1@tijarahjo.local', N'عبدالله', N'المطيري', N'Mobile Phones & Tablets', N'اقساط بدون دفعه اولى ( ايفون 17 برو Iphone 17 Pro 256GB )', 35.00, N'اقساط ..أقساط .. اقساط .. قسط ( بدون دفعة أولى )
+عن طريق
+البنك العربي الاسلامي الدولي , البنك الاسلامي الاردني
+بنك القاهرة >الاسكان> الاهلي> صفوه> العربي> الاردن>وبنك الاتحاد
+صندوق توفير البريد
+الجيش العربي
+نقابة الصيادلة
+نقابة المهندسين الاردنيين, والزراعيين
+موظفو الضمان الاجتماعي
+جمعية وزارة المالية <متقاعدو الضمان<المتقاعدين العسكريين
+موظفو القطاع العام<موظفو المدينة الطبية
+* الهواتف جديدة وليست مجددة UN Active
+*الهواتف مكفولة سنة كاملة كفالة الوكيل I PHONE
+*شركة سرايا للكمبيوتر والالكترونيات
+*اوقات الدوام من الساعة 9 صباحا ولغاية الساعة 7 مساءً".
+* موقعنا شارع المدينة المنورة بجانب مطعم كنتاكي KFC عمارة رقم 126 الطابق الاول فوق معرض BOSE و فوق معرض بيت التطريز مركز دانا التجاري'),
+(N'mobile-phones-and-tablets-2', N'sample-post-mobile-phones-and-tablets-2@tijarahjo.local', N'شيماء', N'العنزي', N'Mobile Phones & Tablets', N'مستعمل بحالة الجديد ايفون 15 بلس بأفضل سعر//IPHONE 15 PLUS USED', 359.00, N'IPHONE 15 PLUS USED
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U3,@CatFurn,N'Study Desk with Drawers',N'Wooden study desk, 120cm. Great for home office or student room.',70,0,DATEADD(DAY,-17,@Now),@Now,@IrbidId,@IrbidCC,0,88);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?w=600&h=400&fit=crop',0,@Now);
+متوفر بذاكرة 128جيجا باسعار تبدا من 359
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U3,@CatAppl,N'Nespresso Coffee Machine',N'Vertuo Next model. Includes 30 free capsules. Used gently.',90,3,DATEADD(DAY,-13,@Now),@Now,@IrbidId,@IrbidCC,0,155);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=600&h=400&fit=crop',0,@Now);
+ومتوفر بذاكرة 256جيجا باسعار تبدا من 409
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U3,@CatRE,N'Room for Rent Near Yarmouk Uni',N'Furnished room, shared kitchen/bathroom. Female students only. 100 JD/month.',100,0,DATEADD(DAY,-9,@Now),@Now,@IrbidId,@IrbidCC,0,220);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=600&h=400&fit=crop',0,@Now);
+السعر بحسب نسبة البطارية
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U3,@CatElec,N'Canon EOS R50 Camera Kit',N'Mirrorless, 24MP, with 18-45mm lens. Perfect for content creators.',650,0,DATEADD(DAY,-4,@Now),@Now,@IrbidId,@IrbidCC,0,175);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600&h=400&fit=crop',0,@Now);
+متوفر بعدة الوان
+----------------------------
+العروض الاقوى في المملكة على جميع الأجهزة الخلوية واكسسواراتها
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U3,@CatSport,N'Yoga Mat + Resistance Bands Set',N'Premium TPE yoga mat, 6mm thick. Includes 5 resistance bands.',20,0,DATEADD(DAY,-2,@Now),@Now,@IrbidId,@IrbidCC,0,40);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&h=400&fit=crop',0,@Now);
+نقطة بيع معتمدة لدى العديد من الوكلاء
 
-    -- =========================================================================
-    -- 4. Posts for User 4 (Omar – West Amman) — 8 posts
-    -- =========================================================================
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U4,@CatCar,N'BMW 320i 2017 M Sport',N'Mineral Grey, M Sport package, navigation, parking sensors. 80K KM.',18500,0,DATEADD(DAY,-29,@Now),@Now,@AmmanId,@WestAmm,0,450);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&h=400&fit=crop',0,@Now),(@PID,'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&h=400&fit=crop',0,@Now);
+وبكفالة 5 سنوات من كليڤر موبايل وبكفالة الوكيل الرسمي
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U4,@CatElec,N'PS5 + 5 Games Bundle',N'Disc edition, 2 DualSense controllers. Games: GTA V, FIFA 25, Spider-Man 2, God of War, Horizon.',400,0,DATEADD(DAY,-23,@Now),@Now,@AmmanId,@WestAmm,0,380);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=600&h=400&fit=crop',0,@Now);
+هذا العرض لفترة محدودة أو حتى نفاذ الكمية
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U4,@CatPC,N'Gaming PC RTX 4070',N'i7-13700K, 32GB RAM, 1TB NVMe, RTX 4070 Ti. RGB case with liquid cooling.',1800,0,DATEADD(DAY,-19,@Now),@Now,@AmmanId,@WestAmm,0,320);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1587202372634-32705e3bf49c?w=600&h=400&fit=crop',0,@Now);
+يتوفر الدفع عن طريق المحافظ الالكترونيه
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U4,@CatFurn,N'L-Shaped Corner Sofa – Grey',N'Seats 6, reversible chaise. Microfiber fabric, stain resistant.',300,0,DATEADD(DAY,-16,@Now),@Now,@AmmanId,@WestAmm,0,145);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&h=400&fit=crop',0,@Now);
+يتوفر خدمة الدفع عند الاستلام
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U4,@CatCar,N'Kia Sportage 2021 AWD',N'Silver, panoramic sunroof, heated seats, blind spot monitor. 25K KM.',21000,0,DATEADD(DAY,-11,@Now),@Now,@AmmanId,@WestAmm,0,290);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1549317661-bd32c8ce0afa?w=600&h=400&fit=crop',0,@Now);
+موقعنا : عمان - شفا بدران بالقرب من دوار الترخيص
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U4,@CatSport,N'Full Home Gym Set',N'Olympic barbell, 100kg plates, adjustable bench, squat rack.',500,0,DATEADD(DAY,-6,@Now),@Now,@AmmanId,@WestAmm,0,110);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&h=400&fit=crop',0,@Now);
+خدمة توصيل متوفرة داخل عمان وجميع المحافظات'),
+(N'mobile-phones-and-tablets-3', N'sample-post-mobile-phones-and-tablets-3@tijarahjo.local', N'باسم', N'القحطاني', N'Mobile Phones & Tablets', N'هونر /x7d/ 5G بسعر مميز 256GB', 120.00, N'هونر x7d جديد كفالة الوكيل الرسمي
+265 جيجا
+8رام
+بسعر مميز
+x7d 4G 120
+x7d 5G 130
+المعالج: ثماني النواة Snapdragon 685 تكنولوجيا 6 نانو
+التخزين / الرام: 256 جيجا مع 8 جيجا رام
+الكاميرا: خلفية مزدوجة 108+2 م.ب / امامية 8 م.ب.
+الشاشة: 6.77 بوصة بدقة 720x1610 بكسل بها ثقب
+نظام التشغيل: اندرويد 15
+البطارية: 6500 مللي أمبير'),
+(N'mobile-phones-and-tablets-4', N'sample-post-mobile-phones-and-tablets-4@tijarahjo.local', N'ولاء', N'الزهراني', N'Mobile Phones & Tablets', N'ايفون 13 برو ماكس 128 جيجا ووتر بروف مش مفتوح بحال الوكاله ولا شخط و مكفول مع وصلة شاحن و عظمه', 365.00, N'ايفون 13 برو ماكس 128 جيجا
+ووتر بروف مش مفتوح
+بحال الوكاله
+ولا شخط و مكفول
+مع وصلة شاحن و عظمه
+السعر شامل التوصيل
+365دينارايفون 13 برو ماكس 128 جيجا
+ووتر بروف مش مفتوح
+بحال الوكاله
+ولا شخط و مكفول
+مع وصلة شاحن و عظمه
+السعر شامل التوصيل
+365'),
+(N'mobile-phones-and-tablets-5', N'sample-post-mobile-phones-and-tablets-5@tijarahjo.local', N'حسام', N'العسيري', N'Mobile Phones & Tablets', N'Brand one mobile', 985.00, N'Brand One iPhones
+iPhone 17 Pro Max-512GB
+اللون : برتقالي
+حالة البطارية: 100%
+حالة الجهاز - ممتاز (لا نقور ، لا اعطال)
+يرفق مع كل جهاز فاتورة اعتماد +
+شاحن معتمد - مكفول 12 شهرا مجانا
+بكج حماية - لاصق + كفر حماية مجانا
+كفالة النظام و الاعطال التقنية - 12 شهر مجانا
+كفالة اداء البطارية - 3 اشهر مجانا
+كفالة استبدال الجهاز - مجانا لاول اسبوع
+خدمة التوصيل متوفرة و لجميع محافظات المملكة
+براند ون موبايل اربد - دوار الجامعه- اليرموك مول'),
+(N'mobile-phones-and-tablets-6', N'sample-post-mobile-phones-and-tablets-6@tijarahjo.local', N'رنا', N'البلوي', N'Mobile Phones & Tablets', N'جديد مختوم كفالة الوكيل Galaxy S25 Ultra متوفر لدى سبيد سيل', 719.00, N'Galaxy S25 Ultra
+256GB - 12GB Ram
+كفالة الوكيل BMS . مع ضمان كسر الشاشة .
+بسعر مميز 719 دينار فقط .
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U4,@CatServ,N'Freelance Web Development',N'Full-stack developer. React, Node.js, .NET. Portfolio available on request.',0,0,DATEADD(DAY,-3,@Now),@Now,@AmmanId,@WestAmm,0,65);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=600&h=400&fit=crop',0,@Now);
+سبيد سيل
+نقطة بيع معتمدة لجميع وكلاء الاردن منذ عام 2003 . بادارة يامن
+كفالة الوكيل الرسمي في الأردن
+موقعنا :
+عمان - الدوار السابع - شارع شهداء الحرم الابراهيمي DHL -بجانب البنك الاهلي مباشرة -عمارة 8
+أوقات الدوام :
+من الساعة 10 ظهرا
+إلى الساعة 11 ليلا
+عدا يوم الجمعة:
+من الساعة 4 عصرا
+إلى الساعة 10 ليلا'),
+(N'mobile-phones-and-tablets-7', N'sample-post-mobile-phones-and-tablets-7@tijarahjo.local', N'وليد', N'الشهري', N'Mobile Phones & Tablets', N'IPAD PRO M5 ( 256GB ) NEW /// ايباد برو ام 5 ذاكره 256 الجديد', 695.00, N'IPAD PRO M5 ( 256GB ) NEW
+آيباد برو ام 5 ذاكرة 256 الجديد
+( تابع الاحكام والشروط )
+( احصل على خصم يصل الى 35٪ على جميع الاكسسوار )
+( يوجد أمريكي / ويوجد اوربي / ويوجد هندي / ويوجد شرق أوسط )
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U4,@CatElec,N'DJI Mini 3 Pro Drone',N'Under 249g, 4K HDR video, 34 min flight time. Includes Fly More combo.',550,0,DATEADD(DAY,-1,@Now),@Now,@AmmanId,@WestAmm,0,200);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1473968512647-3e447244af8f?w=600&h=400&fit=crop',0,@Now);
 
-    -- =========================================================================
-    -- 5. Posts for User 5 (Laila – Abdali) — 7 posts
-    -- =========================================================================
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U5,@CatFash,N'Designer Handbag – Michael Kors',N'Genuine leather, medium Jet Set tote. Camel color.',85,0,DATEADD(DAY,-26,@Now),@Now,@AmmanId,@Abdali,0,190);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600&h=400&fit=crop',0,@Now);
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U5,@CatAppl,N'Samsung Smart TV 55" QLED',N'2023 model, 4K, Smart Hub, Alexa built-in. Wall mount included.',420,0,DATEADD(DAY,-21,@Now),@Now,@AmmanId,@Abdali,0,310);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=600&h=400&fit=crop',0,@Now);
+العروض الافخم و الاقوى على مستواى المملكة
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U5,@CatRE,N'Office Space for Rent – Abdali',N'50sqm, open floor plan, co-working friendly. Abdali Boulevard.',600,0,DATEADD(DAY,-16,@Now),@Now,@AmmanId,@Abdali,0,250);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&h=400&fit=crop',0,@Now);
+منافسه لافضل سعر للمستهلك
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U5,@CatFurn,N'Baby Crib + Mattress',N'Convertible crib in white, with organic cotton mattress. Like new.',120,3,DATEADD(DAY,-12,@Now),@Now,@AmmanId,@Abdali,0,80);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=600&h=400&fit=crop',0,@Now);
+جميع الاجهزه المستعمله كفاله المحل لمده 4 سنوات
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U5,@CatPhone,N'Google Pixel 8 Pro 128GB',N'Obsidian, excellent camera, clean Android. With Spigen case.',600,0,DATEADD(DAY,-8,@Now),@Now,@AmmanId,@Abdali,0,175);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=600&h=400&fit=crop',0,@Now);
+افضل خدمة ما بعد البيع
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U5,@CatBook,N'IELTS Prep Books Bundle',N'Cambridge IELTS 15-18, Barrons complete guide. All with answer keys.',40,0,DATEADD(DAY,-5,@Now),@Now,@AmmanId,@Abdali,0,95);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=600&h=400&fit=crop',0,@Now);
+متوفر خدمة التوصيل
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U5,@CatServ,N'Private Math Tutoring',N'University-level calculus and statistics. Online or in-person in Amman. 15 JD/hour.',15,0,DATEADD(DAY,-2,@Now),@Now,@AmmanId,@Abdali,0,50);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=600&h=400&fit=crop',0,@Now);
+متوفر خدمه الدفع عن طريق المحافظ الألكترونيه
 
-    -- =========================================================================
-    -- 6. Posts for User 6 (Tareq – Zarqa) — 6 posts
-    -- =========================================================================
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U6,@CatCar,N'Hyundai Accent 2015',N'Manual, 120K KM, new tires, AC works great. Economical.',7500,0,DATEADD(DAY,-25,@Now),@Now,@ZarqaId,@ZarqaCC,0,180);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=400&fit=crop',0,@Now);
+متوفر خدمه التوصيل للمحافظات
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U6,@CatAppl,N'LG Washing Machine 9KG',N'Front load, steam wash, inverter motor. 2 years old.',200,0,DATEADD(DAY,-20,@Now),@Now,@ZarqaId,@ZarqaCC,0,110);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=600&h=400&fit=crop',0,@Now);
+متوفر خدمه الدفع عند الاستلام
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U6,@CatFurn,N'King Bedroom Set Complete',N'Bed, 2 nightstands, dresser with mirror, wardrobe. Egyptian wood.',500,0,DATEADD(DAY,-15,@Now),@Now,@ZarqaId,@ZarqaCC,0,95);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1540518614846-7eded433c457?w=600&h=400&fit=crop',0,@Now);
+متوفر خدمه الاقساط عن طريق البنوك الاسلاميه
+1 _ البنك العربي الاسلامي
+2_ الاسلامي الاردني
+3_ صفوة الاسلامي
+4 _ بنك القاهرة
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U6,@CatElec,N'JBL Charge 5 Speaker',N'Blue, waterproof, powerful bass. Battery lasts 20 hours.',75,0,DATEADD(DAY,-10,@Now),@Now,@ZarqaId,@ZarqaCC,0,130);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=600&h=400&fit=crop',0,@Now);
+يمكنك التوصل معنا عند طريق الواتساب'),
+(N'mobile-phones-and-tablets-8', N'sample-post-mobile-phones-and-tablets-8@tijarahjo.local', N'سلمى', N'العمري', N'Mobile Phones & Tablets', N'APPLE WATCH S10 ( 46M ) NEW /// ساعه ابل الجيل 10 مقاس 46 ملي الجديد', 259.00, N'العروض الافخم و الاقوى على مستواى المملكة
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U6,@CatRE,N'Shop for Rent in Zarqa Center',N'30sqm commercial shop, ground floor, busy street. 200 JD/month.',200,0,DATEADD(DAY,-6,@Now),@Now,@ZarqaId,@ZarqaCC,0,160);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&h=400&fit=crop',0,@Now);
+منافسه لافضل سعر للمستهلك'),
+(N'vehicles-1', N'sample-post-vehicles-1@tijarahjo.local', N'محمد', N'الطويل', N'Vehicles', N'مازدا CX-9 GT', 23500.00, N'مازدا CX-9 2021 وارد وصيانه تحت كفاله شركه الخياط مالك اول فل كامل فحص كامل عداد قليل بحاله الوكاله
+Mazda CX-9 2021 SKYACTIV G
+الآن لدى معرض ثالث الحرمين - Thalith Al-Harmin
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U6,@CatOther,N'Aquarium 100L with Fish',N'Complete setup: tank, filter, heater, LED light, gravel, and 15 tropical fish.',80,0,DATEADD(DAY,-2,@Now),@Now,@ZarqaId,@ZarqaCC,0,70);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1520301255226-bf5f144451c1?w=600&h=400&fit=crop',0,@Now);
+#مازدا #CX-9 موديل2021 عداد قليل وارد وصيانه شركه الخياط وتحت كفاله الوكالة
 
-    -- =========================================================================
-    -- 7. Posts for User 7 (Nour – Abdoun) — 6 posts
-    -- =========================================================================
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U7,@CatRE,N'Luxury Apartment – Abdoun',N'200sqm, 4BR/3BA, marble floors, 2 balconies, 24/7 security. Furnished.',1200,0,DATEADD(DAY,-28,@Now),@Now,@AmmanId,@Abdoun,0,490);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&h=400&fit=crop',0,@Now),(@PID,'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&h=400&fit=crop',0,@Now);
+السعر : 23.500 الف
+اللون : فيراني ميتاليك
+عداد : 60 الف كيلو
+محرك : 2500cc توين تيربو
+الفحص : كامل ولا اي ملاحظه
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U7,@CatCar,N'Mercedes C200 2021 AMG Line',N'Obsidian Black, AMG body kit, Burmester sound, 20K KM only.',38000,0,DATEADD(DAY,-22,@Now),@Now,@AmmanId,@Abdoun,0,420);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=600&h=400&fit=crop',0,@Now),(@PID,'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600&h=400&fit=crop',0,@Now);
+الاضافات:
+* فتحة سقف
+* جير أوتوماتيك - تيبترونيك
+* عدة أنظمة قيادة: EV / ECO / Normal / Sport
+* هاند بريك كهربائي مع نظام أوتوهولد
+* مقاعد جلدية فاخرة: كهربائية
+* شاشة لمس مع نظام ملاحة
+* منافذ USB، بلوتوث، ونقطة اتصال Wi-Fi، راديو HD
+* نظام Smart Device Link
+* كاميرا خلفية
+* حساسات اصطفاف خلفية واماميه
+* تشغيل ودخول بدون مفتاح (Keyless Go & Entry)
+* نظام مراقبة النقاط العمياء Blind Spot Monitor
+* نظام تغيير السرعات من المقود Paddle Shifters
+* عجلة قيادة كهربائية مع تحكم كامل وأوامر صوتية
+* ماوس للتحكم بالشاشة
+* 7 ركاب عائلي
+* نظام مانع للانزلاق ومثبت سرعة ذكي
+* نظام الكبح التلقائي في حالات الطوارئ
+* أضويه زينون - Matrix LED headlights - كشافات
+* اضويه ليد نهارية Daytime running lights
+* اضويه أمامية وخلفية ليد
+* جنوط قياس 17 انش
+* مرايا كهربائية مع إشارات انعطاف
+* وسائد هوائية
+والعديد من الاضافات لم تذكر
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U7,@CatPC,N'iMac 24" M1 2021',N'Blue, 16GB RAM, 512GB SSD. Includes Magic Keyboard and Trackpad.',1100,0,DATEADD(DAY,-17,@Now),@Now,@AmmanId,@Abdoun,0,230);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=600&h=400&fit=crop',0,@Now);
+موقعنا دوار المدينه الرياضيه _ شارع صرح الشهيد مقابل البنك الأردني الكويتي
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U7,@CatFash,N'Ray-Ban Aviator Sunglasses',N'Original, gold frame, green lens. With case and cloth.',95,0,DATEADD(DAY,-11,@Now),@Now,@AmmanId,@Abdoun,0,140);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&h=400&fit=crop',0,@Now);
+للاستفسار ضمن اوقات الدوام الرسمي من 9ص وحتى 10م عن طريق الاتصال بالهاتف او عن طريق واتساب في اقرب وقت في خدمتكم :'),
+(N'vehicles-2', N'sample-post-vehicles-2@tijarahjo.local', N'إبراهيم', N'الوهيبي', N'Vehicles', N'دايهاتسو كوبن', 8900.00, N'دايهاتسو كوبن 2007 كاملة الأضافات جير عادي مميزة جدا كشف هاردتوب وحدة من 2 بل مملكة كاش او اقساط
+Daihatsu Copen 2007
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U7,@CatFurn,N'Outdoor Patio Set – 4 Chairs + Table',N'Rattan weave, weather resistant, with cushions. Perfect for garden.',350,0,DATEADD(DAY,-7,@Now),@Now,@AmmanId,@Abdoun,0,85);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1600210492493-0946911123ea?w=600&h=400&fit=crop',0,@Now);
+دايهاتسو كوبن موديل 2007
 
-    INSERT INTO dbo.Posts(UserID,CategoryID,PostTitle,PostDescription,Price,Status,CreatedAt,UpdatedAt,CityID,AreaID,IsDeleted,Views) VALUES(@U7,@CatElec,N'AirPods Pro 2nd Generation',N'With MagSafe charging case, active noise cancellation. 3 months old.',150,0,DATEADD(DAY,-1,@Now),@Now,@AmmanId,@Abdoun,0,210);
-    SET @PID=SCOPE_IDENTITY(); INSERT INTO dbo.PostImages(PostID,PostImageURL,IsDeleted,UploadedAt) VALUES(@PID,'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?w=600&h=400&fit=crop',0,@Now);
+وارد الشركة
 
-    COMMIT TRANSACTION;
-    PRINT '50 sample posts with images inserted for 6 users.';
-END TRY
-BEGIN CATCH
-    IF @@TRANCOUNT > 0
-        ROLLBACK TRANSACTION;
-    THROW;
-END CATCH
+محرك 4 سلندر سعة 1300 سي سي دفع امامي قوي و اقتصادي
+
+جير عادي 5 غيار
+
+كاملة الأضافات :
+
+كشف هاردتوب كهرباء - مقاعد جلد طبيعي مدفأة - شاشة - مري كهرباء - Airbag - Abs - مكيف - سنترلوك - صندوق خلفي كهرباء شفط - زجاج كهرباء - bluetooth - جنطات كروم - كشافات امامية - كشاف خلفي للضباب - مفتاح ريموت - سبويلر خلفي - و العديد من الأضافات الأخرى
+
+المركبة مميزة جداً واحدة من اصل 2 بل مملكة
+
+المركبة بحالة ممتازة
+
+لا تحتاج الى نوع من أنواع الصيانة
+
+رسوم ترخيص سنوي 40 دينار رسوم نقل ملكية 100 دينار فقط
+
+امكانية التقسيط عن طريق المعرض مباشرة
+
+قطع الميكانيك من شركة تويوتا و متوفرة
+
+امكانية البيع مع الرقم المميز او بدون
+
+امكانية البدل متوفرة لدينا
+
+السعر على الأقساط دفعة اولى 3800
+600 شهري لمدة سنة - تنازل و رهن
+
+
+معرض المدينة للسيارات City Car
+
+
+المدينة الرياضية مقابل صرح الشهيد
+
+#المدينة_للسيارات'),
+(N'vehicles-3', N'sample-post-vehicles-3@tijarahjo.local', N'ماجد', N'الكثيري', N'Vehicles', N'لينكولن MKZ Black Label', 10700.00, N'لينكون Mkz لون ابيض لؤلؤي فحص 3جيد فل الفل بانوراما لمتيد أعلى صنف بسعر مغري قابل للبدل
+ماتور 2000 قوي واقتصادي دهان نظيف مشيه نخب قير جديد 2019 راكب قبل شهر كلف 1000 دينار تحت الكفاله فل الفل بانوراما جلد لون بني مميز جنط 19 سياره بالكرتونه واقتصاديه وعديد العديد من الاضافات كلو مرفق بالصور .خصوصي اصلي لم تعمل عالتطبيقات'),
+(N'vehicles-4', N'sample-post-vehicles-4@tijarahjo.local', N'أسماء', N'الرويلي', N'Vehicles', N'ميني كونتريمان Cooper S', 13750.00, N'ميني كوبر كانتريمان S مميزة جدا و بحالة الوكالة لونين مع سقف بانوراما و فحص كامل 7 جيد بسعر مغري
+مني كنتريمان كوبر S
+• موديل :- 2014
+• محرك :- 1.6 تيربو.
+• المسافة المقطوعة :- 129,000 كم.
+• اللون :- اسود من الداخل أسود.
+• فحص كامل .
+
+الإضافات :-
+• جير اوتوماتيك تربترونك.
+• سقف بانوراما.
+• مكيف .
+• بلوتوث .
+• تحكم ستيرنج .
+• ركاية وسط .
+• قفل مركزي .
+• كراسي جلد وقماش.
+• جير شفتر.
+• مري طوي.
+• مفتاحين ريموت .
+• جنطات ألمنيوم.
+• أي يو أكس .
+• يو إس بي .
+• بخاخات اضوية .
+• أضوية زينون .
+• دبل اكزوزت .
+• إنارة داخلية بعدة ألوان .
+• كبسة تحويل سبورت .
+• زجاج أمامي خلفي كهرباء.
+• حساسات .
+• كشافات أمامية.
+• ساوند سستم .
+• مري كهربا.
+• جهاز إنذار .
+• اوتو لايت .
+• مانع إنزلاق.
+• بصمة تشغيل .
+• حساس مطر .
+• سي دي.
+• شعارات COOPER S على الجنحان والمرشات.
+• تمشي بالتنكة 180 كم.
+• مرخصة لغاية شهر 11/2026
+• صيانة كاملة ليست بحاجة لأي شيئ..'),
+(N'vehicles-5', N'sample-post-vehicles-5@tijarahjo.local', N'نايف', N'الحمدان', N'Vehicles', N'ماهيندرا KUV100 NXT K6+', 1470.00, N'Mahindra Kuv 2024 امتلكها الان بدفعة اولى 1470 دينار تسليم مفتاح
+امتلكها الان من الوكيل ، بدفعة اولى 1470 دينار تسليم مفتاح بالتعاون مع شركة السماحة للتمويل الاسلامي و بقسط شهري 192 دينار
+
+Mahindra Kuv 2024
+
+السيارة وارد و كفالة الوكيل ( شركة جميل عودة و اولاده ) 3 سنوات او 100,000 كيلو متر ايهما اسبق
+
+محرك :
+1200 سي سي
+بنزين
+
+تقطع بالتنكة 370 كيلو متر
+
+الالوان المتوفرة : سلفر / احمر
+
+
+المواصفات : جير عادي 5 غيار/ مكيف هواء/ تحكم طارة/ اضوية امامية Led/ كشافات ضباب امامية/ حساسات اصطفاف خلفية/ بلوتوث/ زجاج و مري كهرباء/ جنط المنيوم / ايرباج/ بريك Abs
+s'),
+(N'vehicles-6', N'sample-post-vehicles-6@tijarahjo.local', N'غادة', N'الصاعدي', N'Vehicles', N'نيسان باترول LE', 44800.00, N'نيسان باترول 2023 تحت كفاله الشركه بسطامي مالك اول V6 فحص كامل فل كامل بحاله الوكاله
+Nissan Patrol 2023 V6
+الآن لدى معرض ثالث الحرمين - Thalith Al-Harmin
+جيب نيسان باترول 2023
+
+(وارد وصيانه شركه بسطامي وصاحب تحت كفاله الشركه مالك اول )
+
+السعر : 44.800 الف
+عداد : 96 الف كيلو
+اللون : اسود من داخل بيج
+محرك : 4000cc V6
+فحص : كامل ولا اي ملاحظه
+
+(ملاحظه تحت كفاله شركه بسطامي)
+
+الاضافات :
+فتحة سقف/ شاشة امامية/ كاميرا خلفية/ حساسات اصطفاف امامية و خلفية /كراسي جلد بيج وكهرباء/اضوية امامية زينون/ اضوية Led / 7 مقاعد / فورمايكا داخلية/ لوحة تحكم خلفية للمكيف/ كشافات ضباب امامية/ شاشة معلومات/ صندوق خلفي كهرباء / ثلاجة بالوسط/ بصمة تشغيل و دخول/ شاشة معلومات امامية/ دفع رباعي بوضعيات متعددة / عداد ديجيتال/ شاشة للتحكم بانظمة المكيف / ماوس للتحكم بالشاشة / تشغيل عن بعد
+
+Bose sound system نظام صوتي
+Airbags وسائد هوائية
+Bluetooth بلوتوث
+Voice command داعم
+اوامر صوتية
+والعديد من الاضافات...
+
+موقعنا دوار المدينه الرياضيه _ شارع صرح الشهيد مقابل البنك الأردني الكويتي
+
+للاستفسار ضمن اوقات الدوام الرسمي من 10 ص حتى 12 م عن طريق الاتصال بالهاتف او عن طريق واتساب في اقرب وقت في خدمتكم'),
+(N'vehicles-7', N'sample-post-vehicles-7@tijarahjo.local', N'علي', N'الزبيدي', N'Vehicles', N'مرسيدس بنز الفئة-A A 250', 18000.00, N'مرسيدس A250 Sport 2015، ماشية 17 الف كيلو بحالة الوكالة 7 جيد
+للبيع لاسباب شخصية: Mercedes-Benz A250 Sport موديل 2015
+اللون: أزرق فاتح ميتاليك مميز
+الحالة: استعمال محدود جدا
+ماشية فقط:17,000 كم
+بحالة الوكالة
+مالك واحد فقط
+خالية من الحوادث
+وارد الوكالة السعودية
+استخدام شخصي من طبيب متقاعد مع اهتمام وصيانة دورية
+تم تغيير:
+زيت المحرك بشكل دوري مع الفلتر
+البطارية
+باقي السيارة على حالتها الأصلية من الوكالة، جاهزة للفحص بأي مركز
+
+معلومات المركبة:
+
+محرك: 4 سلندر تيربو 2.0 لتر
+القوة: 211 حصان (أداء قوي وسحب ممتاز)
+ناقل الحركة: أوتوماتيك 7 سرعات (Dual Clutch) كلتش ثنائي سلس
+شيفتر على المقود (Paddle Shifters) (شفتات الطارة)
+وضع Economic لتوفير الوقود
+قيادة ناعمة وثبات عالي على السرعات'),
+(N'vehicles-8', N'sample-post-vehicles-8@tijarahjo.local', N'تهاني', N'المالكي', N'Vehicles', N'لاند روفر رينج روفر Vogue', 30000.00, N'تاجير رينج روفر فوج /سبورت / دفندر موديل للايجار 2025/2022بأفضل الاسعار اقوى العروض
+تأجير جميع انواع السيارات الفارهه 2025 استقبال من والى المطار والجسور والمعابر تجهيز جميع المؤتمرات خدمه رجال اعمال خدمه سائق خدمه vipدقه بل عمل وفي المواعيد لسنا الواحدون ولكننا المميزون
+Zaid rent a car');
+
+;WITH NumberedSamplePosts AS
+(
+    SELECT
+        SourceKey,
+        ROW_NUMBER() OVER (ORDER BY SourceKey) AS RowNumber
+    FROM #SamplePosts
+)
+UPDATE sp
+SET
+    CityName = CASE
+        WHEN sp.SourceKey LIKE N'mobile-phones-and-tablets-%' THEN N'Irbid'
+        ELSE N'Amman'
+    END,
+    AreaName = CASE
+        WHEN sp.SourceKey = N'books-and-stationery-5' THEN N'East Amman'
+        WHEN sp.SourceKey = N'books-and-stationery-7' THEN N'Marj Al Hamam'
+        WHEN sp.SourceKey LIKE N'books-and-stationery-%' THEN N'Jubaiha'
+        WHEN sp.SourceKey LIKE N'computers-and-laptops-%' THEN N'Gardens'
+        WHEN sp.SourceKey LIKE N'mobile-phones-and-tablets-%' THEN N'City Center'
+        WHEN sp.SourceKey LIKE N'vehicles-%' THEN N'Shmeisani'
+        ELSE N'Jubaiha'
+    END,
+    Phone = N'079' + RIGHT(N'0000000' + CONVERT(NVARCHAR(7), numbered.RowNumber), 7)
+FROM #SamplePosts AS sp
+INNER JOIN NumberedSamplePosts AS numbered
+    ON numbered.SourceKey = sp.SourceKey;
+
+INSERT INTO #SampleImages
+    (SourceKey, PostImageURL, SortOrder)
+VALUES
+(N'books-and-stationery-1', N'/uploads/post-images/sample-books-and-stationery-1-8e7c1b18ae9b.webp', 1),
+(N'books-and-stationery-1', N'/uploads/post-images/sample-books-and-stationery-1-62d3068a4580.webp', 2),
+(N'books-and-stationery-1', N'/uploads/post-images/sample-books-and-stationery-1-1407b1a49bdb.webp', 3),
+(N'books-and-stationery-1', N'/uploads/post-images/sample-books-and-stationery-1-288811358e26.webp', 4),
+(N'books-and-stationery-1', N'/uploads/post-images/sample-books-and-stationery-1-fb2e568ef992.webp', 5),
+(N'books-and-stationery-2', N'/uploads/post-images/sample-books-and-stationery-2-03cc50c4ec82.webp', 1),
+(N'books-and-stationery-2', N'/uploads/post-images/sample-books-and-stationery-2-8a063faf0216.webp', 2),
+(N'books-and-stationery-2', N'/uploads/post-images/sample-books-and-stationery-2-efc4a5ab7f15.webp', 3),
+(N'books-and-stationery-3', N'/uploads/post-images/sample-books-and-stationery-3-4fb6113578a2.webp', 1),
+(N'books-and-stationery-3', N'/uploads/post-images/sample-books-and-stationery-3-7c676156d4c9.webp', 2),
+(N'books-and-stationery-3', N'/uploads/post-images/sample-books-and-stationery-3-7ca462a1338d.webp', 3),
+(N'books-and-stationery-3', N'/uploads/post-images/sample-books-and-stationery-3-58c62e3e6b0c.webp', 4),
+(N'books-and-stationery-3', N'/uploads/post-images/sample-books-and-stationery-3-d8d5e4c4d6c7.webp', 5),
+(N'books-and-stationery-4', N'/uploads/post-images/sample-books-and-stationery-4-3d5a948f09fa.webp', 1),
+(N'books-and-stationery-4', N'/uploads/post-images/sample-books-and-stationery-4-d5bead8c1f2e.webp', 2),
+(N'books-and-stationery-4', N'/uploads/post-images/sample-books-and-stationery-4-e97c4cee550a.webp', 3),
+(N'books-and-stationery-4', N'/uploads/post-images/sample-books-and-stationery-4-ed269e46663c.webp', 4),
+(N'books-and-stationery-4', N'/uploads/post-images/sample-books-and-stationery-4-fddc57f80560.webp', 5),
+(N'books-and-stationery-5', N'/uploads/post-images/sample-books-and-stationery-5-efa49f2f2b04.webp', 1),
+(N'books-and-stationery-5', N'/uploads/post-images/sample-books-and-stationery-5-f56582c0bb6e.webp', 2),
+(N'books-and-stationery-6', N'/uploads/post-images/sample-books-and-stationery-6-2ad665a7d863.webp', 1),
+(N'books-and-stationery-6', N'/uploads/post-images/sample-books-and-stationery-6-6afc2fd1055f.webp', 2),
+(N'books-and-stationery-6', N'/uploads/post-images/sample-books-and-stationery-6-3733bdf3f8b8.webp', 3),
+(N'books-and-stationery-6', N'/uploads/post-images/sample-books-and-stationery-6-7976b521bb56.webp', 4),
+(N'books-and-stationery-6', N'/uploads/post-images/sample-books-and-stationery-6-d1f956befc8a.webp', 5),
+(N'books-and-stationery-7', N'/uploads/post-images/sample-books-and-stationery-7-5a02d5c070bf.webp', 1),
+(N'books-and-stationery-7', N'/uploads/post-images/sample-books-and-stationery-7-44ba97be6ae7.webp', 2),
+(N'books-and-stationery-7', N'/uploads/post-images/sample-books-and-stationery-7-b025f95e799a.webp', 3),
+(N'books-and-stationery-7', N'/uploads/post-images/sample-books-and-stationery-7-e0cfacf75ffc.webp', 4),
+(N'books-and-stationery-8', N'/uploads/post-images/sample-books-and-stationery-8-9a50fb7af466.webp', 1),
+(N'computers-and-laptops-1', N'/uploads/post-images/sample-computers-and-laptops-1-a8b7146e7fa6.webp', 1),
+(N'computers-and-laptops-2', N'/uploads/post-images/sample-computers-and-laptops-2-09bc895788dd.webp', 1),
+(N'computers-and-laptops-2', N'/uploads/post-images/sample-computers-and-laptops-2-192aa6f2245b.webp', 2),
+(N'computers-and-laptops-2', N'/uploads/post-images/sample-computers-and-laptops-2-d0a28a4083bc.webp', 3),
+(N'computers-and-laptops-2', N'/uploads/post-images/sample-computers-and-laptops-2-f28927651ac1.webp', 4),
+(N'computers-and-laptops-3', N'/uploads/post-images/sample-computers-and-laptops-3-1a10d846b7a9.webp', 1),
+(N'computers-and-laptops-3', N'/uploads/post-images/sample-computers-and-laptops-3-1e9d3907de53.webp', 2),
+(N'computers-and-laptops-3', N'/uploads/post-images/sample-computers-and-laptops-3-52066efbbfce.webp', 3),
+(N'computers-and-laptops-4', N'/uploads/post-images/sample-computers-and-laptops-4-846633a0f9f0.webp', 1),
+(N'computers-and-laptops-5', N'/uploads/post-images/sample-computers-and-laptops-5-e4d6c4f8f92f.webp', 1),
+(N'computers-and-laptops-6', N'/uploads/post-images/sample-computers-and-laptops-6-022538ed1030.webp', 1),
+(N'mobile-phones-and-tablets-1', N'/uploads/post-images/sample-mobile-phones-and-tablets-1-58e2ff2c0f36.webp', 1),
+(N'mobile-phones-and-tablets-2', N'/uploads/post-images/sample-mobile-phones-and-tablets-2-28fa3f706119.webp', 1),
+(N'mobile-phones-and-tablets-3', N'/uploads/post-images/sample-mobile-phones-and-tablets-3-8f7052e36c3b.webp', 1),
+(N'mobile-phones-and-tablets-3', N'/uploads/post-images/sample-mobile-phones-and-tablets-3-30a41005081d.webp', 2),
+(N'mobile-phones-and-tablets-4', N'/uploads/post-images/sample-mobile-phones-and-tablets-4-0d380a89096d.webp', 1),
+(N'mobile-phones-and-tablets-4', N'/uploads/post-images/sample-mobile-phones-and-tablets-4-509da03e5188.webp', 2),
+(N'mobile-phones-and-tablets-5', N'/uploads/post-images/sample-mobile-phones-and-tablets-5-6dfbd5fb2d23.webp', 1),
+(N'mobile-phones-and-tablets-5', N'/uploads/post-images/sample-mobile-phones-and-tablets-5-ca4a4856ec32.webp', 2),
+(N'mobile-phones-and-tablets-6', N'/uploads/post-images/sample-mobile-phones-and-tablets-6-42f7924e3142.webp', 1),
+(N'mobile-phones-and-tablets-6', N'/uploads/post-images/sample-mobile-phones-and-tablets-6-647bcd2e872a.webp', 2),
+(N'mobile-phones-and-tablets-7', N'/uploads/post-images/sample-mobile-phones-and-tablets-7-804f40a12266.webp', 1),
+(N'mobile-phones-and-tablets-8', N'/uploads/post-images/sample-mobile-phones-and-tablets-8-0d4ece60f81a.webp', 1),
+(N'vehicles-1', N'/uploads/post-images/sample-vehicles-1-1be4043eb080.webp', 1),
+(N'vehicles-1', N'/uploads/post-images/sample-vehicles-1-8a2c8dbf5207.webp', 2),
+(N'vehicles-1', N'/uploads/post-images/sample-vehicles-1-72d6b86c3ad7.webp', 3),
+(N'vehicles-1', N'/uploads/post-images/sample-vehicles-1-738c04bf4247.webp', 4),
+(N'vehicles-1', N'/uploads/post-images/sample-vehicles-1-f0ce92c024f1.webp', 5),
+(N'vehicles-2', N'/uploads/post-images/sample-vehicles-2-685f0683dc7e.webp', 1),
+(N'vehicles-2', N'/uploads/post-images/sample-vehicles-2-a52896cf4a2b.webp', 2),
+(N'vehicles-2', N'/uploads/post-images/sample-vehicles-2-ab1e4df8e9c4.webp', 3),
+(N'vehicles-2', N'/uploads/post-images/sample-vehicles-2-ad8de083a1ce.webp', 4),
+(N'vehicles-3', N'/uploads/post-images/sample-vehicles-3-3a9d22ff4e08.webp', 1),
+(N'vehicles-3', N'/uploads/post-images/sample-vehicles-3-33e03a41ee2a.webp', 2),
+(N'vehicles-3', N'/uploads/post-images/sample-vehicles-3-e0b0bfb82c0e.webp', 3),
+(N'vehicles-3', N'/uploads/post-images/sample-vehicles-3-efce5eabef80.webp', 4),
+(N'vehicles-4', N'/uploads/post-images/sample-vehicles-4-83e0241f34db.webp', 1),
+(N'vehicles-4', N'/uploads/post-images/sample-vehicles-4-bc2f3720c1f7.webp', 2),
+(N'vehicles-5', N'/uploads/post-images/sample-vehicles-5-14d8adf458c3.webp', 1),
+(N'vehicles-5', N'/uploads/post-images/sample-vehicles-5-8408a7b73cdb.webp', 2),
+(N'vehicles-6', N'/uploads/post-images/sample-vehicles-6-68aecd81a41f.webp', 1),
+(N'vehicles-6', N'/uploads/post-images/sample-vehicles-6-732705a6b851.webp', 2),
+(N'vehicles-7', N'/uploads/post-images/sample-vehicles-7-30dab575c252.webp', 1),
+(N'vehicles-7', N'/uploads/post-images/sample-vehicles-7-27369d9fc5c8.webp', 2),
+(N'vehicles-8', N'/uploads/post-images/sample-vehicles-8-a8b92afe4968.webp', 1),
+(N'vehicles-8', N'/uploads/post-images/sample-vehicles-8-d553e081d7f7.webp', 2);
+
+IF EXISTS
+(
+    SELECT 1
+    FROM #SamplePosts AS sp
+    LEFT JOIN dbo.Categories AS c
+        ON c.CategoryName = sp.CategoryName
+       AND c.IsDeleted = 0
+    WHERE c.CategoryID IS NULL
+)
+BEGIN
+    DECLARE @MissingCategories NVARCHAR(MAX) =
+        STUFF((
+            SELECT DISTINCT N', ' + sp.CategoryName
+            FROM #SamplePosts AS sp
+            LEFT JOIN dbo.Categories AS c
+                ON c.CategoryName = sp.CategoryName
+               AND c.IsDeleted = 0
+            WHERE c.CategoryID IS NULL
+            FOR XML PATH(''), TYPE
+        ).value('.', 'NVARCHAR(MAX)'), 1, 2, N'');
+
+    THROW 51000, @MissingCategories, 1;
+END;
+
+IF EXISTS
+(
+    SELECT 1
+    FROM #SamplePosts AS sp
+    LEFT JOIN dbo.Cities AS ct
+        ON ct.CityName = sp.CityName
+    LEFT JOIN dbo.Areas AS a
+        ON a.CityID = ct.CityID
+       AND a.AreaName = sp.AreaName
+    WHERE ct.CityID IS NULL
+       OR a.AreaID IS NULL
+)
+BEGIN
+    DECLARE @MissingLocations NVARCHAR(MAX) =
+        STUFF((
+            SELECT DISTINCT N', ' + sp.CityName + N' / ' + sp.AreaName
+            FROM #SamplePosts AS sp
+            LEFT JOIN dbo.Cities AS ct
+                ON ct.CityName = sp.CityName
+            LEFT JOIN dbo.Areas AS a
+                ON a.CityID = ct.CityID
+               AND a.AreaName = sp.AreaName
+            WHERE ct.CityID IS NULL
+               OR a.AreaID IS NULL
+            FOR XML PATH(''), TYPE
+        ).value('.', 'NVARCHAR(MAX)'), 1, 2, N'');
+
+    THROW 51002, @MissingLocations, 1;
+END;
+
+DECLARE @UserRoleID INT = (SELECT TOP (1) RoleID FROM dbo.Roles WHERE RoleName = N'User' AND IsDeleted = 0 ORDER BY RoleID);
+IF @UserRoleID IS NULL
+BEGIN
+    THROW 51001, 'User role was not found.', 1;
+END;
+
+MERGE dbo.Users AS target
+USING
+(
+        SELECT DISTINCT
+            UserEmail,
+            Phone,
+            FirstName,
+            LastName,
+            ct.CityID,
+        a.AreaID
+    FROM #SamplePosts AS sp
+    INNER JOIN dbo.Cities AS ct
+        ON ct.CityName = sp.CityName
+    INNER JOIN dbo.Areas AS a
+        ON a.CityID = ct.CityID
+       AND a.AreaName = sp.AreaName
+) AS source
+ON target.Email = source.UserEmail
+WHEN MATCHED THEN
+    UPDATE SET
+        target.FirstName = source.FirstName,
+        target.LastName = source.LastName,
+        target.Phone = source.Phone,
+        target.CityID = source.CityID,
+        target.AreaID = source.AreaID,
+        target.Status = 1,
+        target.RoleID = @UserRoleID,
+        target.IsDeleted = 0,
+        target.UpdatedAt = SYSUTCDATETIME()
+WHEN NOT MATCHED BY TARGET THEN
+    INSERT
+        (HashedPassword, Email, FirstName, LastName, Phone, CityID, AreaID, JoinDate, UpdatedAt, Status, RoleID, IsDeleted)
+    VALUES
+        (N'DISABLED_FAKE_SAMPLE_USER', source.UserEmail, source.FirstName, source.LastName, source.Phone, source.CityID, source.AreaID, SYSUTCDATETIME(), SYSUTCDATETIME(), 1, @UserRoleID, 0);
+
+MERGE dbo.Posts AS target
+USING
+(
+    SELECT
+        sp.SourceKey,
+        u.UserID,
+        c.CategoryID,
+        sp.PostTitle,
+        sp.PostDescription,
+        sp.Price,
+        ct.CityID,
+        a.AreaID
+    FROM #SamplePosts AS sp
+    INNER JOIN dbo.Users AS u
+        ON u.Email = sp.UserEmail
+       AND u.IsDeleted = 0
+    INNER JOIN dbo.Categories AS c
+        ON c.CategoryName = sp.CategoryName
+       AND c.IsDeleted = 0
+    INNER JOIN dbo.Cities AS ct
+        ON ct.CityName = sp.CityName
+    INNER JOIN dbo.Areas AS a
+        ON a.CityID = ct.CityID
+       AND a.AreaName = sp.AreaName
+) AS source
+ON target.UserID = source.UserID
+AND target.IsDeleted = 0
+WHEN MATCHED THEN
+    UPDATE SET
+        target.CategoryID = source.CategoryID,
+        target.PostTitle = source.PostTitle,
+        target.PostDescription = source.PostDescription,
+        target.Price = source.Price,
+        target.CityID = source.CityID,
+        target.AreaID = source.AreaID,
+        target.Status = 0,
+        target.UpdatedAt = SYSUTCDATETIME()
+WHEN NOT MATCHED BY TARGET THEN
+    INSERT
+        (UserID, CategoryID, PostTitle, PostDescription, Price, CityID, AreaID, Status, CreatedAt, UpdatedAt, IsDeleted, Views)
+    VALUES
+        (source.UserID, source.CategoryID, source.PostTitle, source.PostDescription, source.Price, source.CityID, source.AreaID, 0, SYSUTCDATETIME(), SYSUTCDATETIME(), 0, 0);
+
+MERGE dbo.PostImages AS target
+USING
+(
+    SELECT
+        p.PostID,
+        si.PostImageURL,
+        si.SortOrder
+    FROM #SampleImages AS si
+    INNER JOIN #SamplePosts AS sp
+        ON sp.SourceKey = si.SourceKey
+    INNER JOIN dbo.Users AS u
+        ON u.Email = sp.UserEmail
+       AND u.IsDeleted = 0
+    INNER JOIN dbo.Posts AS p
+        ON p.UserID = u.UserID
+       AND p.IsDeleted = 0
+) AS source
+ON target.PostID = source.PostID
+AND target.PostImageURL = source.PostImageURL
+WHEN MATCHED THEN
+    UPDATE SET
+        target.IsDeleted = 0
+WHEN NOT MATCHED BY TARGET THEN
+    INSERT
+        (PostID, PostImageURL, UploadedAt, IsDeleted)
+    VALUES
+        (source.PostID, source.PostImageURL, SYSUTCDATETIME(), 0);
+
+COMMIT TRANSACTION;
+
+SELECT
+    (SELECT COUNT(*) FROM #SamplePosts) AS ImportedPosts,
+    (SELECT COUNT(*) FROM #SampleImages) AS ImportedImages,
+    (SELECT COUNT(*) FROM dbo.Users WHERE Email LIKE N'sample-post-%@tijarahjo.local' AND IsDeleted = 0) AS SampleUsersInDatabase,
+    (SELECT COUNT(*) FROM dbo.Posts AS p INNER JOIN dbo.Users AS u ON u.UserID = p.UserID WHERE u.Email LIKE N'sample-post-%@tijarahjo.local' AND p.IsDeleted = 0) AS SamplePostsInDatabase,
+    (SELECT COUNT(*) FROM dbo.Posts AS p INNER JOIN dbo.Users AS u ON u.UserID = p.UserID WHERE u.Email LIKE N'sample-post-%@tijarahjo.local' AND p.CityID IS NOT NULL AND p.AreaID IS NOT NULL AND p.IsDeleted = 0) AS SamplePostsWithLocation,
+    (SELECT COUNT(*) FROM dbo.Posts AS p INNER JOIN dbo.Users AS u ON u.UserID = p.UserID INNER JOIN dbo.Categories AS c ON c.CategoryID = p.CategoryID WHERE u.Email LIKE N'sample-post-%@tijarahjo.local' AND c.CategoryName = N'Books & Stationery' AND p.IsDeleted = 0) AS SampleBookPostsInDatabase;
 GO

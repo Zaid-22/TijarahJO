@@ -249,6 +249,7 @@ export function CategoriesManagement() {
           }
         }}
         title="Edit Category"
+        description="Update this post category."
         saveLabel="Save Changes"
         idPrefix="edit-category"
         formData={formData}

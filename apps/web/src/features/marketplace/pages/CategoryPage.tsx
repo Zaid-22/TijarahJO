@@ -32,6 +32,38 @@ interface CategoryPageProps {
   onRequireAuth?: () => void;
 }
 
+const CATEGORY_STOP_WORDS = new Set(["and"]);
+
+const toCategoryMatchKey = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+const categoryMatchesRequest = (category: string, request: string): boolean => {
+  const categoryKey = toCategoryMatchKey(category);
+  const requestKey = toCategoryMatchKey(request);
+
+  if (!categoryKey || !requestKey) {
+    return false;
+  }
+  if (categoryKey === requestKey) {
+    return true;
+  }
+
+  const categoryTokens = new Set(categoryKey.split(" "));
+  const requestedTokens = requestKey
+    .split(" ")
+    .filter((token) => token.length > 2 && !CATEGORY_STOP_WORDS.has(token));
+
+  return (
+    requestedTokens.length > 0 &&
+    requestedTokens.every((token) => categoryTokens.has(token))
+  );
+};
+
 export function CategoryPage({
   categoryName,
   onBack,
@@ -51,10 +83,10 @@ export function CategoryPage({
     { sortBy: "views", sortOrder: "desc" },
   );
 
-  const normalizedCategoryName = categoryName.trim().toLowerCase();
   const currentCategory = categories.find(
-    (category) => category.name.trim().toLowerCase() === normalizedCategoryName,
+    (category) => categoryMatchesRequest(category.name, categoryName),
   );
+  const resolvedCategoryName = currentCategory?.name || categoryName;
   const displayCategoryName = currentCategory
     ? resolveCategoryName(currentCategory, language)
     : categoryName;
@@ -62,12 +94,12 @@ export function CategoryPage({
   const filteredPosts = useMemo(() => {
     const categoryPosts = posts.filter(
       (p) =>
-        p.category.trim().toLowerCase() === normalizedCategoryName &&
+        categoryMatchesRequest(p.category, resolvedCategoryName) &&
         p.status !== "SOLD" &&
         p.status !== "DELETED",
     );
     return categoryPosts;
-  }, [posts, normalizedCategoryName]);
+  }, [posts, resolvedCategoryName]);
 
   const sortedPosts = useMemo(() => {
     let results = [...filteredPosts];

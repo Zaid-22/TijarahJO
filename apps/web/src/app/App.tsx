@@ -7,6 +7,7 @@ import {
 } from "react";
 import { SearchProvider, useSearch } from "../contexts/SearchContext";
 import { CompareProvider } from "../contexts/CompareContext";
+import { useCompare } from "../contexts/CompareContext";
 import {
   AppSettingsProvider,
   useAppSettings,
@@ -194,6 +195,7 @@ export default function App() {
 }
 
 function AppContent() {
+  const { compareCount } = useCompare();
   const navigate = useNavigate();
   const location = useLocation();
   const {
@@ -360,6 +362,7 @@ function AppContent() {
 
   const shouldShowComparePanel = 
     isAuthenticated && !isAuthRoute && !COMPARISON_EXCLUDED_SEGMENTS.has(primarySegment);
+  const isComparePanelVisible = shouldShowComparePanel && compareCount > 0;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -382,7 +385,7 @@ function AppContent() {
           <Footer language={language} />
         </Suspense>
       ) : null}
-      <ScrollToTop />
+      <ScrollToTop avoidBottomOverlay={isComparePanelVisible} />
       {shouldShowComparePanel && <ComparePanel />}
     </div>
   );

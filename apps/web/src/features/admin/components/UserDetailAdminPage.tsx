@@ -1,6 +1,19 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, User, Mail, Phone, MapPin, Calendar } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import {
+  ArrowLeft,
+  Ban,
+  Calendar,
+  ExternalLink,
+  Mail,
+  MapPin,
+  MessageSquare,
+  Phone,
+  ShieldBan,
+  User,
+  UserCheck,
+} from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "../../../shared/ui/button";
 import {
   Card,
@@ -14,37 +27,58 @@ import { AdminUserDetails } from "../../../services/api/admin";
 import { LoadingState } from "../../../shared/ui/loading-state";
 import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
 import { formatCompactDate } from "../../../shared/lib/dateTime";
+import { SuspendUserDialog } from "./users/SuspendUserDialog";
+import { logger } from "../../../shared/lib/logger";
+import { emitAuthSessionChanged } from "../../../contexts/authContextUtils";
+import { APP_ROUTE_BUILDERS } from "../../../app/routes/routeConfig";
+import {
+  buildCurrentPath,
+  resolveBackPathFromLocationState,
+} from "../../../shared/lib/backNavigation";
 
 export function UserDetailAdminPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [userDetails, setUserDetails] = useState<AdminUserDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
+  const [suspendDurationHours, setSuspendDurationHours] = useState("24");
+  const [isSuspending, setIsSuspending] = useState(false);
+
+  const fetchDetails = useCallback(async () => {
+    if (!id) return;
+
+    try {
+      setIsLoading(true);
+      setLoadError(null);
+      const details = await api.admin.getUserDetails(parseInt(id, 10));
+
+      if (details) {
+        setUserDetails(details);
+      } else {
+        setLoadError("User not found.");
+      }
+    } catch (error) {
+      logger.warn("[UserDetailAdminPage] Failed to fetch user details", error);
+      setLoadError("Failed to fetch user details.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [id]);
 
   useEffect(() => {
-    const fetchDetails = async () => {
-      if (!id) return;
-
-      try {
-        setIsLoading(true);
-        setLoadError(null);
-        const details = await api.admin.getUserDetails(parseInt(id, 10));
-
-        if (details) {
-          setUserDetails(details);
-        } else {
-          setLoadError("User not found.");
-        }
-      } catch (error) {
-        setLoadError("Failed to fetch user details.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     void fetchDetails();
-  }, [id]);
+  }, [fetchDetails]);
+
+  const currentPath = buildCurrentPath(location.pathname, location.search);
+  const backPath = resolveBackPathFromLocationState({
+    locationState: location.state,
+    currentPath,
+    fallbackPath: "/admin/users",
+  });
+  const handleBack = () => navigate(backPath);
 
   if (isLoading) {
     return (
@@ -60,7 +94,7 @@ export function UserDetailAdminPage() {
       <div className="space-y-4">
         <Button
           variant="ghost"
-          onClick={() => navigate("/admin/users")}
+          onClick={handleBack}
           className="mb-4"
         >
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Users
@@ -73,25 +107,142 @@ export function UserDetailAdminPage() {
   }
 
   const { user, recentPosts, recentReviews } = userDetails;
+  const userId = String(user.id || user.userID || id || "");
+  const displayName = `${String(user.firstName || "")} ${String(user.lastName || "")}`.trim() || String(user.email || `User #${userId}`);
+  const suspendedUntil = user.suspendedUntil
+    ? new Date(user.suspendedUntil)
+    : null;
+  const isTimedSuspended =
+    user.status === 1 &&
+    suspendedUntil !== null &&
+    !Number.isNaN(suspendedUntil.getTime()) &&
+    suspendedUntil.getTime() > Date.now();
+  const isEnabled = user.status === 1;
+  const isActive = isEnabled && !isTimedSuspended;
+
+  const handleStatusChange = async (nextStatus: "active" | "banned") => {
+    if (!userId) return;
+
+    try {
+      const success = await api.users.updateUserStatus(userId, nextStatus);
+      if (success) {
+        emitAuthSessionChanged();
+        toast.success(
+          nextStatus === "active"
+            ? `User ${isTimedSuspended ? "unsuspended" : "activated"}`
+            : "User banned",
+        );
+        await fetchDetails();
+      } else {
+        toast.error("Failed to update user status");
+      }
+    } catch (error) {
+      logger.warn("[UserDetailAdminPage] Failed to update user status", error);
+      toast.error("Error updating user status");
+    }
+  };
+
+  const handleSuspendUser = async () => {
+    if (!userId) return;
+    const durationHours =
+      suspendDurationHours === "null" ? null : Number(suspendDurationHours);
+
+    setIsSuspending(true);
+    try {
+      const result = await api.admin.suspendUser(
+        parseInt(userId, 10),
+        durationHours,
+      );
+
+      if (result.success) {
+        toast.success(result.message ?? "User suspended successfully");
+        setSuspendDialogOpen(false);
+        await fetchDetails();
+      } else {
+        toast.error(result.message ?? "Failed to suspend user");
+      }
+    } catch (error) {
+      logger.warn("[UserDetailAdminPage] Suspend user failed", error);
+      toast.error("Failed to suspend user");
+    } finally {
+      setIsSuspending(false);
+    }
+  };
 
   return (
     <div className="space-y-6 pb-12">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Back to Users"
-          onClick={() => navigate("/admin/users")}
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          User Details{" "}
-          <span className="text-muted-foreground font-normal text-lg">
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            #{String(user.id || (user as any).userID)}
-          </span>
-        </h1>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Back to Users"
+            onClick={handleBack}
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            User Details{" "}
+            <span className="text-muted-foreground font-normal text-lg">
+              #{userId}
+            </span>
+          </h1>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              navigate(APP_ROUTE_BUILDERS.sellerProfile(userId), {
+                state: { fromPath: currentPath },
+              })
+            }
+          >
+            <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+            Open Profile
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/admin/comments?userId=${userId}`)}
+          >
+            <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
+            Recent Comments
+          </Button>
+          {isEnabled && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-amber-300 text-amber-700 hover:bg-amber-50"
+              onClick={() => {
+                setSuspendDurationHours("24");
+                setSuspendDialogOpen(true);
+              }}
+            >
+              <ShieldBan className="w-3.5 h-3.5 mr-1.5" />
+              {isTimedSuspended ? "Change Suspension" : "Suspend"}
+            </Button>
+          )}
+          {isActive ? (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => void handleStatusChange("banned")}
+            >
+              <Ban className="w-3.5 h-3.5 mr-1.5" />
+              Ban
+            </Button>
+          ) : (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => void handleStatusChange("active")}
+            >
+              <UserCheck className="w-3.5 h-3.5 mr-1.5" />
+              {isTimedSuspended ? "Unsuspend" : "Activate"}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -157,12 +308,16 @@ export function UserDetailAdminPage() {
                 {user.roleID === 1 ? "Admin" : "User"}
               </Badge>
               <Badge
-                variant={user.status === 1 ? "outline" : "destructive"}
+                variant={isActive ? "outline" : "destructive"}
                 className={
-                  user.status === 1 ? "border-primary/30 text-primary" : ""
+                  isActive ? "border-primary/30 text-primary" : ""
                 }
               >
-                {user.status === 1 ? "Active" : "Banned"}
+                {isTimedSuspended
+                  ? `Suspended until ${suspendedUntil!.toLocaleString()}`
+                  : isActive
+                    ? "Active"
+                    : "Banned"}
               </Badge>
             </div>
           </CardContent>
@@ -189,8 +344,8 @@ export function UserDetailAdminPage() {
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {recentPosts.map((post: any) => (
                     <div
-                      key={post.postId}
-                      className="py-3 flex justify-between items-center"
+                      key={post.postID || post.postId}
+                      className="py-3 flex justify-between items-center gap-3"
                     >
                       <div>
                         <div className="font-medium text-sm">
@@ -201,9 +356,24 @@ export function UserDetailAdminPage() {
                           {formatCompactDate(post.createdAt)}
                         </div>
                       </div>
-                      <Badge variant="outline">
-                        {post.status === 0 ? "Active" : "Blocked"}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">
+                          {post.status === 0 ? "Active" : "Blocked"}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            navigate(
+                              APP_ROUTE_BUILDERS.postDetails(
+                                String(post.postID || post.postId),
+                              ),
+                            )
+                          }
+                        >
+                          Open
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -250,6 +420,16 @@ export function UserDetailAdminPage() {
           </Card>
         </div>
       </div>
+
+      <SuspendUserDialog
+        open={suspendDialogOpen}
+        onOpenChange={setSuspendDialogOpen}
+        userName={displayName}
+        durationHours={suspendDurationHours}
+        onDurationChange={setSuspendDurationHours}
+        onSuspend={() => void handleSuspendUser()}
+        isSuspending={isSuspending}
+      />
     </div>
   );
 }

@@ -58,8 +58,8 @@ export function buildUnifiedProfileLabels(
     reviews: isRTL ? "التقييمات" : "Reviews",
     reviewCountWord: isRTL ? "تقييم" : "reviews",
     newSeller: isRTL ? "جديد" : "New",
-    chatWithSeller: isRTL ? "الدردشة مع البائع" : "Chat with Seller",
-    callSeller: isRTL ? "اتصل بالبائع" : "Call Seller",
+    chatWithSeller: isRTL ? "دردشة" : "Chat",
+    callSeller: isRTL ? "اتصال" : "Call",
     call: isRTL ? "اتصال" : "Call",
     activeListings: normalizeLabel(
       t.activeListings,

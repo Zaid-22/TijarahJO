@@ -15,6 +15,7 @@ import { Button } from "../../../../shared/ui/button";
 import { Input } from "../../../../shared/ui/input";
 import { Label } from "../../../../shared/ui/label";
 import { toast } from "sonner";
+import { resolveBannerColor } from "../../../home/components/heroBannerData";
 
 export type BannerFormState = {
   title: string;
@@ -41,8 +42,8 @@ export const DEFAULT_BANNER_FORM_STATE: BannerFormState = {
   buttonText: "Learn More",
   buttonTextAr: "اعرف المزيد",
   imageUrl: "",
-  bgClass: "bg-background",
-  textClass: "text-foreground",
+  bgClass: "\x231e293b",
+  textClass: "\x23ffffff",
   altText: "",
   altTextAr: "",
   linkUrl: "",
@@ -95,8 +96,12 @@ export function BannerForm({
     }
   };
 
-  const bgPreviewStyle = { background: bannerForm.bgClass || "\x231e293b" };
-  const textPreviewStyle = { background: bannerForm.textClass || "\x23ffffff" };
+  const bgPreviewStyle = {
+    background: resolveBannerColor(bannerForm.bgClass) || "#1e293b",
+  };
+  const textPreviewStyle = {
+    background: resolveBannerColor(bannerForm.textClass) || "#ffffff",
+  };
 
   return (
     <Card className="border-primary/30 shadow-md">
@@ -270,7 +275,7 @@ export function BannerForm({
                 className="font-mono"
               />
               <div
-                className="h-10 w-16 rounded-md border border-border flex-shrink-0"
+                className="h-10 w-16 rounded-md border border-border shrink-0"
                 style={bgPreviewStyle}
                 title="Color preview"
               />
@@ -304,7 +309,7 @@ export function BannerForm({
                 className="font-mono"
               />
               <div
-                className="h-10 w-16 rounded-md border border-border flex-shrink-0"
+                className="h-10 w-16 rounded-md border border-border shrink-0"
                 style={textPreviewStyle}
                 title="Text color preview"
               />

@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Phone } from "lucide-react";
+import { useState, useCallback, useMemo } from "react";
 import { EditPostDialog } from "../../features/marketplace/components/EditPostDialog";
 import {
   AlertDialog,
@@ -24,6 +23,15 @@ import type {
 } from "../../app/routes/usePostActions";
 
 type RemoveReason = "sold" | "no_longer_available" | "mistake" | "other";
+
+/** Detect if the current device is a phone (capable of making calls). */
+function isMobilePhone(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return /Android.*Mobile|iPhone|iPod|Windows Phone|BlackBerry|Opera Mini|IEMobile/i.test(
+    ua,
+  );
+}
 
 interface PostActionDialogsProps {
   language: Language;
@@ -63,6 +71,50 @@ export function PostActionDialogs({
   );
   const [otherText, setOtherText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const isPhone = useMemo(() => isMobilePhone(), []);
+  const phoneNumber = (sellerPhone || post.phone || "").trim();
+  const hasPhoneNumber = phoneNumber.length > 0;
+  const unavailablePhoneLabel = language === "ar" ? "غير متوفر" : "Unavailable";
+  const unavailablePhoneMessage =
+    language === "ar"
+      ? "رقم الهاتف غير متوفر لهذا البائع"
+      : "Phone number is not available for this seller";
+
+  const handlePhoneClick = useCallback(
+    async (e: React.MouseEvent) => {
+      if (!hasPhoneNumber) {
+        e.preventDefault();
+        return;
+      }
+
+      if (isPhone) {
+        // On phones, let the tel: link work naturally
+        return;
+      }
+      // On non-phone devices, prevent call and copy to clipboard instead
+      e.preventDefault();
+      try {
+        await navigator.clipboard.writeText(phoneNumber);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch {
+        // Fallback for older browsers
+        const textArea = document.createElement("textarea");
+        textArea.value = phoneNumber;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    },
+    [hasPhoneNumber, isPhone, phoneNumber],
+  );
 
   const reasons: { value: RemoveReason; label: string }[] = [
     {
@@ -112,14 +164,20 @@ export function PostActionDialogs({
     setShowDeleteDialog(open);
   };
 
+  // Reset "copied" state when dialog closes
+  const handlePhoneDialogChange = (open: boolean) => {
+    if (!open) setCopied(false);
+    setShowPhoneDialog(open);
+  };
+
   return (
     <>
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <EditPostDialog
           post={post}
-            onSave={(updatedPost) => {
+            onSave={async (updatedPost) => {
               if (onUpdatePost) {
-                void onUpdatePost(updatedPost as UpdatePostInput);
+                await onUpdatePost(updatedPost as UpdatePostInput);
               }
               setShowEditDialog(false);
             }}
@@ -213,64 +271,94 @@ export function PostActionDialogs({
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={showPhoneDialog} onOpenChange={setShowPhoneDialog}>
-        <DialogContent 
+      <Dialog open={showPhoneDialog} onOpenChange={handlePhoneDialogChange}>
+        <DialogContent
           hideCloseButton
-          className="sm:max-w-[400px] p-0 overflow-hidden border-none shadow-2xl"
+          className="sm:max-w-[380px] border border-border/60 bg-background p-0 shadow-xl"
         >
           <DialogTitle className="sr-only">
             {language === "ar" ? "رقم الهاتف" : "Phone Number"}
           </DialogTitle>
           <DialogDescription className="sr-only">
             {language === "ar"
-              ? "انقر على الرقم للاتصال بالبائع مباشرة"
-              : "Click the number to call the seller directly"}
+              ? isPhone
+                ? "انقر على الرقم للاتصال بالبائع مباشرة"
+                : "انقر على الرقم لنسخه"
+              : isPhone
+                ? "Click the number to call the seller directly"
+                : "Click the number to copy it"}
           </DialogDescription>
           <div className="flex flex-col">
-            {/* Header section with subtle background */}
-            <div className="bg-muted/30 px-6 pt-8 pb-6 text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10">
-                <Phone className="h-6 w-6 text-emerald-600" />
-              </div>
+            <div className="border-b border-border/60 px-6 pb-5 pt-6 text-center">
               <h3 className="text-xl font-bold tracking-tight text-foreground">
                 {language === "ar" ? "رقم الهاتف" : "Phone Number"}
               </h3>
               <p className="mt-1.5 text-sm text-muted-foreground">
-                {language === "ar"
-                  ? "انقر على الرقم للاتصال بالبائع مباشرة"
-                  : "Click the button below to call the seller"}
+                {!hasPhoneNumber
+                  ? unavailablePhoneMessage
+                  : isPhone
+                  ? language === "ar"
+                    ? "انقر على الرقم للاتصال بالبائع مباشرة"
+                    : "Tap the number below to call the seller directly"
+                  : language === "ar"
+                    ? "انقر على الرقم لنسخه"
+                    : "Click the number to copy it to clipboard"}
               </p>
             </div>
 
-            {/* Action section */}
-            <div className="px-6 py-6 pb-8">
+            <div className="px-6 py-6">
               <a
-                href={`tel:${sellerPhone || post.phone || "962700000000"}`}
+                href={hasPhoneNumber && isPhone ? `tel:${phoneNumber}` : "#"}
+                onClick={(e) => void handlePhoneClick(e)}
                 aria-label={
-                  language === "ar"
-                    ? `اتصل الآن ${sellerPhone || post.phone || "+962 7 0000 0000"}`
-                    : `Call now ${sellerPhone || post.phone || "+962 7 0000 0000"}`
+                  !hasPhoneNumber
+                    ? language === "ar"
+                      ? "رقم الهاتف غير متوفر"
+                      : "Phone number unavailable"
+                    : isPhone
+                    ? language === "ar"
+                      ? `اتصل الآن ${phoneNumber}`
+                      : `Call now ${phoneNumber}`
+                    : language === "ar"
+                      ? `نسخ الرقم ${phoneNumber}`
+                      : `Copy number ${phoneNumber}`
                 }
-                className="group relative flex h-16 w-full items-center justify-between overflow-hidden rounded-2xl bg-linear-to-r from-emerald-500 to-teal-500 px-6 text-white shadow-md transition-all hover:from-emerald-600 hover:to-teal-600 hover:shadow-lg active:scale-95"
+                className={`flex min-h-16 w-full items-center justify-center rounded-2xl border px-6 py-4 text-center transition-all duration-300 ${
+                  !hasPhoneNumber
+                    ? "cursor-not-allowed border-border bg-muted/30 text-muted-foreground"
+                    : copied
+                    ? "border-green-500 bg-green-500/10 text-green-700 dark:text-green-400"
+                    : "cursor-pointer border-border bg-muted/30 text-foreground hover:bg-muted/50"
+                }`}
                 dir="ltr"
               >
-                <div className="flex flex-col items-start font-sans">
-                  <span className="text-xs uppercase tracking-widest text-emerald-50 font-semibold mb-0.5">
-                    {language === "ar" ? "رقم البائع" : "Seller Phone"}
+                <div className="flex flex-col items-center font-sans">
+                  <span className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                    {copied
+                      ? language === "ar"
+                        ? "✓ تم النسخ"
+                        : "✓ Copied!"
+                      : language === "ar"
+                        ? "رقم البائع"
+                        : "Seller Phone"}
                   </span>
-                  <span className="text-2xl font-bold tracking-tight">
-                    {sellerPhone || post.phone || "+962 7 0000 0000"}
+                  <span className="mt-1 text-2xl font-bold tracking-tight">
+                    {phoneNumber || unavailablePhoneLabel}
                   </span>
-                </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 transition-transform group-hover:rotate-12">
-                  <Phone className="h-5 w-5 text-white" />
+                  {hasPhoneNumber && !isPhone && !copied && (
+                    <span className="mt-1.5 text-xs text-muted-foreground/70">
+                      {language === "ar"
+                        ? "انقر للنسخ"
+                        : "Click to copy"}
+                    </span>
+                  )}
                 </div>
               </a>
 
               <Button
                 variant="ghost"
-                className="mt-4 w-full text-muted-foreground hover:text-foreground font-medium"
-                onClick={() => setShowPhoneDialog(false)}
+                className="mt-3 w-full font-medium text-muted-foreground hover:text-foreground"
+                onClick={() => handlePhoneDialogChange(false)}
               >
                 {language === "ar" ? "رجوع" : "Go Back"}
               </Button>

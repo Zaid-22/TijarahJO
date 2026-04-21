@@ -15,6 +15,10 @@ type CategorySection = {
   posts: Post[];
 };
 
+function getViewCount(post: Post): number {
+  return Number.isFinite(post.views) ? post.views ?? 0 : 0;
+}
+
 type HomeDeferredSectionsProps = {
   language: Language;
   isAuthenticated: boolean;
@@ -82,11 +86,11 @@ export function HomeDeferredSections({
   );
 
   const featuredPosts = useMemo(
-    () => [...safeDisplayedPosts]
+    () => [...safeFilteredPosts]
       .filter(isActivePost)
-      .sort((a, b) => (b.views || 0) - (a.views || 0))
+      .sort((a, b) => getViewCount(b) - getViewCount(a))
       .slice(0, 10),
-    [safeDisplayedPosts],
+    [safeFilteredPosts],
   );
 
   const recentPosts = useMemo(() => {

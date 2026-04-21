@@ -26,9 +26,12 @@ export interface ComparePost {
   category: string;
   categoryId?: string;
   location?: string;
+  views?: number;
   averageRating?: number;
   reviewCount?: number;
   sellerId?: string;
+  sellerName?: string;
+  sellerAvatar?: string | null;
 }
 
 interface CompareContextValue {

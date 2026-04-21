@@ -48,7 +48,6 @@
 
 ### 🔔 Notifications
 - In-app notification system with unread count badge
-- Push notification subscription support
 - Mark as read / mark all as read
 
 ### ⭐ Reviews
@@ -186,7 +185,7 @@ The application will be available at **http://localhost:5173**
 | **Search** | `/api/v1/search` — full-text search |
 | **Sellers** | `/api/v1/sellers/*` — profile, top sellers |
 | **Reviews** | `/api/v1/reviews/*` — list, create |
-| **Notifications** | `/api/v1/notifications/*` — list, read, push subscriptions |
+| **Notifications** | `/api/v1/notifications/*` — list, read, unread count |
 | **Admin** | `/api/v1/admin/*` — dashboard, users, posts, analytics, reports, settings |
 
 ---
@@ -231,7 +230,7 @@ cd apps/web && npx playwright test
 - [x] Cookie-backed JWT authentication, refresh retry, and Google OAuth
 - [x] Two-Factor Authentication (TOTP)
 - [x] Real-time chat with image sharing
-- [x] Notifications with push support
+- [x] In-app notifications
 - [x] Seller reviews and ratings
 - [x] Admin panel with full moderation
 - [x] Multi-language support (EN/AR)

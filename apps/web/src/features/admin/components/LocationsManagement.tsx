@@ -14,6 +14,7 @@ import { Badge } from "../../../shared/ui/badge";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -42,6 +43,7 @@ export function LocationsManagement() {
     type: "city" | "area";
     id: number;
     name: string;
+    areaCount?: number;
   } | null>(null);
 
   const getErrorMessage = (error: unknown, fallback: string) =>
@@ -247,6 +249,7 @@ export function LocationsManagement() {
                           type: "city",
                           id: city.cityID,
                           name: city.cityName,
+                          areaCount: city.areas?.length ?? 0,
                         })
                       }
                     >
@@ -325,6 +328,9 @@ export function LocationsManagement() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{dialogTitle}</DialogTitle>
+            <DialogDescription className="sr-only">
+              Enter the English and Arabic names for this location entry.
+            </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-3">
             <div>
@@ -371,13 +377,27 @@ export function LocationsManagement() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogDescription className="py-4">
+              Are you sure you want to delete{" "}
+              <strong>{deleteTarget?.name}</strong>?
+              {deleteTarget?.type === "city" ? (
+                <>
+                  {" "}
+                  {(deleteTarget.areaCount ?? 0) > 0
+                    ? `This will also delete ${
+                        deleteTarget.areaCount === 1
+                          ? "1 related area"
+                          : `${deleteTarget.areaCount} related areas`
+                      }.`
+                    : "This city has no related areas."}{" "}
+                  Cities still cannot be deleted while users or posts reference
+                  them.
+                </>
+              ) : (
+                " Areas can only be deleted when no users or posts reference them."
+              )}
+            </DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground py-4">
-            Are you sure you want to delete{" "}
-            <strong>{deleteTarget?.name}</strong>?
-            {deleteTarget?.type === "city" &&
-              " This will also remove all its areas."}
-          </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>
               Cancel

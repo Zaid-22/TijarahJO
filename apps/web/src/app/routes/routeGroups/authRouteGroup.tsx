@@ -88,7 +88,11 @@ export function renderAuthRouteGroup({
               }
               navigate(safePath, { replace: true });
             }}
-            onContinueAsGuest={() => navigate(APP_ROUTE_PATHS.home)}
+            onContinueAsGuest={() => {
+              void appProps.loginAsGuest().finally(() => {
+                navigate(APP_ROUTE_PATHS.home, { replace: true });
+              });
+            }}
             language={appProps.language}
           />
         }

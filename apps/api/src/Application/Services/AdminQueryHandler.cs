@@ -168,11 +168,11 @@ public sealed class AdminQueryHandler : IAdminQueryHandler
         }
     }
 
-    public async Task<AdminPostCommentsQueryResult> GetAdminPostCommentsAsync(string? search = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
+    public async Task<AdminPostCommentsQueryResult> GetAdminPostCommentsAsync(string? search = null, int? userId = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
     {
         try
         {
-            var result = await _adminDataAccess.GetAdminPostCommentsAsync(search, pageNumber, pageSize, cancellationToken);
+            var result = await _adminDataAccess.GetAdminPostCommentsAsync(search, userId, pageNumber, pageSize, cancellationToken);
             return new AdminPostCommentsQueryResult
             {
                 Success = true,
@@ -200,9 +200,9 @@ public sealed class AdminQueryHandler : IAdminQueryHandler
             {
                 return new AdminPostCommentDeleteResult
                 {
-                    Success = false,
-                    StatusCode = 404,
-                    Message = $"Comment with ID {commentId} not found."
+                    Success = true,
+                    StatusCode = 200,
+                    Message = "Comment was already deleted or no longer available."
                 };
             }
 

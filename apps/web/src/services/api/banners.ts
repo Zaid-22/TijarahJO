@@ -51,7 +51,7 @@ export const bannersApi = {
   /**
    * Fetch all active hero banners for the homepage
    */
-  getActiveBanners: async (): Promise<BannerModel[]> => {
+  getActiveBanners: async (): Promise<BannerModel[] | null> => {
     try {
       const response = await apiRequest<HeroBannerListResult>("/banners", {
         method: "GET",
@@ -66,10 +66,10 @@ export const bannersApi = {
           }));
         }
       }
-      return [];
+      return null;
     } catch (error) {
       debugError("Failed to fetch active banners:", error);
-      return [];
+      return null;
     }
   },
 };

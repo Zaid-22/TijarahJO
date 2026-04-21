@@ -463,15 +463,22 @@ export function useAuthProviderController(): AuthContextType {
     }
   }, [clearAuthStorage, setSignedOutState]);
 
-  const loginAsGuest = useCallback(() => {
-    clearAuthStorage();
-    localStorage.setItem(AUTH_GUEST_KEY, "true");
-    setIsGuest(true);
-    setAuthError(null);
-    setAuthState({
-      isAuthenticated: false,
-      user: null,
-    });
+  const loginAsGuest = useCallback(async () => {
+    try {
+      await api.auth.logout();
+    } catch (error) {
+      debugAuthError("Guest mode logout cleanup error:", error);
+    } finally {
+      clearAuthStorage();
+      localStorage.removeItem(AUTH_LOGOUT_KEY);
+      localStorage.setItem(AUTH_GUEST_KEY, "true");
+      setIsGuest(true);
+      setAuthError(null);
+      setAuthState({
+        isAuthenticated: false,
+        user: null,
+      });
+    }
   }, [clearAuthStorage]);
 
   return {

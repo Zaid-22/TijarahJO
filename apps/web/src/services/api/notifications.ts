@@ -37,21 +37,6 @@ type MarkAllReadPayload = {
   updatedCount?: unknown;
 };
 
-type PushConfigPayload = {
-  Enabled?: unknown;
-  enabled?: unknown;
-  PublicKey?: unknown;
-  publicKey?: unknown;
-};
-
-type PushSubscriptionJson = {
-  endpoint?: string;
-  keys?: {
-    p256dh?: string;
-    auth?: string;
-  };
-};
-
 type UnreadCountResult = {
   unreadCount: number;
   serviceUnavailable: boolean;
@@ -184,79 +169,5 @@ export const notificationsApi = {
 
     const updatedCount = Number(response.data.UpdatedCount ?? response.data.updatedCount ?? 0);
     return Number.isFinite(updatedCount) && updatedCount > 0 ? Math.floor(updatedCount) : 0;
-  },
-
-  getPushConfig: async (): Promise<{ enabled: boolean; publicKey: string }> => {
-    const response = await apiRequest<PushConfigPayload>("/notifications/push-config", {
-      method: "GET",
-    });
-
-    if (!response.success || !response.data) {
-      return {
-        enabled: false,
-        publicKey: "",
-      };
-    }
-
-    return {
-      enabled: Boolean(response.data.Enabled ?? response.data.enabled ?? false),
-      publicKey: String(response.data.PublicKey ?? response.data.publicKey ?? ""),
-    };
-  },
-
-  upsertPushSubscription: async (
-    subscription: PushSubscriptionJson,
-    userAgent?: string,
-  ): Promise<boolean> => {
-    const endpoint = subscription.endpoint?.trim() ?? "";
-    const p256dh = subscription.keys?.p256dh?.trim() ?? "";
-    const auth = subscription.keys?.auth?.trim() ?? "";
-    if (!endpoint || !p256dh || !auth) {
-      return false;
-    }
-
-    const response = await apiRequest<{ success?: boolean; Success?: boolean }>(
-      "/notifications/push-subscriptions",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          Endpoint: endpoint,
-          Keys: {
-            P256dh: p256dh,
-            Auth: auth,
-          },
-          UserAgent: userAgent ?? "",
-        }),
-      },
-    );
-
-    if (!response.success) {
-      return false;
-    }
-
-    return Boolean(response.data?.success ?? response.data?.Success ?? false);
-  },
-
-  removePushSubscription: async (endpoint: string): Promise<boolean> => {
-    const normalizedEndpoint = endpoint.trim();
-    if (!normalizedEndpoint) {
-      return false;
-    }
-
-    const response = await apiRequest<{ success?: boolean; Success?: boolean }>(
-      "/notifications/push-subscriptions",
-      {
-        method: "DELETE",
-        body: JSON.stringify({
-          Endpoint: normalizedEndpoint,
-        }),
-      },
-    );
-
-    if (!response.success) {
-      return false;
-    }
-
-    return Boolean(response.data?.success ?? response.data?.Success ?? false);
   },
 };

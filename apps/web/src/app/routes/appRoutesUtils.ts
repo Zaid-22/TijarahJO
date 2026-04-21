@@ -225,7 +225,6 @@ export const toEditProfileFormProfile = (
   id: userProfile.id,
   name: userProfile.name,
   firstName: userProfile.firstName || "",
-  middleName: userProfile.middleName || "",
   lastName: userProfile.lastName || "",
   email: userProfile.email,
   phone: userProfile.phone,
@@ -234,7 +233,6 @@ export const toEditProfileFormProfile = (
   location: userProfile.location,
   bio: userProfile.bio,
   avatar: userProfile.avatar || undefined,
-  joinedDate: userProfile.joinedDate,
 });
 
 export const applyLoginUserDataToProfile = (

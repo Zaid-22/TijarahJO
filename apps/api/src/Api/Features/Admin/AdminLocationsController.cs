@@ -77,7 +77,7 @@ public class AdminLocationsController(IAdminDataAccess adminDataAccess) : Contro
         }
         catch (DbUpdateException)
         {
-            return Conflict(new { Message = "Cannot delete this city because it is referenced by areas, users, or posts. Remove those references first." });
+            return Conflict(new { Message = "Cannot delete this city because it is referenced by users or posts. Remove those references first." });
         }
     }
 

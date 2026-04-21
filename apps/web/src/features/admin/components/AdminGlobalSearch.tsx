@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Search, Users, ShoppingBag, Tags, X } from "lucide-react";
 import { Input } from "../../../shared/ui/input";
 import { apiRequest } from "../../../services/api/client";
 import { logger } from "../../../shared/lib/logger";
+import { buildCurrentPath } from "../../../shared/lib/backNavigation";
 
 type SearchResultItem = {
   id: number;
@@ -38,6 +39,7 @@ export function AdminGlobalSearch() {
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Keyboard shortcut: "/" to focus
   useEffect(() => {
@@ -107,12 +109,16 @@ export function AdminGlobalSearch() {
     (item: SearchResultItem) => {
       const routeFn = TYPE_ROUTES[item.type];
       if (routeFn) {
-        navigate(routeFn(item.id));
+        navigate(routeFn(item.id), {
+          state: {
+            fromPath: buildCurrentPath(location.pathname, location.search),
+          },
+        });
       }
       setQuery("");
       setIsOpen(false);
     },
-    [navigate],
+    [location.pathname, location.search, navigate],
   );
 
   const allResults = results

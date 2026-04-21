@@ -1,12 +1,13 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "../../../shared/ui/dialog";
 import { Badge } from "../../../shared/ui/badge";
 import { Button } from "../../../shared/ui/button";
-import { Ban, CheckCircle, Eye, ExternalLink } from "lucide-react";
+import { Ban, CheckCircle, Eye, ExternalLink, Trash2 } from "lucide-react";
 import type { AdminPostItem } from "../../../services/api/admin.types";
 import { formatCompactDate } from "../../../shared/lib/dateTime";
 
@@ -15,15 +16,14 @@ type ListingDetailModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onBlock: (postId: number) => void;
-  onSuspend: (postId: number) => void;
+  onDelete: (postId: number) => void;
   onApprove: (postId: number) => void;
 };
 
 const STATUS_MAP: Record<number, { label: string; color: string }> = {
   0: { label: "Active", color: "bg-emerald-100 text-emerald-800" },
   1: { label: "Blocked", color: "bg-red-100 text-red-800" },
-  2: { label: "Sold", color: "bg-blue-100 text-blue-800" },
-  3: { label: "Suspended", color: "bg-yellow-100 text-yellow-800" },
+  3: { label: "Sold", color: "bg-blue-100 text-blue-800" },
 };
 
 export function ListingDetailModal({
@@ -31,7 +31,7 @@ export function ListingDetailModal({
   open,
   onOpenChange,
   onBlock,
-  onSuspend,
+  onDelete,
   onApprove,
 }: ListingDetailModalProps) {
   if (!post) return null;
@@ -49,6 +49,10 @@ export function ListingDetailModal({
             <span className="truncate">{post.title}</span>
             <Badge className={status.color}>{status.label}</Badge>
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Listing details, moderation status, seller information, and available
+            admin actions for this post.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
@@ -94,13 +98,13 @@ export function ListingDetailModal({
               <Button
                 variant="outline"
                 size="sm"
-                className="text-amber-600 border-amber-200 hover:bg-amber-50"
+                className="text-destructive border-destructive/30 hover:bg-destructive/10"
                 onClick={() => {
-                  onSuspend(post.postID);
+                  onDelete(post.postID);
                   onOpenChange(false);
                 }}
               >
-                Suspend
+                <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete
               </Button>
             )}
             {post.status !== 1 && (

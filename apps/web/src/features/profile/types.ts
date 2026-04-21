@@ -19,7 +19,6 @@ export interface EditProfileFormProfile {
   id: string;
   name: string;
   firstName: string;
-  middleName?: string;
   lastName: string;
   email: string;
   phone: string;
@@ -28,7 +27,6 @@ export interface EditProfileFormProfile {
   location: string;
   bio: string;
   avatar?: string;
-  joinedDate: string;
 }
 
 export interface EditProfileValidationErrors {

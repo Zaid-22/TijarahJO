@@ -111,3 +111,39 @@ public interface IPostCompareService
         string language = "en",
         CancellationToken cancellationToken = default);
 }
+
+public sealed class CompareVideoPostInput
+{
+    public int PostId { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public string Category { get; init; } = string.Empty;
+    public string Description { get; init; } = string.Empty;
+}
+
+public sealed class CompareVideoRecommendation
+{
+    public int PostId { get; init; }
+    public string VideoId { get; init; } = string.Empty;
+    public string Title { get; init; } = string.Empty;
+    public string ChannelTitle { get; init; } = string.Empty;
+    public string ThumbnailUrl { get; init; } = string.Empty;
+    public long ViewCount { get; init; }
+    public string PublishedAt { get; init; } = string.Empty;
+    public string SearchQuery { get; init; } = string.Empty;
+}
+
+public sealed class CompareVideoRecommendationResult
+{
+    public bool Success { get; init; }
+    public bool IsConfigured { get; init; }
+    public string? Message { get; init; }
+    public List<CompareVideoRecommendation> Videos { get; init; } = [];
+}
+
+public interface ICompareVideoRecommendationService
+{
+    Task<CompareVideoRecommendationResult> RecommendAsync(
+        IReadOnlyList<int> postIds,
+        string language = "en",
+        CancellationToken cancellationToken = default);
+}

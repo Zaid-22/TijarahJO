@@ -15,7 +15,7 @@ import {
 } from "./lookups";
 import { RawPost } from "./types";
 
-const FEED_PAGE_SIZE = 500;
+const FEED_PAGE_SIZE = 200;
 
 type FeedApiOptions = Pick<ApiRequestOptions, "signal" | "throwOnAbort">;
 
@@ -144,7 +144,7 @@ export async function getPostsFromFeed(
   const rowsPerPage =
     params?.limit && Number.isFinite(params.limit) && params.limit > 0
       ? Math.min(FEED_PAGE_SIZE, Math.floor(params.limit))
-      : 20;
+      : FEED_PAGE_SIZE;
 
   const pagedFeed = await fetchFeedPage(pageNumber, rowsPerPage, options);
   if (!pagedFeed || !('posts' in pagedFeed)) {

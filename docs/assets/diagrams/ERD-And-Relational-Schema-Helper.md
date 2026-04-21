@@ -853,7 +853,7 @@ TijarahJo is a **C2C (Consumer-to-Consumer) marketplace** platform similar to OL
 
 ## 5.5 Entity: Notification
 
-> **Description**: In-app and push notifications
+> **Description**: In-app notifications
 
 ```
 ┌────────────────────────────────────────────┐

@@ -24,6 +24,7 @@ export function renderAppRouteElements({
   setDarkMode,
   toggleLanguage,
   logout,
+  loginAsGuest,
   setUserProfile,
   currentUserDisplayName,
   routeState,
@@ -42,6 +43,7 @@ export function renderAppRouteElements({
     setDarkMode,
     toggleLanguage,
     logout,
+    loginAsGuest,
     setUserProfile,
     currentUserDisplayName,
   };

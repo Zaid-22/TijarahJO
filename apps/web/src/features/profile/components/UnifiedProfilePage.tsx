@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { api } from "../../../services/api";
 import { PageShell } from "../../../shared/ui/page-shell";
@@ -24,6 +24,7 @@ import { UnifiedProfileHeaderCard } from "./UnifiedProfileHeaderCard";
 import { UnifiedProfileListingCard } from "./UnifiedProfileListingCard";
 import { UnifiedProfileTabs } from "./UnifiedProfileTabs";
 import { buildUnifiedProfileLabels } from "./unifiedProfileLabels";
+import { useLocationOptions } from "../../../shared/hooks/useLocationOptions";
 
 interface UnifiedProfilePageProps {
   language: Language;
@@ -71,6 +72,7 @@ export function UnifiedProfilePage({
   const isRTL = language === "ar";
   const dateLocale = isRTL ? "ar-JO" : "en-US";
   const labels = buildUnifiedProfileLabels(language);
+  const { cities, areas } = useLocationOptions(viewModel.profile.city || "", language);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
@@ -89,9 +91,9 @@ export function UnifiedProfilePage({
   const parsedJoinDate = viewModel.profile.joinedDate
     ? new Date(viewModel.profile.joinedDate)
     : null;
-  const joinYear =
+  const joinDateDisplay =
     parsedJoinDate && !Number.isNaN(parsedJoinDate.getTime())
-      ? parsedJoinDate.getFullYear()
+      ? new Intl.DateTimeFormat(dateLocale, { month: "short", year: "numeric" }).format(parsedJoinDate)
       : "2024";
 
   const handleReviewSubmit = async () => {
@@ -154,6 +156,43 @@ export function UnifiedProfilePage({
     await onReload?.();
   };
 
+  const displayLocation = useMemo(() => {
+    if (!viewModel.profile.city && !viewModel.profile.area) {
+      return viewModel.profile.location || labels.jordan;
+    }
+
+    let localizedCity = viewModel.profile.city || "";
+    if (cities.length > 0 && localizedCity) {
+      const normalizedCity = localizedCity.trim().toLowerCase();
+      const cityObj = cities.find(
+        (c) =>
+          c.cityName.toLowerCase() === normalizedCity ||
+          (c.cityNameAr && c.cityNameAr.toLowerCase() === normalizedCity),
+      );
+      if (cityObj) {
+        localizedCity = language === "ar" && cityObj.cityNameAr ? cityObj.cityNameAr : cityObj.cityName;
+      }
+    }
+
+    let localizedArea = viewModel.profile.area || "";
+    if (areas.length > 0 && localizedArea) {
+      const normalizedArea = localizedArea.trim().toLowerCase();
+      const areaObj = areas.find(
+        (a) =>
+          a.areaName.toLowerCase() === normalizedArea ||
+          (a.areaNameAr && a.areaNameAr.toLowerCase() === normalizedArea),
+      );
+      if (areaObj) {
+        localizedArea = language === "ar" && areaObj.areaNameAr ? areaObj.areaNameAr : areaObj.areaName;
+      }
+    }
+
+    if (localizedCity && localizedArea) {
+      return `${localizedCity}، ${localizedArea}`;
+    }
+    return localizedCity || localizedArea || viewModel.profile.location || labels.jordan;
+  }, [cities, areas, viewModel.profile.city, viewModel.profile.area, viewModel.profile.location, language, labels.jordan]);
+
   if (isLoading) {
     return (
       <PageShell>
@@ -188,7 +227,8 @@ export function UnifiedProfilePage({
           viewModel={viewModel}
           labels={labels}
           averageRating={averageRating}
-          joinYear={joinYear}
+          joinDateDisplay={joinDateDisplay}
+          displayLocation={displayLocation}
           onSettingsClick={onSettingsClick}
           onEditProfileClick={onEditProfileClick}
           onChatWithSeller={onChatWithSeller}

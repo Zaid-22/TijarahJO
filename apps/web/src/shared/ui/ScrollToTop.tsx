@@ -1,7 +1,12 @@
 import { useState, useEffect } from "react";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
+import { cn } from "./utils";
 
-export function ScrollToTop() {
+interface ScrollToTopProps {
+  avoidBottomOverlay?: boolean;
+}
+
+export function ScrollToTop({ avoidBottomOverlay = false }: ScrollToTopProps) {
   const [isVisible, setIsVisible] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
 
@@ -39,7 +44,12 @@ export function ScrollToTop() {
   }
 
   return (
-    <div className="fixed bottom-24 right-6 z-[150] sm:bottom-28 sm:right-8">
+    <div
+      className={cn(
+        "fixed right-6 z-[150] hidden transition-all duration-300 sm:block sm:right-8",
+        avoidBottomOverlay ? "bottom-72 sm:bottom-40 lg:bottom-32" : "bottom-24 sm:bottom-28",
+      )}
+    >
       <button
         onClick={scrollToTop}
         type="button"

@@ -201,6 +201,7 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
             Avatar = userEntity.Avatar,
             JoinDate = userEntity.JoinDate,
             Status = userEntity.Status,
+            SuspendedUntil = userEntity.SuspendedUntil,
             RoleID = userEntity.RoleID,
             IsDeleted = userEntity.IsDeleted,
             TwoFactorEnabled = userEntity.TwoFactorEnabled
@@ -279,7 +280,7 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
         return true;
     }
 
-    public async Task<AdminPostCommentListResult> GetAdminPostCommentsAsync(string? search = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
+    public async Task<AdminPostCommentListResult> GetAdminPostCommentsAsync(string? search = null, int? userId = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
     {
         var normalizedSearch = search?.Trim();
 
@@ -290,6 +291,13 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
             join post in _dbContext.Posts.AsNoTracking().IgnoreQueryFilters() on comment.PostID equals post.PostID into postGroup
             from post in postGroup.DefaultIfEmpty()
             select new { comment, user, post };
+
+        query = query.Where(x => !x.comment.IsDeleted);
+
+        if (userId.HasValue)
+        {
+            query = query.Where(x => x.comment.UserID == userId.Value);
+        }
 
         if (!string.IsNullOrWhiteSpace(normalizedSearch))
         {
@@ -340,9 +348,24 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
     public async Task<bool> SoftDeletePostCommentAsync(int commentId, int adminUserId, CancellationToken cancellationToken = default)
     {
         var entity = await _dbContext.PostComments
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(comment => comment.CommentID == commentId, cancellationToken);
 
         if (entity == null) return false;
+        if (entity.IsDeleted) return true;
+
+        entity.IsDeleted = true;
+        _dbContext.AuditActorUserId = adminUserId;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> SoftDeletePostAsync(int postId, int adminUserId, CancellationToken cancellationToken = default)
+    {
+        var entity = await _dbContext.Posts
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.PostID == postId, cancellationToken);
+        if (entity == null || entity.IsDeleted) return false;
 
         entity.IsDeleted = true;
         _dbContext.AuditActorUserId = adminUserId;
@@ -570,8 +593,12 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
 
     public async Task<bool> DeleteCityAsync(int cityId, CancellationToken cancellationToken = default)
     {
-        var entity = await _dbContext.Cities.FindAsync([cityId], cancellationToken);
+        var entity = await _dbContext.Cities
+            .Include(c => c.Areas)
+            .FirstOrDefaultAsync(c => c.CityID == cityId, cancellationToken);
         if (entity == null) return false;
+
+        _dbContext.Areas.RemoveRange(entity.Areas);
         _dbContext.Cities.Remove(entity);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return true;

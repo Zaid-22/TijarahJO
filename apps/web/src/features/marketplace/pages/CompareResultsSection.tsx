@@ -65,7 +65,7 @@ export function CompareResultsSection({
                   <h3 className="line-clamp-2 text-start text-base font-bold leading-snug text-foreground">
                     {winnerPost.name}
                   </h3>
-                  <p className="mt-3 text-start text-sm leading-7 text-foreground/80 sm:text-[15px] line-clamp-6">
+                  <p className="mt-3 text-start text-sm leading-7 text-foreground/80 sm:text-base line-clamp-6">
                     {ps.Summary}
                   </p>
                 </div>
@@ -89,7 +89,7 @@ export function CompareResultsSection({
               <h3 className="mb-4 text-base font-bold text-blue-700 dark:text-blue-400">{fd.PostName}</h3>
               <ul className="space-y-3.5">
                 {fd.Features.map((feature, i) => (
-                  <li key={i} className="flex items-start gap-3 text-sm sm:text-[15px]">
+                  <li key={i} className="flex items-start gap-3 text-sm sm:text-base">
                     <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-xs font-bold text-blue-600 dark:bg-blue-500/30 dark:text-blue-300">
                       {i + 1}
                     </span>
@@ -120,7 +120,7 @@ export function CompareResultsSection({
                 </div>
                 <div className="space-y-2.5">
                 {pc.Pros.map((pro, i) => (
-                  <div key={i} className="flex items-start gap-2.5 text-sm sm:text-[15px]">
+                  <div key={i} className="flex items-start gap-2.5 text-sm sm:text-base">
                     <CheckCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
                     <span className="leading-7 text-foreground/80">{pro}</span>
                   </div>
@@ -133,7 +133,7 @@ export function CompareResultsSection({
                 </div>
                 <div className="space-y-2.5">
                 {pc.Cons.map((con, i) => (
-                  <div key={i} className="flex items-start gap-2.5 text-sm sm:text-[15px]">
+                  <div key={i} className="flex items-start gap-2.5 text-sm sm:text-base">
                     <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-500" />
                     <span className="leading-7 text-foreground/80">{con}</span>
                   </div>
@@ -205,13 +205,13 @@ export function CompareResultsSection({
             </span>
           </div>
           <div className="mb-6 space-y-3">
-            <div className="flex items-start gap-2.5 text-sm sm:text-[15px]">
+            <div className="flex items-start gap-2.5 text-sm sm:text-base">
               <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">✔</span>
               <span className="leading-7 text-foreground/90">
                 <span className="font-bold text-foreground">{t.bestForLabel}:</span> {result.FinalRecommendation.BestFor}
               </span>
             </div>
-            <div className="flex items-start gap-2.5 text-sm sm:text-[15px]">
+            <div className="flex items-start gap-2.5 text-sm sm:text-base">
               <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">✔</span>
               <span className="leading-7 text-foreground/90">
                 <span className="font-bold text-foreground">{t.whyLabel}:</span> {result.FinalRecommendation.Reason}
@@ -254,7 +254,7 @@ export function CompareResultsSection({
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-foreground sm:text-[15px]">{post.name}</p>
+                <p className="truncate text-sm font-semibold text-foreground sm:text-base">{post.name}</p>
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs sm:text-sm">
                   <span className="font-bold text-foreground">{post.price > 0 ? `${post.price.toLocaleString()} JOD` : "—"}</span>
                   {post.location && (

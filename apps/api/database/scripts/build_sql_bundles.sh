@@ -26,6 +26,9 @@ SEED_ADMIN_FILES=(
 
 SEED_DEV_FILES=(
   "seeds/dev/INSERT_DEV_SEED_USER.sql"
+)
+
+SEED_SAMPLE_FILES=(
   "seeds/dev/INSERT_SAMPLE_POSTS.sql"
 )
 
@@ -162,6 +165,7 @@ validate_sources() {
     "${SEED_BASELINE_FILES[@]}" \
     "${SEED_ADMIN_FILES[@]}" \
     "${SEED_DEV_FILES[@]}" \
+    "${SEED_SAMPLE_FILES[@]}" \
     "${SEED_TEST_FILES[@]}"; do
     local resolved_source
     resolved_source="$(resolve_bundle_source_path "$file")"
@@ -227,6 +231,13 @@ build_seed_dev_bundle() {
   append_seed_group "$destination" "Development Seeds" "${SEED_DEV_FILES[@]}"
 }
 
+build_seed_sample_bundle() {
+  local destination="$BUNDLES_DIR/seed_sample_posts.sql"
+  write_header "$destination" "Seed Data Bundle (Sample Posts)"
+
+  append_seed_group "$destination" "Sample Post Seeds" "${SEED_SAMPLE_FILES[@]}"
+}
+
 build_seed_test_bundle() {
   local destination="$BUNDLES_DIR/seed_test.sql"
   write_header "$destination" "Seed Data Bundle (Test)"
@@ -259,13 +270,15 @@ main() {
 
   rm -f "$BUNDLES_DIR/seed.sql" "$BUNDLES_DIR/views.sql" \
     "$BUNDLES_DIR/indexes.sql" "$BUNDLES_DIR/procedures.sql" \
-    "$BUNDLES_DIR/seed_admin.sql" "$BUNDLES_DIR/seed_dev.sql" "$BUNDLES_DIR/seed_test.sql"
+    "$BUNDLES_DIR/seed_admin.sql" "$BUNDLES_DIR/seed_dev.sql" \
+    "$BUNDLES_DIR/seed_sample_posts.sql" "$BUNDLES_DIR/seed_test.sql"
 
   build_schema_bundle
   build_migrations_bundle
   build_seed_bundle
   build_seed_admin_bundle
   build_seed_dev_bundle
+  build_seed_sample_bundle
   build_seed_test_bundle
   build_master_bundle
 
@@ -275,6 +288,7 @@ main() {
   echo "  $BUNDLES_DIR/seed_data.sql"
   echo "  $BUNDLES_DIR/seed_admin.sql"
   echo "  $BUNDLES_DIR/seed_dev.sql"
+  echo "  $BUNDLES_DIR/seed_sample_posts.sql"
   echo "  $BUNDLES_DIR/seed_test.sql"
   echo "  $BUNDLES_DIR/master.sql"
 }

@@ -208,6 +208,11 @@ public sealed class UserCommandService : IUserCommandService
             {
                 user = user with { IsDeleted = command.IsDeleted.Value };
             }
+
+            if (command.ClearSuspension == true)
+            {
+                user = user with { SuspendedUntil = null };
+            }
         }
 
         bool saved = await _users.UpdateUserAsync(user, command.ActorUserId, cancellationToken);

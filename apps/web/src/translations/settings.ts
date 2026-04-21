@@ -12,8 +12,6 @@ export type SettingsTranslations = {
   notificationsDesc: string;
   emailNotifications: string;
   emailNotificationsDesc: string;
-  pushNotifications: string;
-  pushNotificationsDesc: string;
   messageNotifications: string;
   messageNotificationsDesc: string;
   newListings: string;
@@ -68,8 +66,6 @@ export const settingsTranslations: Record<Language, SettingsTranslations> = {
     notificationsDesc: "Manage how you receive notifications",
     emailNotifications: "Email Notifications",
     emailNotificationsDesc: "Receive notifications via email",
-    pushNotifications: "Push Notifications",
-    pushNotificationsDesc: "Receive push notifications on your device",
     messageNotifications: "Message Notifications",
     messageNotificationsDesc: "Get notified when you receive messages",
     newListings: "New Listings in Categories",
@@ -122,8 +118,6 @@ export const settingsTranslations: Record<Language, SettingsTranslations> = {
     notificationsDesc: "إدارة كيفية تلقي الإشعارات",
     emailNotifications: "إشعارات البريد الإلكتروني",
     emailNotificationsDesc: "تلقي الإشعارات عبر البريد الإلكتروني",
-    pushNotifications: "الإشعارات الفورية",
-    pushNotificationsDesc: "تلقي الإشعارات الفورية على جهازك",
     messageNotifications: "إشعارات الرسائل",
     messageNotificationsDesc: "احصل على إشعار عند تلقي الرسائل",
     newListings: "إعلانات جديدة في الفئات",

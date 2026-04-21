@@ -43,6 +43,15 @@ Useful flags:
 - `--no-volume-reset`
 - `--no-verify`
 - `--keep-backend`
+- `--with-sample-posts` seeds 30 marketplace sample posts with packaged images
+
+### Sample marketplace posts
+
+Use `./scripts/bootstrap_db.sh --with-sample-posts` when you want the packaged sample marketplace data. This applies `apps/api/database/bundles/seed_sample_posts.sql` after the baseline seed bundle.
+
+The sample seed creates 30 fake user accounts, 30 active posts, and 76 post image rows. The matching `sample-*.webp` files are tracked under `apps/api/src/Api/uploads/post-images/` and are included in API publish output by `TijarahJo.Api.csproj`.
+
+The book listings are in the existing `Books & Stationery` category.
 
 ---
 

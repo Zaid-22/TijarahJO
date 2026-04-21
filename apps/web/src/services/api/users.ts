@@ -352,6 +352,7 @@ export const usersApi = {
       {
         Status: nextStatus,
         IsDeleted: status === "active" ? false : mutableFields.isDeleted,
+        ClearSuspension: status === "active" ? true : undefined,
       },
       "update user status",
       mutableFields,

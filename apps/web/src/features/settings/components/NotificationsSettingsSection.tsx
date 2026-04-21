@@ -10,10 +10,8 @@ import {
   CardHeader,
   CardTitle,
 } from "../../../shared/ui/card";
-import type { AppNotification, Language } from "../../../types";
 import type { SettingsTranslations } from "../../../translations/settings";
 import type { SettingsPreferences } from "../types";
-import { SettingsNotificationsPreview } from "../SettingsNotificationsPreview";
 
 interface SettingsActionRowProps {
   icon: LucideIcon;
@@ -71,32 +69,16 @@ export function SettingsActionRow({
 
 interface NotificationsSettingsSectionProps {
   text: SettingsTranslations;
-  language: Language;
   settingsPreferences: SettingsPreferences;
   updatePreference: (
     key: keyof SettingsPreferences,
   ) => (value: boolean) => void;
-  onPushNotificationsChange?: (value: boolean) => void;
-  isPushNotificationsDisabled?: boolean;
-  notifications: AppNotification[];
-  isNotificationsLoading: boolean;
-  isNotificationsMutationPending: boolean;
-  onMarkNotificationAsRead?: (notificationId: number) => void;
-  onMarkAllNotificationsAsRead?: () => void;
 }
 
 export function NotificationsSettingsSection({
   text,
-  language,
   settingsPreferences,
   updatePreference,
-  onPushNotificationsChange,
-  isPushNotificationsDisabled,
-  notifications,
-  isNotificationsLoading,
-  isNotificationsMutationPending,
-  onMarkNotificationAsRead,
-  onMarkAllNotificationsAsRead,
 }: NotificationsSettingsSectionProps) {
   return (
     <Card>
@@ -122,19 +104,6 @@ export function NotificationsSettingsSection({
         />
         <Separator />
         <SettingsActionRow
-          icon={Bell}
-          controlId="settings-push-notifications"
-          label={text.pushNotifications}
-          description={text.pushNotificationsDesc}
-          checked={settingsPreferences.pushNotifications}
-          onCheckedChange={
-            onPushNotificationsChange ??
-            updatePreference("pushNotifications")
-          }
-          disabled={isPushNotificationsDisabled}
-        />
-        <Separator />
-        <SettingsActionRow
           icon={Mail}
           controlId="settings-message-notifications"
           label={text.messageNotifications}
@@ -150,15 +119,6 @@ export function NotificationsSettingsSection({
           description={text.newListingsDesc}
           checked={settingsPreferences.newListingNotifications}
           onCheckedChange={updatePreference("newListingNotifications")}
-        />
-        <Separator />
-        <SettingsNotificationsPreview
-          language={language}
-          notifications={notifications}
-          isLoading={isNotificationsLoading}
-          isMutationPending={isNotificationsMutationPending}
-          onMarkNotificationAsRead={onMarkNotificationAsRead}
-          onMarkAllNotificationsAsRead={onMarkAllNotificationsAsRead}
         />
       </CardContent>
     </Card>

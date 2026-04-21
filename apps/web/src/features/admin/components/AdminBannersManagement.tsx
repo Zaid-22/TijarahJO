@@ -2,11 +2,12 @@ import { useState, useCallback, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
 import { Badge } from "../../../shared/ui/badge";
+import { ConfirmActionDialog } from "../../../shared/ui/confirm-action-dialog";
 import { toast } from "sonner";
 import { adminBannersApi as adminApi } from "../../../services/api/admin-banners";
 import { type BannerModel } from "../../../services/api/banners";
 import { LoadingState } from "../../../shared/ui/loading-state";
-import { getAllHeroBanners } from "../../home/components/heroBannerData";
+import { clearSavedHeroBanners } from "../../home/components/heroBannerData";
 import {
   BannerForm,
   DEFAULT_BANNER_FORM_STATE,
@@ -51,6 +52,8 @@ export function AdminBannersManagement() {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [showBannerForm, setShowBannerForm] = useState(false);
   const [editingBannerId, setEditingBannerId] = useState<number | null>(null);
+  const [pendingDeleteBanner, setPendingDeleteBanner] =
+    useState<BannerModel | null>(null);
   const [bannerForm, setBannerForm] = useState<BannerFormState>(
     DEFAULT_BANNER_FORM_STATE,
   );
@@ -60,6 +63,15 @@ export function AdminBannersManagement() {
     try {
       const data = await adminApi.getBanners();
       setBanners(data || []);
+      setPendingDeleteBanner((pendingBanner) => {
+        if (!pendingBanner) {
+          return null;
+        }
+
+        return data?.some((banner) => banner.bannerID === pendingBanner.bannerID)
+          ? pendingBanner
+          : null;
+      });
     } catch {
       toast.error("Failed to load banners");
     } finally {
@@ -111,6 +123,7 @@ export function AdminBannersManagement() {
   const toggleActive = async (id: number) => {
     const success = await adminApi.toggleBannerActive(id);
     if (success) {
+      clearSavedHeroBanners();
       toast.success("Banner visibility updated");
       loadBanners();
     } else {
@@ -121,6 +134,8 @@ export function AdminBannersManagement() {
   const removeBanner = async (id: number) => {
     const success = await adminApi.deleteBanner(id);
     if (success) {
+      clearSavedHeroBanners();
+      setPendingDeleteBanner(null);
       toast.success("Banner removed");
       loadBanners();
     } else {
@@ -176,6 +191,7 @@ export function AdminBannersManagement() {
         : await adminApi.updateBanner(editingBannerId, payload);
 
     if (result.success) {
+      clearSavedHeroBanners();
       setShowBannerForm(false);
       resetBannerForm();
       toast.success(
@@ -191,40 +207,6 @@ export function AdminBannersManagement() {
             ? "Failed to add banner"
             : "Failed to update banner"),
       );
-    }
-  };
-
-  const resetToDefaults = async () => {
-    setIsLoading(true);
-    const defaults = getAllHeroBanners();
-    let successCount = 0;
-
-    for (const banner of defaults) {
-      const result = await adminApi.createBanner({
-        title: banner.title,
-        titleAr: banner.titleAr,
-        subtitle: banner.subtitle,
-        subtitleAr: banner.subtitleAr,
-        buttonText: banner.buttonText,
-        buttonTextAr: banner.buttonTextAr,
-        bgClass: banner.bgClass,
-        textClass: banner.textClass,
-        imageUrl: banner.imageUrl,
-        altText: banner.altText,
-        altTextAr: banner.altTextAr,
-        linkUrl: banner.linkUrl,
-        isActive: banner.isActive,
-        displayOrder: banner.order,
-      });
-      if (result.success) successCount++;
-    }
-
-    if (successCount > 0) {
-      toast.success(`Restored ${successCount} default banners`);
-      loadBanners();
-    } else {
-      toast.error("Failed to restore default banners");
-      setIsLoading(false);
     }
   };
 
@@ -255,6 +237,7 @@ export function AdminBannersManagement() {
       if (!result.success) allSuccess = false;
     }
     if (allSuccess) {
+      clearSavedHeroBanners();
       toast.success("Banner order updated");
     } else {
       toast.error("Failed to update some banner orders");
@@ -282,7 +265,7 @@ export function AdminBannersManagement() {
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="outline" className="text-sm px-3 py-1">
-            {activeCount} active / {banners.length} backend
+            {activeCount} active
           </Badge>
           <Button
             size="sm"
@@ -338,14 +321,40 @@ export function AdminBannersManagement() {
             onDragEnd={handleDragEnd}
             onEdit={() => openEditForm(banner)}
             onToggleActive={() => toggleActive(banner.bannerID)}
-            onRemove={() => removeBanner(banner.bannerID)}
+            onRemove={() => setPendingDeleteBanner(banner)}
           />
         ))}
 
-        {banners.length === 0 && (
-          <FallbackBannerPreview onResetToDefaults={resetToDefaults} />
-        )}
+        {banners.length === 0 && <FallbackBannerPreview />}
       </div>
+
+      <ConfirmActionDialog
+        open={pendingDeleteBanner !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingDeleteBanner(null);
+          }
+        }}
+        title="Delete banner?"
+        description={
+          pendingDeleteBanner
+            ? `Are you sure you want to delete "${
+                pendingDeleteBanner.title ||
+                pendingDeleteBanner.titleAr ||
+                pendingDeleteBanner.altText ||
+                "Untitled banner"
+              }"? This will remove it from the homepage carousel.`
+            : ""
+        }
+        confirmLabel="Delete"
+        onConfirm={() => {
+          if (!pendingDeleteBanner) {
+            return;
+          }
+
+          void removeBanner(pendingDeleteBanner.bannerID);
+        }}
+      />
     </div>
   );
 }

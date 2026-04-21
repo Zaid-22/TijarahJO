@@ -73,6 +73,7 @@ public sealed class AdminUserProfile
     public string? Avatar { get; init; }
     public System.DateTime JoinDate { get; init; }
     public int Status { get; init; }
+    public System.DateTime? SuspendedUntil { get; init; }
     public int RoleID { get; init; }
     public bool IsDeleted { get; init; }
     public bool TwoFactorEnabled { get; init; }
@@ -149,8 +150,9 @@ public interface IAdminDataAccess
     // Phase 2
     Task<AdminReviewListResult> GetAdminReviewsAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
     Task<bool> SoftDeleteReviewAsync(int reviewId, int adminUserId, CancellationToken cancellationToken = default);
-    Task<AdminPostCommentListResult> GetAdminPostCommentsAsync(string? search = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
+    Task<AdminPostCommentListResult> GetAdminPostCommentsAsync(string? search = null, int? userId = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
     Task<bool> SoftDeletePostCommentAsync(int commentId, int adminUserId, CancellationToken cancellationToken = default);
+    Task<bool> SoftDeletePostAsync(int postId, int adminUserId, CancellationToken cancellationToken = default);
     Task<AdminAuditLogResult> GetAuditLogsAsync(string? tableName = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
 
     // Phase 3

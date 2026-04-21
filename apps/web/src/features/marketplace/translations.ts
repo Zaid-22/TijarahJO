@@ -64,6 +64,8 @@ export const marketplaceTranslations = {
     callSeller: "Call Seller",
     soldOut: "SOLD OUT",
     descriptionTitle: "Description",
+    readMore: "Read more",
+    showLess: "Show less",
     locationTitle: "Location",
     postedDaysAgo: "Posted 2 days ago",
     views: "views",
@@ -141,7 +143,15 @@ export const marketplaceTranslations = {
     postAlreadyInCompare: "Post already in comparison",
     compareItemAdded: "Added '{name}' to comparison",
     compareItemRemoved: "Removed '{name}' from comparison",
-    compareCleared: "Comparison cleared"
+    compareCleared: "Comparison cleared",
+    recommendedVideos: "Recommended videos",
+    recommendedVideosDesc: "Watch a related high-view YouTube video for each compared post.",
+    videoNotConfigured: "Add a YouTube API key to show embedded recommendations.",
+    videoUnavailable: "No matching video found for this post yet.",
+    watchRelatedVideo: "Watch related video",
+    videoViews: "{count} views",
+    recommendedFor: "Recommended for",
+    videoSearchUsed: "Search used"
   },
   ar: {
     searchPlaceholder: "ابحث في تجارة جو...",
@@ -208,6 +218,8 @@ export const marketplaceTranslations = {
     callSeller: "اتصل بالبائع",
     soldOut: "تم البيع",
     descriptionTitle: "الوصف",
+    readMore: "اقرأ المزيد",
+    showLess: "إظهار أقل",
     locationTitle: "الموقع",
     postedDaysAgo: "نُشر منذ يومين",
     views: "مشاهدة",
@@ -285,6 +297,14 @@ export const marketplaceTranslations = {
     postAlreadyInCompare: "المنشور موجود مسبقاً في قائمة المقارنة",
     compareItemAdded: "تم إضافة '{name}' إلى المقارنة",
     compareItemRemoved: "تم إزالة '{name}' من المقارنة",
-    compareCleared: "تم مسح قائمة المقارنة"
+    compareCleared: "تم مسح قائمة المقارنة",
+    recommendedVideos: "فيديوهات مقترحة",
+    recommendedVideosDesc: "شاهد فيديو يوتيوب مرتبطاً وذا مشاهدات عالية لكل منشور في المقارنة.",
+    videoNotConfigured: "أضف مفتاح YouTube API لعرض التوصيات داخل الصفحة.",
+    videoUnavailable: "لا يوجد فيديو مناسب لهذا المنشور حالياً.",
+    watchRelatedVideo: "شاهد الفيديو المرتبط",
+    videoViews: "{count} مشاهدة",
+    recommendedFor: "مقترح لـ",
+    videoSearchUsed: "عبارة البحث"
   }
 };

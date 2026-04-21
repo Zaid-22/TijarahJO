@@ -49,6 +49,27 @@ export interface CompareResponse {
   FinalRecommendation: FinalRecommendationDTO | null;
 }
 
+export interface CompareVideoPostInput {
+  postId: number;
+}
+
+export interface CompareVideoRecommendation {
+  PostId: number;
+  VideoId: string;
+  Title: string;
+  ChannelTitle: string;
+  ThumbnailUrl: string;
+  ViewCount: number;
+  PublishedAt: string;
+  SearchQuery: string;
+}
+
+export interface CompareVideoRecommendationsResponse {
+  IsConfigured: boolean;
+  Message?: string | null;
+  Videos: CompareVideoRecommendation[];
+}
+
 async function comparePosts(postIds: number[], language: string = "en"): Promise<CompareResponse | null> {
   const response = await apiRequest<CompareResponse>("/compare", {
     method: "POST",
@@ -65,6 +86,27 @@ async function comparePosts(postIds: number[], language: string = "en"): Promise
   );
 }
 
+async function getVideoRecommendations(
+  posts: CompareVideoPostInput[],
+  language: string = "en",
+): Promise<CompareVideoRecommendationsResponse> {
+  const response = await apiRequest<CompareVideoRecommendationsResponse>("/compare/videos", {
+    method: "POST",
+    body: JSON.stringify({
+      PostIds: posts.map((post) => post.postId),
+      Language: language,
+    }),
+    timeoutMs: 20_000,
+  });
+
+  if (response.success) {
+    return response.data;
+  }
+
+  throw new Error(response.error?.message ?? "Failed to fetch recommended videos");
+}
+
 export const compareApi = {
   comparePosts,
+  getVideoRecommendations,
 };

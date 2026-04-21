@@ -206,6 +206,10 @@ export function PostDetailsPage({
           );
           const sellerProfile = sellerProfileResponse?.seller;
           if (sellerProfile) {
+            const sellerProfilePhone = String(sellerProfile.phone || "").trim();
+            if (!phone && sellerProfilePhone && !cancelled) {
+              setSellerPhone(sellerProfilePhone);
+            }
             if (!avatar && sellerProfile.avatar) {
               setSellerAvatar(String(sellerProfile.avatar));
             }
@@ -321,39 +325,41 @@ export function PostDetailsPage({
               displayLocationLabel={displayLocationLabel}
               postedAgoLabel={postedAgoLabel}
               displayedViews={displayedViews}
-                labels={{
-                  descriptionTitle: t.descriptionTitle,
-                  soldOut: t.soldOut,
-                  views: t.views,
-                }}
-              />
+              labels={{
+                descriptionTitle: t.descriptionTitle,
+                readMore: t.readMore,
+                showLess: t.showLess,
+                soldOut: t.soldOut,
+                views: t.views,
+              }}
+            />
 
-              <PostCommentsSection
-                postId={post.id}
-                language={language}
-                postOwnerId={post.sellerId}
-                labels={{
-                  commentsTitle: t.commentsTitle,
-                  addComment: t.addComment,
-                  commentPlaceholder: t.commentPlaceholder,
-                  submitComment: t.submitComment,
-                  noComments: t.noComments,
-                  deleteComment: t.deleteComment,
-                  loadMoreComments: t.loadMoreComments,
-                  loginToComment: t.loginToComment,
-                  commentAdded: t.commentAdded,
-                  commentDeleted: t.commentDeleted,
-                  reply: t.reply,
-                  hideReplies: t.hideReplies,
-                  showReplies: t.showReplies,
-                  editComment: t.editComment,
-                  cancelEdit: t.cancelEdit,
-                  saveComment: t.saveComment,
-                  commentUpdated: t.commentUpdated,
-                  replies: t.replies,
-                }}
-              />
-            </div>
+            <PostCommentsSection
+              postId={post.id}
+              language={language}
+              postOwnerId={post.sellerId}
+              labels={{
+                commentsTitle: t.commentsTitle,
+                addComment: t.addComment,
+                commentPlaceholder: t.commentPlaceholder,
+                submitComment: t.submitComment,
+                noComments: t.noComments,
+                deleteComment: t.deleteComment,
+                loadMoreComments: t.loadMoreComments,
+                loginToComment: t.loginToComment,
+                commentAdded: t.commentAdded,
+                commentDeleted: t.commentDeleted,
+                reply: t.reply,
+                hideReplies: t.hideReplies,
+                showReplies: t.showReplies,
+                editComment: t.editComment,
+                cancelEdit: t.cancelEdit,
+                saveComment: t.saveComment,
+                commentUpdated: t.commentUpdated,
+                replies: t.replies,
+              }}
+            />
+          </div>
 
           <PostSellerSidebar
             language={language}

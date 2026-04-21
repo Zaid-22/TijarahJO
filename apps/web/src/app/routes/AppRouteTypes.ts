@@ -13,6 +13,7 @@ export interface BaseAppRouteProps {
   setDarkMode: (enabled: boolean) => void;
   toggleLanguage: () => void;
   logout: () => Promise<void>;
+  loginAsGuest: () => Promise<void>;
   setUserProfile: (profile: UserProfile) => void;
   currentUserDisplayName: string;
 }
@@ -52,6 +53,7 @@ export interface AppRouteElementsParams {
   setDarkMode: (enabled: boolean) => void;
   toggleLanguage: () => void;
   logout: () => Promise<void>;
+  loginAsGuest: () => Promise<void>;
   setUserProfile: (profile: UserProfile) => void;
   currentUserDisplayName: string;
   routeState: MarketplaceRouteState;

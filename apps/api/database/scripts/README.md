@@ -82,7 +82,8 @@ Use `./scripts/bootstrap_db.sh` (from repo root) for local setup.
 3. Applies `apps/api/database/bundles/seed_data.sql` (baseline seeds only, by default)
 4. Applies `apps/api/database/bundles/seed_admin.sql` only with `--with-admin-bootstrap`
 5. Applies `apps/api/database/bundles/seed_dev.sql` only with `--with-dev-seeds`
-6. Applies `apps/api/database/bundles/seed_test.sql` only with `--with-test-seeds`
+6. Applies `apps/api/database/bundles/seed_sample_posts.sql` only with `--with-sample-posts`
+7. Applies `apps/api/database/bundles/seed_test.sql` only with `--with-test-seeds`
 
 ## Canonical Source Layout
 
@@ -186,6 +187,7 @@ Generated files:
 - `apps/api/database/bundles/seed_data.sql`: baseline seed bundle only
 - `apps/api/database/bundles/seed_admin.sql`: guarded admin bootstrap seed bundle
 - `apps/api/database/bundles/seed_dev.sql`: development-only seed bundle
+- `apps/api/database/bundles/seed_sample_posts.sql`: optional sample marketplace post seed bundle
 - `apps/api/database/bundles/seed_test.sql`: test-only seed bundle
 - `apps/api/database/bundles/master.sql`: one-shot deployment bundle (`base schema + migrations`)
 
@@ -194,6 +196,7 @@ Generated files:
 - Full setup (recommended): run `./scripts/bootstrap_db.sh`
 - Full setup + guarded admin bootstrap: `./scripts/bootstrap_db.sh --with-admin-bootstrap`
 - Full setup + dev seeds: `./scripts/bootstrap_db.sh --with-dev-seeds`
+- Full setup + sample marketplace posts: `./scripts/bootstrap_db.sh --with-sample-posts`
 - Full setup + admin bootstrap + dev seeds: `./scripts/bootstrap_db.sh --with-admin-bootstrap --with-dev-seeds`
 - Full setup + dev/test seeds: `./scripts/bootstrap_db.sh --with-dev-seeds --with-test-seeds`
 - Manual schema-only setup: apply `apps/api/database/bundles/schema.sql`
@@ -201,8 +204,19 @@ Generated files:
 - Baseline-only seed data: apply `apps/api/database/bundles/seed_data.sql`
 - Optional guarded admin bootstrap seed: apply `apps/api/database/bundles/seed_admin.sql`
 - Optional development seed data: apply `apps/api/database/bundles/seed_dev.sql`
+- Optional sample marketplace post seed data: apply `apps/api/database/bundles/seed_sample_posts.sql`
 - Optional test seed data: apply `apps/api/database/bundles/seed_test.sql`
 - Maintenance cleanup (dev/test only): run `apps/api/database/ops/dev-only/CLEANUP_TEST_DATA.sql` with `sqlcmd -v ALLOW_DEV_DATA_CLEANUP=1`
+
+## Sample Marketplace Posts
+
+Sample marketplace posts are not part of the default baseline seed path. They are optional publish/demo data and must be applied intentionally with `./scripts/bootstrap_db.sh --with-sample-posts` or by manually applying `apps/api/database/bundles/seed_sample_posts.sql` after `seed_data.sql`.
+
+`seeds/dev/INSERT_SAMPLE_POSTS.sql` is self-contained for database rows: it creates one disabled fake user account per sample post, upserts the post rows, assigns real baseline `CityID` and `AreaID` values, and upserts the matching `PostImages` rows. It currently seeds 30 posts and 76 image references across `Books & Stationery`, `Computers & Laptops`, `Mobile Phones & Tablets`, and `Vehicles`.
+
+The corresponding physical images are tracked as `apps/api/src/Api/uploads/post-images/sample-*.webp`. The API project includes those files in publish output, so a fresh publish checkout has the image files needed by the `/uploads/post-images/sample-*` URLs in the seed.
+
+Book sample posts use the existing `Books & Stationery` category name.
 
 ## Security
 

@@ -1,7 +1,7 @@
 /* eslint-disable max-lines */
 /* eslint-disable jsx-a11y/control-has-associated-label */
 import { useEffect, useState } from "react";
-import { Search, Eye, Ban, CheckCircle, Clock, Download } from "lucide-react";
+import { Search, Eye, Ban, CheckCircle, Download, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
@@ -91,6 +91,29 @@ export function ListingsManagement() {
     }
   };
 
+  const [deletePost, setDeletePost] = useState<{
+    id: number;
+    title: string;
+  } | null>(null);
+
+  const handleDeletePost = async () => {
+    if (!deletePost) return;
+    try {
+      const success = await api.admin.softDeletePost(deletePost.id);
+      if (success) {
+        toast.success("Post deleted successfully");
+        await fetchPosts(page, statusFilter);
+      } else {
+        toast.error("Failed to delete post");
+      }
+    } catch (error) {
+      logger.warn("[ListingsManagement] Failed to delete post", error);
+      toast.error("Error deleting post");
+    } finally {
+      setDeletePost(null);
+    }
+  };
+
   const getStatusBadge = (status: number) => {
     switch (status) {
       case 0:
@@ -106,15 +129,10 @@ export function ListingsManagement() {
           </span>
         );
       case 2:
-        return (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-            <Clock className="w-3 h-3 mr-1" /> Sold/Archived
-          </span>
-        );
       case 3:
         return (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            <Clock className="w-3 h-3 mr-1" /> Suspended
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            <CheckCircle className="w-3 h-3 mr-1" /> Sold
           </span>
         );
       default:
@@ -237,8 +255,7 @@ export function ListingsManagement() {
             <option value="">All Statuses</option>
             <option value="0">Active</option>
             <option value="1">Blocked</option>
-            <option value="2">Sold/Archived</option>
-            <option value="3">Suspended</option>
+            <option value="3">Sold</option>
           </select>
         </div>
       </div>
@@ -343,19 +360,17 @@ export function ListingsManagement() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              title="Suspend Post"
-                              aria-label={`Suspend Post ${post.title}`}
-                              className="text-amber-600 hover:bg-amber-100"
+                              title="Delete Post"
+                              aria-label={`Delete Post ${post.title}`}
+                              className="text-destructive hover:bg-destructive/10"
                               onClick={() =>
-                                setActionPost({
+                                setDeletePost({
                                   id: post.postID,
                                   title: post.title,
-                                  newStatus: 3,
-                                  label: "Suspended",
                                 })
                               }
                             >
-                              <Clock className="w-4 h-4" />
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                             <Button
                               variant="ghost"
@@ -445,6 +460,21 @@ export function ListingsManagement() {
         onConfirm={handleUpdateStatus}
       />
 
+      <ConfirmActionDialog
+        open={deletePost !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeletePost(null);
+        }}
+        title="Delete post?"
+        description={
+          deletePost
+            ? `Are you sure you want to delete "${deletePost.title || "Untitled"}"? This action will soft-delete the post and hide it from the marketplace.`
+            : ""
+        }
+        confirmLabel="Delete"
+        onConfirm={handleDeletePost}
+      />
+
       {/* Listing Detail Modal */}
       <ListingDetailModal
         post={detailPost}
@@ -460,12 +490,10 @@ export function ListingsManagement() {
             label: "Blocked",
           })
         }
-        onSuspend={(id) =>
-          setActionPost({
+        onDelete={(id) =>
+          setDeletePost({
             id,
             title: detailPost?.title || "",
-            newStatus: 3,
-            label: "Suspended",
           })
         }
         onApprove={(id) =>

@@ -39,7 +39,6 @@ builder.Services.AddSingleton(featureFlags);
 // ---------------------------------------------------------------------------
 // Options binding
 // ---------------------------------------------------------------------------
-builder.Services.Configure<WebPushOptions>(builder.Configuration.GetSection("WebPush"));
 builder.Services.Configure<GoogleAuthOptions>(builder.Configuration.GetSection("GoogleAuth"));
 builder.Services.Configure<FileStorageOptions>(builder.Configuration.GetSection("FileStorage"));
 builder.Services.Configure<PasswordResetOptions>(builder.Configuration.GetSection("PasswordReset"));
@@ -47,8 +46,10 @@ builder.Services.Configure<PasswordResetEmailOptions>(builder.Configuration.GetS
 builder.Services.Configure<TwoFactorOptions>(builder.Configuration.GetSection("TwoFactor"));
 builder.Services.Configure<EmailTwoFactorOptions>(builder.Configuration.GetSection("EmailTwoFactor"));
 builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
+builder.Services.Configure<YouTubeSettings>(builder.Configuration.GetSection("YouTube"));
 builder.Services.AddHttpClient<GoogleAuthService>();
 builder.Services.AddHttpClient<IPostCompareService, GeminiPostCompareService>();
+builder.Services.AddHttpClient<ICompareVideoRecommendationService, YouTubeCompareVideoRecommendationService>();
 
 // ---------------------------------------------------------------------------
 // Forwarded headers (proxy support)

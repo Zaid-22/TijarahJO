@@ -18,7 +18,6 @@ import {
 import { Badge } from "../../../shared/ui/badge";
 import { api } from "../../../services/api";
 import type { AdminDashboardStats } from "../../../services/api/admin";
-import { formatCompactDateTime } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
 import { LoadingState } from "../../../shared/ui/loading-state";
 
@@ -32,6 +31,21 @@ type AdminDashboardAnalytics = {
   weeklyUsers: Record<string, unknown>[];
   categoryData: Record<string, unknown>[];
 };
+
+function formatAdminActivityTimestamp(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(parsed);
+}
 
 export function AdminDashboard() {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
@@ -229,7 +243,7 @@ export function AdminDashboard() {
                       </span>
                     </div>
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatCompactDateTime(action.changedAt)}
+                      {formatAdminActivityTimestamp(action.changedAt)}
                     </span>
                   </div>
                 ))}

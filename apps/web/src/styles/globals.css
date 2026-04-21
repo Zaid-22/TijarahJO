@@ -407,7 +407,7 @@ body {
 
 /* Better mobile touch targets - minimum 44x44px */
 @media (max-width: 640px) {
-  button:not([role="switch"]),
+  button:not([role="switch"]):not(.compare-remove-btn),
   input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
   select,
   textarea {
@@ -415,7 +415,7 @@ body {
   }
 
   /* Ensure clickable elements are large enough */
-  button:not(.p-0):not([role="switch"]) {
+  button:not(.p-0):not([role="switch"]):not(.compare-remove-btn) {
     min-width: 44px;
   }
 }

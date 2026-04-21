@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Calendar,
   Edit,
   MapPin,
-  MessageSquare,
+  MessageCircle,
   Phone,
   Settings,
   Star,
@@ -11,14 +11,30 @@ import {
 import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
 import { Avatar, AvatarFallback, AvatarImage } from "../../../shared/ui/avatar";
 import { Button } from "../../../shared/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "../../../shared/ui/dialog";
 import type { UnifiedProfileViewModel } from "../types";
 import type { UnifiedProfileLabels } from "./unifiedProfileLabels";
+
+/** Detect if the current device is a phone (capable of making calls). */
+function isMobilePhone(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return /Android.*Mobile|iPhone|iPod|Windows Phone|BlackBerry|Opera Mini|IEMobile/i.test(
+    ua,
+  );
+}
 
 interface UnifiedProfileHeaderCardProps {
   viewModel: UnifiedProfileViewModel;
   labels: UnifiedProfileLabels;
   averageRating: string;
-  joinYear: number | string;
+  joinDateDisplay: string;
+  displayLocation?: string;
   onSettingsClick?: () => void;
   onEditProfileClick?: () => void;
   onChatWithSeller?: () => void;
@@ -28,17 +44,53 @@ export function UnifiedProfileHeaderCard({
   viewModel,
   labels,
   averageRating,
-  joinYear,
+  joinDateDisplay,
+  displayLocation,
   onSettingsClick,
   onEditProfileClick,
   onChatWithSeller,
 }: UnifiedProfileHeaderCardProps) {
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
+  const [showPhoneDialog, setShowPhoneDialog] = useState(false);
+  const [phoneCopied, setPhoneCopied] = useState(false);
   const avatarSrc = resolveAvatarSrc(viewModel.profile.avatar);
+  const isPhone = useMemo(() => isMobilePhone(), []);
+  const phoneNumber = viewModel.profile.phone?.trim() || "";
+  const isArabic = labels.jordan === "الأردن"; // infer language from labels
 
   useEffect(() => {
     setAvatarLoadFailed(false);
   }, [avatarSrc]);
+
+  const handlePhoneNumberClick = useCallback(
+    async (e: React.MouseEvent) => {
+      if (isPhone) return; // let tel: link work
+      e.preventDefault();
+      if (!phoneNumber) return;
+      try {
+        await navigator.clipboard.writeText(phoneNumber);
+        setPhoneCopied(true);
+        setTimeout(() => setPhoneCopied(false), 2000);
+      } catch {
+        const ta = document.createElement("textarea");
+        ta.value = phoneNumber;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        setPhoneCopied(true);
+        setTimeout(() => setPhoneCopied(false), 2000);
+      }
+    },
+    [isPhone, phoneNumber],
+  );
+
+  const handlePhoneDialogClose = (open: boolean) => {
+    if (!open) setPhoneCopied(false);
+    setShowPhoneDialog(open);
+  };
 
   const shouldShowAvatarImage = Boolean(avatarSrc) && !avatarLoadFailed;
   return (
@@ -71,12 +123,12 @@ export function UnifiedProfileHeaderCard({
             <div className="flex flex-wrap justify-center sm:justify-start gap-3 sm:gap-4 text-sm text-muted-foreground font-medium">
               <div className="flex items-center gap-1.5 rounded-full bg-slate-100/80 px-3.5 py-1.5 dark:bg-slate-800/50">
                 <MapPin className="h-4 w-4 text-primary" />
-                <span>{viewModel.profile.location || labels.jordan}</span>
+                <span>{displayLocation || viewModel.profile.location || labels.jordan}</span>
               </div>
               <div className="flex items-center gap-1.5 rounded-full bg-slate-100/80 px-3.5 py-1.5 dark:bg-slate-800/50">
                 <Calendar className="h-4 w-4 text-primary" />
                 <span>
-                  {labels.joined} {joinYear}
+                  {labels.joined} {joinDateDisplay}
                 </span>
               </div>
               <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3.5 py-1.5 font-semibold text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
@@ -114,30 +166,25 @@ export function UnifiedProfileHeaderCard({
               </Button>
             ) : null}
 
-            {viewModel.mode !== "owner" && viewModel.canCall ? (
+            {viewModel.mode !== "owner" && viewModel.canChat && onChatWithSeller ? (
               <Button
-                className="h-[3.25rem] rounded-[18px] bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-xl shadow-blue-500/20 transition-all hover:bg-primary/92 hover:-translate-y-0.5 active:translate-y-0"
-                disabled={!viewModel.profile.phone?.trim()}
-                onClick={() => {
-                  if (!viewModel.profile.phone?.trim()) {
-                    return;
-                  }
-                  window.location.href = `tel:${viewModel.profile.phone}`;
-                }}
+                className="flex h-11 min-w-[9rem] items-center justify-center gap-2 rounded-[16px] bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-none transition-colors hover:bg-primary/92"
+                onClick={onChatWithSeller}
               >
-                <Phone className="me-2 h-4.5 w-4.5 text-primary-foreground/90" />
-                {labels.callSeller}
+                <MessageCircle className="h-[1.2rem] w-[1.2rem] text-primary-foreground" />
+                {labels.chatWithSeller}
               </Button>
             ) : null}
 
-            {viewModel.mode !== "owner" && viewModel.canChat && onChatWithSeller ? (
+            {viewModel.mode !== "owner" && viewModel.canCall ? (
               <Button
                 variant="outline"
-                className="h-[3.25rem] rounded-[18px] border-2 border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 hover:-translate-y-0.5 active:translate-y-0"
-                onClick={onChatWithSeller}
+                className="flex h-11 min-w-[9rem] items-center justify-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-none transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:disabled:border-white/10 dark:disabled:bg-slate-800 dark:disabled:text-slate-400"
+                disabled={!phoneNumber}
+                onClick={() => setShowPhoneDialog(true)}
               >
-                <MessageSquare className="me-2 h-4.5 w-4.5 text-slate-500 transition-colors group-hover:text-slate-700 dark:text-slate-400" />
-                {labels.chatWithSeller}
+                <Phone className="h-[1.05rem] w-[1.05rem] text-slate-500 dark:text-slate-400" />
+                {labels.callSeller}
               </Button>
             ) : null}
           </div>
@@ -153,6 +200,93 @@ export function UnifiedProfileHeaderCard({
           </div>
         )}
       </div>
+
+      {/* Phone Dialog — same design everywhere */}
+      <Dialog open={showPhoneDialog} onOpenChange={handlePhoneDialogClose}>
+        <DialogContent
+          hideCloseButton
+          className="sm:max-w-[380px] border border-border/60 bg-background p-0 shadow-xl"
+        >
+          <DialogTitle className="sr-only">
+            {isArabic ? "رقم الهاتف" : "Phone Number"}
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            {isPhone
+              ? isArabic
+                ? "انقر على الرقم للاتصال بالبائع مباشرة"
+                : "Click the number to call the seller directly"
+              : isArabic
+                ? "انقر على الرقم لنسخه"
+                : "Click the number to copy it"}
+          </DialogDescription>
+          <div className="flex flex-col">
+            <div className="border-b border-border/60 px-6 pb-5 pt-6 text-center">
+              <h3 className="text-xl font-bold tracking-tight text-foreground">
+                {isArabic ? "رقم الهاتف" : "Phone Number"}
+              </h3>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                {isPhone
+                  ? isArabic
+                    ? "انقر على الرقم للاتصال بالبائع مباشرة"
+                    : "Tap the number below to call the seller directly"
+                  : isArabic
+                    ? "انقر على الرقم لنسخه"
+                    : "Click the number to copy it to clipboard"}
+              </p>
+            </div>
+
+            <div className="px-6 py-6">
+              <a
+                href={isPhone ? `tel:${phoneNumber}` : "#"}
+                onClick={(e) => void handlePhoneNumberClick(e)}
+                aria-label={
+                  isPhone
+                    ? isArabic
+                      ? `اتصل الآن ${phoneNumber}`
+                      : `Call now ${phoneNumber}`
+                    : isArabic
+                      ? `نسخ الرقم ${phoneNumber}`
+                      : `Copy number ${phoneNumber}`
+                }
+                className={`flex min-h-16 w-full items-center justify-center rounded-2xl border px-6 py-4 text-center transition-all duration-300 cursor-pointer ${
+                  phoneCopied
+                    ? "border-green-500 bg-green-500/10 text-green-700 dark:text-green-400"
+                    : "border-border bg-muted/30 text-foreground hover:bg-muted/50"
+                }`}
+                dir="ltr"
+              >
+                <div className="flex flex-col items-center font-sans">
+                  <span className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                    {phoneCopied
+                      ? isArabic
+                        ? "✓ تم النسخ"
+                        : "✓ Copied!"
+                      : isArabic
+                        ? "رقم البائع"
+                        : "Seller Phone"}
+                  </span>
+                  <span className="mt-1 text-2xl font-bold tracking-tight">
+                    {phoneNumber}
+                  </span>
+                  {!isPhone && !phoneCopied && (
+                    <span className="mt-1.5 text-xs text-muted-foreground/70">
+                      {isArabic ? "انقر للنسخ" : "Click to copy"}
+                    </span>
+                  )}
+                </div>
+              </a>
+
+              <Button
+                variant="ghost"
+                className="mt-3 w-full font-medium text-muted-foreground hover:text-foreground"
+                onClick={() => handlePhoneDialogClose(false)}
+              >
+                {isArabic ? "رجوع" : "Go Back"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

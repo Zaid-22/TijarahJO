@@ -38,6 +38,7 @@ public sealed class UpdateUserCommand
     public int? Status { get; init; }
     public int? RoleId { get; init; }
     public bool? IsDeleted { get; init; }
+    public bool? ClearSuspension { get; init; }
 }
 
 public sealed class DeleteUserCommand

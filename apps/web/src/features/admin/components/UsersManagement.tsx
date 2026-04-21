@@ -11,10 +11,11 @@ import { SuspendUserDialog } from "./users/SuspendUserDialog";
 import { CreateUserForm, initialCreateUserForm } from "./users/types";
 import { formatCompactDate } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { TypeToConfirmDialog } from "../../../shared/ui/type-to-confirm-dialog";
 import { emitAuthSessionChanged } from "../../../contexts/authContextUtils";
 import type { NormalizedRole } from "../../../services/api/roles";
+import { buildCurrentPath } from "../../../shared/lib/backNavigation";
 
 function formatJoinedDate(dateValue?: string): string {
   if (!dateValue) {
@@ -48,6 +49,8 @@ function getDefaultCreateRoleId(roles: NormalizedRole[]): string {
 
 export function UsersManagement() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const currentPath = buildCurrentPath(location.pathname, location.search);
   const [users, setUsers] = useState<AdminUserRecord[]>([]);
   const [roles, setRoles] = useState<NormalizedRole[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -365,7 +368,9 @@ export function UsersManagement() {
           void handleStatusChange(userId, status);
         }}
         onViewDetails={(userId) => {
-          navigate(`/admin/users/${userId}`);
+          navigate(`/admin/users/${userId}`, {
+            state: { fromPath: currentPath },
+          });
         }}
         onDeleteRequest={(user) => {
           setPendingDeleteUser({

@@ -21,10 +21,12 @@ namespace TijarahJo.Api.Features.Compare
     [Authorize]
     public class CompareController(
         ILogger<CompareController> logger,
-        IPostCompareService compareService) : ControllerBase
+        IPostCompareService compareService,
+        ICompareVideoRecommendationService videoRecommendations) : ControllerBase
     {
         private readonly ILogger<CompareController> _logger = logger;
         private readonly IPostCompareService _compareService = compareService;
+        private readonly ICompareVideoRecommendationService _videoRecommendations = videoRecommendations;
 
         [HttpPost]
         [EnableRateLimiting("compare")]
@@ -130,6 +132,55 @@ namespace TijarahJo.Api.Features.Compare
                         Reason = result.FinalRecommendation.Reason
                     }
                     : null
+            };
+
+            return Ok(response);
+        }
+
+        [HttpPost("videos")]
+        [EnableRateLimiting("compare")]
+        [ProducesResponseType(typeof(CompareVideoRecommendationsResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+        public async Task<ActionResult<CompareVideoRecommendationsResponse>> RecommendVideos(
+            [FromBody] CompareVideoRecommendationsRequest request,
+            CancellationToken cancellationToken)
+        {
+            if (request?.PostIds == null || request.PostIds.Count == 0 || request.PostIds.Count > 3)
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    detail: "Please provide 1 to 3 posts for video recommendations.");
+            }
+
+            if (request.PostIds.Any(postId => postId < 1) || request.PostIds.Distinct().Count() != request.PostIds.Count)
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    detail: "Post IDs must be positive and unique.");
+            }
+
+            CompareVideoRecommendationResult result = await _videoRecommendations.RecommendAsync(
+                request.PostIds,
+                request.Language,
+                cancellationToken);
+
+            var response = new CompareVideoRecommendationsResponse
+            {
+                IsConfigured = result.IsConfigured,
+                Message = result.Message,
+                Videos = [.. result.Videos.Select(video => new CompareVideoRecommendationDTO
+                {
+                    PostId = video.PostId,
+                    VideoId = video.VideoId,
+                    Title = video.Title,
+                    ChannelTitle = video.ChannelTitle,
+                    ThumbnailUrl = video.ThumbnailUrl,
+                    ViewCount = video.ViewCount,
+                    PublishedAt = video.PublishedAt,
+                    SearchQuery = video.SearchQuery
+                })]
             };
 
             return Ok(response);

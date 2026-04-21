@@ -93,9 +93,11 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
                   category: post.category ?? "",
                   categoryId: post.categoryId || "",
                   location: detailLocation || post.location || "",
+                  views: post.views,
                   averageRating: sellerAverageRating || undefined,
                   reviewCount: sellerReviewCount || undefined,
                   sellerId: post.sellerId || "",
+                  sellerName: post.seller,
                 }}
                 isAuthenticated={props.isAuthenticated}
                 onRequireAuth={props.onRequireAuth}
@@ -120,7 +122,7 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
             variant="inline"
             className="mb-0 shrink-0 self-start"
           />
-          <h3 className="line-clamp-2 text-base font-semibold leading-tight text-foreground sm:text-[1.05rem]">
+          <h3 className="line-clamp-2 text-base font-semibold leading-tight text-foreground sm:text-lg">
             {post.name}
           </h3>
           <div className="min-w-0 text-muted-foreground" title={detailLocation || post.location || ""}>

@@ -138,7 +138,7 @@ export function NotificationsPage({
       // silently fail
     }
   }, []);
-
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
   const filteredNotifications = notifications.filter((n) => {
     if (activeTab === "all") return true;
     const type = getNotificationType(n.notificationType);
@@ -147,7 +147,7 @@ export function NotificationsPage({
     return type === "system";
   });
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
 
   const tabs: { key: FilterTab; label: string }[] = [
     { key: "all", label: copy.all },
@@ -248,7 +248,7 @@ export function NotificationsPage({
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex-shrink-0">
+                  <div className="mt-0.5 shrink-0">
                     {getNotificationIcon(notification.notificationType)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -262,7 +262,7 @@ export function NotificationsPage({
                       >
                         {notification.title}
                       </h4>
-                      <span className="text-xs text-muted-foreground flex-shrink-0">
+                      <span className="text-xs text-muted-foreground shrink-0">
                         {formatRelativeTime(notification.createdAt, dateTimeLocale)}
                       </span>
                     </div>
@@ -277,7 +277,7 @@ export function NotificationsPage({
                         e.stopPropagation();
                         markAsRead(notification.notificationId);
                       }}
-                      className="mt-0.5 flex-shrink-0 p-1 rounded-full hover:bg-muted transition-colors"
+                      className="mt-0.5 shrink-0 p-1 rounded-full hover:bg-muted transition-colors"
                       aria-label="Mark as read"
                     >
                       <Check className="h-4 w-4 text-primary" />

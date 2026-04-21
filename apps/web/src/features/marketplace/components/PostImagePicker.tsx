@@ -42,12 +42,12 @@ export function PostImagePicker({
             {selectedImages.map((image, index) => (
               <div
                 key={image.id}
-                className="group relative aspect-square overflow-hidden rounded-lg border-2 border-border"
+                className="group relative overflow-hidden rounded-lg border-2 border-border bg-muted/20"
               >
                 <img
                   src={image.previewUrl}
                   alt={`Upload ${index + 1}`}
-                  className="h-full w-full object-cover"
+                  className="block w-full h-auto object-contain"
                 />
                 {index === 0 ? (
                   <div className="absolute left-2 top-2 rounded bg-primary px-2 py-1 text-xs text-primary-foreground">

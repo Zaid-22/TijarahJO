@@ -3,6 +3,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Language } from "../../../types";
 import {
   getAllHeroBanners,
+  clearSavedHeroBanners,
+  resolveBannerColor,
   resolveHeroBannerMedia,
   saveHeroBanners,
   type HeroBanner,
@@ -22,6 +24,42 @@ type HomeHeroSectionProps = {
 };
 
 const AUTO_PLAY_INTERVAL = 5000;
+
+function isLightColor(color: string | undefined, fallbackClass: string): boolean {
+  if (!color) {
+    return /\b(50|100|200|white|sky|amber|background)\b/.test(fallbackClass);
+  }
+
+  if (color === "transparent") {
+    return true;
+  }
+
+  if (!color.startsWith("#")) {
+    return /\bbackground\b/.test(fallbackClass);
+  }
+
+  const hexValue = color.slice(1);
+  const hex =
+    hexValue.length === 3
+      ? hexValue
+          .split("")
+          .map((char) => `${char}${char}`)
+          .join("")
+      : hexValue.slice(0, 6);
+  if (hex.length !== 6) {
+    return /\b(50|100|200|white|sky|amber|background)\b/.test(fallbackClass);
+  }
+
+  const red = parseInt(hex.slice(0, 2), 16);
+  const green = parseInt(hex.slice(2, 4), 16);
+  const blue = parseInt(hex.slice(4, 6), 16);
+  if (![red, green, blue].every(Number.isFinite)) {
+    return /\b(50|100|200|white|sky|amber|background)\b/.test(fallbackClass);
+  }
+
+  const luminance = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255;
+  return luminance > 0.62;
+}
 
 function resolveLocalizedBannerCopy(
   language: Language,
@@ -45,12 +83,16 @@ export function HomeHeroSection({
   
   useEffect(() => {
     let isCurrent = true;
-    let idleHandle: number | null = null;
-    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
 
     const refreshBanners = () => {
       bannersApi.getActiveBanners().then((apiBanners) => {
-        if (!isCurrent || !apiBanners || apiBanners.length === 0) {
+        if (!isCurrent || apiBanners === null) {
+          return;
+        }
+
+        if (apiBanners.length === 0) {
+          setBanners([]);
+          clearSavedHeroBanners();
           return;
         }
 
@@ -80,24 +122,10 @@ export function HomeHeroSection({
       });
     };
 
-    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-      idleHandle = window.requestIdleCallback(() => {
-        refreshBanners();
-      }, { timeout: 1500 });
-    } else {
-      timeoutHandle = setTimeout(() => {
-        refreshBanners();
-      }, 1200);
-    }
+    refreshBanners();
 
     return () => {
       isCurrent = false;
-      if (idleHandle !== null && typeof window !== "undefined" && "cancelIdleCallback" in window) {
-        window.cancelIdleCallback(idleHandle);
-      }
-      if (timeoutHandle) {
-        clearTimeout(timeoutHandle);
-      }
     };
   }, []);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -230,12 +258,16 @@ export function HomeHeroSection({
                 isActive
                   ? "opacity-100 z-10"
                   : "opacity-0 z-0"
-              } ${banner.bgClass.startsWith('#') ? '' : banner.bgClass} ${banner.textClass.startsWith('#') ? '' : banner.textClass}`;
-              const slideStyle = banner.bgClass.startsWith('#') ? { backgroundColor: banner.bgClass } : {};
-              const textStyle = banner.textClass.startsWith('#') ? { color: banner.textClass } : {};
-              const isLightBg = banner.bgClass.startsWith('#')
-                ? parseInt(banner.bgClass.slice(1), 16) > 0x888888
-                : banner.bgClass.includes('50') || banner.bgClass.includes('100') || banner.bgClass.includes('200') || banner.bgClass.includes('white') || banner.bgClass.includes('sky') || banner.bgClass.includes('amber');
+              }`;
+              const backgroundColor = resolveBannerColor(banner.bgClass);
+              const textColor = resolveBannerColor(banner.textClass);
+              const slideStyle = backgroundColor
+                ? backgroundColor.includes("gradient(")
+                  ? { background: backgroundColor }
+                  : { backgroundColor }
+                : {};
+              const textStyle = textColor ? { color: textColor } : {};
+              const isLightBg = isLightColor(backgroundColor, banner.bgClass);
               const buttonStyle = isLightBg
                 ? { backgroundColor: 'rgb(15, 23, 42)', color: 'rgb(255, 255, 255)' }
                 : { backgroundColor: 'rgb(255, 255, 255)', color: 'rgb(15, 23, 42)' };

@@ -12,6 +12,7 @@ MASTER_SQL_BUNDLE="$DB_BUNDLES_DIR/master.sql"
 SEED_BASELINE_SQL_BUNDLE="$DB_BUNDLES_DIR/seed_data.sql"
 SEED_ADMIN_SQL_BUNDLE="$DB_BUNDLES_DIR/seed_admin.sql"
 SEED_DEV_SQL_BUNDLE="$DB_BUNDLES_DIR/seed_dev.sql"
+SEED_SAMPLE_POSTS_SQL_BUNDLE="$DB_BUNDLES_DIR/seed_sample_posts.sql"
 SEED_TEST_SQL_BUNDLE="$DB_BUNDLES_DIR/seed_test.sql"
 VERIFY_SCRIPT="$ROOT_DIR/scripts/verify_all_apis.sh"
 CONTAINER_NAME="tijarahjo-db"
@@ -26,6 +27,7 @@ RUN_VERIFY=1
 KEEP_BACKEND_RUNNING=0
 ENABLE_ADMIN_BOOTSTRAP=0
 ENABLE_DEV_SEEDS=0
+ENABLE_SAMPLE_POST_SEEDS=0
 ENABLE_TEST_SEEDS=0
 
 print_usage() {
@@ -39,6 +41,7 @@ Options:
   --with-admin-bootstrap
                      Apply guarded admin bootstrap seed after baseline seeds.
   --with-dev-seeds    Apply development seed bundle after baseline seeds.
+  --with-sample-posts Apply sample marketplace post seed bundle after baseline seeds.
   --with-test-seeds   Apply test seed bundle after baseline seeds.
   -h, --help          Show this help message.
 
@@ -81,6 +84,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --with-dev-seeds)
       ENABLE_DEV_SEEDS=1
+      shift
+      ;;
+    --with-sample-posts)
+      ENABLE_SAMPLE_POST_SEEDS=1
       shift
       ;;
     --with-test-seeds)
@@ -372,6 +379,14 @@ if [[ "$ENABLE_DEV_SEEDS" -eq 1 ]]; then
     apply_sql_file "$SEED_DEV_SQL_BUNDLE"
   else
     echo "Warning: dev seed bundle was not generated at $SEED_DEV_SQL_BUNDLE (skipping dev seeds)."
+  fi
+fi
+
+if [[ "$ENABLE_SAMPLE_POST_SEEDS" -eq 1 ]]; then
+  if [[ -f "$SEED_SAMPLE_POSTS_SQL_BUNDLE" ]]; then
+    apply_sql_file "$SEED_SAMPLE_POSTS_SQL_BUNDLE"
+  else
+    echo "Warning: sample post seed bundle was not generated at $SEED_SAMPLE_POSTS_SQL_BUNDLE (skipping sample posts)."
   fi
 fi
 

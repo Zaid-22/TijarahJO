@@ -3,6 +3,7 @@ import { Button } from "../../../../shared/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -39,6 +40,9 @@ export function SuspendUserDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Suspend User</DialogTitle>
+          <DialogDescription className="sr-only">
+            Choose how long to suspend this user and apply the suspension.
+          </DialogDescription>
         </DialogHeader>
         {userName && (
           <div className="space-y-4 py-3">

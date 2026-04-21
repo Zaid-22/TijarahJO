@@ -28,6 +28,20 @@ function isSoldListing(post: unknown): boolean {
   return status === "SOLD" && !isDeleted;
 }
 
+function readPhone(value: unknown): string {
+  const row = toRecord(value);
+  return String(row.phone ?? row.Phone ?? "").trim();
+}
+
+function findFirstPostPhone(posts: unknown[]): string {
+  for (const post of posts) {
+    const phone = readPhone(post);
+    if (phone.length > 0) return phone;
+  }
+
+  return "";
+}
+
 function normalizeListingToPost(
   post: unknown,
   fallbackIndex: number,
@@ -168,6 +182,7 @@ export function useSellerProfileData(userId: string | undefined) {
 
       if (sellerResponse?.seller) {
         const seller = sellerResponse.seller;
+        const sellerPosts = sellerResponse.posts || [];
         const city = seller?.city;
         const area = seller?.area;
         const location = [area, city].filter(Boolean).join(", ") || "Amman, Jordan";
@@ -175,17 +190,18 @@ export function useSellerProfileData(userId: string | undefined) {
           seller.name,
           String(seller?.id || userId),
         );
+        const sellerPhone = readPhone(seller) || findFirstPostPhone(sellerPosts);
 
         setSellerProfile({
           name: sellerName,
           joinDate: seller.joinedDate || "2024",
           location,
-          phone: seller.phone,
+          phone: sellerPhone,
           bio: seller.bio,
           avatar: seller.avatar,
         });
 
-        const activePosts = (sellerResponse.posts || [])
+        const activePosts = sellerPosts
           .filter(isActiveListing)
           .map((post, index: number) =>
             normalizeListingToPost(
@@ -200,7 +216,7 @@ export function useSellerProfileData(userId: string | undefined) {
           );
         setActiveListings(activePosts);
 
-        const soldPosts = (sellerResponse.posts || [])
+        const soldPosts = sellerPosts
           .filter(isSoldListing)
           .map((post, index: number) =>
             normalizeListingToPost(
@@ -215,7 +231,11 @@ export function useSellerProfileData(userId: string | undefined) {
           );
         setSoldListings(soldPosts);
       } else {
-        const sellerUser = await api.users.getUser(String(userId));
+        const [sellerUser, userPosts] = await Promise.all([
+          api.users.getUser(String(userId)),
+          api.posts.getUserPosts(String(userId)),
+        ]);
+        const userPostPhone = findFirstPostPhone(userPosts);
         let fallbackSellerName = `User ${userId}`;
         let fallbackLocation = "Amman, Jordan";
         if (sellerUser) {
@@ -233,13 +253,12 @@ export function useSellerProfileData(userId: string | undefined) {
             name: fallbackSellerName,
             joinDate: String(sellerRow.joinedAt ?? "2024"),
             location,
-            phone: String(sellerRow.phone ?? ""),
+            phone: readPhone(sellerRow) || userPostPhone,
             bio: String(sellerRow.bio ?? ""),
             avatar: String(sellerRow.avatar ?? ""),
           });
         }
 
-        const userPosts = await api.posts.getUserPosts(String(userId));
         const activePosts = userPosts
           .filter(isActiveListing)
           .map((post: Post, index: number) =>

@@ -46,7 +46,13 @@ export function AppRoutes() {
   const normalizedPathname = normalizePathname(location.pathname);
 
   const { language, darkMode, setDarkMode, toggleLanguage } = useAppSettings();
-  const { isAuthenticated, logout, loading: isAuthLoading, user } = useAuth();
+  const {
+    isAuthenticated,
+    logout,
+    loginAsGuest,
+    loading: isAuthLoading,
+    user,
+  } = useAuth();
   const { userProfile, setUserProfile, currentUserDisplayName, isLoading: isProfileLoading, isProfileComplete } =
     useUserProfileContext();
   const { activeSearchQuery } = useSearch();
@@ -71,6 +77,10 @@ export function AppRoutes() {
 
   const [showAuthModal, setShowAuthModal] = useState(false);
   const promptLoginModal = () => setShowAuthModal(true);
+  const continueAsGuest = async () => {
+    await loginAsGuest();
+    setShowAuthModal(false);
+  };
 
   const shouldShowProfileCompletion = isAuthenticated && !isAuthLoading && !isProfileLoading && !isProfileComplete;
 
@@ -133,6 +143,7 @@ export function AppRoutes() {
           setDarkMode,
           toggleLanguage,
           logout,
+          loginAsGuest,
           setUserProfile,
           currentUserDisplayName,
           routeState,
@@ -178,7 +189,9 @@ export function AppRoutes() {
           }
           setShowAuthModal(false);
         }}
-        onContinueAsGuest={() => setShowAuthModal(false)}
+        onContinueAsGuest={() => {
+          void continueAsGuest();
+        }}
       />
     </Suspense>
   );

@@ -4,6 +4,7 @@ import { Button } from "../../../shared/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -76,6 +77,10 @@ export function ReportActionDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Review Report #{report?.reportID}</DialogTitle>
+          <DialogDescription className="sr-only">
+            Review report details, update moderation status, and apply related
+            admin actions.
+          </DialogDescription>
         </DialogHeader>
         {report && (
           <div className="space-y-4 py-2">
