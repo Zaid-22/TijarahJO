@@ -173,7 +173,7 @@ export function resolveUserFromAuthPayload(
 ): User {
   const safeFallback = toFallbackUser(fallback);
   const backendUser = asBackendUser(payload);
-
+           
   if (!backendUser) {
     return safeFallback;
   }
