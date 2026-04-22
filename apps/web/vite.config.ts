@@ -105,6 +105,8 @@ function buildConnectSources(isProduction: boolean): string {
     connectSources.add("ws:");
     connectSources.add("wss:");
   }
+  connectSources.add("https://maps.googleapis.com");
+  connectSources.add("https://maps.gstatic.com");
   if (apiOrigin) {
     connectSources.add(apiOrigin);
     addLoopbackOriginAliases(connectSources, apiOrigin);
@@ -127,10 +129,24 @@ function buildConnectSources(isProduction: boolean): string {
 
 function buildStyleSrcDirective(isProduction: boolean): string {
   if (isProduction) {
-    return "style-src 'self' https://fonts.googleapis.com";
+    return "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com";
   }
 
   return "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com";
+}
+
+function buildScriptSrcDirective(): string {
+  return [
+    "script-src",
+    "'self'",
+    "'sha256-SLOKmWvKYj1okn6TfCw3PMmRTrhS4oK78YwwL9JigrM='",
+    "https://maps.googleapis.com",
+    "https://maps.gstatic.com",
+  ].join(" ");
+}
+
+function buildFrameSrcDirective(): string {
+  return "frame-src 'self' https://www.google.com";
 }
 
 function buildImgSrcDirective(isProduction: boolean): string {
@@ -154,17 +170,20 @@ function buildImgSrcDirective(isProduction: boolean): string {
 function buildCspPolicy(isProduction: boolean): string {
   const connectSrc = buildConnectSources(isProduction);
   const styleSrc = buildStyleSrcDirective(isProduction);
+  const scriptSrc = buildScriptSrcDirective();
+  const frameSrc = buildFrameSrcDirective();
   const imgSrc = buildImgSrcDirective(isProduction);
 
   return [
     "default-src 'self'",
     "base-uri 'self'",
     "object-src 'none'",
-    "script-src 'self' 'sha256-SLOKmWvKYj1okn6TfCw3PMmRTrhS4oK78YwwL9JigrM='",
+    scriptSrc,
     styleSrc,
     imgSrc,
     "font-src 'self' data: https://fonts.gstatic.com",
     connectSrc,
+    frameSrc,
     "worker-src 'self'",
     "form-action 'self'",
   ].join("; ");

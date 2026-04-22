@@ -30,25 +30,32 @@ public sealed class DataCleanupBackgroundService(
             _logger.LogInformation("DataCleanupBackgroundService started. Interval: {Interval}", Interval);
         }
 
-        // Delay the first run by 2 minutes to let the app finish starting up
-        await Task.Delay(TimeSpan.FromMinutes(2), stoppingToken);
-
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            try
-            {
-                await RunCycleAsync(stoppingToken);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "DataCleanupBackgroundService encountered an error during cleanup cycle");
-            }
+            // Delay the first run by 2 minutes to let the app finish starting up
+            await Task.Delay(TimeSpan.FromMinutes(2), stoppingToken);
 
-            await Task.Delay(Interval, stoppingToken);
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                try
+                {
+                    await RunCycleAsync(stoppingToken);
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "DataCleanupBackgroundService encountered an error during cleanup cycle");
+                }
+
+                await Task.Delay(Interval, stoppingToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignored to allow graceful shutdown without noisy logs
         }
 
         _logger.LogInformation("DataCleanupBackgroundService stopped.");

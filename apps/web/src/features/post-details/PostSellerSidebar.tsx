@@ -6,6 +6,7 @@ import { Skeleton } from "../../shared/ui/skeleton";
 import { Card, CardContent } from "../../shared/ui/card";
 import { resolveAvatarSrc, getAvatarInitial } from "../../shared/lib/avatar";
 import { Separator } from "../../shared/ui/separator";
+import { PostLocationMapCard } from "./PostLocationMapCard";
 import type { Language, Post } from "../../types";
 
 interface PostSellerSidebarProps {
@@ -44,6 +45,7 @@ interface PostSellerSidebarProps {
 
 export function PostSellerSidebar({
   language,
+  isRTL,
 
   post,
   publicSellerName,
@@ -233,6 +235,7 @@ export function PostSellerSidebar({
         </CardContent>
       </Card>
 
+      <PostLocationMapCard post={post} language={language} isRTL={isRTL} />
     </div>
   );
 }

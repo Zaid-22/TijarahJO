@@ -46,7 +46,11 @@ builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gem
 builder.Services.Configure<YouTubeSettings>(builder.Configuration.GetSection("YouTube"));
 builder.Services.AddHttpClient<GoogleAuthService>();
 builder.Services.AddHttpClient<IPostCompareService, GeminiPostCompareService>();
-builder.Services.AddHttpClient<ICompareVideoRecommendationService, YouTubeCompareVideoRecommendationService>();
+builder.Services.AddHttpClient<ICompareVideoRecommendationService, YouTubeCompareVideoRecommendationService>(client =>
+{
+    // The YouTube API Key has HTTP Referrer restrictions. We need to spoof the frontend URL.
+    client.DefaultRequestHeaders.Add("Referer", "http://localhost:5173/");
+});
 
 // ---------------------------------------------------------------------------
 // Forwarded headers (proxy support)
