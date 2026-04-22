@@ -16,6 +16,10 @@ import { Input } from "../../../../shared/ui/input";
 import { Label } from "../../../../shared/ui/label";
 import { toast } from "sonner";
 import { resolveBannerColor } from "../../../home/components/heroBannerData";
+import {
+  BANNER_BACKGROUND_FALLBACK,
+  BANNER_TEXT_FALLBACK,
+} from "../../../../shared/design/colorTokens";
 
 export type BannerFormState = {
   title: string;
@@ -42,8 +46,8 @@ export const DEFAULT_BANNER_FORM_STATE: BannerFormState = {
   buttonText: "Learn More",
   buttonTextAr: "اعرف المزيد",
   imageUrl: "",
-  bgClass: "\x231e293b",
-  textClass: "\x23ffffff",
+  bgClass: BANNER_BACKGROUND_FALLBACK,
+  textClass: BANNER_TEXT_FALLBACK,
   altText: "",
   altTextAr: "",
   linkUrl: "",
@@ -97,10 +101,11 @@ export function BannerForm({
   };
 
   const bgPreviewStyle = {
-    background: resolveBannerColor(bannerForm.bgClass) || "#1e293b",
+    background:
+      resolveBannerColor(bannerForm.bgClass) || BANNER_BACKGROUND_FALLBACK,
   };
   const textPreviewStyle = {
-    background: resolveBannerColor(bannerForm.textClass) || "#ffffff",
+    background: resolveBannerColor(bannerForm.textClass) || BANNER_TEXT_FALLBACK,
   };
 
   return (
@@ -254,7 +259,7 @@ export function BannerForm({
               <input
                 id="banner-bgcolor"
                 type="color"
-                value={/^#[0-9A-Fa-f]{6}$/.test(bannerForm.bgClass) ? bannerForm.bgClass : "\x231e293b"}
+                value={/^#[0-9A-Fa-f]{6}$/.test(bannerForm.bgClass) ? bannerForm.bgClass : BANNER_BACKGROUND_FALLBACK}
                 onChange={(e) =>
                   onFormChange((prev) => ({
                     ...prev,
@@ -264,7 +269,7 @@ export function BannerForm({
                 className="h-10 w-14 cursor-pointer rounded-md border border-border p-1 bg-background"
               />
               <Input
-                placeholder="\x231e293b"
+                placeholder={BANNER_BACKGROUND_FALLBACK}
                 value={bannerForm.bgClass}
                 onChange={(e) =>
                   onFormChange((prev) => ({
@@ -288,7 +293,7 @@ export function BannerForm({
               <input
                 id="banner-btncolor"
                 type="color"
-                value={/^#[0-9A-Fa-f]{6}$/.test(bannerForm.textClass) ? bannerForm.textClass : "\x23ffffff"}
+                value={/^#[0-9A-Fa-f]{6}$/.test(bannerForm.textClass) ? bannerForm.textClass : BANNER_TEXT_FALLBACK}
                 onChange={(e) =>
                   onFormChange((prev) => ({
                     ...prev,
@@ -298,7 +303,7 @@ export function BannerForm({
                 className="h-10 w-14 cursor-pointer rounded-md border border-border p-1 bg-background"
               />
               <Input
-                placeholder="\x23ffffff"
+                placeholder={BANNER_TEXT_FALLBACK}
                 value={bannerForm.textClass}
                 onChange={(e) =>
                   onFormChange((prev) => ({

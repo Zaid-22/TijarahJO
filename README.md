@@ -44,15 +44,15 @@
 - Category browsing (15+ categories) and full-text search
 - AI-Powered Post Comparison (side-by-side analysis, pros & cons, language-aware)
 - YouTube Video Recommendations for compared products
-- Image uploads (server-side file storage)
+- Image uploads with server-side validation, WebP optimization, thumbnails, and local file storage
 - Favorites system and seller profiles
 - Post view tracking
 
 ### User & Security
-- JWT-based authentication with token blacklisting
+- Cookie-backed JWT authentication with refresh flow, token blacklisting, session invalidation, and CSRF protection
 - Google OAuth 2.0 social login
 - Two-Factor Authentication (TOTP / Authenticator app)
-- Password reset with email verification codes
+- Password reset with email verification codes and DB-backed hashed verification challenges
 - Role-based access control (RBAC)
 
 ### Communication
@@ -75,9 +75,12 @@
 
 ---
 
-## Known Limitations
+## Architecture Notes
 
-- **In-Memory State**: Password reset and Two-Factor Authentication (2FA) challenge states are currently stored in memory (`ConcurrentDictionary`). In a multi-instance production environment, this requires either configuring **sticky sessions** (session affinity) on your load balancer, or migrating these stores to a distributed cache (like Redis).
+- Password reset and Two-Factor Authentication (2FA) challenge state is persisted in the `VerificationChallenges` table, with hashed tokens and expiry metadata.
+- JWT session safety uses cookie-backed access tokens, refresh endpoints, token blacklisting, and `LastInvalidatedAt` session invalidation checks.
+- Redis-backed caching and SignalR scale-out are supported when configured; the API can gracefully fall back for local development.
+- Production deployments must provide environment-specific origins, hosts, JWT issuer/audience/signing key, database credentials, and persistent upload storage.
 
 ---
 
@@ -112,12 +115,12 @@ make ci-local                  # Full local CI mirror
 
 | Layer | Technologies |
 |-------|-------------|
-| **Frontend** | React 18, TypeScript 5, Vite, Tailwind CSS v4, Radix UI, Framer Motion |
-| **Backend** | ASP.NET Core 8, Entity Framework Core, SignalR |
-| **Database** | SQL Server 2022, Flyway-style ordered migrations |
-| **Auth** | Cookie-backed JWT auth with refresh endpoint, Google OAuth 2.0, TOTP 2FA |
+| **Frontend** | React 18, TypeScript 5, Vite, Tailwind CSS v4, Radix UI, TanStack Query, SignalR client, Lucide React |
+| **Backend** | ASP.NET Core 8, Entity Framework Core, SignalR, ImageSharp, optional Redis integration |
+| **Database** | SQL Server 2022, Flyway-style ordered migrations, migration guard scripts |
+| **Auth** | Cookie-backed JWT auth, refresh endpoint, token blacklisting, CSRF protection, Google OAuth 2.0, TOTP 2FA |
 | **Infra** | Docker Compose, GitHub Actions CI |
 
 ---
 
-Last Updated: 2026-04-21
+Last Updated: 2026-04-22

@@ -266,7 +266,7 @@ function AppContent() {
   }, [authError, clearAuthError]);
 
   useEffect(() => {
-    document.title = "TijarahJo - Jordan's Marketplace";
+    document.title = "TijarahJO";
   }, []);
 
   useEffect(() => {

@@ -27,15 +27,17 @@ services:
       - redis
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      DATABASE_CONNECTION_STRING: >-
-        Server=sqlserver,1433;Database=TijarahJoDB;User Id=sa;Password=${MSSQL_SA_PASSWORD};
-        Encrypt=True;TrustServerCertificate=True;
+      FrontendUrl: ${FRONTEND_URL:?Set FRONTEND_URL}
+      CORS__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:?Set CORS_ALLOWED_ORIGINS}
+      AllowedHosts: ${ALLOWED_HOSTS:?Set ALLOWED_HOSTS}
+      DATABASE_CONNECTION_STRING: "Server=sqlserver,1433;Database=TijarahJoDB;User Id=${DB_APP_LOGIN:?Set DB_APP_LOGIN};Password=${DB_APP_PASSWORD:?Set DB_APP_PASSWORD};Encrypt=True;TrustServerCertificate=True;"
       JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY}
-      JWT_ISSUER: ${JWT_ISSUER:-https://your-production-domain.com}
-      JWT_AUDIENCE: ${JWT_AUDIENCE:-https://your-production-domain.com}
+      JWT_ISSUER: ${JWT_ISSUER:?Set JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:?Set JWT_AUDIENCE}
       ConnectionStrings__Redis: redis:6379
       FileStorage__RootPath: /var/lib/tijarahjo/uploads
       FileStorage__PublicBasePath: /uploads
+      FeatureFlags__EnableAiComparison: "true"
       FeatureFlags__RequireRedis: "true"
     volumes:
       - api_uploads:/var/lib/tijarahjo/uploads

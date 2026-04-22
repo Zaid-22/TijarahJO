@@ -127,7 +127,7 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       signUpCityRequiredPrompt: "Please enter your city.",
       signUpAreaRequiredPrompt: "Please enter your area.",
       registrationFailedFallback: "Registration failed. Please try again.",
-      loginFailedFallback: "Invalid email or password. Please try again.",
+      loginFailedFallback: "Invalid email, phone number, or password.",
       googleAuthFailedFallback: "Google sign-in failed. Please try again.",
       twoFactorRequiredPrompt:
         "Two-factor verification is required. Enter the code sent to your email.",
@@ -216,7 +216,7 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       signUpAreaRequiredPrompt: "يرجى إدخال المنطقة.",
       registrationFailedFallback: "فشل إنشاء الحساب. يرجى المحاولة مرة أخرى.",
       loginFailedFallback:
-        "البريد الإلكتروني أو كلمة المرور غير صحيحة. يرجى المحاولة مرة أخرى.",
+        "البريد الإلكتروني أو رقم الهاتف أو كلمة المرور غير صحيحة.",
       googleAuthFailedFallback:
         "فشل تسجيل الدخول عبر Google. يرجى المحاولة مرة أخرى.",
       twoFactorRequiredPrompt:

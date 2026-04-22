@@ -11,6 +11,9 @@ Set these environment variables in your hosting platform (Azure, AWS, Docker, et
 JWT_SIGNING_KEY=your-very-long-random-secret-key-at-least-32-characters
 JWT_ISSUER=https://your-production-domain.com
 JWT_AUDIENCE=https://your-production-domain.com
+FRONTEND_URL=https://your-frontend-domain.com
+CORS_ALLOWED_ORIGINS=https://your-frontend-domain.com,https://www.your-frontend-domain.com
+ALLOWED_HOSTS=your-api-domain.com
 # Optional but recommended: separate pepper for password hashing
 PASSWORD_PEPPER=another-long-random-secret-at-least-32-characters
 ```
@@ -77,16 +80,18 @@ TwoFactor__ChallengeSigningKey=your-random-secret-for-2fa-login-challenges
 
 **Option 1: Full Connection String (Recommended)**
 ```bash
-DATABASE_CONNECTION_STRING=Data Source=your-server;Database=TijarahJoDB;User Id=sa;Password=YourSecurePassword;TrustServerCertificate=True;
+DATABASE_CONNECTION_STRING=Data Source=your-server;Database=TijarahJoDB;User Id=tijarahjo_app;Password=YourSecurePassword;TrustServerCertificate=True;
 ```
 
 **Option 2: Individual Components**
 ```bash
 DB_HOST=your-database-server
 DB_NAME=TijarahJoDB
-DB_USER=sa
+DB_USER=tijarahjo_app
 DB_PASSWORD=YourSecurePassword
 ```
+
+Provision the runtime app login before starting production API instances. Use the existing bootstrap/provisioning scripts with `DB_RUNTIME_PRINCIPAL=app`, `DB_APP_LOGIN`, and `DB_APP_PASSWORD`; reserve the SQL Server `sa` login for bootstrap and administration only.
 
 #### CORS Configuration (Optional - defaults to FrontendUrl)
 ```bash
@@ -101,6 +106,7 @@ FeatureFlags__EnableRateLimiting=true
 FeatureFlags__EnableHttpLogging=true
 FeatureFlags__EnableHealthChecks=true
 FeatureFlags__EnableInMemoryCaching=true
+FeatureFlags__EnableAiComparison=true
 
 # Redis behavior controls
 FeatureFlags__EnableRedisPresence=true
@@ -116,6 +122,9 @@ ConnectionStrings__Redis=localhost:6379
 #### Gemini AI Configuration (Required for Post Comparison)
 ```bash
 Gemini__ApiKey=your-gemini-secure-api-key
+# Set FeatureFlags__EnableAiComparison=false to disable outbound AI comparison calls.
+# When enabled, comparison sends listing name, price, category, description, city,
+# and view metadata to Gemini.
 # Defaults (usually fine to omit):
 # Gemini__ModelName=gemini-2.5-flash
 # Gemini__FallbackModelName=gemini-3-flash-preview

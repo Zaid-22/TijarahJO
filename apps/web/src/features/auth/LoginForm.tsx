@@ -155,11 +155,11 @@ export function LoginForm({
       {generalError && (
         <Alert
           variant="destructive"
-          className="mb-4 sm:mb-6"
-          aria-live="polite"
+          className="mb-4 border-destructive/30 bg-destructive/5 px-3 py-2.5 text-destructive shadow-none sm:mb-5 [&>svg]:text-destructive"
+          aria-live="assertive"
         >
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="text-sm">
+          <AlertDescription className="text-sm font-medium text-destructive" dir="auto">
             {generalError}
           </AlertDescription>
         </Alert>

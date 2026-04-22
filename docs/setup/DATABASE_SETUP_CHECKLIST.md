@@ -128,7 +128,7 @@ WHERE schema_id = SCHEMA_ID('dbo')
 
 ## 6. Index/Query Health Spot Checks
 
-- [ ] Login lookup indexes exist (`IX_TbUsers_Login_Email_Active`, normalized phone/email equivalents)
+- [ ] Login lookup indexes exist (`IX_Users_Login_Email_Active`, normalized phone/email equivalents)
 - [ ] Post feed indexes exist on status/delete + recency paths
 - [ ] No blocking migration/index errors in SQL logs
 

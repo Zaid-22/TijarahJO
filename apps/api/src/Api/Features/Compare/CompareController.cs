@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
 using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Api.Common.Configuration;
 using TijarahJo.Api.Contracts.Requests;
 using TijarahJo.Api.Contracts.Responses;
 
@@ -22,11 +23,13 @@ namespace TijarahJo.Api.Features.Compare
     public class CompareController(
         ILogger<CompareController> logger,
         IPostCompareService compareService,
-        ICompareVideoRecommendationService videoRecommendations) : ControllerBase
+        ICompareVideoRecommendationService videoRecommendations,
+        FeatureFlagsOptions featureFlags) : ControllerBase
     {
         private readonly ILogger<CompareController> _logger = logger;
         private readonly IPostCompareService _compareService = compareService;
         private readonly ICompareVideoRecommendationService _videoRecommendations = videoRecommendations;
+        private readonly FeatureFlagsOptions _featureFlags = featureFlags;
 
         [HttpPost]
         [EnableRateLimiting("compare")]
@@ -35,11 +38,19 @@ namespace TijarahJo.Api.Features.Compare
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+        [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<CompareResponse>> ComparePosts(
             [FromBody] CompareRequest request,
             CancellationToken cancellationToken)
         {
+            if (!_featureFlags.EnableAiComparison)
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status503ServiceUnavailable,
+                    detail: "AI comparison is currently disabled.");
+            }
+
             if (request?.PostIds == null || request.PostIds.Count < 2 || request.PostIds.Count > 3)
             {
                 return Problem(
@@ -143,10 +154,18 @@ namespace TijarahJo.Api.Features.Compare
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+        [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
         public async Task<ActionResult<CompareVideoRecommendationsResponse>> RecommendVideos(
             [FromBody] CompareVideoRecommendationsRequest request,
             CancellationToken cancellationToken)
         {
+            if (!_featureFlags.EnableAiComparison)
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status503ServiceUnavailable,
+                    detail: "AI comparison is currently disabled.");
+            }
+
             if (request?.PostIds == null || request.PostIds.Count == 0 || request.PostIds.Count > 3)
             {
                 return Problem(

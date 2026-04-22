@@ -220,6 +220,7 @@ public sealed class GeminiPostCompareService(
     // -----------------------------------------------------------------------
 
     private const int MaxRetriesPerModel = 2;
+    private const int MaxLoggedErrorBodyChars = 500;
     private static readonly TimeSpan BaseRetryDelay = TimeSpan.FromSeconds(1);
 
     private static bool IsTransientStatusCode(System.Net.HttpStatusCode statusCode) =>
@@ -238,6 +239,22 @@ public sealed class GeminiPostCompareService(
                 "The AI service encountered an internal error. Please try again.",
             _ => googleMessage ?? "An unexpected error occurred while communicating with the AI service."
         };
+
+    private static string BuildGeminiEndpoint(string modelName)
+        => $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(modelName)}:generateContent";
+
+    private static string SanitizeErrorBodyForLog(string? body)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return "";
+        }
+
+        string trimmed = body.Trim();
+        return trimmed.Length <= MaxLoggedErrorBodyChars
+            ? trimmed
+            : $"{trimmed[..MaxLoggedErrorBodyChars]}...";
+    }
 
     private async Task<PostCompareResult> CallGeminiAsync(
         List<PostForComparison> posts,
@@ -274,7 +291,7 @@ public sealed class GeminiPostCompareService(
 
         foreach (string modelName in modelsToTry)
         {
-            string url = $"https://generativelanguage.googleapis.com/v1beta/models/{modelName}:generateContent?key={_settings.ApiKey}";
+            string url = BuildGeminiEndpoint(modelName);
 
             if (_logger.IsEnabled(LogLevel.Information))
                 _logger.LogInformation("Calling Gemini API with model {Model}, key present: {KeyPresent}",
@@ -282,7 +299,16 @@ public sealed class GeminiPostCompareService(
 
             for (int attempt = 1; attempt <= MaxRetriesPerModel; attempt++)
             {
-                var response = await _httpClient.PostAsJsonAsync(url, requestBody, s_camelCaseOptions, cancellationToken);
+                using var requestMessage = new HttpRequestMessage(HttpMethod.Post, url)
+                {
+                    Content = JsonContent.Create(requestBody, options: s_camelCaseOptions)
+                };
+                if (!string.IsNullOrWhiteSpace(_settings.ApiKey))
+                {
+                    requestMessage.Headers.TryAddWithoutValidation("x-goog-api-key", _settings.ApiKey);
+                }
+
+                var response = await _httpClient.SendAsync(requestMessage, cancellationToken);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -299,8 +325,8 @@ public sealed class GeminiPostCompareService(
                 // Non-transient error — don't retry, don't try fallback
                 if (!IsTransientStatusCode(response.StatusCode))
                 {
-                    _logger.LogError("Gemini API ({Model}) returned non-transient {StatusCode}: {Body}",
-                        modelName, response.StatusCode, lastErrorBody);
+                    _logger.LogError("Gemini API ({Model}) returned non-transient {StatusCode}: {BodyPreview}",
+                        modelName, response.StatusCode, SanitizeErrorBodyForLog(lastErrorBody));
                     goto BuildErrorResult;
                 }
 
@@ -351,8 +377,8 @@ public sealed class GeminiPostCompareService(
             ? CompareFailureReason.RateLimited
             : CompareFailureReason.AiServiceError;
 
-        _logger.LogError("Gemini API failed after trying {ModelCount} model(s). Last status: {StatusCode}, Body: {Body}",
-            modelsToTry.Count, finalStatusCode, lastErrorBody);
+        _logger.LogError("Gemini API failed after trying {ModelCount} model(s). Last status: {StatusCode}, BodyPreview: {BodyPreview}",
+            modelsToTry.Count, finalStatusCode, SanitizeErrorBodyForLog(lastErrorBody));
 
         return new PostCompareResult
         {

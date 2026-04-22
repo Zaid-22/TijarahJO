@@ -1,192 +1,24 @@
+Legacy schema script notes
+==========================
 
----------------------------- Last Added
-CREATE OR ALTER PROCEDURE dbo.sp_TbUsers_Login
-(
-    @Email          NVARCHAR(255),
-    @HashedPassword NVARCHAR(255)
-)
-AS
-BEGIN
-    SET NOCOUNT ON;
+This file used to contain an early prototype schema for the old `Tb*` table
+model. That model is obsolete. The current application schema uses the
+canonical tables in `apps/api/database/schema/BASE_SCHEMA.sql`, including
+`dbo.Users`, `dbo.Posts`, `dbo.Categories`, and `dbo.PostImages`.
 
-    -- Return the full user row only if credentials are valid and the user is not deleted
-    SELECT TOP (1)
-           u.UserID,
-           u.HashedPassword,
-           u.Email,
-           u.FirstName,
-           u.LastName,
-           u.JoinDate,
-           u.Status,
-           u.RoleID,
-           u.IsDeleted
-    FROM dbo.TbUsers AS u
-    WHERE u.Email = @Email
-      AND u.HashedPassword = @HashedPassword
-      AND u.IsDeleted = 0;
-END
-GO
----------------------------- Last Added
+Current database setup should use:
 
+- `apps/api/database/schema/BASE_SCHEMA.sql`
+- `apps/api/database/scripts/migrations/`
+- `apps/api/database/scripts/seeds/baseline/`
+- `apps/api/database/scripts/seeds/dev/`
 
+For sample marketplace posts, use:
 
+- `apps/api/database/scripts/seeds/dev/INSERT_SAMPLE_POSTS.sql`
 
+Or run:
 
-------------------------------------------------------------
--- 0. Create and select database
-------------------------------------------------------------
-CREATE DATABASE TijarahJoDB;
-GO
-
-USE TijarahJoDB;
-GO
-
-------------------------------------------------------------
--- 1. TbRoles
-------------------------------------------------------------
-CREATE TABLE dbo.TbRoles (
-    RoleID      INT IDENTITY(1,1) CONSTRAINT PK_TbRoles PRIMARY KEY,
-    RoleName    NVARCHAR(50) NOT NULL,
-    CreatedAt   DATETIME2     NOT NULL CONSTRAINT DF_TbRoles_CreatedAt DEFAULT SYSDATETIME(),
-    IsDeleted   BIT           NOT NULL CONSTRAINT DF_TbRoles_IsDeleted DEFAULT 0,
-    CONSTRAINT UQ_TbRoles_RoleName UNIQUE (RoleName)
-);
-GO
-
-------------------------------------------------------------
--- 2. TbUsers
-------------------------------------------------------------
-CREATE TABLE dbo.TbUsers (
-    UserID          INT IDENTITY(1,1) CONSTRAINT PK_TbUsers PRIMARY KEY,
-    HashedPassword  NVARCHAR(255) NOT NULL,
-    Email           NVARCHAR(255) NOT NULL,
-    FirstName       NVARCHAR(100) NOT NULL,
-    LastName        NVARCHAR(100) NULL,
-    JoinDate        DATETIME2     NOT NULL CONSTRAINT DF_TbUsers_JoinDate DEFAULT SYSDATETIME(),
-    Status          INT  NOT NULL CONSTRAINT DF_TbUsers_Status DEFAULT 1, -- 1 is active 
-    RoleID          INT           NOT NULL,
-    IsDeleted       BIT           NOT NULL CONSTRAINT DF_TbUsers_IsDeleted DEFAULT 0,
-
-    CONSTRAINT UQ_TbUsers_Email    UNIQUE (Email),
-
-    CONSTRAINT CK_TbUsers_Status CHECK (Status IN (0, 1, 2)), -- 0- deleted ---- 1- active  ----- 2- blocked
-
-    CONSTRAINT FK_TbUsers_RoleID FOREIGN KEY (RoleID)
-        REFERENCES dbo.TbRoles(RoleID)
-);
-GO
-
-------------------------------------------------------------
--- 3. TbItemCategories
-------------------------------------------------------------
-CREATE TABLE dbo.TbItemCategories (
-    CategoryID   INT IDENTITY(1,1) CONSTRAINT PK_TbItemCategories PRIMARY KEY,
-    CategoryName NVARCHAR(100) NOT NULL,
-    NameAr       NVARCHAR(100) NULL,
-    Icon         NVARCHAR(100) NULL,
-    Color        NVARCHAR(20)  NULL,
-    Image        NVARCHAR(1000) NULL,
-    CreatedAt    DATETIME2     NOT NULL CONSTRAINT DF_TbItemCategories_CreatedAt DEFAULT SYSDATETIME(),
-    IsDeleted    BIT           NOT NULL CONSTRAINT DF_TbItemCategories_IsDeleted DEFAULT 0,
-    CONSTRAINT UQ_TbItemCategories_CategoryName UNIQUE (CategoryName)
-);
-GO
-
-------------------------------------------------------------
--- 4. TbPosts
-------------------------------------------------------------
-CREATE TABLE dbo.TbPosts (
-    PostID          INT IDENTITY(1,1) CONSTRAINT PK_TbUserPosts PRIMARY KEY,
-    UserID          INT          NOT NULL,
-    CategoryID      INT          NOT NULL,
-    PostTitle       NVARCHAR(200) NOT NULL,
-    PostDescription NVARCHAR(MAX) NULL,
-    Price           DECIMAL(18,2) NULL,
-    Status          INT  NOT NULL CONSTRAINT DF_TbUserPosts_Status DEFAULT 1,
-    CreatedAt       DATETIME2    NOT NULL CONSTRAINT DF_TbUserPosts_CreatedAt DEFAULT SYSDATETIME(),
-    IsDeleted       BIT          NOT NULL CONSTRAINT DF_TbUserPosts_IsDeleted DEFAULT 0,
-
-    CONSTRAINT CK_TbUserPosts_Price CHECK (Price IS NULL OR Price >= 0),
-
-    CONSTRAINT CK_TbUserPosts_Status CHECK (Status IN (0, 1, 2, 3)), -- 0- Active ---- 1- Blocked  ----- 2- Inactive ------  3- SoldOut
-   
-
-    CONSTRAINT FK_TbUserPosts_UserID FOREIGN KEY (UserID)
-        REFERENCES dbo.TbUsers(UserID),
-
-    CONSTRAINT FK_TbUserPosts_CategoryID FOREIGN KEY (CategoryID)
-        REFERENCES dbo.TbItemCategories(CategoryID)
-);
-GO
-
-------------------------------------------------------------
--- 5. TbPostImages
-------------------------------------------------------------
-CREATE TABLE dbo.TbPostImages (
-    PostImageID  INT IDENTITY(1,1) CONSTRAINT PK_TbPostImages PRIMARY KEY,
-    PostID       INT           NOT NULL,
-    PostImageURL NVARCHAR(500) NOT NULL,
-    UploadedAt   DATETIME2     NOT NULL CONSTRAINT DF_TbPostImages_UploadedAt DEFAULT SYSDATETIME(),
-    IsDeleted    BIT           NOT NULL CONSTRAINT DF_TbPostImages_IsDeleted DEFAULT 0,
-    CONSTRAINT FK_TbPostImages_PostID FOREIGN KEY (PostID)
-        REFERENCES dbo.TbPosts(PostID)
-);
-GO
-
-------------------------------------------------------------
--- 6. Seed data
-------------------------------------------------------------
-
--- 6.1 Roles (Admin, User)
-INSERT INTO dbo.TbRoles (RoleName)
-VALUES ('Admin'), ('User');
-GO
-
--- 6.2 Users (sample)
--- NOTE: replace HASHED_PASSWORD_x with real hashed values in production
-INSERT INTO dbo.TbUsers (HashedPassword, Email, FirstName, LastName, RoleID, Status)
-VALUES
-('HASHED_PASSWORD_1', 'admin@tijarahjo.com', 'Super', 'Admin', 1, 1),
-('HASHED_PASSWORD_2', 'user1@tijarahjo.com', 'Ahmad', 'Ali',   2, 2);
-GO
-
--- 6.3 Item categories (sample)
-INSERT INTO dbo.TbItemCategories (CategoryName, NameAr, Icon, Color, Image)
-VALUES
-('Electronics', 'Electronics', 'camera', '#0A4ABF', 'https://example.com/images/categories/electronics.jpg'),
-('Furniture', 'Furniture', 'armchair', '#8B5CF6', 'https://example.com/images/categories/furniture.jpg'),
-('Vehicles', 'Vehicles', 'car', '#EF4444', 'https://example.com/images/categories/vehicles.jpg'),
-('Services', 'Services', 'wrench', '#64748B', 'https://example.com/images/categories/services.jpg');
-GO
-
--- 6.4 User posts (sample)
-INSERT INTO dbo.TbPosts (UserID, CategoryID, PostTitle, PostDescription, Price, Status)
-VALUES
-(2, 1, 'iPhone 13 for Sale', 'Gently used, 128GB, blue color', 550.00, 1),
-(2, 4, 'Freelance Web Design', 'Offering professional website design services', 0.00, 2);
-GO
-
--- 6.5 Post images (sample)
-INSERT INTO dbo.TbPostImages (PostID, PostImageURL)
-VALUES
-(1, 'https://example.com/images/iphone13.jpg'),
-(2, 'https://example.com/images/webdesign.jpg');
-GO
-
-------------------------------------------------------------
--- 7. Recommended indexes
-------------------------------------------------------------
-CREATE INDEX IX_TbUsers_Email           ON dbo.TbUsers (Email);
-CREATE INDEX IX_TbUsers_HashedPassword  ON dbo.TbUsers (HashedPassword);
-
-CREATE INDEX IX_TbUsers_RoleID          ON dbo.TbUsers (RoleID);
-CREATE INDEX IX_TbUsers_Status          ON dbo.TbUsers(Status);
-
-CREATE INDEX IX_TbUserPosts_UserID      ON dbo.TbPosts (UserID);
-CREATE INDEX IX_TbUserPosts_CategoryID  ON dbo.TbPosts (CategoryID);
-CREATE INDEX IX_TbUserPosts_Status      ON dbo.TbPosts (Status);
-
-CREATE INDEX IX_TbItemCategories_Name   ON dbo.TbItemCategories (CategoryName);
-
-CREATE INDEX IX_TbPostImages_PostID     ON dbo.TbPostImages (PostID);
-GO
+```bash
+./scripts/bootstrap_db.sh --with-sample-posts
+```

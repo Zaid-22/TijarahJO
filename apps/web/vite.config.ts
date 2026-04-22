@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
 
 const DEV_DEFAULT_API_BASE_URL = "http://localhost:5033/api/v1";
@@ -164,6 +165,7 @@ function buildCspPolicy(isProduction: boolean): string {
     imgSrc,
     "font-src 'self' data: https://fonts.gstatic.com",
     connectSrc,
+    "worker-src 'self'",
     "form-action 'self'",
   ].join("; ");
 }
@@ -193,7 +195,88 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, "");
 
   return {
-    plugins: [tailwindcss(), react(), injectCspPolicy(mode, env)],
+    plugins: [
+      tailwindcss(),
+      react(),
+      VitePWA({
+        registerType: "autoUpdate",
+        includeAssets: ["favicon.svg", "icons/*.png", "robots.txt"],
+        manifest: {
+          name: "TijarahJO — سوق الأردن",
+          short_name: "TijarahJO",
+          description:
+            "Jordan's trusted marketplace for buying and selling new and used items.",
+          theme_color: "#0A4ABF",
+          background_color: "#ffffff",
+          display: "standalone",
+          scope: "/",
+          start_url: "/",
+          dir: "rtl",
+          lang: "ar",
+          icons: [
+            {
+              src: "/icons/icon-192x192.png",
+              sizes: "192x192",
+              type: "image/png",
+            },
+            {
+              src: "/icons/icon-512x512.png",
+              sizes: "512x512",
+              type: "image/png",
+            },
+            {
+              src: "/icons/icon-512x512.png",
+              sizes: "512x512",
+              type: "image/png",
+              purpose: "maskable",
+            },
+          ],
+        },
+        workbox: {
+          globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+          runtimeCaching: [
+            {
+              urlPattern: /^\/api\//,
+              handler: "NetworkFirst",
+              options: {
+                cacheName: "api-cache",
+                expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 },
+                networkTimeoutSeconds: 5,
+              },
+            },
+            {
+              urlPattern: /\/uploads\//,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "image-cache",
+                expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "google-fonts",
+                expiration: { maxEntries: 20, maxAgeSeconds: 365 * 24 * 60 * 60 },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/images\.unsplash\.com\/.*/,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "unsplash-images",
+                expiration: { maxEntries: 50, maxAgeSeconds: 30 * 24 * 60 * 60 },
+              },
+            },
+          ],
+        },
+        devOptions: {
+          enabled: true,
+          type: "module",
+        },
+      }),
+      injectCspPolicy(mode, env),
+    ],
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "src"),

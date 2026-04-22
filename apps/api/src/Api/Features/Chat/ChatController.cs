@@ -311,17 +311,28 @@ public class ChatController(
     [HttpGet("download-image")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [AllowAnonymous]
-    public IActionResult DownloadImage(
+    public async Task<IActionResult> DownloadImage(
         [FromQuery] int conversationId,
         [FromQuery] string url,
-        [FromQuery] string sig)
+        [FromQuery] string sig,
+        CancellationToken cancellationToken)
     {
+        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int currentUserId, out ActionResult? failureResult))
+        {
+            return failureResult!;
+        }
+
         if (conversationId < 1 || string.IsNullOrWhiteSpace(url))
         {
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Conversation ID and URL are required.");
+        }
+
+        if (!await _messages.CanAccessConversationAsync(currentUserId, conversationId, cancellationToken))
+        {
+            return Forbid();
         }
 
         try

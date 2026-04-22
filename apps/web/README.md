@@ -77,7 +77,7 @@
 ### 🎨 Modern UI/UX
 - Responsive design (mobile, tablet, desktop)
 - Full dark mode support with comfortable color scheme
-- Smooth animations and transitions with Framer Motion
+- Smooth CSS and Tailwind-powered transitions
 - Loading and error states
 - Confirmation dialogs and toast notifications (Sonner)
 - Pagination with configurable page sizes
@@ -152,7 +152,7 @@ The application will be available at **http://localhost:5173**
 | **Styling** | Tailwind CSS v4 |
 | **Components** | Radix UI (accessible primitives) |
 | **Icons** | Lucide React |
-| **Animations** | Framer Motion |
+| **Animations** | CSS and Tailwind transitions |
 | **Realtime** | SignalR (@microsoft/signalr) |
 | **Notifications** | Sonner (toast) |
 | **Linting** | ESLint |

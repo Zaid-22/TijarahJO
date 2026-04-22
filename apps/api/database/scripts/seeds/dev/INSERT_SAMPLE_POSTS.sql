@@ -94,26 +94,23 @@ ACT American international schools, GR1 ~GR12
 بتقدروا تزورونا بمعرضنا بالجاردنز ش وصفي التل. مجمع 73 معرض هاي تك HIGH TECH
 أوقات الدوام يوميا من 9ص-10م ويوم الجمعه من 4م-10م
 خدمة التوصيل متوفرة لجميع مناطق المملكة ب 3 دنانير خلال 24-48 ساعه'),
-(N'computers-and-laptops-2', N'sample-post-computers-and-laptops-2@tijarahjo.local', N'منى', N'العتيبي', N'Computers & Laptops', N'Lenovo Thinkpads and Thinkbooks for sale', 225.00, N'Various Lenovo Thinkpad laptops and Thinkbook laptops for sale.
-
-See photos for specifications of the laptops.
-
-1. Lenovo Thinkbook 13s.
-# Intel Core i5 11th
-# 8 GB Ram
-# 256GB SSD NVMe storage
-# 1Gb Intel Iris Xe GPU
-# very good condition
-# 146 battery cycles
-
-Price: 225 jod
-
-2. Lenovo Thinkpad L15
-# Amd Ryzen 7 Pro
-# 32 GB Ram
-# 256GB SSD Storage
-# 1GB Amd GPU
-# 426 battery cycles'),
+(N'computers-and-laptops-2', N'sample-post-computers-and-laptops-2@tijarahjo.local', N'منى', N'العتيبي', N'Computers & Laptops', N'Lenovo Thinkpads and Thinkbooks for sale', 225.00, CONCAT(
+    N'Various Lenovo Thinkpad laptops and Thinkbook laptops for sale.', CHAR(13), CHAR(10), CHAR(13), CHAR(10),
+    N'See photos for specifications of the laptops.', CHAR(13), CHAR(10), CHAR(13), CHAR(10),
+    N'1. Lenovo Thinkbook 13s.', CHAR(13), CHAR(10),
+    N'# Intel Core i5 11th', CHAR(13), CHAR(10),
+    N'# 8 GB Ram', CHAR(13), CHAR(10),
+    N'# 256GB SSD NVMe storage', CHAR(13), CHAR(10),
+    N'# 1Gb Intel Iris Xe GPU', CHAR(13), CHAR(10),
+    N'# very good condition', CHAR(13), CHAR(10),
+    N'# 146 battery cycles', CHAR(13), CHAR(10), CHAR(13), CHAR(10),
+    N'Price: 225 jod', CHAR(13), CHAR(10), CHAR(13), CHAR(10),
+    N'2. Lenovo Thinkpad L15', CHAR(13), CHAR(10),
+    N'# Amd Ryzen 7 Pro', CHAR(13), CHAR(10),
+    N'# 32 GB Ram', CHAR(13), CHAR(10),
+    N'# 256GB SSD Storage', CHAR(13), CHAR(10),
+    N'# 1GB Amd GPU', CHAR(13), CHAR(10),
+    N'# 426 battery cycles')),
 (N'computers-and-laptops-3', N'sample-post-computers-and-laptops-3@tijarahjo.local', N'زياد', N'الحربي', N'Computers & Laptops', N'Lenovo laptop with accessories (cooling fan wireless lenovo mouse and red dragon headset)', 650.00, N'Brand/Model: Lenovo LOQ 15IAX9E used for 5 months feels like new
 • Processor (CPU): Intel Core i7-12650HX (12th Generation)
 • Graphics Card (GPU): NVIDIA GeForce RTX 4050 (6GB)

@@ -57,11 +57,25 @@ const extractErrorMessage = (
   fallback: string,
   backendConnectionMessage: string,
 ): string => {
-  if (extractApiCode(payload) === "CONNECTION_REFUSED") {
+  const code = extractApiCode(payload);
+  if (code === "CONNECTION_REFUSED") {
     return backendConnectionMessage;
   }
 
-  return extractApiMessage(payload) || fallback;
+  if (code === "LOGIN_FAILED") {
+    return fallback;
+  }
+
+  const message = extractApiMessage(payload);
+  const normalizedMessage = (message || "").toLowerCase();
+  if (
+    normalizedMessage.includes("invalid email/phone or password") ||
+    normalizedMessage.includes("invalid email or password")
+  ) {
+    return fallback;
+  }
+
+  return message || fallback;
 };
 
 const toExceptionMessage = (
@@ -194,6 +208,7 @@ export function LoginPage({
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const submitInFlightRef = useRef(false);
 
   const {
     cityNames,
@@ -646,9 +661,13 @@ export function LoginPage({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    dispatch({ type: "SET_GENERAL_ERROR", error: "" });
+
+    if (state.isLoading || submitInFlightRef.current) {
+      return;
+    }
 
     if (state.step === "twoFactor") {
+      submitInFlightRef.current = true;
       dispatch({ type: "START_LOADING" });
       try {
         await handleTwoFactorVerification();
@@ -662,6 +681,7 @@ export function LoginPage({
           ),
         });
       } finally {
+        submitInFlightRef.current = false;
         dispatch({ type: "STOP_LOADING" });
       }
       return;
@@ -675,9 +695,11 @@ export function LoginPage({
     );
 
     if (hasValidationErrors) {
+      dispatch({ type: "SET_GENERAL_ERROR", error: "" });
       return;
     }
 
+    submitInFlightRef.current = true;
     dispatch({ type: "START_LOADING" });
     try {
       if (state.mode === "signUp") {
@@ -695,6 +717,7 @@ export function LoginPage({
         ),
       });
     } finally {
+      submitInFlightRef.current = false;
       dispatch({ type: "STOP_LOADING" });
     }
   };

@@ -25,6 +25,10 @@ function walkFiles(dirPath) {
   return files;
 }
 
+const IGNORE_FILES = [
+  "src/shared/design/colorTokens.ts",
+];
+
 function main() {
   const files = walkFiles(SRC_DIR);
   const violations = [];
@@ -33,6 +37,11 @@ function main() {
     const relativePath = path
       .relative(process.cwd(), filePath)
       .replace(/\\/g, "/");
+
+    if (IGNORE_FILES.includes(relativePath)) {
+      continue;
+    }
+
     const content = readFileSync(filePath, "utf8");
     const lines = content.split("\n");
 
@@ -52,10 +61,12 @@ function main() {
     return;
   }
 
+  // eslint-disable-next-line no-console
   console.error(
     "Design-system check failed: hardcoded hex colors are not allowed in TS/TSX files.",
   );
   for (const violation of violations) {
+    // eslint-disable-next-line no-console
     console.error(`- ${violation}`);
   }
   process.exit(1);

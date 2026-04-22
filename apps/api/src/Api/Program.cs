@@ -22,10 +22,7 @@ using TijarahJo.Api.Common.Utils;
 using TijarahJo.Api.Startup;
 using TijarahJo.Infrastructure.Services;
 
-Console.WriteLine("--> STARTING PROGRAM.CS");
 var builder = WebApplication.CreateBuilder(args);
-Console.WriteLine("--> WebApplication.CreateBuilder FINISHED");
-
 
 // ---------------------------------------------------------------------------
 // Feature flags
