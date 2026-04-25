@@ -130,6 +130,14 @@ Gemini__ApiKey=your-gemini-secure-api-key
 # Gemini__FallbackModelName=gemini-3-flash-preview
 ```
 
+#### YouTube Recommendations Configuration (Optional)
+```bash
+YouTube__ApiKey=your-youtube-data-api-key
+# Optional absolute URL used as the outbound Referer header when your YouTube key
+# is restricted by HTTP referrer.
+YouTube__Referer=https://your-frontend-domain.com/
+```
+
 #### File Storage (post image uploads)
 ```bash
 # Absolute or relative path for persisted uploads

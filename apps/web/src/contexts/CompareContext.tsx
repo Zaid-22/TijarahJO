@@ -4,6 +4,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useMemo,
   type ReactNode,
 } from "react";
 import { toast } from "sonner";
@@ -93,45 +94,48 @@ export function CompareProvider({ children }: { children: ReactNode }) {
 
   const addToCompare = useCallback(
     (post: ComparePost) => {
-      // Use the current state value directly to avoid side-effects in the updater function
-      if (selectedPosts.some((p) => p.id === post.id)) {
-        toast.info(t.postAlreadyInCompare);
-        return;
-      }
-      if (selectedPosts.length >= MAX_COMPARE_ITEMS) {
-        toast.warning(t.compareMaxLimit);
-        return;
-      }
-      
-      if (
-        selectedPosts.length > 0 &&
-        selectedPosts[0].category !== post.category
-      ) {
-        toast.error(t.compareCategoryMismatch, {
-          id: "compare-category-mismatch"
-        });
-        return;
-      }
-      
-      toast.success(t.compareItemAdded.replace("{name}", post.name), {
-        id: `compare-added-${post.id}`
+      setSelectedPosts((prev) => {
+        if (prev.some((p) => p.id === post.id)) {
+          queueMicrotask(() => toast.info(t.postAlreadyInCompare));
+          return prev;
+        }
+        if (prev.length >= MAX_COMPARE_ITEMS) {
+          queueMicrotask(() => toast.warning(t.compareMaxLimit));
+          return prev;
+        }
+        if (prev.length > 0 && prev[0].category !== post.category) {
+          queueMicrotask(() =>
+            toast.error(t.compareCategoryMismatch, {
+              id: "compare-category-mismatch",
+            }),
+          );
+          return prev;
+        }
+        queueMicrotask(() =>
+          toast.success(t.compareItemAdded.replace("{name}", post.name), {
+            id: `compare-added-${post.id}`,
+          }),
+        );
+        return [...prev, post];
       });
-      setSelectedPosts((prev) => [...prev, post]);
     },
-    [selectedPosts, t.compareCategoryMismatch, t.compareItemAdded, t.compareMaxLimit, t.postAlreadyInCompare]
+    [t.compareCategoryMismatch, t.compareItemAdded, t.compareMaxLimit, t.postAlreadyInCompare],
   );
 
   const removeFromCompare = useCallback(
     (postId: string) => {
-      const post = selectedPosts.find((p) => p.id === postId);
-      if (post) {
-        toast.error(t.compareItemRemoved.replace("{name}", post.name), {
-          id: `compare-removed-${postId}`,
-        });
-        setSelectedPosts((prev) => prev.filter((p) => p.id !== postId));
-      }
+      setSelectedPosts((prev) => {
+        const post = prev.find((p) => p.id === postId);
+        if (!post) return prev;
+        queueMicrotask(() =>
+          toast.error(t.compareItemRemoved.replace("{name}", post.name), {
+            id: `compare-removed-${postId}`,
+          }),
+        );
+        return prev.filter((p) => p.id !== postId);
+      });
     },
-    [selectedPosts, t.compareItemRemoved]
+    [t.compareItemRemoved],
   );
 
   const clearCompare = useCallback(() => {
@@ -141,18 +145,21 @@ export function CompareProvider({ children }: { children: ReactNode }) {
 
   const isInCompare = useCallback(
     (postId: string) => selectedPosts.some((p) => p.id === postId),
-    [selectedPosts]
+    [selectedPosts],
   );
 
-  const value: CompareContextValue = {
-    selectedPosts,
-    addToCompare,
-    removeFromCompare,
-    clearCompare,
-    isInCompare,
-    canAddMore: selectedPosts.length < MAX_COMPARE_ITEMS,
-    compareCount: selectedPosts.length,
-  };
+  const value = useMemo<CompareContextValue>(
+    () => ({
+      selectedPosts,
+      addToCompare,
+      removeFromCompare,
+      clearCompare,
+      isInCompare,
+      canAddMore: selectedPosts.length < MAX_COMPARE_ITEMS,
+      compareCount: selectedPosts.length,
+    }),
+    [selectedPosts, addToCompare, removeFromCompare, clearCompare, isInCompare],
+  );
 
   return (
     <CompareContext.Provider value={value}>{children}</CompareContext.Provider>

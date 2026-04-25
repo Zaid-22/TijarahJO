@@ -1,4 +1,3 @@
-/* eslint-disable jsx-a11y/control-has-associated-label */
 import { useEffect, useState } from "react";
 import { Star, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -140,7 +139,7 @@ export function ReviewsModeration() {
                     colSpan={7}
                     className="px-6 py-12 text-center text-muted-foreground"
                   >
-                    <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" role="status" aria-label="Loading" /><span className="sr-only">Loading…</span>
                   </td>
                 </tr>
               ) : filteredReviews.length === 0 ? (

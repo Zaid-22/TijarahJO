@@ -146,7 +146,7 @@ function buildScriptSrcDirective(): string {
 }
 
 function buildFrameSrcDirective(): string {
-  return "frame-src 'self' https://www.google.com";
+  return "frame-src 'self' https://www.google.com https://www.youtube-nocookie.com";
 }
 
 function buildImgSrcDirective(isProduction: boolean): string {
@@ -412,9 +412,6 @@ export default defineConfig(({ mode }) => {
     },
     // Optimize HMR to prevent unnecessary reloads
     optimizeDeps: {
-      // Force a fresh prebundle on each dev-server start so browsers do not
-      // keep using stale dependency wrapper files with old internal chunk names.
-      force: true,
       exclude: [],
     },
   };

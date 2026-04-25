@@ -119,13 +119,14 @@ test("post details shows map card under seller card with Google Maps fallback", 
   const apiMock = createMarketplaceApiMock({ authenticated: true });
   await apiMock.install(page);
   await setEnglishLanguage(page);
+  await page.route("https://maps.googleapis.com/**", (route) => route.abort());
 
   await page.goto("/post/101");
   await waitForPostDetailsLoaded(page);
 
   const mapCard = page.getByTestId("post-location-map-card");
   await expect(mapCard).toBeVisible();
-  await expect(mapCard).toContainText("Khalda, Amman");
+  await expect(mapCard).not.toContainText("Khalda, Amman");
   await expect(mapCard).toContainText("Google Maps is not configured yet.");
   await expect(mapCard).toContainText("Open in Google Maps");
 });

@@ -36,8 +36,8 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black p-4">
-          <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 text-center">
+        <div className="min-h-screen flex items-center justify-center bg-background p-4">
+          <div className="max-w-md w-full bg-card rounded-2xl shadow-lg p-8 text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
               <svg
                 aria-hidden="true"
@@ -61,10 +61,10 @@ export class ErrorBoundary extends Component<Props, State> {
                 <circle cx="12" cy="16.5" r="1.2" fill="currentColor" />
               </svg>
             </div>
-            <h2 className="mb-2 text-gray-900 dark:text-white">
+            <h2 className="mb-2 text-foreground">
               Oops! Something went wrong
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
+            <p className="text-muted-foreground mb-6">
               We're sorry, but something unexpected happened. Please try
               refreshing the page.
             </p>
@@ -79,7 +79,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <button
                 onClick={this.handleReset}
                 type="button"
-                className="inline-flex items-center justify-center rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+                className="inline-flex items-center justify-center rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted"
               >
                 Try Again
               </button>

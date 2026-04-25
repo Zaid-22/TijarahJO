@@ -104,5 +104,6 @@ VITE_DEBUG_CHAT=false
 
 Gemini__ApiKey=
 YouTube__ApiKey=
+YouTube__Referer=
 
 Last Updated: 2026-04-21

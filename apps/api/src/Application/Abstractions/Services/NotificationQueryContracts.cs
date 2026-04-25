@@ -5,7 +5,7 @@ public sealed class NotificationListQueryResult
     public bool Success { get; init; }
     public int StatusCode { get; init; }
     public string? Message { get; init; }
-    public IReadOnlyList<NotificationEnvelope> Notifications { get; init; } = Array.Empty<NotificationEnvelope>();
+    public IReadOnlyList<NotificationEnvelope> Notifications { get; init; } = [];
 }
 
 public sealed class NotificationUnreadCountQueryResult

@@ -5,7 +5,7 @@ public sealed class FavoriteListQueryResult
     public bool Success { get; init; }
     public int StatusCode { get; init; }
     public string? Message { get; init; }
-    public IReadOnlyList<string> FavoritePostIds { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> FavoritePostIds { get; init; } = [];
 }
 
 public sealed class FavoriteOperationQueryResult

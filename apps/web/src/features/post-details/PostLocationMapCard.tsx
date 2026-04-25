@@ -15,6 +15,13 @@ import {
   loadGoogleMapsApi,
 } from "./googleMapsClient";
 import {
+  cacheUserLocation,
+  canUseCachedUserLocation,
+  clearCachedUserLocation,
+  getBrowserLocation,
+  readCachedUserLocation,
+} from "./postLocationGeolocation";
+import {
   buildGoogleMapsDirectionsUrl,
   buildGoogleMapsSearchUrl,
   buildPostMapDestination,
@@ -32,9 +39,6 @@ interface PostLocationMapCardProps {
 
 type MapStatus = "idle" | "loading" | "ready" | "error";
 type RouteStatus = "idle" | "loading" | "success" | "error";
-
-const USER_LOCATION_CACHE_KEY = "tijarahjo_post_map_user_location";
-const USER_LOCATION_CACHE_TTL_MS = 60 * 60 * 1000;
 
 const copy = {
   en: {
@@ -60,97 +64,6 @@ const copy = {
     locationUnavailable: "تعذر الوصول إلى موقعك من المتصفح.",
   },
 } as const;
-
-function readCachedUserLocation(): Coordinates | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  try {
-    const rawValue = window.localStorage.getItem(USER_LOCATION_CACHE_KEY);
-    if (!rawValue) {
-      return null;
-    }
-
-    const parsed = JSON.parse(rawValue) as Partial<Coordinates> & {
-      savedAt?: number;
-    };
-    if (
-      typeof parsed.lat !== "number" ||
-      typeof parsed.lng !== "number" ||
-      typeof parsed.savedAt !== "number" ||
-      Date.now() - parsed.savedAt > USER_LOCATION_CACHE_TTL_MS
-    ) {
-      window.localStorage.removeItem(USER_LOCATION_CACHE_KEY);
-      return null;
-    }
-
-    return {
-      lat: parsed.lat,
-      lng: parsed.lng,
-    };
-  } catch {
-    window.localStorage.removeItem(USER_LOCATION_CACHE_KEY);
-    return null;
-  }
-}
-
-function cacheUserLocation(location: Coordinates) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(
-    USER_LOCATION_CACHE_KEY,
-    JSON.stringify({ ...location, savedAt: Date.now() }),
-  );
-}
-
-function clearCachedUserLocation() {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.removeItem(USER_LOCATION_CACHE_KEY);
-}
-
-async function canUseCachedUserLocation(): Promise<boolean> {
-  if (typeof navigator === "undefined" || !navigator.permissions) {
-    return false;
-  }
-
-  try {
-    const status = await navigator.permissions.query({
-      name: "geolocation" as PermissionName,
-    });
-    return status.state === "granted";
-  } catch {
-    return false;
-  }
-}
-
-function getBrowserLocation(): Promise<Coordinates> {
-  if (typeof navigator === "undefined" || !navigator.geolocation) {
-    return Promise.reject(new Error("Geolocation is not available."));
-  }
-
-  return new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        });
-      },
-      () => reject(new Error("Geolocation permission was not granted.")),
-      {
-        enableHighAccuracy: false,
-        maximumAge: 300_000,
-        timeout: 10_000,
-      },
-    );
-  });
-}
 
 export function PostLocationMapCard({
   post,
@@ -350,24 +263,33 @@ export function PostLocationMapCard({
       return;
     }
 
+    let cancelled = false;
     void (async () => {
       const canUseCache = await canUseCachedUserLocation();
+      if (cancelled) {
+        return;
+      }
+
       if (!canUseCache) {
         clearCachedUserLocation();
         return;
       }
 
-      if (routeStatus !== "idle") {
+      if (cancelled || routeStatus !== "idle") {
         return;
       }
 
       const cachedLocation = readCachedUserLocation();
-      if (!cachedLocation) {
+      if (cancelled || !cachedLocation) {
         return;
       }
 
       void calculateRouteFromLocation(cachedLocation, false);
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     calculateRouteFromLocation,
     destination,

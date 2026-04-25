@@ -1,4 +1,3 @@
-/* eslint-disable jsx-a11y/control-has-associated-label */
 import { useDeferredValue, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Search, Trash2 } from "lucide-react";
@@ -167,7 +166,7 @@ export function PostCommentsModeration() {
                     colSpan={9}
                     className="px-6 py-12 text-center text-muted-foreground"
                   >
-                    <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" role="status" aria-label="Loading" /><span className="sr-only">Loading…</span>
                   </td>
                 </tr>
               ) : commentsResult.comments.length === 0 ? (

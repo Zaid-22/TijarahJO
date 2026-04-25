@@ -28,46 +28,11 @@ import { useScrollReset } from "./hooks/useScrollReset";
 import { useChatConnection } from "./hooks/useChatConnection";
 import { useNotificationPolling } from "./hooks/useNotificationPolling";
 import type { PublicSystemStatus } from "../services/api/system";
+import { lazyImportWithRetry } from "../shared/lib/lazyImportWithRetry";
 
 import { Header } from "../features/marketplace/components/Header";
 import { ComparePanel } from "../features/marketplace/components/ComparePanel";
 import { AppRoutes } from "./routes/AppRoutes";
-
-function lazyImportWithRetry<TModule>(
-  load: () => Promise<TModule>,
-  retryKey: string,
-) {
-  return async () => {
-    try {
-      const module = await load();
-      if (typeof window !== "undefined") {
-        window.sessionStorage.removeItem(retryKey);
-      }
-      return module;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const isRecoverableImportError =
-        /Failed to fetch dynamically imported module|Importing a module script failed/i.test(
-          message,
-        );
-
-      if (
-        typeof window !== "undefined" &&
-        isRecoverableImportError &&
-        !window.sessionStorage.getItem(retryKey)
-      ) {
-        window.sessionStorage.setItem(retryKey, "1");
-        window.location.reload();
-
-        return new Promise<never>(() => {
-          // Keep React.lazy pending while the page reload is in flight.
-        });
-      }
-
-      throw error;
-    }
-  };
-}
 
 const MaintenanceScreen = lazy(
   lazyImportWithRetry(
@@ -363,6 +328,7 @@ function AppContent() {
   const shouldShowComparePanel = 
     isAuthenticated && !isAuthRoute && !COMPARISON_EXCLUDED_SEGMENTS.has(primarySegment);
   const isComparePanelVisible = shouldShowComparePanel && compareCount > 0;
+  const shouldShowFooter = !isAuthRoute && primarySegment !== "admin";
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -380,7 +346,7 @@ function AppContent() {
         <AppRoutes />
       </main>
 
-      {!isAuthRoute ? (
+      {shouldShowFooter ? (
         <Suspense fallback={null}>
           <Footer language={language} />
         </Suspense>

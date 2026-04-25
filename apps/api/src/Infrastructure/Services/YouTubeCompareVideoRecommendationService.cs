@@ -21,7 +21,7 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
     IOptions<YouTubeSettings> settings,
     ILogger<YouTubeCompareVideoRecommendationService> logger) : ICompareVideoRecommendationService
 {
-    private const string CacheVersion = "v3";
+    private const string CacheVersion = "v4";
     private const int MaxSearchResults = 8;
     private static readonly TimeSpan s_cacheDuration = TimeSpan.FromHours(6);
 
@@ -207,22 +207,29 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
         string language,
         CancellationToken cancellationToken)
     {
-        // Try the full review query first
-        string query = BuildSearchQuery(post, language);
-        CompareVideoRecommendation? video = await SearchAndPickBestAsync(post, query, language, cancellationToken);
-        if (video != null)
+        foreach (string searchLanguage in GetSearchLanguages(language))
         {
-            return video;
+            // Try the full review query first.
+            string query = BuildSearchQuery(post, searchLanguage);
+            CompareVideoRecommendation? video = await SearchAndPickBestAsync(post, query, searchLanguage, cancellationToken);
+            if (video != null)
+            {
+                return video;
+            }
+
+            // Fallback: simpler query with just the product name + review.
+            string fallbackQuery = BuildFallbackSearchQuery(post, searchLanguage);
+            if (!string.Equals(fallbackQuery, query, StringComparison.OrdinalIgnoreCase))
+            {
+                video = await SearchAndPickBestAsync(post, fallbackQuery, searchLanguage, cancellationToken);
+                if (video != null)
+                {
+                    return video;
+                }
+            }
         }
 
-        // Fallback: simpler query with just the product name + review
-        string fallbackQuery = BuildFallbackSearchQuery(post, language);
-        if (!string.Equals(fallbackQuery, query, StringComparison.OrdinalIgnoreCase))
-        {
-            video = await SearchAndPickBestAsync(post, fallbackQuery, language, cancellationToken);
-        }
-
-        return video;
+        return null;
     }
 
     private async Task<CompareVideoRecommendation?> SearchAndPickBestAsync(
@@ -424,6 +431,7 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
         return value
             .Replace("JOD", " ", StringComparison.OrdinalIgnoreCase)
             .Replace("JD", " ", StringComparison.OrdinalIgnoreCase)
+            .Replace("+", " ", StringComparison.Ordinal)
             .Replace("/", " ", StringComparison.Ordinal)
             .Replace("\\", " ", StringComparison.Ordinal)
             .Trim();
@@ -432,6 +440,16 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
     private static string NormalizeLanguage(string language)
     {
         return language.StartsWith("ar", StringComparison.OrdinalIgnoreCase) ? "ar" : "en";
+    }
+
+    private static IEnumerable<string> GetSearchLanguages(string language)
+    {
+        yield return language;
+
+        if (language == "ar")
+        {
+            yield return "en";
+        }
     }
 
     private static bool ContainsArabic(string value)
