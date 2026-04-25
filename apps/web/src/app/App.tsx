@@ -348,7 +348,12 @@ function AppContent() {
     />
   ) : null;
 
-  if (maintenanceStatus?.maintenanceMode && !isAuthRoute && !userHasAdminAccess(user)) {
+  if (
+    maintenanceStatus?.maintenanceMode &&
+    !isAuthRoute &&
+    primarySegment !== "admin" &&
+    !userHasAdminAccess(user)
+  ) {
     return (
       <Suspense fallback={<div className="min-h-screen bg-background" />}>
         <MaintenanceScreen
