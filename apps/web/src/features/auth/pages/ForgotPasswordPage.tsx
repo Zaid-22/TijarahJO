@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { AlertCircle, CheckCircle2, KeyRound, Lock, Mail } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { api } from "../../../services/api";
 import type { Language } from "../../../types";
@@ -9,12 +9,7 @@ import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
 import { Label } from "../../../shared/ui/label";
 import { PageShell } from "../../../shared/ui/page-shell";
-import { SubpageHeader } from "../../../shared/ui/subpage-header";
 import { AuthPageLayout } from "../components/AuthPageLayout";
-import {
-  buildCurrentPath,
-  resolveBackPathFromLocationState,
-} from "../../../shared/lib/backNavigation";
 
 interface ForgotPasswordPageProps {
   language: Language;
@@ -125,16 +120,8 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function ForgotPasswordPage({ language }: ForgotPasswordPageProps) {
   const navigate = useNavigate();
-  const location = useLocation();
   const copy = forgotPasswordCopyByLanguage[language];
   const isRTL = language === "ar";
-  const currentPath = buildCurrentPath(location.pathname, location.search);
-  const backPath = resolveBackPathFromLocationState({
-    locationState: location.state,
-    currentPath,
-    fallbackPath: "/login",
-    blockedPathnames: ["/forgot-password"],
-  });
   const iconPositionClass = isRTL ? "right-3" : "left-3";
   const inputPaddingClass = "ps-9";
 
@@ -256,12 +243,6 @@ export function ForgotPasswordPage({ language }: ForgotPasswordPageProps) {
 
   return (
     <PageShell tone="account">
-      <SubpageHeader
-        onBack={() => navigate(backPath, { replace: true })}
-        isRTL={isRTL}
-        backLabel={copy.backToLogin}
-        onLogoClick={() => navigate("/")}
-      />
         <AuthPageLayout
           direction={isRTL ? "rtl" : "ltr"}
           title={copy.title}

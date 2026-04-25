@@ -2,14 +2,17 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using TijarahJo.Application.Abstractions.DataAccess;
+using TijarahJo.Domain.Enums;
 using TijarahJo.Infrastructure.Persistence;
 
 namespace TijarahJo.Infrastructure.DataAccess;
 
-public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdminDataAccess
+public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<AdminDataAccessAdapter> logger) : IAdminDataAccess
 {
     private readonly TijarahJoDbContext _dbContext = dbContext;
+    private readonly ILogger<AdminDataAccessAdapter> _logger = logger;
 
     public async Task<DashboardStatsModel> GetDashboardStatsAsync(CancellationToken cancellationToken = default)
     {
@@ -20,32 +23,61 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
         double averageRating = 0;
         var recentActions = new System.Collections.Generic.List<RecentAdminAction>();
 
-        // Users
+        // Users — single query for all counts
         try
         {
-            totalUsers = await _dbContext.Users.CountAsync(u => !u.IsDeleted, cancellationToken);
-            activeUsers = await _dbContext.Users.CountAsync(u => !u.IsDeleted && u.Status == 1, cancellationToken);
             var oneWeekAgo = System.DateTime.UtcNow.AddDays(-7);
-            newUsersThisWeek = await _dbContext.Users.CountAsync(u => !u.IsDeleted && u.JoinDate >= oneWeekAgo, cancellationToken);
-        }
-        catch { /* swallow – dashboard still usable without user counts */ }
+            var userStats = await _dbContext.Users
+                .Where(u => !u.IsDeleted)
+                .GroupBy(u => 1)
+                .Select(g => new
+                {
+                    Total = g.Count(),
+                    Active = g.Count(u => u.Status == (int)UserStatus.Active),
+                    NewThisWeek = g.Count(u => u.JoinDate >= oneWeekAgo)
+                })
+                .FirstOrDefaultAsync(cancellationToken);
 
-        // Posts
+            if (userStats != null)
+            {
+                totalUsers = userStats.Total;
+                activeUsers = userStats.Active;
+                newUsersThisWeek = userStats.NewThisWeek;
+            }
+        }
+        catch (System.Exception ex) { _logger.LogWarning(ex, "Dashboard: failed to load user counts."); }
+
+        // Posts — single query for all counts
         try
         {
-            totalPosts = await _dbContext.Posts.CountAsync(p => !p.IsDeleted, cancellationToken);
-            activeListings = await _dbContext.Posts.CountAsync(p => !p.IsDeleted && p.Status == 0, cancellationToken);
-            blockedListings = await _dbContext.Posts.CountAsync(p => !p.IsDeleted && p.Status == 1, cancellationToken);
-            soldPosts = await _dbContext.Posts.CountAsync(p => !p.IsDeleted && p.Status == 3, cancellationToken);
+            var postStats = await _dbContext.Posts
+                .Where(p => !p.IsDeleted)
+                .GroupBy(p => 1)
+                .Select(g => new
+                {
+                    Total = g.Count(),
+                    Active = g.Count(p => p.Status == (int)PostStatus.Active),
+                    Blocked = g.Count(p => p.Status == (int)PostStatus.Blocked),
+                    Sold = g.Count(p => p.Status == (int)PostStatus.Sold)
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (postStats != null)
+            {
+                totalPosts = postStats.Total;
+                activeListings = postStats.Active;
+                blockedListings = postStats.Blocked;
+                soldPosts = postStats.Sold;
+            }
         }
-        catch { /* swallow */ }
+        catch (System.Exception ex) { _logger.LogWarning(ex, "Dashboard: failed to load post counts."); }
 
         // Categories
         try
         {
             totalCategories = await _dbContext.Categories.CountAsync(c => !c.IsDeleted, cancellationToken);
         }
-        catch { /* swallow */ }
+        catch (System.Exception ex) { _logger.LogWarning(ex, "Dashboard: failed to load category count."); }
 
         // Reviews
         try
@@ -56,7 +88,7 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
                 .Select(r => (double?)r.Rating)
                 .AverageAsync(cancellationToken) ?? 0;
         }
-        catch { /* swallow */ }
+        catch (System.Exception ex) { _logger.LogWarning(ex, "Dashboard: failed to load review stats."); }
 
         // Recent admin activity (last 10 from audit log)
         try
@@ -73,7 +105,7 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
                                        ChangedAt = a.ChangedAt
                                    }).Take(10).ToListAsync(cancellationToken);
         }
-        catch { /* swallow – dashboard still usable without recent actions */ }
+        catch (System.Exception ex) { _logger.LogWarning(ex, "Dashboard: failed to load recent admin actions."); }
 
         return new DashboardStatsModel
         {
@@ -331,7 +363,7 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
                     ? ((x.user.FirstName ?? string.Empty) + " " + (x.user.LastName ?? string.Empty)).Trim()
                     : "Unknown user",
                 ParentCommentID = x.comment.ParentCommentID,
-                ReplyCount = _dbContext.PostComments.Count(reply => reply.ParentCommentID.HasValue && reply.ParentCommentID.Value == x.comment.CommentID),
+                ReplyCount = _dbContext.PostComments.Count(reply => !reply.IsDeleted && reply.ParentCommentID.HasValue && reply.ParentCommentID.Value == x.comment.CommentID),
                 Content = x.comment.Content,
                 CreatedAt = x.comment.CreatedAt,
                 UpdatedAt = x.comment.UpdatedAt
@@ -442,9 +474,9 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
                 })
                 .ToListAsync(cancellationToken);
         }
-        catch
+        catch (System.Exception ex)
         {
-            // SystemSettings table may not exist yet – return empty list
+            _logger.LogWarning(ex, "Failed to load system settings – table may not exist.");
             return [];
         }
     }
@@ -646,12 +678,18 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
             if (!string.IsNullOrWhiteSpace(reportType))
                 query = query.Where(r => r.ReportType == reportType);
 
-            // Build joined query for search
+            // Build joined query for search + target label resolution (LEFT JOINs)
             var joined = from r in query
                          join reporter in _dbContext.Users.AsNoTracking() on r.ReporterUserID equals reporter.UserID
                          join resolver in _dbContext.Users.AsNoTracking() on r.ResolvedByUserID equals resolver.UserID into rg
                          from resolver in rg.DefaultIfEmpty()
-                         select new { r, reporter, resolver };
+                         join targetPost in _dbContext.Posts.AsNoTracking() on r.TargetID equals targetPost.PostID into tpg
+                         from targetPost in tpg.DefaultIfEmpty()
+                         join targetUser in _dbContext.Users.AsNoTracking() on r.TargetID equals targetUser.UserID into tug
+                         from targetUser in tug.DefaultIfEmpty()
+                         join targetReview in _dbContext.Reviews.AsNoTracking() on r.TargetID equals targetReview.ReviewID into trg
+                         from targetReview in trg.DefaultIfEmpty()
+                         select new { r, reporter, resolver, targetPost, targetUser, targetReview };
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -672,26 +710,14 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
                     ReportType = x.r.ReportType,
                     TargetID = x.r.TargetID,
                     TargetLabel =
-                        x.r.ReportType == "LISTING"
-                            ? _dbContext.Posts
-                                .Where(post => post.PostID == x.r.TargetID)
-                                .Select(post => post.PostTitle)
-                                .FirstOrDefault()
-                            : x.r.ReportType == "USER"
-                                ? _dbContext.Users
-                                    .Where(user => user.UserID == x.r.TargetID)
-                                    .Select(user => (user.FirstName + " " + (user.LastName ?? "")).Trim())
-                                    .FirstOrDefault()
-                                : x.r.ReportType == "REVIEW"
-                                    ? _dbContext.Reviews
-                                        .Where(review => review.ReviewID == x.r.TargetID)
-                                        .Select(review => review.Comment)
-                                        .FirstOrDefault()
+                        x.r.ReportType == "LISTING" && x.targetPost != null
+                            ? x.targetPost.PostTitle
+                            : x.r.ReportType == "USER" && x.targetUser != null
+                                ? (x.targetUser.FirstName + " " + (x.targetUser.LastName ?? "")).Trim()
+                                : x.r.ReportType == "REVIEW" && x.targetReview != null
+                                    ? x.targetReview.Comment
                                     : x.r.ReportType == "CHAT"
-                                        ? _dbContext.Conversations
-                                            .Where(c => c.ConversationID == x.r.TargetID)
-                                            .Select(c => "Conversation #" + c.ConversationID)
-                                            .FirstOrDefault()
+                                        ? "Conversation #" + x.r.TargetID
                                         : null,
                     Reason = x.r.Reason,
                     Description = x.r.Description,
@@ -710,9 +736,9 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext) : IAdmi
 
             return new AdminReportListResult { Reports = items, TotalCount = totalCount };
         }
-        catch
+        catch (System.Exception ex)
         {
-            // Reports table may not exist yet – return empty result
+            _logger.LogWarning(ex, "Failed to load reports – table may not exist.");
             return new AdminReportListResult { Reports = [], TotalCount = 0 };
         }
     }

@@ -36,12 +36,12 @@ export function PageShell({
     >
       {/* Decorative blurs — skip for reduced-motion users to improve perf on lower-end devices */}
       {showDecorations && !prefersReducedMotion && (
-        <>
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-primary/10 blur-3xl will-change-transform" />
           <div className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-secondary/10 blur-3xl will-change-transform" />
-        </>
+        </div>
       )}
-      <div className="relative min-h-0 h-full">{children}</div>
+      <div className="relative min-h-0">{children}</div>
     </div>
   );
 }

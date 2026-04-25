@@ -21,6 +21,8 @@
     "src/services/api/schemas/authSchema.ts",
     "src/services/api/schemas/postSchema.ts",
     "src/services/api/signupErrorMessages.ts",
+    "src/features/auth/pages/loginAuthHelpers.ts",
+    "src/contexts/authUtils.ts",
     "src/services/api/schemas/categorySchema.ts",
     "src/services/api/schemas/chatSchema.ts",
     "src/services/api/schemas/commentsSchema.ts",

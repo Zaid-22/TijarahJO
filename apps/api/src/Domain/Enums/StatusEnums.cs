@@ -19,3 +19,14 @@ public enum PostStatus
     Blocked = 1,
     Sold = 3
 }
+
+/// <summary>
+/// Report status values stored in dbo.Reports.Status.
+/// </summary>
+public enum ReportStatus
+{
+    Pending = 0,
+    UnderReview = 1,
+    Resolved = 2,
+    Dismissed = 3
+}

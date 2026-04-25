@@ -70,7 +70,7 @@ namespace TijarahJo.Api.Features.Posts
             return Ok(dto);
         }
 
-        [HttpGet("Exists/{id:int}")]
+        [HttpGet("exists/{id:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<bool>> DoesPostExist(int id, CancellationToken cancellationToken)
@@ -231,7 +231,7 @@ namespace TijarahJo.Api.Features.Posts
         }
 
         [Authorize]
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

@@ -10,9 +10,9 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/reports")]
-public class AdminReportsQueueController(IAdminDataAccess adminDataAccess) : ControllerBase
+public class AdminReportsQueueController(IAdminReportDataAccess reportDataAccess) : ControllerBase
 {
-    private readonly IAdminDataAccess _adminDataAccess = adminDataAccess;
+    private readonly IAdminReportDataAccess _adminDataAccess = reportDataAccess;
 
     [HttpGet]
     [Authorize(Policy = AuthorizationPolicies.ReportsView)]

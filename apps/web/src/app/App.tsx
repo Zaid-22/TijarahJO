@@ -71,10 +71,19 @@ const ROUTES_WITH_LOCAL_HEADER = new Set([
 const KNOWN_PRIMARY_SEGMENTS = new Set([
   "",
   "login",
+  "forgot-password",
+  "complete-profile",
+  "register",
   "admin",
   "compare",
   "category",
   ...Array.from(ROUTES_WITH_LOCAL_HEADER),
+]);
+const AUTH_ROUTE_SEGMENTS = new Set([
+  "login",
+  "forgot-password",
+  "complete-profile",
+  "register",
 ]);
 const AUTH_TOAST_COOLDOWN_MS = 12_000;
 const MAINTENANCE_STATUS_CACHE_KEY = "tijarahjo_public_system_status_v1";
@@ -86,6 +95,8 @@ const COMPARISON_EXCLUDED_SEGMENTS = new Set([
   "chat",
   "sell",
   "login",
+  "forgot-password",
+  "complete-profile",
   "register",
 ]);
 const MAINTENANCE_STATUS_REFRESH_MS = 30_000;
@@ -182,7 +193,7 @@ function AppContent() {
     .replace(/\/+$/, "");
   const pathSegments = normalizedPathname.split("/").filter(Boolean);
   const primarySegment = pathSegments[0] || "";
-  const isAuthRoute = primarySegment === "login";
+  const isAuthRoute = AUTH_ROUTE_SEGMENTS.has(primarySegment);
   const hasLocalPageHeader = ROUTES_WITH_LOCAL_HEADER.has(primarySegment);
   const isUnknownPrimarySegment =
     primarySegment !== "" && !KNOWN_PRIMARY_SEGMENTS.has(primarySegment);

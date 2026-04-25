@@ -62,7 +62,7 @@ public class AuthController(
                 AuthCommandFailureReason.InvalidRequest => Problem(statusCode: StatusCodes.Status400BadRequest, detail: result.Message),
                 AuthCommandFailureReason.InvalidCredentials => Problem(statusCode: StatusCodes.Status401Unauthorized, detail: InvalidLoginMessage),
                 AuthCommandFailureReason.UserDeleted => Problem(statusCode: StatusCodes.Status401Unauthorized, detail: InvalidLoginMessage),
-                AuthCommandFailureReason.UserInactive => Problem(statusCode: StatusCodes.Status401Unauthorized, detail: InvalidLoginMessage),
+                AuthCommandFailureReason.UserInactive => Problem(statusCode: StatusCodes.Status401Unauthorized, detail: result.Message),
                 AuthCommandFailureReason.RoleResolutionFailed => Problem(statusCode: StatusCodes.Status500InternalServerError, detail: result.Message),
                 _ => Problem(statusCode: StatusCodes.Status500InternalServerError, detail: "Authentication failed.")
             };
@@ -94,9 +94,9 @@ public class AuthController(
                 );
             }
 
-            if (sendResult.DebugCode is { Length: > 0 } && _logger.IsEnabled(LogLevel.Information))
+            if (sendResult.DebugCode is { Length: > 0 } && _logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.LogInformation(
+                _logger.LogDebug(
                     "Two-factor login debug code issued for user {UserId}: {DebugCode}",
                     result.User.UserID.Value,
                     sendResult.DebugCode
@@ -106,7 +106,7 @@ public class AuthController(
             return Ok(AuthShared.BuildTwoFactorChallengeResponse(
                 _twoFactorService,
                 result.User.UserID.Value,
-                BuildTwoFactorPromptMessage("Two-factor verification is required.", sendResult.DebugCode)
+                "Two-factor verification is required."
             ));
         }
 
@@ -301,8 +301,4 @@ public class AuthController(
         return Ok(new ApiMessageResponse { Message = "Logged out successfully" });
     }
 
-    private static string BuildTwoFactorPromptMessage(string message, string? _debugCode)
-    {
-        return message;
-    }
 }

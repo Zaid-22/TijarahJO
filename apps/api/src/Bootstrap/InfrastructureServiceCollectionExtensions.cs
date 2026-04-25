@@ -100,6 +100,8 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IReviewDataAccess, ReviewDataAccessAdapter>();
         services.AddScoped<IVerificationChallengeDataAccess, VerificationChallengeDataAccessAdapter>();
         services.AddScoped<IAdminDataAccess, AdminDataAccessAdapter>();
+        services.AddScoped<IAdminLocationDataAccess>(sp => sp.GetRequiredService<IAdminDataAccess>());
+        services.AddScoped<IAdminReportDataAccess>(sp => sp.GetRequiredService<IAdminDataAccess>());
         services.AddScoped<IPostCommentDataAccess, PostCommentDataAccessAdapter>();
 
         // Register the resolved connection string so raw-SQL services can inject it.
@@ -126,6 +128,8 @@ public static class InfrastructureServiceCollectionExtensions
         // Data lifecycle: hygiene detection engine + periodic cleanup (DBRE Phase 2)
         services.AddScoped<IDataHygieneService, DataHygieneService>();
         services.AddHostedService<DataCleanupBackgroundService>();
+
+        services.AddScoped<IFraudDetectionService, TijarahJo.Infrastructure.Services.FraudDetectionService>();
 
         return services;
     }

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using TijarahJo.Api.Common.Utils;
 using TijarahJo.Api.Contracts.Requests;
 using TijarahJo.Domain.Entities;
+using TijarahJo.Domain.Enums;
 using TijarahJo.Infrastructure.Persistence;
 
 namespace TijarahJo.Api.Features.Reports;
@@ -62,7 +63,7 @@ public sealed class ReportsController(TijarahJoDbContext dbContext) : Controller
                 report.ReportType == normalizedReportType &&
                 report.TargetID == request.TargetID &&
                 report.ReporterUserID == currentUserId &&
-                report.Status == 0,
+                report.Status == (int)ReportStatus.Pending,
             cancellationToken);
         if (duplicatePendingReportExists)
         {
@@ -76,7 +77,7 @@ public sealed class ReportsController(TijarahJoDbContext dbContext) : Controller
             Reason = normalizedReason,
             Description = normalizedDescription,
             ReporterUserID = currentUserId,
-            Status = 0,
+            Status = (int)ReportStatus.Pending,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -86,7 +87,7 @@ public sealed class ReportsController(TijarahJoDbContext dbContext) : Controller
         return StatusCode(StatusCodes.Status201Created, new
         {
             Message = "Report submitted successfully.",
-            ReportID = reportEntity.ReportID
+            reportEntity.ReportID
         });
     }
 

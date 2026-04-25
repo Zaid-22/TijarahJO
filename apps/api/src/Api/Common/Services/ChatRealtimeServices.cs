@@ -29,6 +29,11 @@ public interface IChatRealtimeDeliveryService
         CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// In-memory chat presence tracker using ConcurrentDictionary.
+/// WARNING: This only works in single-server deployments. For horizontal
+/// scaling, replace with Redis-backed presence (EnableRedisPresence feature flag).
+/// </summary>
 public sealed class InMemoryChatPresenceService : IChatPresenceService
 {
     private static readonly TimeSpan PresenceGracePeriod = TimeSpan.FromSeconds(30);
@@ -109,29 +114,23 @@ public sealed class InMemoryChatPresenceService : IChatPresenceService
     {
         if (userId < 1)
         {
-            return Task.FromResult<IReadOnlyCollection<string>>(Array.Empty<string>());
+            return Task.FromResult<IReadOnlyCollection<string>>([]);
         }
 
         if (!_userConnections.TryGetValue(userId, out ConcurrentDictionary<string, byte>? connections) ||
             connections.IsEmpty)
         {
-            return Task.FromResult<IReadOnlyCollection<string>>(Array.Empty<string>());
+            return Task.FromResult<IReadOnlyCollection<string>>([]);
         }
 
-        return Task.FromResult<IReadOnlyCollection<string>>(connections.Keys.ToArray());
+        return Task.FromResult<IReadOnlyCollection<string>>([.. connections.Keys]);
     }
 }
 
-public sealed class ChatRealtimeDeliveryService : IChatRealtimeDeliveryService
+public sealed class ChatRealtimeDeliveryService(
+    IHubContext<ChatHub> hubContext,
+    IChatPresenceService presence) : IChatRealtimeDeliveryService
 {
-    private readonly IHubContext<ChatHub> _hubContext;
-    private readonly IChatPresenceService _presence;
-
-    public ChatRealtimeDeliveryService(IHubContext<ChatHub> hubContext, IChatPresenceService presence)
-    {
-        _hubContext = hubContext;
-        _presence = presence;
-    }
 
     public async Task DeliverToReceiverAsync(
         int receiverUserId,
@@ -139,7 +138,7 @@ public sealed class ChatRealtimeDeliveryService : IChatRealtimeDeliveryService
         NotificationResponseDTO? notificationPayload,
         CancellationToken cancellationToken = default)
     {
-        IReadOnlyCollection<string> receiverConnections = await _presence.GetUserConnectionIdsAsync(receiverUserId, cancellationToken);
+        IReadOnlyCollection<string> receiverConnections = await presence.GetUserConnectionIdsAsync(receiverUserId, cancellationToken);
         if (receiverConnections.Count == 0)
         {
             return;
@@ -149,7 +148,7 @@ public sealed class ChatRealtimeDeliveryService : IChatRealtimeDeliveryService
         {
             var tasks = new List<Task>
             {
-                _hubContext.Clients.Client(connectionId).SendAsync(
+                hubContext.Clients.Client(connectionId).SendAsync(
                     "ReceiveMessage",
                     messagePayload,
                     cancellationToken)
@@ -157,7 +156,7 @@ public sealed class ChatRealtimeDeliveryService : IChatRealtimeDeliveryService
 
             if (notificationPayload is not null)
             {
-                tasks.Add(_hubContext.Clients.Client(connectionId).SendAsync(
+                tasks.Add(hubContext.Clients.Client(connectionId).SendAsync(
                     "ReceiveNotification",
                     notificationPayload,
                     cancellationToken));
@@ -181,14 +180,14 @@ public sealed class ChatRealtimeDeliveryService : IChatRealtimeDeliveryService
             return;
         }
 
-        IReadOnlyCollection<string> senderConnections = await _presence.GetUserConnectionIdsAsync(senderUserId, cancellationToken);
+        IReadOnlyCollection<string> senderConnections = await presence.GetUserConnectionIdsAsync(senderUserId, cancellationToken);
         if (senderConnections.Count == 0)
         {
             return;
         }
 
         IEnumerable<Task> sendTasks = senderConnections.Select(connectionId =>
-            _hubContext.Clients.Client(connectionId).SendAsync(
+            hubContext.Clients.Client(connectionId).SendAsync(
                 "MessagesRead",
                 new
                 {

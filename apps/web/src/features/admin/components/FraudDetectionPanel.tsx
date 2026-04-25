@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { useEffect, useState } from "react";
 import {
   AlertTriangle,
@@ -7,7 +8,12 @@ import {
   Copy,
   DollarSign,
   Star,
+  Ban,
+  Eye,
+  Trash2,
+  UserX,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "../../../shared/ui/button";
 import { Badge } from "../../../shared/ui/badge";
@@ -17,13 +23,20 @@ import {
   CardHeader,
   CardTitle,
 } from "../../../shared/ui/card";
+import { ConfirmActionDialog } from "../../../shared/ui/confirm-action-dialog";
 import { api } from "../../../services/api";
+import { useAuth } from "../../../contexts/AuthContext";
+import { userHasAdminPermission } from "../../../contexts/authUtils";
 import type {
   FraudSignalsResult,
   FraudSignal,
+  FraudPostCandidate,
+  FraudReviewCandidate,
+  FraudUserCandidate,
 } from "../../../services/api/admin";
 import { formatCompactTime } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
+import { ADMIN_PERMISSIONS } from "../adminPermissions";
 
 const SIGNAL_META: Record<
   string,
@@ -63,9 +76,35 @@ const SEVERITY_DOT: Record<string, string> = {
   LOW: "bg-green-500",
 };
 
+type PendingAction =
+  | { type: "suspend-user"; user: FraudUserCandidate }
+  | { type: "block-post"; post: FraudPostCandidate }
+  | { type: "delete-review"; review: FraudReviewCandidate };
+
 export function FraudDetectionPanel() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [result, setResult] = useState<FraudSignalsResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(
+    null,
+  );
+  const canViewUsers = userHasAdminPermission(
+    user,
+    ADMIN_PERMISSIONS.usersView,
+  );
+  const canSuspendUsers = userHasAdminPermission(
+    user,
+    ADMIN_PERMISSIONS.usersManage,
+  );
+  const canBlockListings = userHasAdminPermission(
+    user,
+    ADMIN_PERMISSIONS.postsModerate,
+  );
+  const canDeleteReviews = userHasAdminPermission(
+    user,
+    ADMIN_PERMISSIONS.reviewsModerate,
+  );
 
   const fetchSignals = async () => {
     try {
@@ -92,6 +131,82 @@ export function FraudDetectionPanel() {
     );
     return () => clearInterval(interval);
   }, []);
+
+  const handleConfirmAction = async () => {
+    if (!pendingAction) return;
+
+    try {
+      if (pendingAction.type === "suspend-user") {
+        const response = await api.admin.suspendUser(
+          pendingAction.user.userID,
+          24,
+        );
+        if (!response.success) {
+          toast.error(response.message || "Failed to suspend user");
+          return;
+        }
+        toast.success("User suspended for 24 hours");
+      }
+
+      if (pendingAction.type === "block-post") {
+        const success = await api.admin.updatePostStatus(
+          pendingAction.post.postID,
+          1,
+        );
+        if (!success) {
+          toast.error("Failed to block listing");
+          return;
+        }
+        toast.success("Listing blocked");
+      }
+
+      if (pendingAction.type === "delete-review") {
+        const success = await api.admin.deleteReview(
+          pendingAction.review.reviewID,
+        );
+        if (!success) {
+          toast.error("Failed to delete review");
+          return;
+        }
+        toast.success("Review deleted");
+      }
+
+      await fetchSignals();
+    } catch (error) {
+      logger.warn("[FraudDetectionPanel] Action failed", error);
+      toast.error("Action failed");
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
+  const getActionCopy = () => {
+    if (!pendingAction) {
+      return { title: "", description: "", confirmLabel: "Confirm" };
+    }
+
+    if (pendingAction.type === "suspend-user") {
+      return {
+        title: "Suspend user for 24 hours?",
+        description: `${pendingAction.user.name || pendingAction.user.email} will be temporarily suspended while you review this signal.`,
+        confirmLabel: "Suspend",
+      };
+    }
+
+    if (pendingAction.type === "block-post") {
+      return {
+        title: "Block this listing?",
+        description: `"${pendingAction.post.title}" will be removed from active marketplace results.`,
+        confirmLabel: "Block listing",
+      };
+    }
+
+    return {
+      title: "Delete this review?",
+      description: `This removes the suspicious ${pendingAction.review.rating}-star review from ${pendingAction.review.reviewerName}.`,
+      confirmLabel: "Delete review",
+    };
+  };
 
   const getSignalCard = (signal: FraudSignal) => {
     const meta = SIGNAL_META[signal.type] ?? {
@@ -141,6 +256,131 @@ export function FraudDetectionPanel() {
       </Card>
     );
   };
+
+  const renderUserRow = (user: FraudUserCandidate) => (
+    <div
+      key={user.userID}
+      className="flex flex-col gap-3 border-b border-border py-3 last:border-0 md:flex-row md:items-center md:justify-between"
+    >
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium">
+          {user.name.trim() || "Unnamed user"}
+        </p>
+        <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+        <p className="text-xs text-muted-foreground">
+          Joined {formatCompactTime(user.joinedAt)}
+        </p>
+      </div>
+      <div className="flex shrink-0 gap-2">
+        {canViewUsers && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/admin/users/${user.userID}`)}
+          >
+            <Eye className="mr-1.5 h-3.5 w-3.5" />
+            View
+          </Button>
+        )}
+        {canSuspendUsers && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setPendingAction({ type: "suspend-user", user })}
+          >
+            <UserX className="mr-1.5 h-3.5 w-3.5" />
+            Suspend
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderPostRow = (post: FraudPostCandidate) => (
+    <div
+      key={`${post.postID}-${post.signalReason}`}
+      className="flex flex-col gap-3 border-b border-border py-3 last:border-0 lg:flex-row lg:items-center lg:justify-between"
+    >
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium">{post.title}</p>
+        <p className="text-xs text-muted-foreground">
+          {post.sellerName} · {post.categoryName} ·{" "}
+          {post.price == null ? "No price" : `${post.price} JOD`}
+        </p>
+        <p className="text-xs text-muted-foreground">{post.signalReason}</p>
+      </div>
+      <div className="flex shrink-0 gap-2">
+        {canViewUsers && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/admin/users/${post.userID}`)}
+          >
+            <Eye className="mr-1.5 h-3.5 w-3.5" />
+            Seller
+          </Button>
+        )}
+        {canBlockListings && (
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={post.status === 1}
+            onClick={() => setPendingAction({ type: "block-post", post })}
+          >
+            <Ban className="mr-1.5 h-3.5 w-3.5" />
+            Block
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderReviewRow = (review: FraudReviewCandidate) => (
+    <div
+      key={review.reviewID}
+      className="flex flex-col gap-3 border-b border-border py-3 last:border-0 lg:flex-row lg:items-center lg:justify-between"
+    >
+      <div className="min-w-0">
+        <p className="text-sm font-medium">
+          {review.rating} star review on {review.reviewedUserName}
+        </p>
+        <p className="truncate text-xs text-muted-foreground">
+          From {review.reviewerName}: {review.comment || "No comment"}
+        </p>
+        <p className="text-xs text-muted-foreground">{review.signalReason}</p>
+      </div>
+      <div className="flex shrink-0 gap-2">
+        {canViewUsers && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/admin/users/${review.reviewedUserID}`)}
+          >
+            <Eye className="mr-1.5 h-3.5 w-3.5" />
+            Seller
+          </Button>
+        )}
+        {canDeleteReviews && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setPendingAction({ type: "delete-review", review })}
+          >
+            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+            Delete
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  const hasActionItems =
+    result &&
+    (result.rapidRegistrationUsers.length > 0 ||
+      result.duplicateListingPosts.length > 0 ||
+      result.suspiciousPricePosts.length > 0 ||
+      result.reviewBombingReviews.length > 0);
+  const actionCopy = getActionCopy();
 
   if (!result && isLoading) {
     return (
@@ -192,13 +432,13 @@ export function FraudDetectionPanel() {
           }`}
         >
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <AlertTriangle className="w-4 h-4 shrink-0" />
             <span className="text-sm font-medium">
               {result.signals.some((s) => s.severity === "HIGH")
                 ? "⚠️ High-severity fraud signals detected — immediate action recommended"
                 : result.signals.some((s) => s.severity === "MEDIUM")
                   ? "⚡ Medium-severity signals detected — review recommended"
-                  : "✅ All signals are within normal range"}
+                  : " All signals are within normal range"}
             </span>
           </div>
         </div>
@@ -208,6 +448,76 @@ export function FraudDetectionPanel() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {result?.signals.map((signal) => getSignalCard(signal))}
       </div>
+
+      {hasActionItems && result && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Action queue</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {result.rapidRegistrationUsers.length > 0 && (
+              <section>
+                <div className="mb-2 flex items-center gap-2">
+                  <Users className="h-4 w-4 text-primary" />
+                  <h2 className="text-sm font-semibold">
+                    Rapid-registration accounts to review
+                  </h2>
+                </div>
+                <div>{result.rapidRegistrationUsers.map(renderUserRow)}</div>
+              </section>
+            )}
+
+            {result.duplicateListingPosts.length > 0 && (
+              <section>
+                <div className="mb-2 flex items-center gap-2">
+                  <Copy className="h-4 w-4 text-primary" />
+                  <h2 className="text-sm font-semibold">
+                    Duplicate listings to review
+                  </h2>
+                </div>
+                <div>{result.duplicateListingPosts.map(renderPostRow)}</div>
+              </section>
+            )}
+
+            {result.suspiciousPricePosts.length > 0 && (
+              <section>
+                <div className="mb-2 flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-primary" />
+                  <h2 className="text-sm font-semibold">
+                    Suspicious prices to review
+                  </h2>
+                </div>
+                <div>{result.suspiciousPricePosts.map(renderPostRow)}</div>
+              </section>
+            )}
+
+            {result.reviewBombingReviews.length > 0 && (
+              <section>
+                <div className="mb-2 flex items-center gap-2">
+                  <Star className="h-4 w-4 text-primary" />
+                  <h2 className="text-sm font-semibold">
+                    Review bombing to review
+                  </h2>
+                </div>
+                <div>{result.reviewBombingReviews.map(renderReviewRow)}</div>
+              </section>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <ConfirmActionDialog
+        open={pendingAction !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingAction(null);
+        }}
+        title={actionCopy.title}
+        description={actionCopy.description}
+        confirmLabel={actionCopy.confirmLabel}
+        onConfirm={() => {
+          void handleConfirmAction();
+        }}
+      />
     </div>
   );
 }

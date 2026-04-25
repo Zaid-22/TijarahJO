@@ -59,6 +59,46 @@ public sealed class TwoFactorDeliveryTests
     }
 
     [Fact]
+    public async Task Login_ReturnsInactiveAccountMessage_WhenUserIsBanned()
+    {
+        const string message = "User account is banned or inactive.";
+        var authCommands = new FakeAuthCommandService(new AuthCommandResult
+        {
+            Success = false,
+            FailureReason = AuthCommandFailureReason.UserInactive,
+            Message = message
+        });
+        var controller = new AuthController(
+            new FakeTokenService(),
+            authCommands,
+            new FakeUserQueryHandler(),
+            new FakeRoleService(),
+            new FakeUserPermissionService(),
+            CreateTwoFactorService(),
+            new FakeEmailTwoFactorSender(new EmailTwoFactorSendResult(true)),
+            new FakeTokenBlacklistService(),
+            NullLogger<AuthController>.Instance
+        )
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext()
+            }
+        };
+
+        ActionResult<AuthResponse> actionResult = await controller.Login(
+            new LoginRequest { Login = "banned@example.com", Password = "Password123!" },
+            CancellationToken.None
+        );
+
+        ObjectResult? result = Assert.IsType<ObjectResult>(actionResult.Result);
+        Assert.Equal(StatusCodes.Status401Unauthorized, result.StatusCode);
+
+        ProblemDetails problem = Assert.IsType<ProblemDetails>(result.Value);
+        Assert.Equal(message, problem.Detail);
+    }
+
+    [Fact]
     public async Task StartTwoFactorSetup_ReturnsServiceUnavailable_AndDoesNotPersist_WhenEmailFails()
     {
         var user = CreateUser(twoFactorEnabled: false, twoFactorSecret: null);

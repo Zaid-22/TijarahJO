@@ -31,7 +31,7 @@ export function AuthPageLayout({
   return (
     <div
       dir={direction}
-      className="min-h-content-70vh flex items-center justify-center p-4 sm:p-6 lg:p-8"
+      className="flex min-h-screen items-center justify-center px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
     >
       <div className="w-full max-w-md">
         <div className="text-center mb-6 sm:mb-8">

@@ -140,7 +140,24 @@ public sealed class AdminAuditLogResult
     public int TotalCount { get; init; }
 }
 
-public interface IAdminDataAccess
+public interface IAdminLocationDataAccess
+{
+    Task<System.Collections.Generic.IReadOnlyList<AdminCityItem>> GetCitiesWithAreasAsync(CancellationToken cancellationToken = default);
+    Task<int> CreateCityAsync(string cityName, string cityNameAr, CancellationToken cancellationToken = default);
+    Task<bool> UpdateCityAsync(int cityId, string cityName, string cityNameAr, CancellationToken cancellationToken = default);
+    Task<bool> DeleteCityAsync(int cityId, CancellationToken cancellationToken = default);
+    Task<int> CreateAreaAsync(int cityId, string areaName, string areaNameAr, CancellationToken cancellationToken = default);
+    Task<bool> UpdateAreaAsync(int areaId, string areaName, string areaNameAr, CancellationToken cancellationToken = default);
+    Task<bool> DeleteAreaAsync(int areaId, CancellationToken cancellationToken = default);
+}
+
+public interface IAdminReportDataAccess
+{
+    Task<AdminReportListResult> GetReportsAsync(int? status = null, string? reportType = null, string? search = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
+    Task<bool> UpdateReportStatusAsync(int reportId, int newStatus, int adminUserId, string? resolutionNotes = null, CancellationToken cancellationToken = default);
+}
+
+public interface IAdminDataAccess : IAdminLocationDataAccess, IAdminReportDataAccess
 {
     Task<DashboardStatsModel> GetDashboardStatsAsync(CancellationToken cancellationToken = default);
     Task<AdminPostListResult> GetAdminPostsAsync(AdminPostFilter filter, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
@@ -160,19 +177,6 @@ public interface IAdminDataAccess
     Task<bool> UpdateSettingAsync(string key, string value, CancellationToken cancellationToken = default);
     Task<AdminConversationListResult> GetConversationsAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
     Task<AdminConversationDetail?> GetConversationMessagesAsync(int conversationId, CancellationToken cancellationToken = default);
-
-    // Locations CRUD
-    Task<System.Collections.Generic.IReadOnlyList<AdminCityItem>> GetCitiesWithAreasAsync(CancellationToken cancellationToken = default);
-    Task<int> CreateCityAsync(string cityName, string cityNameAr, CancellationToken cancellationToken = default);
-    Task<bool> UpdateCityAsync(int cityId, string cityName, string cityNameAr, CancellationToken cancellationToken = default);
-    Task<bool> DeleteCityAsync(int cityId, CancellationToken cancellationToken = default);
-    Task<int> CreateAreaAsync(int cityId, string areaName, string areaNameAr, CancellationToken cancellationToken = default);
-    Task<bool> UpdateAreaAsync(int areaId, string areaName, string areaNameAr, CancellationToken cancellationToken = default);
-    Task<bool> DeleteAreaAsync(int areaId, CancellationToken cancellationToken = default);
-
-    // Reports
-    Task<AdminReportListResult> GetReportsAsync(int? status = null, string? reportType = null, string? search = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
-    Task<bool> UpdateReportStatusAsync(int reportId, int newStatus, int adminUserId, string? resolutionNotes = null, CancellationToken cancellationToken = default);
 
     // User Suspension
     Task<bool> SuspendUserAsync(int userId, System.DateTime? suspendedUntil, int adminUserId, CancellationToken cancellationToken = default);

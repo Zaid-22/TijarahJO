@@ -11,9 +11,9 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/locations")]
 [Authorize(Policy = AuthorizationPolicies.LocationsManage)]
-public class AdminLocationsController(IAdminDataAccess adminDataAccess) : ControllerBase
+public class AdminLocationsController(IAdminLocationDataAccess locationDataAccess) : ControllerBase
 {
-    private readonly IAdminDataAccess _adminDataAccess = adminDataAccess;
+    private readonly IAdminLocationDataAccess _adminDataAccess = locationDataAccess;
 
     [HttpGet("cities")]
     [ProducesResponseType(StatusCodes.Status200OK)]

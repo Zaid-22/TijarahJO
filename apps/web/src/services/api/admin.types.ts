@@ -220,6 +220,39 @@ export type FraudSignal = {
   detail: string;
 };
 
+export type FraudUserCandidate = {
+  userID: number;
+  name: string;
+  email: string;
+  joinedAt: string;
+  status: number;
+};
+
+export type FraudPostCandidate = {
+  postID: number;
+  userID: number;
+  title: string;
+  categoryID: number;
+  categoryName: string;
+  sellerName: string;
+  price: number | null;
+  status: number;
+  createdAt: string;
+  signalReason: string;
+};
+
+export type FraudReviewCandidate = {
+  reviewID: number;
+  reviewerID: number;
+  reviewerName: string;
+  reviewedUserID: number;
+  reviewedUserName: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  signalReason: string;
+};
+
 export type FraudSignalsResult = {
   rapidRegistrations: boolean;
   rapidRegistrationCount: number;
@@ -227,5 +260,9 @@ export type FraudSignalsResult = {
   suspiciousPriceCount: number;
   reviewBombingTargets: number;
   checkedAt: string;
+  rapidRegistrationUsers: FraudUserCandidate[];
+  duplicateListingPosts: FraudPostCandidate[];
+  suspiciousPricePosts: FraudPostCandidate[];
+  reviewBombingReviews: FraudReviewCandidate[];
   signals: FraudSignal[];
 };

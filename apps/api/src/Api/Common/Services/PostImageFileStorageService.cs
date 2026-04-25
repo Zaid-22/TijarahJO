@@ -24,6 +24,10 @@ public interface IPostImageFileStorageService
     Task DeleteByPublicUrlAsync(string publicUrl, CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Local filesystem storage for post images, chat images, and user avatars.
+/// For production with multiple servers, replace with Azure Blob Storage or AWS S3.
+/// </summary>
 public sealed class LocalPostImageFileStorageService : IPostImageFileStorageService
 {
     private static readonly StringComparison PathComparison =

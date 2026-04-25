@@ -79,9 +79,10 @@ public sealed class AuthCommandService(
                 user = user with { HashedPassword = PasswordHelper.HashPassword(command.Password) };
                 await _users.UpdateUserAsync(user, user.UserID.Value, cancellationToken);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 // Authentication should not fail because opportunistic hash upgrade failed.
+                _logger.LogWarning(ex, "Opportunistic password hash upgrade failed for user {UserId}.", user.UserID);
             }
         }
 

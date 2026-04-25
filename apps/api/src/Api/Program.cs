@@ -318,7 +318,7 @@ app.UseTijarahJoSecurityHeaders();
 
 // CORS must be registered before static files so uploaded images get
 // Access-Control-Allow-Origin headers (static files short-circuit the pipeline).
-app.UseCors("AllowAll");
+app.UseCors("TijarahJoCors");
 
 // Static files (uploads root: post images, chat images, user avatars)
 var fileStorageOptions = app.Services.GetRequiredService<IOptions<FileStorageOptions>>().Value;
@@ -331,6 +331,9 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = LocalPostImageFileStorageService.NormalizeRequestPath(fileStorageOptions.PublicBasePath),
     OnPrepareResponse = ctx =>
     {
+        // SECURITY NOTE: Wildcard origin is intentional for uploaded images.
+        // These are public, content-addressed files (unique filenames) and do not
+        // require origin-restricted access. This avoids CORS preflight for <img> tags.
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
         // Cache uploaded images for 30 days; files are content-addressed by unique names

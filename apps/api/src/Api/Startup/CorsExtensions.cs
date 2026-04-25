@@ -13,7 +13,7 @@ public static class CorsExtensions
         {
             if (environment.IsDevelopment())
             {
-                options.AddPolicy("AllowAll",
+                options.AddPolicy("TijarahJoCors",
                     policy =>
                     {
                         policy
@@ -67,7 +67,7 @@ public static class CorsExtensions
                     }
                 }
 
-                options.AddPolicy("AllowAll",
+                options.AddPolicy("TijarahJoCors",
                     policy =>
                     {
                         policy

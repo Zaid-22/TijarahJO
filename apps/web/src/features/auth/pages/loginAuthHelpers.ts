@@ -38,10 +38,6 @@ export const extractErrorMessage = (
     return backendConnectionMessage;
   }
 
-  if (code === "LOGIN_FAILED") {
-    return fallback;
-  }
-
   const message = extractApiMessage(payload);
   const normalizedMessage = (message || "").toLowerCase();
   if (
