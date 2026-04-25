@@ -101,3 +101,9 @@ docs/_build/
 *.tsbuildinfo
 apps/web/.unit-dist/
 **/.unit-dist/
+
+# Scratch / debug files
+apps/web/measure*.mjs
+apps/web/screenshot*.mjs
+apps/web/login_gap.png
+.playwright-mcp/
