@@ -1,6 +1,7 @@
 import { Suspense, type ReactElement } from "react";
 import { Routes, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { renderAppRouteElements } from "./AppRouteElements";
+import { renderAdminRoutes } from "./adminRoutes";
 import { usePostActions } from "./usePostActions";
 import { useProfileSaveAction } from "./useProfileSaveAction";
 import { useMarketplaceRouteState } from "./useMarketplaceRouteState";
@@ -135,6 +136,7 @@ export function AppRoutes() {
   return (
     <Suspense fallback={routeFallback}>
       <Routes>
+        {renderAdminRoutes()}
         {renderAppRouteElements({
           language,
           isAuthenticated,

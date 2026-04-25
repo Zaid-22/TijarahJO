@@ -45,6 +45,7 @@
 - AI-Powered Post Comparison (side-by-side analysis, pros & cons, language-aware)
 - YouTube Video Recommendations for compared products
 - Image uploads with server-side validation, WebP optimization, thumbnails, and local file storage
+- Location map integration with travel time/distance estimations and a polished responsive UI
 - Favorites system and seller profiles
 - Post view tracking
 

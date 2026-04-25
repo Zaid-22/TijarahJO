@@ -46,7 +46,22 @@ builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gem
 builder.Services.Configure<YouTubeSettings>(builder.Configuration.GetSection("YouTube"));
 builder.Services.AddHttpClient<GoogleAuthService>();
 builder.Services.AddHttpClient<IPostCompareService, GeminiPostCompareService>();
-builder.Services.AddHttpClient<ICompareVideoRecommendationService, YouTubeCompareVideoRecommendationService>();
+builder.Services.AddHttpClient<ICompareVideoRecommendationService, YouTubeCompareVideoRecommendationService>((serviceProvider, client) =>
+{
+    var youtubeSettings = serviceProvider.GetRequiredService<IOptions<YouTubeSettings>>().Value;
+    string referer = youtubeSettings.Referer?.Trim() ?? string.Empty;
+    if (string.IsNullOrWhiteSpace(referer))
+    {
+        return;
+    }
+
+    if (!Uri.TryCreate(referer, UriKind.Absolute, out var refererUri))
+    {
+        throw new InvalidOperationException("YouTube:Referer must be an absolute URL when configured.");
+    }
+
+    client.DefaultRequestHeaders.Referrer = refererUri;
+});
 
 // ---------------------------------------------------------------------------
 // Forwarded headers (proxy support)

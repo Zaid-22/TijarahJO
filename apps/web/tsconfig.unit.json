@@ -30,6 +30,7 @@
     "src/services/api/chatNormalization.ts",
     "src/services/api/systemStatus.ts",
     "src/features/marketplace/components/postCardPhoneDialog.ts",
+    "src/features/post-details/postLocationMapUtils.ts",
     "src/constants/appConfig.ts",
     "src/utils/idValidation.ts",
     "src/contexts/authRuntimePolicy.ts",

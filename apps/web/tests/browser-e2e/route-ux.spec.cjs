@@ -68,7 +68,7 @@ test("seller to chat preserves deterministic back path", async ({ page }) => {
   await expect(page).toHaveURL(/\/seller\/5$/);
 
   await page
-    .getByRole("button", { name: /chat with seller|الدردشة مع البائع/i })
+    .getByRole("button", { name: /^(chat|دردشة)$/i })
     .first()
     .click();
   await expect(page).toHaveURL(/\/chat\/5(?:\?.*)?$/);

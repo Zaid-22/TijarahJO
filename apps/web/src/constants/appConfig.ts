@@ -97,6 +97,7 @@ export const APP_CONFIG = {
   apiBaseUrl: configuredApiBaseUrl,
   backendHostUrl,
   googleAuthEnabled: parseBooleanFlag(env.VITE_GOOGLE_AUTH_ENABLED, false),
+  googleMapsApiKey: parseNonEmptyString(env.VITE_GOOGLE_MAPS_API_KEY, ""),
   backendRunCommand:
     "cd apps/api/src/Api && dotnet run",
   requestTimeoutMs: parsePositiveNumber(env.VITE_REQUEST_TIMEOUT_MS, 10_000),

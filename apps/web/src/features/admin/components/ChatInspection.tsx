@@ -1,4 +1,3 @@
-/* eslint-disable jsx-a11y/control-has-associated-label */
 import { useEffect, useState } from "react";
 import { MessageCircle, Eye, ArrowLeft, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -127,8 +126,9 @@ export function ChatInspection() {
                         if (parsed.type === "image") {
                           return (
                             <div className="space-y-1.5">
-                              <button
+                                <button
                                 type="button"
+                                aria-label="Open image in new tab"
                                 className="block w-full overflow-hidden rounded-lg border border-border/30 bg-black/5 hover:opacity-90 transition-opacity"
                                 onClick={() => window.open(parsed.imageUrl, "_blank")}
                               >
@@ -139,7 +139,7 @@ export function ChatInspection() {
                                 />
                               </button>
                               {parsed.caption && (
-                                <p className="text-sm whitespace-pre-wrap break-words">
+                                <p className="text-sm whitespace-pre-wrap wrap-break-word">
                                   {parsed.caption}
                                 </p>
                               )}
@@ -147,7 +147,7 @@ export function ChatInspection() {
                           );
                         }
                         return (
-                          <p className="text-sm whitespace-pre-wrap break-words">
+                          <p className="text-sm whitespace-pre-wrap wrap-break-word">
                             {parsed.text}
                           </p>
                         );
@@ -230,7 +230,7 @@ export function ChatInspection() {
                     colSpan={7}
                     className="px-6 py-12 text-center text-muted-foreground"
                   >
-                    <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" role="status" aria-label="Loading" /><span className="sr-only">Loading…</span>
                   </td>
                 </tr>
               ) : filteredConversations.length === 0 ? (

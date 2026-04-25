@@ -129,33 +129,6 @@ export function PostImageGallery({ post }: PostImageGalleryProps) {
           </div>
         </div>
 
-        {hasMultipleImages && (
-          <div className="flex gap-2 overflow-x-auto border-t border-border bg-muted/30 p-3 sm:p-4 dark:border-white/10 dark:bg-slate-950/60">
-            {displayImages.map((img, index) => (
-              <button
-                key={`gallery-thumb-${img || "image"}-${index}`}
-                type="button"
-                onClick={() => {
-                  setSelectedImage(index);
-                  setLightboxOpen(true);
-                }}
-                className={`h-20 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition-all hover:scale-105 active:scale-95 ${
-                  index === selectedImage
-                    ? "border-primary"
-                    : "border-transparent"
-                }`}
-                aria-label={`View image ${index + 1}`}
-              >
-                <ImageWithFallback
-                  src={img}
-                  alt={`${post.name} - ${index + 1}`}
-                  className="h-full w-full object-cover"
-                  fallbackSrc="https://via.placeholder.com/200x200?text=No+Image"
-                />
-              </button>
-            ))}
-          </div>
-        )}
       </Card>
 
       <ImageLightbox

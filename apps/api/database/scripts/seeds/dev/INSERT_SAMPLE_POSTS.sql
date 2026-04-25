@@ -543,18 +543,29 @@ Zaid rent a car');
 )
 UPDATE sp
 SET
-    CityName = CASE
-        WHEN sp.SourceKey LIKE N'mobile-phones-and-tablets-%' THEN N'Irbid'
-        ELSE N'Amman'
+    CityName = CASE (numbered.RowNumber % 10)
+        WHEN 0 THEN N'Amman'
+        WHEN 1 THEN N'Irbid'
+        WHEN 2 THEN N'Zarqa'
+        WHEN 3 THEN N'Aqaba'
+        WHEN 4 THEN N'Balqa'
+        WHEN 5 THEN N'Madaba'
+        WHEN 6 THEN N'Amman'
+        WHEN 7 THEN N'Irbid'
+        WHEN 8 THEN N'Zarqa'
+        WHEN 9 THEN N'Aqaba'
     END,
-    AreaName = CASE
-        WHEN sp.SourceKey = N'books-and-stationery-5' THEN N'East Amman'
-        WHEN sp.SourceKey = N'books-and-stationery-7' THEN N'Marj Al Hamam'
-        WHEN sp.SourceKey LIKE N'books-and-stationery-%' THEN N'Jubaiha'
-        WHEN sp.SourceKey LIKE N'computers-and-laptops-%' THEN N'Gardens'
-        WHEN sp.SourceKey LIKE N'mobile-phones-and-tablets-%' THEN N'City Center'
-        WHEN sp.SourceKey LIKE N'vehicles-%' THEN N'Shmeisani'
-        ELSE N'Jubaiha'
+    AreaName = CASE (numbered.RowNumber % 10)
+        WHEN 0 THEN N'West Amman'
+        WHEN 1 THEN N'City Center'
+        WHEN 2 THEN N'New Zarqa'
+        WHEN 3 THEN N'Tala Bay'
+        WHEN 4 THEN N'Salt'
+        WHEN 5 THEN N'City Center'
+        WHEN 6 THEN N'Abdali'
+        WHEN 7 THEN N'Al Ramtha'
+        WHEN 8 THEN N'Russeifa'
+        WHEN 9 THEN N'South Beach'
     END,
     Phone = N'079' + RIGHT(N'0000000' + CONVERT(NVARCHAR(7), numbered.RowNumber), 7)
 FROM #SamplePosts AS sp

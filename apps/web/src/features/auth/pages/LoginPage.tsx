@@ -6,7 +6,6 @@ import { useAuth } from "../../../contexts/AuthContext";
 import { persistAuthSessionHint } from "../../../contexts/authContextUtils";
 import { api } from "../../../services/api";
 import { debugError } from "../../../services/api/client";
-import { readStringArray } from "../../../services/api/normalizers";
 import { normalizeJordanPhone } from "../../../utils/phone";
 import { getLoginCopy } from "../loginCopy";
 import { PageShell } from "../../../shared/ui/page-shell";
@@ -14,8 +13,6 @@ import { resolveHasAdminAccessFromPayload } from "../../../contexts/authUtils";
 
 import { LoginForm } from "../LoginForm";
 import {
-  extractApiCode,
-  extractApiMessage,
   formatJoinedDateLabel,
   parseAuthIdentifier,
 } from "../loginUtils";
@@ -28,6 +25,17 @@ import {
 import { useLoginReducer } from "../useLoginReducer";
 import type { Language } from "../../../types";
 import { useLocationOptions } from "../../../shared/hooks/useLocationOptions";
+
+import {
+  extractErrorMessage,
+  toExceptionMessage,
+  appendDuplicateAccountHint,
+  normalizeTwoFactorCode,
+  resolveLoginRole,
+  readAuthString,
+  readAuthPermissions,
+  readAuthPositiveInt,
+} from "./loginAuthHelpers";
 
 interface LoginPageProps {
   onLogin: (userData: {
@@ -51,143 +59,6 @@ interface LoginPageProps {
   isModal?: boolean;
   onSuccess?: () => void;
 }
-
-const extractErrorMessage = (
-  payload: unknown,
-  fallback: string,
-  backendConnectionMessage: string,
-): string => {
-  const code = extractApiCode(payload);
-  if (code === "CONNECTION_REFUSED") {
-    return backendConnectionMessage;
-  }
-
-  if (code === "LOGIN_FAILED") {
-    return fallback;
-  }
-
-  const message = extractApiMessage(payload);
-  const normalizedMessage = (message || "").toLowerCase();
-  if (
-    normalizedMessage.includes("invalid email/phone or password") ||
-    normalizedMessage.includes("invalid email or password")
-  ) {
-    return fallback;
-  }
-
-  return message || fallback;
-};
-
-const toExceptionMessage = (
-  error: unknown,
-  fallbackMessage: string,
-  backendConnectionMessage: string,
-): string => {
-  if (!(error instanceof Error)) {
-    return fallbackMessage;
-  }
-
-  if (
-    error.message.includes("Failed to fetch") ||
-    error.message.includes("ERR_CONNECTION_REFUSED")
-  ) {
-    return backendConnectionMessage;
-  }
-
-  return error.message;
-};
-
-const appendDuplicateAccountHint = (
-  message: string,
-  duplicateHintSuffix: string,
-): string => {
-  const normalizedMessage = message.toLowerCase();
-
-  if (
-    normalizedMessage.includes("try logging in") ||
-    normalizedMessage.includes("switch to sign in") ||
-    normalizedMessage.includes("sign in if you already have an account")
-  ) {
-    return message;
-  }
-
-  if (
-    normalizedMessage.includes("already exists") ||
-    normalizedMessage.includes("email address already")
-  ) {
-    return `${message} ${duplicateHintSuffix}`;
-  }
-
-  return message;
-};
-
-const normalizeTwoFactorCode = (value: string): string => {
-  return value.replace(/\D+/g, "");
-};
-
-const resolveLoginRole = (user: unknown): "admin" | "user" => {
-  const payload =
-    typeof user === "object" && user !== null
-      ? (user as Record<string, unknown>)
-      : null;
-
-  return resolveHasAdminAccessFromPayload(payload) ? "admin" : "user";
-};
-
-const readAuthString = (
-  payload: Record<string, unknown> | null,
-  ...keys: string[]
-): string => {
-  if (!payload) {
-    return "";
-  }
-
-  for (const key of keys) {
-    const value = payload[key];
-    if (typeof value === "string" && value.trim().length > 0) {
-      return value.trim();
-    }
-  }
-
-  return "";
-};
-
-const readAuthPermissions = (payload: unknown): string[] => {
-  if (typeof payload !== "object" || payload === null) {
-    return [];
-  }
-
-  return readStringArray(
-    (payload as Record<string, unknown>).AdminPermissions ??
-      (payload as Record<string, unknown>).adminPermissions ??
-      (payload as Record<string, unknown>).Permissions ??
-      (payload as Record<string, unknown>).permissions,
-  );
-};
-
-const readAuthPositiveInt = (
-  payload: Record<string, unknown> | null,
-  ...keys: string[]
-): number | undefined => {
-  if (!payload) {
-    return undefined;
-  }
-
-  for (const key of keys) {
-    const value = payload[key];
-    if (typeof value === "number" && Number.isInteger(value) && value > 0) {
-      return value;
-    }
-    if (typeof value === "string") {
-      const parsed = Number.parseInt(value, 10);
-      if (Number.isInteger(parsed) && parsed > 0) {
-        return parsed;
-      }
-    }
-  }
-
-  return undefined;
-};
 
 export function LoginPage({
   onLogin,

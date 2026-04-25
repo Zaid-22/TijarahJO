@@ -151,7 +151,14 @@ export const marketplaceTranslations = {
     watchRelatedVideo: "Watch related video",
     videoViews: "{count} views",
     recommendedFor: "Recommended for",
-    videoSearchUsed: "Search used"
+    videoSearchUsed: "Search used",
+    // Phone dialog
+    phoneClickToCopy: "Click the number to copy it",
+    phoneNumber: "Phone Number",
+    sellerPhone: "Seller's Phone",
+    clickToCopy: "Click to copy",
+    copied: "✓ Copied",
+    goBack: "Go Back"
   },
   ar: {
     searchPlaceholder: "ابحث في تجارة جو...",
@@ -305,6 +312,13 @@ export const marketplaceTranslations = {
     watchRelatedVideo: "شاهد الفيديو المرتبط",
     videoViews: "{count} مشاهدة",
     recommendedFor: "مقترح لـ",
-    videoSearchUsed: "عبارة البحث"
+    videoSearchUsed: "عبارة البحث",
+    // Phone dialog
+    phoneClickToCopy: "انقر على الرقم لنسخه",
+    phoneNumber: "رقم الهاتف",
+    sellerPhone: "رقم البائع",
+    clickToCopy: "انقر للنسخ",
+    copied: "✓ تم النسخ",
+    goBack: "رجوع"
   }
 };

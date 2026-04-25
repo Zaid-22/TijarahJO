@@ -125,34 +125,7 @@ public static class AuthenticationExtensions
 
             options.Events = new JwtBearerEvents
             {
-                OnTokenValidated = async context =>
-                {
-                    var blacklistService = context.HttpContext.RequestServices.GetRequiredService<TijarahJo.Application.Abstractions.Services.ITokenBlacklistService>();
-                    var principal = context.Principal;
-                    if (principal == null) return;
 
-                    string? jti = principal.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Jti)?.Value;
-                    if (!string.IsNullOrEmpty(jti) && await blacklistService.IsBlacklistedAsync(jti, context.HttpContext.RequestAborted))
-                    {
-                        context.Fail("Token is blacklisted.");
-                        return;
-                    }
-
-                    string? userIdClaim = principal.FindFirst("userId")?.Value ?? principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-                    if (int.TryParse(userIdClaim, out int userId))
-                    {
-                        string? iatClaim = principal.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Iat)?.Value;
-                        if (long.TryParse(iatClaim, out long iatUnix))
-                        {
-                            var iat = DateTimeOffset.FromUnixTimeSeconds(iatUnix);
-                            if (await blacklistService.IsUserSessionInvalidatedAsync(userId, iat, context.HttpContext.RequestAborted))
-                            {
-                                context.Fail("User session was invalidated.");
-                                return;
-                            }
-                        }
-                    }
-                },
                 OnMessageReceived = context =>
                 {
                     if (string.IsNullOrWhiteSpace(context.Token))

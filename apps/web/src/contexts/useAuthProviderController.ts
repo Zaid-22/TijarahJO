@@ -49,6 +49,8 @@ export function useAuthProviderController(): AuthContextType {
   const lastRevalidateAtRef = useRef(0);
   const consecutiveNetworkFailuresRef = useRef(0);
   const didInitialAuthCheckRef = useRef(false);
+  const authStateRef = useRef(authState);
+  authStateRef.current = authState;
   const lastAuthErrorEmissionRef = useRef<{
     message: string;
     emittedAt: number;
@@ -273,9 +275,10 @@ export function useAuthProviderController(): AuthContextType {
     const guestMode = localStorage.getItem(AUTH_GUEST_KEY);
     const hasAnySessionHint = hasStoredAuthSessionHint() || AUTH_LEGACY_KEYS.some((k) => localStorage.getItem(k) !== null);
 
+    const currentAuthState = authStateRef.current;
     const shouldSkipLoggedOutProbe =
-      !authState.isAuthenticated &&
-      !authState.user &&
+      !currentAuthState.isAuthenticated &&
+      !currentAuthState.user &&
       !hasAnySessionHint;
 
     if (shouldSkipLoggedOutProbe) {
@@ -293,13 +296,13 @@ export function useAuthProviderController(): AuthContextType {
       return;
     }
 
-    let currentUserResult = await fetchCurrentUser(authState.user?.email || "");
+    let currentUserResult = await fetchCurrentUser(currentAuthState.user?.email || "");
     if (currentUserResult.status === "network_error") {
       const retryDelayMs = getNetworkRetryDelayMs(
         consecutiveNetworkFailuresRef.current,
       );
       await pause(retryDelayMs);
-      currentUserResult = await fetchCurrentUser(authState.user?.email || "");
+      currentUserResult = await fetchCurrentUser(currentAuthState.user?.email || "");
     }
 
     if (!isLatestRun()) {
@@ -342,7 +345,7 @@ export function useAuthProviderController(): AuthContextType {
       debugAuthWarn("[AuthContext] No valid authenticated session");
 
       const wasAuthenticated =
-        authState.isAuthenticated ||
+        currentAuthState.isAuthenticated ||
         AUTH_LEGACY_KEYS.some((k) => localStorage.getItem(k) !== null);
 
       clearAuthStorage();
@@ -360,7 +363,7 @@ export function useAuthProviderController(): AuthContextType {
       debugAuthWarn("[AuthContext] Backend unavailable during auth check");
 
       const wasAuthenticated =
-        authState.isAuthenticated ||
+        currentAuthState.isAuthenticated ||
         AUTH_LEGACY_KEYS.some((k) => localStorage.getItem(k) !== null);
 
       if (wasAuthenticated) {
@@ -383,10 +386,7 @@ export function useAuthProviderController(): AuthContextType {
     if (isLatestRun()) {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    authState.isAuthenticated,
-    authState.user?.email,
     clearAuthStorage,
     emitAuthError,
     fetchCurrentUser,

@@ -27,17 +27,24 @@ public sealed class BackgroundJobWorker : BackgroundService
     {
         _logger.LogInformation("Background job worker is starting.");
 
-        await foreach (var workItem in _jobService.Reader.ReadAllAsync(stoppingToken))
+        try
         {
-            try
+            await foreach (var workItem in _jobService.Reader.ReadAllAsync(stoppingToken))
             {
-                using IServiceScope scope = _scopeFactory.CreateScope();
-                await workItem(scope.ServiceProvider, stoppingToken);
+                try
+                {
+                    using IServiceScope scope = _scopeFactory.CreateScope();
+                    await workItem(scope.ServiceProvider, stoppingToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error executing background job.");
+                }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error executing background job.");
-            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignored to allow graceful shutdown without noisy logs
         }
 
         _logger.LogInformation("Background job worker is stopping.");
