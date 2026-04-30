@@ -10,15 +10,15 @@ GO
 -- Documentation: Reports table uses a polymorphic FK pattern
 -- =============================================================================
 -- NOTE: Reports.TargetID is a polymorphic foreign key.
--- Depending on ReportType ('LISTING', 'USER', 'REVIEW', 'CHAT'), TargetID
--- references a different parent table (Posts, Users, Reviews, Conversations).
+-- Depending on ReportType ('LISTING', 'USER', 'REVIEW', 'COMMENT'), TargetID
+-- references a different parent table (Posts, Users, Reviews, PostComments).
 --
 -- Referential integrity for TargetID is enforced at the APPLICATION level
 -- (in ReportDataAccessAdapter and ReportService), not at the database level.
 --
 -- This is a documented, accepted trade-off for this project scope.
 -- In a production system at scale, consider refactoring to typed nullable FK
--- columns (TargetPostID, TargetUserID, TargetReviewID, TargetConversationID)
+-- columns (TargetPostID, TargetUserID, TargetReviewID, TargetCommentID)
 -- with a CHECK constraint ensuring exactly one is non-null.
 -- =============================================================================
 

@@ -215,7 +215,7 @@ erDiagram
     %% ==========================================
     Reports {
         int ReportID PK "IDENTITY"
-        nvarchar ReportType "LISTING|USER|REVIEW|CHAT"
+        nvarchar ReportType "LISTING|USER|REVIEW|COMMENT"
         int TargetID
         nvarchar Reason
         nvarchar Description
@@ -363,7 +363,7 @@ All deletes use batch processing (1000 rows/batch) to avoid lock escalation.
 | `LISTING` | `Posts.PostID` |
 | `USER` | `Users.UserID` |
 | `REVIEW` | `Reviews.ReviewID` |
-| `CHAT` | `Conversations.ConversationID` |
+| `COMMENT` | `PostComments.CommentID` |
 
 Referential integrity for `TargetID` is enforced at the **application level**, not the database. This is a documented trade-off: adding separate nullable FK columns would require a schema migration with data mapping, while the current pattern works safely because only the admin panel reads reports.
 
@@ -392,4 +392,3 @@ Referential integrity for `TargetID` is enforced at the **application level**, n
 ### SchemaMigrations Table
 
 `dbo.SchemaMigrations` is an infrastructure-only tracking table. It has **no C# entity** and is accessed only by SQL migration scripts. Each row records a migration name and its applied timestamp to prevent re-execution.
-

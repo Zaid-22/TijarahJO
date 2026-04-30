@@ -19,6 +19,7 @@ type ParsedUserSchema = {
   joinedDate: string;
   joinedAt: string;
   status: number;
+  suspendedUntil?: string;
   roleId: number;
   isDeleted: boolean;
   raw: Record<string, unknown>;
@@ -107,6 +108,9 @@ export function parseUserSchema(
       userRecord.Status ?? userRecord.status,
       DEFAULT_ACTIVE_STATUS,
     ),
+    suspendedUntil:
+      readString(userRecord.SuspendedUntil ?? userRecord.suspendedUntil) ||
+      undefined,
     roleId: toIntegerOrDefault(
       userRecord.RoleID ?? userRecord.roleID,
       DEFAULT_USER_ROLE_ID,

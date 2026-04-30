@@ -234,16 +234,84 @@ public sealed class AuthCommandServiceTests
     }
 
     // -------------------------------------------------------------------------
+    // GoogleAuthAsync
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task GoogleAuthAsync_RefreshesExternalAvatar_WhenGooglePictureChanges()
+    {
+        var account = CreateDefaultUser(avatar: "https://lh3.googleusercontent.com/old-photo");
+        var (service, users) = BuildServiceWithAccount(account);
+
+        AuthCommandResult result = await service.GoogleAuthAsync(new GoogleAuthCommand
+        {
+            Subject = "google-subject-1",
+            Email = "user@example.com",
+            FirstName = "Test",
+            LastName = "User",
+            Avatar = "https://lh3.googleusercontent.com/new-photo"
+        });
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.User);
+        Assert.Equal("https://lh3.googleusercontent.com/new-photo", result.User.Avatar);
+        Assert.NotNull(users.UpdatedUser);
+        Assert.Equal("https://lh3.googleusercontent.com/new-photo", users.UpdatedUser.Avatar);
+    }
+
+    [Fact]
+    public async Task GoogleAuthAsync_KeepsUploadedAvatar_WhenGooglePictureChanges()
+    {
+        var account = CreateDefaultUser(avatar: "/uploads/user-avatars/custom.webp");
+        var (service, users) = BuildServiceWithAccount(account);
+
+        AuthCommandResult result = await service.GoogleAuthAsync(new GoogleAuthCommand
+        {
+            Subject = "google-subject-1",
+            Email = "user@example.com",
+            FirstName = "Test",
+            LastName = "User",
+            Avatar = "https://lh3.googleusercontent.com/new-photo"
+        });
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.User);
+        Assert.Equal("/uploads/user-avatars/custom.webp", result.User.Avatar);
+        Assert.Null(users.UpdatedUser);
+    }
+
+    [Fact]
+    public async Task GoogleAuthAsync_KeepsUploadAvatarWithoutLeadingSlash_WhenGooglePictureChanges()
+    {
+        var account = CreateDefaultUser(avatar: "uploads/user-avatars/custom.webp");
+        var (service, users) = BuildServiceWithAccount(account);
+
+        AuthCommandResult result = await service.GoogleAuthAsync(new GoogleAuthCommand
+        {
+            Subject = "google-subject-1",
+            Email = "user@example.com",
+            FirstName = "Test",
+            LastName = "User",
+            Avatar = "https://lh3.googleusercontent.com/new-photo"
+        });
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.User);
+        Assert.Equal("uploads/user-avatars/custom.webp", result.User.Avatar);
+        Assert.Null(users.UpdatedUser);
+    }
+
+    // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
-    private static AuthCommandService BuildService(
-        UserModel? nextFindUser = null,
+    private static UserModel CreateDefaultUser(
         string? hashedPassword = null,
         bool isDeleted = false,
-        int status = 1 /* Active */)
+        int status = 1 /* Active */,
+        string? avatar = null)
     {
-        var model = new UserModel(
+        return new UserModel(
             userid: 1,
             hashedpassword: hashedPassword ?? TijarahJo.Application.Common.PasswordHelper.HashPassword("Test1234!"),
             email: "user@example.com",
@@ -253,22 +321,39 @@ public sealed class AuthCommandServiceTests
             cityId: null,
             areaId: null,
             bio: null,
-            avatar: null,
+            avatar: avatar,
             joindate: DateTime.UtcNow,
             status: status,
             roleid: 1,
             isdeleted: isDeleted
         );
+    }
+
+    private static AuthCommandService BuildService(
+        UserModel? nextFindUser = null,
+        string? hashedPassword = null,
+        bool isDeleted = false,
+        int status = 1 /* Active */)
+    {
+        var model = CreateDefaultUser(
+            hashedPassword: hashedPassword,
+            isDeleted: isDeleted,
+            status: status);
 
         var account = nextFindUser ?? model;
 
+        return BuildServiceWithAccount(account).Service;
+    }
+
+    private static (AuthCommandService Service, FakeUserDataAccess Users) BuildServiceWithAccount(UserModel account)
+    {
         var users = new FakeUserDataAccess(account);
         var externalIdentities = new FakeExternalIdentityDataAccess();
         var roles = new FakeRoleService();
         var locations = new FakeLocationReadService();
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<AuthCommandService>.Instance;
 
-        return new AuthCommandService(users, externalIdentities, roles, locations, logger);
+        return (new AuthCommandService(users, externalIdentities, roles, locations, logger), users);
     }
 
     // -------------------------------------------------------------------------
@@ -281,6 +366,8 @@ public sealed class AuthCommandServiceTests
         private bool _saveResult = true;
 
         public FakeUserDataAccess(UserModel account) => _account = account;
+
+        public UserModel? UpdatedUser { get; private set; }
 
         public Task<UserModel?> GetUserByIDAsync(int? userId, CancellationToken ct = default)
             => Task.FromResult<UserModel?>(_account);
@@ -305,7 +392,10 @@ public sealed class AuthCommandServiceTests
             => Task.FromResult(_saveResult ? 1 : 0);
 
         public Task<bool> UpdateUserAsync(UserModel user, int actorUserId, CancellationToken ct = default)
-            => Task.FromResult(_saveResult);
+        {
+            UpdatedUser = user;
+            return Task.FromResult(_saveResult);
+        }
 
         public Task<bool> DeleteUserAsync(int? userId, int actorUserId, CancellationToken ct = default)
             => Task.FromResult(true);

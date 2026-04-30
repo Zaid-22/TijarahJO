@@ -131,7 +131,7 @@ export function AdminGlobalSearch() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           ref={inputRef}
-          placeholder='Search users, listings... (press "/")'
+          placeholder='Search users by name, email, or phone... (press "/")'
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => query.length >= 2 && results && setIsOpen(true)}

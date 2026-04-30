@@ -24,6 +24,7 @@ interface PostDetailsRouteWrapperProps {
   onFavoriteToggle: (postId: string) => void;
   onOpenPost: (postId: string) => void;
   onNavigateHome: () => void;
+  onNavigateCategory: (categoryName: string, fromPath?: string) => void;
   onNavigateProfile: () => void;
   onNavigateSeller: (sellerId: string, fromPath?: string) => void;
   onNavigateChat: (sellerId: string, fromPath?: string) => void;
@@ -44,6 +45,7 @@ export function PostDetailsRouteWrapper({
   onFavoriteToggle,
   onOpenPost,
   onNavigateHome,
+  onNavigateCategory,
   onNavigateProfile,
   onNavigateSeller,
   onNavigateChat,
@@ -145,6 +147,9 @@ export function PostDetailsRouteWrapper({
       allPosts={availablePosts}
       language={language}
       onPostClick={onOpenPost}
+      onCategoryClick={(categoryName) =>
+        onNavigateCategory(categoryName, currentPath)
+      }
       onSellerClick={() => {
         if (isOwnPost) {
           onNavigateProfile();

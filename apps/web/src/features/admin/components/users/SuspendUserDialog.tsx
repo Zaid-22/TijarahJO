@@ -1,3 +1,4 @@
+import { type ReactNode } from "react";
 import { ShieldBan } from "lucide-react";
 import { Button } from "../../../../shared/ui/button";
 import {
@@ -20,6 +21,8 @@ interface SuspendUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userName: string | undefined;
+  title?: string;
+  description?: ReactNode;
   durationHours: string;
   onDurationChange: (value: string) => void;
   onSuspend: () => void;
@@ -30,6 +33,8 @@ export function SuspendUserDialog({
   open,
   onOpenChange,
   userName,
+  title = "Suspend User",
+  description,
   durationHours,
   onDurationChange,
   onSuspend,
@@ -39,7 +44,7 @@ export function SuspendUserDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Suspend User</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           <DialogDescription className="sr-only">
             Choose how long to suspend this user and apply the suspension.
           </DialogDescription>
@@ -47,9 +52,13 @@ export function SuspendUserDialog({
         {userName && (
           <div className="space-y-4 py-3">
             <p className="text-sm text-muted-foreground">
-              You are about to suspend <strong>{userName}</strong>. This will
-              immediately invalidate their active sessions and prevent them from
-              logging in.
+              {description ?? (
+                <>
+                  You are about to suspend <strong>{userName}</strong>. This will
+                  immediately invalidate their active sessions and prevent them
+                  from logging in.
+                </>
+              )}
             </p>
             <div className="space-y-2">
               <div id="suspension-duration-label" className="text-sm font-medium">

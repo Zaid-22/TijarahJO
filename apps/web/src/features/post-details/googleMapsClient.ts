@@ -15,6 +15,7 @@ type MapStyleRule = {
 type MapOptions = {
   center: Coordinates;
   zoom: number;
+  mapId?: string;
   disableDefaultUI?: boolean;
   clickableIcons?: boolean;
   gestureHandling?: string;
@@ -29,6 +30,26 @@ interface GoogleMap {
 interface GoogleMarker {
   setMap(map: GoogleMap | null): void;
 }
+
+type PostMapHandle = {
+  map: GoogleMap;
+  marker: GoogleMarker;
+  supportsInlineStyles: boolean;
+};
+
+interface GoogleAdvancedMarker {
+  map: GoogleMap | null;
+}
+
+type AdvancedMarkerConstructor = new (options: {
+  position: Coordinates;
+  map: GoogleMap;
+  title?: string;
+}) => GoogleAdvancedMarker;
+
+type MarkerLibrary = {
+  AdvancedMarkerElement?: AdvancedMarkerConstructor;
+};
 
 interface GoogleLatLng {
   lat(): number;
@@ -76,6 +97,9 @@ interface GoogleMapsNamespace {
       map: GoogleMap;
       title?: string;
     }) => GoogleMarker;
+    marker?: {
+      AdvancedMarkerElement?: AdvancedMarkerConstructor;
+    };
     TravelMode: {
       DRIVING: string;
     };
@@ -137,12 +161,22 @@ async function importOptionalLibraries(maps: GoogleMapsNamespace["maps"]) {
     return;
   }
 
-  await Promise.allSettled([
+  const [, markerResult] = await Promise.allSettled([
     maps.importLibrary("maps"),
     maps.importLibrary("marker"),
     maps.importLibrary("routes"),
     maps.importLibrary("geocoding"),
   ]);
+
+  if (markerResult.status === "fulfilled") {
+    const markerLibrary = markerResult.value as MarkerLibrary;
+    if (markerLibrary.AdvancedMarkerElement) {
+      maps.marker = {
+        ...maps.marker,
+        AdvancedMarkerElement: markerLibrary.AdvancedMarkerElement,
+      };
+    }
+  }
 }
 
 export async function loadGoogleMapsApi(
@@ -223,22 +257,47 @@ export function createPostMap(
   destination: Coordinates,
   title: string,
   darkMode: boolean,
-): { map: GoogleMap; marker: GoogleMarker } {
+  mapId: string,
+): PostMapHandle {
+  const AdvancedMarkerElement = maps.maps.marker?.AdvancedMarkerElement;
+  const canUseAdvancedMarker = Boolean(AdvancedMarkerElement && mapId);
+  const supportsInlineStyles = !canUseAdvancedMarker;
   const map = new maps.maps.Map(element, {
     center: destination,
     zoom: 14,
+    ...(canUseAdvancedMarker ? { mapId } : {}),
     disableDefaultUI: true,
     clickableIcons: false,
     gestureHandling: "none",
-    styles: darkMode ? DARK_MAP_STYLES : null,
+    ...(supportsInlineStyles
+      ? { styles: darkMode ? DARK_MAP_STYLES : null }
+      : {}),
   });
+  if (canUseAdvancedMarker && AdvancedMarkerElement) {
+    const advancedMarker = new AdvancedMarkerElement({
+      position: destination,
+      map,
+      title,
+    });
+
+    return {
+      map,
+      supportsInlineStyles,
+      marker: {
+        setMap(nextMap: GoogleMap | null) {
+          advancedMarker.map = nextMap;
+        },
+      },
+    };
+  }
+
   const marker = new maps.maps.Marker({
     position: destination,
     map,
     title,
   });
 
-  return { map, marker };
+  return { map, marker, supportsInlineStyles };
 }
 
 export function applyPostMapTheme(map: GoogleMap, darkMode: boolean) {

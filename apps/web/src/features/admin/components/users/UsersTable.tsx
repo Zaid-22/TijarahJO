@@ -151,7 +151,9 @@ export function UsersTable({
                 <TableCell>
                   <Select
                     value={String(user.roleId)}
-                    onValueChange={(value) => onChangeRole(user.id, Number(value))}
+                    onValueChange={(value) =>
+                      onChangeRole(user.id, Number(value))
+                    }
                   >
                     <SelectTrigger
                       className="w-[160px]"
@@ -174,15 +176,22 @@ export function UsersTable({
                 <TableCell>
                   <Badge
                     variant="outline"
+                    title={
+                      user.status === "suspended" && user.suspendedUntil
+                        ? `Suspended until ${new Date(user.suspendedUntil).toLocaleString()}`
+                        : undefined
+                    }
                     className={
                       user.status === "active"
                         ? "border-primary/30 bg-primary/10 text-primary"
-                        : user.status === "banned"
-                          ? "border-destructive/30 bg-destructive/10 text-destructive"
-                          : "border-border bg-muted text-muted-foreground"
+                        : user.status === "suspended"
+                          ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                          : user.status === "banned"
+                            ? "border-destructive/30 bg-destructive/10 text-destructive"
+                            : "border-border bg-muted text-muted-foreground"
                     }
                   >
-                    {user.status}
+                    {user.status === "suspended" ? "Suspended" : user.status}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">

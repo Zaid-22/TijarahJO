@@ -255,7 +255,13 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
 
         foreach (var user in users)
         {
+            bool statusWillBecomeMoreRestrictive = newStatusId != 1 && user.Status != newStatusId;
             user.Status = newStatusId;
+            user.SuspendedUntil = null;
+            if (statusWillBecomeMoreRestrictive)
+            {
+                user.LastInvalidatedAt = System.DateTime.UtcNow;
+            }
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -340,7 +346,10 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
                 (x.user != null && (
                     ((x.user.FirstName ?? string.Empty) + " " + (x.user.LastName ?? string.Empty)).Trim().Contains(searchTerm) ||
                     (x.user.FirstName ?? string.Empty).Contains(searchTerm) ||
-                    (x.user.LastName ?? string.Empty).Contains(searchTerm))));
+                    (x.user.LastName ?? string.Empty).Contains(searchTerm) ||
+                    x.user.Email.Contains(searchTerm) ||
+                    (x.user.Phone != null && x.user.Phone.Contains(searchTerm))
+                )));
         }
 
         int totalCount = await query.CountAsync(cancellationToken);
@@ -492,96 +501,6 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
         return true;
     }
 
-    // ── Phase 3: Chat Inspection ──
-
-    public async Task<AdminConversationListResult> GetConversationsAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
-    {
-        var query = from c in _dbContext.Conversations.AsNoTracking()
-                    join u1 in _dbContext.Users.AsNoTracking() on c.User1ID equals u1.UserID
-                    join u2 in _dbContext.Users.AsNoTracking() on c.User2ID equals u2.UserID
-                    where !c.IsDeleted
-                    select new { c, u1, u2 };
-
-        int totalCount = await query.CountAsync(cancellationToken);
-
-        int safePage = System.Math.Max(1, pageNumber);
-        int safeSize = System.Math.Clamp(pageSize, 1, 200);
-
-        var items = await query
-            .OrderByDescending(x => x.c.LastMessageAt)
-            .Skip((safePage - 1) * safeSize)
-            .Take(safeSize)
-            .Select(x => new AdminConversationItem
-            {
-                ConversationID = x.c.ConversationID,
-                User1ID = x.c.User1ID,
-                User1Name = (x.u1.FirstName + " " + (x.u1.LastName ?? "")).Trim(),
-                User2ID = x.c.User2ID,
-                User2Name = (x.u2.FirstName + " " + (x.u2.LastName ?? "")).Trim(),
-                PostID = x.c.PostID,
-                LastMessageAt = x.c.LastMessageAt,
-                MessageCount = _dbContext.Messages.Count(m => m.ConversationID == x.c.ConversationID && !m.IsDeleted)
-            })
-            .ToListAsync(cancellationToken);
-
-        return new AdminConversationListResult
-        {
-            TotalCount = totalCount,
-            Conversations = items
-        };
-    }
-
-    public async Task<AdminConversationDetail?> GetConversationMessagesAsync(int conversationId, CancellationToken cancellationToken = default)
-    {
-        var conversation = await (from c in _dbContext.Conversations.AsNoTracking()
-                                  join u1 in _dbContext.Users.AsNoTracking() on c.User1ID equals u1.UserID
-                                  join u2 in _dbContext.Users.AsNoTracking() on c.User2ID equals u2.UserID
-                                  where c.ConversationID == conversationId
-                                  select new AdminConversationItem
-                                  {
-                                      ConversationID = c.ConversationID,
-                                      User1ID = c.User1ID,
-                                      User1Name = (u1.FirstName + " " + (u1.LastName ?? "")).Trim(),
-                                      User2ID = c.User2ID,
-                                      User2Name = (u2.FirstName + " " + (u2.LastName ?? "")).Trim(),
-                                      PostID = c.PostID,
-                                      LastMessageAt = c.LastMessageAt,
-                                      MessageCount = 0 // filled below
-                                  }).FirstOrDefaultAsync(cancellationToken);
-
-        if (conversation == null) return null;
-
-        var messages = await (from m in _dbContext.Messages.AsNoTracking()
-                              join u in _dbContext.Users.AsNoTracking() on m.SenderID equals u.UserID
-                              where m.ConversationID == conversationId && !m.IsDeleted
-                              orderby m.CreatedAt
-                              select new AdminMessageItem
-                              {
-                                  MessageID = m.MessageID,
-                                  SenderID = m.SenderID,
-                                  SenderName = (u.FirstName + " " + (u.LastName ?? "")).Trim(),
-                                  Content = m.Content,
-                                  CreatedAt = m.CreatedAt,
-                                  IsRead = m.IsRead
-                              }).ToListAsync(cancellationToken);
-
-        return new AdminConversationDetail
-        {
-            Conversation = new AdminConversationItem
-            {
-                ConversationID = conversation.ConversationID,
-                User1ID = conversation.User1ID,
-                User1Name = conversation.User1Name,
-                User2ID = conversation.User2ID,
-                User2Name = conversation.User2Name,
-                PostID = conversation.PostID,
-                LastMessageAt = conversation.LastMessageAt,
-                MessageCount = messages.Count
-            },
-            Messages = messages
-        };
-    }
-
     // ── Locations CRUD ──
 
     public async Task<System.Collections.Generic.IReadOnlyList<AdminCityItem>> GetCitiesWithAreasAsync(CancellationToken cancellationToken = default)
@@ -671,7 +590,9 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
     {
         try
         {
-            var query = _dbContext.Reports.AsNoTracking().AsQueryable();
+            var query = _dbContext.Reports
+                .AsNoTracking()
+                .Where(r => r.ReportType != "CHAT");
 
             if (status.HasValue)
                 query = query.Where(r => r.Status == status.Value);
@@ -689,14 +610,23 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
                          from targetUser in tug.DefaultIfEmpty()
                          join targetReview in _dbContext.Reviews.AsNoTracking() on r.TargetID equals targetReview.ReviewID into trg
                          from targetReview in trg.DefaultIfEmpty()
-                         select new { r, reporter, resolver, targetPost, targetUser, targetReview };
+                         join targetComment in _dbContext.PostComments.AsNoTracking() on r.TargetID equals targetComment.CommentID into tcg
+                         from targetComment in tcg.DefaultIfEmpty()
+                         join postOwner in _dbContext.Users.AsNoTracking() on (targetPost == null ? 0 : targetPost.UserID) equals postOwner.UserID into pog
+                         from postOwner in pog.DefaultIfEmpty()
+                         join reviewAuthor in _dbContext.Users.AsNoTracking() on (targetReview == null ? 0 : targetReview.ReviewerID) equals reviewAuthor.UserID into rag
+                         from reviewAuthor in rag.DefaultIfEmpty()
+                         join commentAuthor in _dbContext.Users.AsNoTracking() on (targetComment == null ? 0 : targetComment.UserID) equals commentAuthor.UserID into cag
+                         from commentAuthor in cag.DefaultIfEmpty()
+                         select new { r, reporter, resolver, targetPost, targetUser, targetReview, targetComment, postOwner, reviewAuthor, commentAuthor };
 
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var term = search.Trim();
                 joined = joined.Where(x =>
                     (x.reporter.FirstName + " " + (x.reporter.LastName ?? "")).Contains(term) ||
-                    x.reporter.Email.Contains(term));
+                    x.reporter.Email.Contains(term) ||
+                    (x.reporter.Phone != null && x.reporter.Phone.Contains(term)));
             }
             int totalCount = await joined.CountAsync(cancellationToken);
 
@@ -716,14 +646,34 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
                                 ? (x.targetUser.FirstName + " " + (x.targetUser.LastName ?? "")).Trim()
                                 : x.r.ReportType == "REVIEW" && x.targetReview != null
                                     ? x.targetReview.Comment
-                                    : x.r.ReportType == "CHAT"
-                                        ? "Conversation #" + x.r.TargetID
-                                        : null,
+                                    : x.r.ReportType == "COMMENT" && x.targetComment != null
+                                        ? x.targetComment.Content
+                                    : null,
                     Reason = x.r.Reason,
                     Description = x.r.Description,
                     ReporterUserID = x.r.ReporterUserID,
                     ReporterName = (x.reporter.FirstName + " " + (x.reporter.LastName ?? "")).Trim(),
                     ReporterEmail = x.reporter.Email,
+                    TargetUserID =
+                        x.r.ReportType == "USER" && x.targetUser != null
+                            ? x.targetUser.UserID
+                            : x.r.ReportType == "LISTING" && x.targetPost != null
+                                ? x.targetPost.UserID
+                                : x.r.ReportType == "REVIEW" && x.targetReview != null
+                                    ? x.targetReview.ReviewerID
+                                    : x.r.ReportType == "COMMENT" && x.targetComment != null
+                                        ? x.targetComment.UserID
+                                    : null,
+                    TargetUserName =
+                        x.r.ReportType == "USER" && x.targetUser != null
+                            ? (x.targetUser.FirstName + " " + (x.targetUser.LastName ?? "")).Trim()
+                            : x.r.ReportType == "LISTING" && x.postOwner != null
+                                ? (x.postOwner.FirstName + " " + (x.postOwner.LastName ?? "")).Trim()
+                                : x.r.ReportType == "REVIEW" && x.reviewAuthor != null
+                                    ? (x.reviewAuthor.FirstName + " " + (x.reviewAuthor.LastName ?? "")).Trim()
+                                    : x.r.ReportType == "COMMENT" && x.commentAuthor != null
+                                        ? (x.commentAuthor.FirstName + " " + (x.commentAuthor.LastName ?? "")).Trim()
+                                    : null,
                     Status = x.r.Status,
                     StatusLabel = x.r.Status >= 0 && x.r.Status < _reportStatusLabels.Length ? _reportStatusLabels[x.r.Status] : "Unknown",
                     ResolvedByUserID = x.r.ResolvedByUserID,

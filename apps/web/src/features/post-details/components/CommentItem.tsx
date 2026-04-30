@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { MoreVertical, Reply, Trash2, Edit2, ChevronDown, ChevronUp } from "lucide-react";
+import { MoreVertical, Reply, Trash2, Edit2, ChevronDown, ChevronUp, Flag } from "lucide-react";
 import { api } from "../../../services/api";
 import { logger } from "../../../shared/lib/logger";
 import { PostComment, User } from "../../../types";
@@ -17,6 +17,7 @@ import {
 import { cn } from "../../../shared/ui/utils";
 import { toast } from "sonner";
 import { formatPostedAgo } from "../postDetailsUtils";
+import { ReportPostDialog } from "../../marketplace/components/ReportPostDialog";
 
 interface CommentItemProps {
   comment: PostComment;
@@ -56,6 +57,7 @@ export function CommentItem({
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
   const [submittingReply, setSubmittingReply] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
 
   useEffect(() => {
     setReplyCount(comment.replyCount);
@@ -67,6 +69,7 @@ export function CommentItem({
     currentUser.role === "admin"
   );
   const canEdit = currentUser && currentUser.id === comment.userId.toString();
+  const canReport = !currentUser || currentUser.id !== comment.userId.toString();
 
   const handleToggleReplies = async () => {
     if (!showReplies && replies.length === 0 && replyCount > 0) {
@@ -160,7 +163,7 @@ export function CommentItem({
               )}
             </div>
 
-            {(canEdit || canDelete) && (
+            {(canEdit || canDelete || canReport) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" aria-label={labels.options || "Options"} className="h-8 w-8 text-muted-foreground hover:bg-muted rounded-full">
@@ -178,6 +181,21 @@ export function CommentItem({
                     <DropdownMenuItem onClick={() => { void onDelete(comment.commentId); }} className="text-destructive focus:text-destructive cursor-pointer">
                       <Trash2 className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
                       {labels.deleteComment}
+                    </DropdownMenuItem>
+                  )}
+                  {canReport && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (!currentUser) {
+                          navigate("/auth/login", { state: { from: currentPathLocation.pathname } });
+                          return;
+                        }
+                        setIsReportOpen(true);
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <Flag className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
+                      {isRTL ? "إبلاغ" : "Report"}
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
@@ -289,6 +307,14 @@ export function CommentItem({
           )}
         </div>
       </div>
+      <ReportPostDialog
+        open={isReportOpen}
+        onOpenChange={setIsReportOpen}
+        language={language}
+        reportType="COMMENT"
+        targetId={comment.commentId}
+        targetTitle={comment.content.slice(0, 80)}
+      />
     </div>
   );
 }

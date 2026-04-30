@@ -81,6 +81,7 @@ export function PostLocationMapCard({
   const markerRef = useRef<ReturnType<typeof createPostMap>["marker"] | null>(
     null,
   );
+  const supportsInlineMapStylesRef = useRef(false);
   const destinationCoordinatesRef = useRef<Coordinates | null>(null);
   const darkModeRef = useRef(darkMode);
   const routeRequestIdRef = useRef(0);
@@ -111,6 +112,7 @@ export function PostLocationMapCard({
     markerRef.current?.setMap(null);
     markerRef.current = null;
     mapRef.current = null;
+    supportsInlineMapStylesRef.current = false;
     destinationCoordinatesRef.current = null;
     setMapStatus("idle");
 
@@ -128,16 +130,18 @@ export function PostLocationMapCard({
           return;
         }
 
-        const { map, marker } = createPostMap(
+        const { map, marker, supportsInlineStyles } = createPostMap(
           google,
           mapContainerRef.current,
           coordinates,
           destination.displayLabel,
           darkModeRef.current,
+          APP_CONFIG.googleMapsMapId,
         );
         destinationCoordinatesRef.current = coordinates;
         mapRef.current = map;
         markerRef.current = marker;
+        supportsInlineMapStylesRef.current = supportsInlineStyles;
         setMapStatus("ready");
       })
       .catch(() => {
@@ -151,12 +155,13 @@ export function PostLocationMapCard({
       markerRef.current?.setMap(null);
       markerRef.current = null;
       mapRef.current = null;
+      supportsInlineMapStylesRef.current = false;
     };
   }, [destination, hasGoogleMapsSupport]);
 
   useEffect(() => {
     darkModeRef.current = darkMode;
-    if (mapRef.current) {
+    if (mapRef.current && supportsInlineMapStylesRef.current) {
       applyPostMapTheme(mapRef.current, darkMode);
     }
   }, [darkMode]);

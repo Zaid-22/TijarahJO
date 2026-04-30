@@ -159,7 +159,7 @@ function getToastClasses(kind: ToastKind, richColors: boolean) {
     case "error":
       return "border-destructive bg-destructive text-destructive-foreground font-bold shadow-destructive/20";
     case "info":
-      return "border-primary bg-primary text-primary-foreground font-bold shadow-primary/20";
+      return "border-border bg-white text-foreground font-bold shadow-2xl dark:border-white/10 dark:bg-slate-900 dark:text-white";
     case "warning":
       return "border-amber-500 bg-amber-500 text-white font-bold shadow-amber-900/10";
     case "default":

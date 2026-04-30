@@ -98,7 +98,7 @@ export function PostSellerSidebar({
   );
 
   return (
-    <div className="space-y-3 lg:sticky lg:top-24">
+    <div className="min-w-0 space-y-3 lg:sticky lg:top-24">
       <Card className="rounded-2xl border-slate-200/80 bg-gradient-to-b from-white to-slate-50/70 shadow-2xl dark:border-white/10 dark:from-slate-900 dark:to-slate-950/95">
         <CardContent className="pt-5 pb-5">
           {onSellerClick ? (

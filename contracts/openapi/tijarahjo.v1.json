@@ -93,9 +93,7 @@
             }
           }
         },
-        "security": [
-
-        ]
+        "security": []
       }
     },
     "/api/v1/auth/signup": {
@@ -165,9 +163,7 @@
             }
           }
         },
-        "security": [
-
-        ]
+        "security": []
       }
     },
     "/api/v1/auth/me": {
@@ -227,26 +223,6 @@
         ],
         "operationId": "Logout",
         "responses": {
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
           "200": {
             "description": "OK",
             "content": {
@@ -263,6 +239,26 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiMessageResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -374,26 +370,6 @@
           }
         ],
         "responses": {
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
           "200": {
             "description": "OK",
             "content": {
@@ -410,6 +386,26 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PresenceResponseDTO"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -2622,8 +2618,8 @@
               }
             }
           },
-          "404": {
-            "description": "Not Found",
+          "403": {
+            "description": "Forbidden",
             "content": {
               "text/plain": {
                 "schema": {
@@ -2642,8 +2638,8 @@
               }
             }
           },
-          "403": {
-            "description": "Forbidden",
+          "404": {
+            "description": "Not Found",
             "content": {
               "text/plain": {
                 "schema": {
@@ -2704,8 +2700,8 @@
               }
             }
           },
-          "404": {
-            "description": "Not Found",
+          "403": {
+            "description": "Forbidden",
             "content": {
               "text/plain": {
                 "schema": {
@@ -2724,8 +2720,8 @@
               }
             }
           },
-          "403": {
-            "description": "Forbidden",
+          "404": {
+            "description": "Not Found",
             "content": {
               "text/plain": {
                 "schema": {
@@ -3586,8 +3582,8 @@
               }
             }
           },
-          "404": {
-            "description": "Not Found",
+          "403": {
+            "description": "Forbidden",
             "content": {
               "text/plain": {
                 "schema": {
@@ -3606,8 +3602,8 @@
               }
             }
           },
-          "403": {
-            "description": "Forbidden",
+          "404": {
+            "description": "Not Found",
             "content": {
               "text/plain": {
                 "schema": {
@@ -4120,9 +4116,7 @@
             }
           }
         },
-        "security": [
-
-        ]
+        "security": []
       }
     },
     "/api/v1/cities/{cityId}/areas": {
@@ -4193,9 +4187,7 @@
             }
           }
         },
-        "security": [
-
-        ]
+        "security": []
       }
     },
     "/api/v1/auth/google/start": {
@@ -4204,9 +4196,7 @@
           "Auth"
         ],
         "operationId": "StartGoogleOAuth",
-        "security": [
-
-        ],
+        "security": [],
         "responses": {
           "302": {
             "description": "Found"
@@ -4220,9 +4210,7 @@
           "Auth"
         ],
         "operationId": "GoogleOAuthCallback",
-        "security": [
-
-        ],
+        "security": [],
         "parameters": [
           {
             "name": "code",
@@ -4262,9 +4250,7 @@
           "Auth"
         ],
         "operationId": "VerifyLoginTwoFactor",
-        "security": [
-
-        ],
+        "security": [],
         "requestBody": {
           "content": {
             "application/json": {
@@ -4672,9 +4658,7 @@
           "Auth"
         ],
         "operationId": "RequestPasswordReset",
-        "security": [
-
-        ],
+        "security": [],
         "requestBody": {
           "content": {
             "application/json": {
@@ -4744,9 +4728,7 @@
           "Auth"
         ],
         "operationId": "ConfirmPasswordReset",
-        "security": [
-
-        ],
+        "security": [],
         "requestBody": {
           "content": {
             "application/json": {
@@ -6200,217 +6182,6 @@
         }
       }
     },
-    "/api/v1/admin/conversations": {
-      "get": {
-        "tags": [
-          "Admin"
-        ],
-        "operationId": "GetAdminConversations",
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 1
-            }
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 50
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminConversationListResult"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminConversationListResult"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminConversationListResult"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Error",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Error",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Error",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/admin/conversations/{id}/messages": {
-      "get": {
-        "tags": [
-          "Admin"
-        ],
-        "operationId": "GetAdminConversationMessages",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminConversationDetail"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminConversationDetail"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AdminConversationDetail"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Error",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Error",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Error",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/admin/locations/cities": {
       "get": {
         "tags": [
@@ -7687,76 +7458,6 @@
         }
       }
     },
-    "/api/v1/admin/fraud/signals": {
-      "get": {
-        "tags": [
-          "Admin"
-        ],
-        "operationId": "GetFraudSignals",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/FraudSignalsResult"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FraudSignalsResult"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FraudSignalsResult"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Error",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Error",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/admin/search": {
       "get": {
         "tags": [
@@ -8246,8 +7947,7 @@
             "nullable": true
           }
         },
-        "additionalProperties": {
-        }
+        "additionalProperties": {}
       },
       "ReviewModel": {
         "type": "object",
@@ -8481,6 +8181,11 @@
           "Status": {
             "type": "integer",
             "format": "int32"
+          },
+          "SuspendedUntil": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           },
           "RoleID": {
             "type": "integer",
@@ -9493,102 +9198,6 @@
         },
         "additionalProperties": false
       },
-      "AdminConversationItem": {
-        "type": "object",
-        "properties": {
-          "ConversationID": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "User1ID": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "User1Name": {
-            "type": "string"
-          },
-          "User2ID": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "User2Name": {
-            "type": "string"
-          },
-          "PostID": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "LastMessageAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "MessageCount": {
-            "type": "integer",
-            "format": "int32"
-          }
-        },
-        "additionalProperties": false
-      },
-      "AdminConversationListResult": {
-        "type": "object",
-        "properties": {
-          "Conversations": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AdminConversationItem"
-            }
-          },
-          "TotalCount": {
-            "type": "integer",
-            "format": "int32"
-          }
-        },
-        "additionalProperties": false
-      },
-      "AdminMessageItem": {
-        "type": "object",
-        "properties": {
-          "MessageID": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "SenderID": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "SenderName": {
-            "type": "string"
-          },
-          "Content": {
-            "type": "string"
-          },
-          "CreatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "IsRead": {
-            "type": "boolean"
-          }
-        },
-        "additionalProperties": false
-      },
-      "AdminConversationDetail": {
-        "type": "object",
-        "properties": {
-          "Conversation": {
-            "$ref": "#/components/schemas/AdminConversationItem"
-          },
-          "Messages": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AdminMessageItem"
-            }
-          }
-        },
-        "additionalProperties": false
-      },
       "AdminAreaItem": {
         "type": "object",
         "properties": {
@@ -9723,6 +9332,22 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "TargetLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "ReporterEmail": {
+            "type": "string"
+          },
+          "TargetUserID": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "TargetUserName": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -9807,60 +9432,6 @@
         },
         "additionalProperties": false
       },
-      "FraudSignal": {
-        "type": "object",
-        "properties": {
-          "Type": {
-            "type": "string"
-          },
-          "Severity": {
-            "type": "string"
-          },
-          "Count": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "Detail": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
-      },
-      "FraudSignalsResult": {
-        "type": "object",
-        "properties": {
-          "RapidRegistrations": {
-            "type": "boolean"
-          },
-          "RapidRegistrationCount": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "DuplicateListings": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "SuspiciousPriceCount": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "ReviewBombingTargets": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "CheckedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "Signals": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/FraudSignal"
-            }
-          }
-        },
-        "additionalProperties": false
-      },
       "SearchResultItem": {
         "type": "object",
         "properties": {
@@ -9925,9 +9496,7 @@
   },
   "security": [
     {
-      "Bearer": [
-
-      ]
+      "Bearer": []
     }
   ]
 }

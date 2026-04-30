@@ -129,8 +129,6 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IDataHygieneService, DataHygieneService>();
         services.AddHostedService<DataCleanupBackgroundService>();
 
-        services.AddScoped<IFraudDetectionService, TijarahJo.Infrastructure.Services.FraudDetectionService>();
-
         return services;
     }
 }

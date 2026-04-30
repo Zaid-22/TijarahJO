@@ -83,6 +83,7 @@ public static class DTOMapper
             Avatar = ResolveAssetUrl(request, userModel.Avatar),
             JoinedDate = userModel.JoinDate,
             Status = userModel.Status,
+            SuspendedUntil = userModel.SuspendedUntil,
             RoleID = userModel.RoleID,
             RoleName = roleName,
             HasAdminAccess = hasAdminAccess,

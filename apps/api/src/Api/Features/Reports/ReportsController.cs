@@ -92,7 +92,7 @@ public sealed class ReportsController(TijarahJoDbContext dbContext) : Controller
     }
 
     private static bool IsSupportedReportType(string reportType) =>
-        reportType is "LISTING" or "USER" or "REVIEW" or "CHAT";
+        reportType is "LISTING" or "USER" or "REVIEW" or "COMMENT";
 
     private async Task<bool> TargetExistsAsync(
         string reportType,
@@ -110,8 +110,8 @@ public sealed class ReportsController(TijarahJoDbContext dbContext) : Controller
             "REVIEW" => await _dbContext.Reviews.AnyAsync(
                 review => review.ReviewID == targetId && !review.IsDeleted,
                 cancellationToken),
-            "CHAT" => await _dbContext.Conversations.AnyAsync(
-                conversation => conversation.ConversationID == targetId && !conversation.IsDeleted,
+            "COMMENT" => await _dbContext.PostComments.AnyAsync(
+                comment => comment.CommentID == targetId && !comment.IsDeleted,
                 cancellationToken),
             _ => false
         };

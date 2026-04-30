@@ -299,6 +299,10 @@ components:
           type: integer
         status:
           type: integer
+        suspendedUntil:
+          type: string
+          format: date-time
+          nullable: true
         isDeleted:
           type: boolean
     ApiError:

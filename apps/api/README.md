@@ -379,7 +379,7 @@ User-submitted abuse/fraud reports.
 | Attribute | Type | Description |
 |-----------|------|-------------|
 | **ReportID** (PK) | INT | Unique report ID |
-| ReportType | NVARCHAR | `LISTING`, `USER`, `REVIEW`, `CHAT` |
+| ReportType | NVARCHAR | `LISTING`, `USER`, `REVIEW`, `COMMENT` |
 | TargetID | INT | ID of reported entity |
 | Reason | NVARCHAR | `SPAM`, `SCAM`, `OFFENSIVE`, `FAKE`, `HARASSMENT`, `OTHER` |
 | Description | NVARCHAR? | Additional details |

@@ -18,7 +18,7 @@ import { Alert, AlertDescription } from "../../../shared/ui/alert";
 import { Button } from "../../../shared/ui/button";
 import { AlertCircle } from "lucide-react";
 
-/** Returns true when the avatar is empty or is just the local default placeholder. */
+/** Returns true when the avatar is empty or cannot be resolved to an image source. */
 function isPlaceholderAvatar(src: string | undefined | null): boolean {
   return !resolveAvatarSrc(src);
 }

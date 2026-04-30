@@ -175,9 +175,6 @@ public interface IAdminDataAccess : IAdminLocationDataAccess, IAdminReportDataAc
     // Phase 3
     Task<System.Collections.Generic.IReadOnlyList<SystemSettingItem>> GetAllSettingsAsync(CancellationToken cancellationToken = default);
     Task<bool> UpdateSettingAsync(string key, string value, CancellationToken cancellationToken = default);
-    Task<AdminConversationListResult> GetConversationsAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
-    Task<AdminConversationDetail?> GetConversationMessagesAsync(int conversationId, CancellationToken cancellationToken = default);
-
     // User Suspension
     Task<bool> SuspendUserAsync(int userId, System.DateTime? suspendedUntil, int adminUserId, CancellationToken cancellationToken = default);
 }
@@ -193,42 +190,6 @@ public sealed class SystemSettingItem
     public string ValueType { get; init; } = "bool";
     public string? Description { get; init; }
     public System.DateTime UpdatedAt { get; init; }
-}
-
-// ── Phase 3: Chat Inspection ──
-
-public sealed class AdminConversationItem
-{
-    public int ConversationID { get; init; }
-    public int User1ID { get; init; }
-    public string User1Name { get; init; } = string.Empty;
-    public int User2ID { get; init; }
-    public string User2Name { get; init; } = string.Empty;
-    public int? PostID { get; init; }
-    public System.DateTime? LastMessageAt { get; init; }
-    public int MessageCount { get; init; }
-}
-
-public sealed class AdminConversationListResult
-{
-    public System.Collections.Generic.IReadOnlyList<AdminConversationItem> Conversations { get; init; } = [];
-    public int TotalCount { get; init; }
-}
-
-public sealed class AdminMessageItem
-{
-    public int MessageID { get; init; }
-    public int SenderID { get; init; }
-    public string SenderName { get; init; } = string.Empty;
-    public string Content { get; init; } = string.Empty;
-    public System.DateTime CreatedAt { get; init; }
-    public bool IsRead { get; init; }
-}
-
-public sealed class AdminConversationDetail
-{
-    public AdminConversationItem Conversation { get; init; } = new();
-    public System.Collections.Generic.IReadOnlyList<AdminMessageItem> Messages { get; init; } = [];
 }
 
 // ── Locations ──
@@ -262,6 +223,8 @@ public sealed class AdminReportItem
     public int ReporterUserID { get; init; }
     public string ReporterName { get; init; } = string.Empty;
     public string ReporterEmail { get; init; } = string.Empty;
+    public int? TargetUserID { get; init; }
+    public string? TargetUserName { get; init; }
     public int Status { get; init; }
     public string StatusLabel { get; init; } = string.Empty;
     public int? ResolvedByUserID { get; init; }

@@ -1,5 +1,4 @@
 import {
-  Heart,
   LogOut,
   Menu,
   MessageCircle,
@@ -87,7 +86,7 @@ export function HeaderMobileMenuSheet({
   isOpen,
   onOpenChange,
   onShowProfile,
-  onShowFavorites,
+
   onShowMessages,
   onShowSettings,
   onShowAdminDashboard,
@@ -114,7 +113,7 @@ export function HeaderMobileMenuSheet({
           variant="ghost"
           size="sm"
           className={cn(
-            "p-1 text-primary hover:bg-muted sm:p-2 md:hidden transition-all duration-300 z-[60]",
+            "p-1 text-primary hover:bg-muted sm:p-2 md:hidden transition-all duration-300 z-60",
             isOpen && "relative bg-muted rounded-lg"
           )}
           aria-label={language === "ar" ? "القائمة" : "Menu"}
@@ -145,11 +144,6 @@ export function HeaderMobileMenuSheet({
                   icon={User}
                   label={language === "ar" ? "ملفي الشخصي" : "My Profile"}
                   onClick={() => closeAndRun(onShowProfile)}
-                />
-                <MobileActionRow
-                  icon={Heart}
-                  label={language === "ar" ? "المفضلة" : "Favorites"}
-                  onClick={() => closeAndRun(onShowFavorites)}
                 />
                 <MobileActionRow
                   icon={MessageCircle}

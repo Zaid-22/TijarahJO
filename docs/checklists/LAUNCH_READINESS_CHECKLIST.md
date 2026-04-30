@@ -84,7 +84,7 @@
 
 - [x] **Role-Based Access Control (RBAC)**
 
-  - [x] Granular policy-based authorization: `UsersView`, `UsersManage`, `PostsView`, `PostsModerate`, `AdminAccess`, `AdminOnly`, `ReportsView`, `ReportsResolve`, `CategoriesManage`, `LocationsManage`, `SettingsManage`, `RolesManage`, `CommentsView`, `CommentsModerate`, `ChatView`, `FraudView`
+  - [x] Granular policy-based authorization: `UsersView`, `UsersManage`, `PostsView`, `PostsModerate`, `AdminAccess`, `AdminOnly`, `ReportsView`, `ReportsResolve`, `CategoriesManage`, `LocationsManage`, `SettingsManage`, `RolesManage`, `CommentsView`, `CommentsModerate`
   - [x] Admin-only endpoints protected via `[Authorize(Policy = AuthorizationPolicies.AdminOnly)]`
   - [x] Role checks in controllers with `_authorizationService.AuthorizeAsync`
 

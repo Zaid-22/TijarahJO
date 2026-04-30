@@ -17,9 +17,12 @@ import { api } from "../../../services/api";
 interface ReportPostDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  postId: string;
-  postTitle: string;
+  postId?: string;
+  postTitle?: string;
   language: Language;
+  reportType?: "LISTING" | "COMMENT";
+  targetId?: number | string;
+  targetTitle?: string;
 }
 
 const REPORT_REASONS = [
@@ -61,17 +64,38 @@ export function ReportPostDialog({
   postId,
   postTitle,
   language,
+  reportType = "LISTING",
+  targetId,
+  targetTitle,
 }: ReportPostDialogProps) {
   const [selectedReason, setSelectedReason] = useState<string>("");
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const resolvedTargetId = targetId ?? postId;
+  const resolvedTargetTitle = targetTitle ?? postTitle ?? "";
+  const targetLabel =
+    reportType === "COMMENT"
+      ? language === "ar"
+        ? "التعليق"
+        : "Comment"
+      : language === "ar"
+        ? "الإعلان"
+        : "Listing";
+
   const labels = {
-    title: language === "ar" ? "الإبلاغ عن هذا الإعلان" : "Report This Listing",
+    title:
+      language === "ar"
+        ? reportType === "COMMENT"
+          ? "الإبلاغ عن هذا التعليق"
+          : "الإبلاغ عن هذا الإعلان"
+        : reportType === "COMMENT"
+          ? "Report This Comment"
+          : "Report This Listing",
     subtitle:
       language === "ar"
-        ? `الإبلاغ عن "${postTitle}"`
-        : `Reporting "${postTitle}"`,
+        ? `الإبلاغ عن ${targetLabel} "${resolvedTargetTitle}"`
+        : `Reporting ${targetLabel.toLowerCase()} "${resolvedTargetTitle}"`,
     selectReason:
       language === "ar" ? "اختر سبب الإبلاغ" : "Select a reason for reporting",
     additionalDetails:
@@ -112,8 +136,8 @@ export function ReportPostDialog({
     setIsSubmitting(true);
     try {
       const result = await api.reports.submitReport({
-        reportType: "LISTING",
-        targetId: postId,
+        reportType,
+        targetId: resolvedTargetId ?? "",
         reason: selectedReason,
         description,
       });

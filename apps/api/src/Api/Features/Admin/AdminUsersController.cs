@@ -74,9 +74,16 @@ public class AdminUsersController(IAdminQueryHandler adminQueries, IAdminDataAcc
     [HttpPost("{id}/suspend")]
     [Authorize(Policy = AuthorizationPolicies.UsersManage)]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> SuspendUser(int id, [FromBody] SuspendUserRequest request)
     {
+        if (request.DurationHours.HasValue &&
+            (!double.IsFinite(request.DurationHours.Value) || request.DurationHours.Value <= 0))
+        {
+            return BadRequest(new { Message = "DurationHours must be greater than 0, or null for a permanent ban." });
+        }
+
         int adminUserId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
 
         DateTime? suspendedUntil = request.DurationHours.HasValue

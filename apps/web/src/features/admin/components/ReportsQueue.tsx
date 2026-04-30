@@ -55,10 +55,8 @@ const REPORT_TYPE_COLORS: Record<string, string> = {
   LISTING: "bg-violet-100 text-violet-800",
   USER: "bg-blue-100 text-blue-800",
   REVIEW: "bg-amber-100 text-amber-800",
-  CHAT: "bg-emerald-100 text-emerald-800",
+  COMMENT: "bg-cyan-100 text-cyan-800",
 };
-
-
 
 function formatReportTargetLabel(report: AdminReportItem): string {
   const normalizedLabel = report.targetLabel?.trim();
@@ -73,8 +71,8 @@ function formatReportTargetLabel(report: AdminReportItem): string {
       return `User #${report.targetID}`;
     case "REVIEW":
       return `Review #${report.targetID}`;
-    case "CHAT":
-      return `Conversation #${report.targetID}`;
+    case "COMMENT":
+      return `Comment #${report.targetID}`;
     default:
       return `Target #${report.targetID}`;
   }
@@ -104,6 +102,7 @@ export function ReportsQueue() {
 
   // Block post state
   const [isBlockingPost, setIsBlockingPost] = useState(false);
+  const [isDeletingComment, setIsDeletingComment] = useState(false);
 
   const pageSize = 25;
 
@@ -169,7 +168,7 @@ export function ReportsQueue() {
   };
 
   const handleBlockUser = async () => {
-    if (!selectedReport || selectedReport.reportType !== "USER") return;
+    if (!selectedReport?.targetUserID) return;
 
     const durationHours =
       selectedSuspensionHours === "null"
@@ -179,7 +178,7 @@ export function ReportsQueue() {
     setIsSuspending(true);
     try {
       const result = await api.admin.suspendUser(
-        selectedReport.targetID,
+        selectedReport.targetUserID,
         durationHours,
       );
 
@@ -190,7 +189,7 @@ export function ReportsQueue() {
         await api.admin.updateReportStatus(
           selectedReport.reportID,
           2, // Resolved
-          `User ${durationHours === null ? "permanently banned" : `suspended for ${durationHours}h`} via report #${selectedReport.reportID}`,
+          `User #${selectedReport.targetUserID} ${durationHours === null ? "permanently banned" : `suspended for ${durationHours}h`} via report #${selectedReport.reportID}`,
         );
 
         setActionDialogOpen(false);
@@ -239,6 +238,35 @@ export function ReportsQueue() {
     }
   };
 
+  const handleDeleteComment = async () => {
+    if (!selectedReport || selectedReport.reportType !== "COMMENT") return;
+
+    setIsDeletingComment(true);
+    try {
+      const result = await api.admin.deletePostComment(selectedReport.targetID);
+
+      if (result.success) {
+        toast.success(result.message || "Comment deleted successfully");
+
+        await api.admin.updateReportStatus(
+          selectedReport.reportID,
+          2,
+          `Comment deleted via report #${selectedReport.reportID}`,
+        );
+
+        setActionDialogOpen(false);
+        await fetchReports();
+      } else {
+        toast.error(result.message || "Failed to delete comment");
+      }
+    } catch (error) {
+      logger.warn("[ReportsQueue] Delete comment failed", error);
+      toast.error("Failed to delete comment");
+    } finally {
+      setIsDeletingComment(false);
+    }
+  };
+
   const totalPages = Math.ceil(totalCount / pageSize);
 
   if (isLoading && reports.length === 0) {
@@ -265,7 +293,7 @@ export function ReportsQueue() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search by name or email…"
+            placeholder="Search by name, email, or phone..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -315,7 +343,7 @@ export function ReportsQueue() {
               <SelectItem value="LISTING">Listing</SelectItem>
               <SelectItem value="USER">User</SelectItem>
               <SelectItem value="REVIEW">Review</SelectItem>
-              <SelectItem value="CHAT">Chat</SelectItem>
+              <SelectItem value="COMMENT">Comment</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -446,6 +474,8 @@ export function ReportsQueue() {
         onBlockUser={handleBlockUser}
         isBlockingPost={isBlockingPost}
         onBlockPost={handleBlockPost}
+        isDeletingComment={isDeletingComment}
+        onDeleteComment={handleDeleteComment}
       />
     </div>
   );

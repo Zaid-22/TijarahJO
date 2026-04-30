@@ -92,12 +92,17 @@ const configuredApiBaseUrl = normalizeApiBaseUrl(
 );
 
 const backendHostUrl = configuredApiBaseUrl.replace(/\/api(?:\/v\d+)?$/i, "");
+const isDevMode = parseBooleanFlag(env.DEV, false);
 
 export const APP_CONFIG = {
   apiBaseUrl: configuredApiBaseUrl,
   backendHostUrl,
   googleAuthEnabled: parseBooleanFlag(env.VITE_GOOGLE_AUTH_ENABLED, false),
   googleMapsApiKey: parseNonEmptyString(env.VITE_GOOGLE_MAPS_API_KEY, ""),
+  googleMapsMapId: parseNonEmptyString(
+    env.VITE_GOOGLE_MAPS_MAP_ID,
+    isDevMode ? "DEMO_MAP_ID" : "",
+  ),
   backendRunCommand:
     "cd apps/api/src/Api && dotnet run",
   requestTimeoutMs: parsePositiveNumber(env.VITE_REQUEST_TIMEOUT_MS, 10_000),

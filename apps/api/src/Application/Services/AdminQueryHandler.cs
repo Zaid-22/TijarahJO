@@ -279,33 +279,4 @@ public sealed class AdminQueryHandler : IAdminQueryHandler
         }
     }
 
-    // ── Phase 3: Chat Inspection ──
-
-    public async Task<AdminConversationsQueryResult> GetConversationsAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var result = await _adminDataAccess.GetConversationsAsync(pageNumber, pageSize, cancellationToken);
-            return new AdminConversationsQueryResult { Success = true, StatusCode = 200, Result = result };
-        }
-        catch (Exception ex)
-        {
-            return new AdminConversationsQueryResult { Success = false, StatusCode = 500, Message = $"Error retrieving conversations: {ex.Message}" };
-        }
-    }
-
-    public async Task<AdminConversationDetailQueryResult> GetConversationMessagesAsync(int conversationId, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var result = await _adminDataAccess.GetConversationMessagesAsync(conversationId, cancellationToken);
-            if (result == null)
-                return new AdminConversationDetailQueryResult { Success = false, StatusCode = 404, Message = "Conversation not found." };
-            return new AdminConversationDetailQueryResult { Success = true, StatusCode = 200, Result = result };
-        }
-        catch (Exception ex)
-        {
-            return new AdminConversationDetailQueryResult { Success = false, StatusCode = 500, Message = $"Error retrieving conversation: {ex.Message}" };
-        }
-    }
 }

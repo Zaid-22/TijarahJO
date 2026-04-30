@@ -19,6 +19,7 @@ import { ImageWithFallback } from "./ImageWithFallback";
 import { getResponsiveImageProps } from "../../../shared/lib/thumbnail";
 import { PostCardPriceBadge } from "./PostCardPriceBadge";
 import { postCardMediaClass } from "./postCardMediaClass";
+
 import { PostCardPhoneDialog } from "./PostCardPhoneDialog.tsx";
 
 import { usePostCardState, type PostCardSharedProps } from "./usePostCardState";
@@ -154,7 +155,6 @@ export const PostCardList = React.memo(function PostCardList(
   const canResolvePhone = hasPhone || hasChatTarget;
   const maskedPhone = toLocalJordanMaskedPhone(trimmedPhone, labels.callButton);
 
-
   useEffect(() => {
     let cancelled = false;
 
@@ -272,7 +272,7 @@ export const PostCardList = React.memo(function PostCardList(
             alt={post.name}
             width={420}
             height={236}
-            className="absolute inset-0 block h-full min-h-full w-full min-w-full object-cover object-center"
+            className="absolute inset-0 block h-full! w-full! max-w-none object-cover"
           />
           <div className="absolute inset-0 bg-linear-to-b from-black/3 via-transparent to-black/10" />
 

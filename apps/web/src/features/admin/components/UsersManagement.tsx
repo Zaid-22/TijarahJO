@@ -1,51 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Search, Ban, UserCheck } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "../../../shared/ui/button";
-import { Input } from "../../../shared/ui/input";
 import { api } from "../../../services/api";
 import { AdminUserRecord } from "../../../services/api/users";
-import { CreateUserDialog } from "./users/CreateUserDialog";
 import { UsersTable } from "./users/UsersTable";
-import { SuspendUserDialog } from "./users/SuspendUserDialog";
+import { BulkUserActionsBar } from "./users/BulkUserActionsBar";
+import { UsersManagementHeader } from "./users/UsersManagementHeader";
+import { UsersManagementDialogs } from "./users/UsersManagementDialogs";
 import { CreateUserForm, initialCreateUserForm } from "./users/types";
-import { formatCompactDate } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
 import { useLocation, useNavigate } from "react-router-dom";
-import { TypeToConfirmDialog } from "../../../shared/ui/type-to-confirm-dialog";
 import { emitAuthSessionChanged } from "../../../contexts/authContextUtils";
 import type { NormalizedRole } from "../../../services/api/roles";
 import { buildCurrentPath } from "../../../shared/lib/backNavigation";
-
-function formatJoinedDate(dateValue?: string): string {
-  if (!dateValue) {
-    return "N/A";
-  }
-  return formatCompactDate(dateValue) || dateValue;
-}
-
-function getAssignableRoles(roles: NormalizedRole[]): NormalizedRole[] {
-  return roles.filter((role) => !role.IsDeleted);
-}
-
-function getDefaultCreateRoleId(roles: NormalizedRole[]): string {
-  const assignableRoles = getAssignableRoles(roles);
-  if (assignableRoles.length === 0) {
-    return "";
-  }
-
-  const preferredRole =
-    assignableRoles.find(
-      (role) =>
-        role.RoleID === 2 || role.RoleName.trim().toLowerCase() === "user",
-    ) ??
-    assignableRoles.find(
-      (role) => role.RoleName.trim().toLowerCase() !== "admin",
-    ) ??
-    assignableRoles[0];
-
-  return String(preferredRole.RoleID);
-}
+import {
+  formatJoinedDate,
+  getAssignableRoles,
+  getDefaultCreateRoleId,
+} from "./users/userManagementUtils";
 
 export function UsersManagement() {
   const navigate = useNavigate();
@@ -71,15 +42,19 @@ export function UsersManagement() {
   const [isSuspending, setIsSuspending] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const filteredUsers = useMemo(
-    () =>
-      users.filter(
-        (user) =>
-          (user.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (user.email || "").toLowerCase().includes(searchQuery.toLowerCase()),
-      ),
-    [searchQuery, users],
-  );
+  const filteredUsers = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return users;
+    }
+
+    return users.filter(
+      (user) =>
+        (user.name || "").toLowerCase().includes(normalizedQuery) ||
+        (user.email || "").toLowerCase().includes(normalizedQuery) ||
+        (user.phone || "").toLowerCase().includes(normalizedQuery),
+    );
+  }, [searchQuery, users]);
 
   const assignableRoles = useMemo(() => getAssignableRoles(roles), [roles]);
 
@@ -216,6 +191,47 @@ export function UsersManagement() {
     }
   };
 
+  const handleBulkSuspend = async (durationHours: number | null) => {
+    if (selectedIds.size === 0) return;
+    const userIds = Array.from(selectedIds)
+      .map((id) => Number.parseInt(id, 10))
+      .filter((id) => Number.isInteger(id) && id > 0);
+
+    if (userIds.length === 0) {
+      toast.error("No valid users selected");
+      return;
+    }
+
+    setIsSuspending(true);
+    try {
+      const results = await Promise.all(
+        userIds.map((userId) => api.admin.suspendUser(userId, durationHours)),
+      );
+      const successCount = results.filter((result) => result.success).length;
+
+      if (successCount > 0) {
+        toast.success(
+          durationHours === null
+            ? `${successCount} users permanently banned`
+            : `${successCount} users suspended`,
+        );
+        setSelectedIds(new Set());
+        await fetchUsers();
+      }
+
+      if (successCount < userIds.length) {
+        toast.error(
+          `${userIds.length - successCount} users could not be suspended`,
+        );
+      }
+    } catch (error) {
+      logger.warn("[UsersManagement] Bulk suspend failed", error);
+      toast.error("Failed to suspend selected users");
+    } finally {
+      setIsSuspending(false);
+    }
+  };
+
   const handleStatusChange = async (
     userId: string,
     newStatus: "active" | "banned",
@@ -232,7 +248,9 @@ export function UsersManagement() {
       if (success) {
         setUsers((previous) =>
           previous.map((user) =>
-            user.id === userId ? { ...user, status: newStatus } : user,
+            user.id === userId
+              ? { ...user, status: newStatus, suspendedUntil: undefined }
+              : user,
           ),
         );
         emitAuthSessionChanged();
@@ -316,7 +334,11 @@ export function UsersManagement() {
       );
       if (success) {
         setUsers((prev) =>
-          prev.map((u) => (selectedIds.has(u.id) ? { ...u, status } : u)),
+          prev.map((u) =>
+            selectedIds.has(u.id)
+              ? { ...u, status, suspendedUntil: undefined }
+              : u,
+          ),
         );
         toast.success(
           `${selectedIds.size} users ${status === "banned" ? "banned" : "activated"}`,
@@ -333,30 +355,11 @@ export function UsersManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between gap-4 items-center">
-        <h1 className="text-2xl font-bold text-foreground">Users Management</h1>
-
-        <div className="flex w-full sm:w-auto items-center gap-3">
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search users..."
-              className="pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <Button
-            onClick={() => {
-              setIsCreateOpen(true);
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add User
-          </Button>
-        </div>
-      </div>
+      <UsersManagementHeader
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
+        onAddUser={() => setIsCreateOpen(true)}
+      />
 
       <UsersTable
         users={filteredUsers}
@@ -392,97 +395,48 @@ export function UsersManagement() {
 
       {/* Floating Bulk Action Bar */}
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-lg border border-border bg-card px-5 py-3 shadow-xl">
-          <span className="text-sm font-medium text-foreground">
-            {selectedIds.size} selected
-          </span>
-          <div className="h-4 w-px bg-border" />
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => void handleBulkAction("banned")}
-          >
-            <Ban className="w-3.5 h-3.5 mr-1.5" />
-            Bulk Ban
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void handleBulkAction("active")}
-          >
-            <UserCheck className="w-3.5 h-3.5 mr-1.5" />
-            Bulk Activate
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSelectedIds(new Set())}
-          >
-            Clear
-          </Button>
-        </div>
+        <BulkUserActionsBar
+          selectedCount={selectedIds.size}
+          isSuspending={isSuspending}
+          onBan={() => void handleBulkAction("banned")}
+          onActivate={() => void handleBulkAction("active")}
+          onClear={() => setSelectedIds(new Set())}
+          onSuspend={(durationHours) => void handleBulkSuspend(durationHours)}
+        />
       )}
 
-      <CreateUserDialog
-        open={isCreateOpen}
+      <UsersManagementDialogs
+        isCreateOpen={isCreateOpen}
         isCreatingUser={isCreatingUser}
-        formData={createForm}
+        createForm={createForm}
         roles={assignableRoles}
-        onOpenChange={(open) => {
+        pendingDeleteUser={pendingDeleteUser}
+        pendingSuspendUser={pendingSuspendUser}
+        suspendDurationHours={suspendDurationHours}
+        isSuspending={isSuspending}
+        onCreateOpenChange={(open) => {
           setIsCreateOpen(open);
-          if (!open) {
-            resetCreateForm();
-          }
+          if (!open) resetCreateForm();
         }}
-        onFormDataChange={setCreateForm}
-        onSubmit={() => {
-          void handleCreateUser();
-        }}
-        onCancel={() => {
+        onCreateFormChange={setCreateForm}
+        onCreateSubmit={() => void handleCreateUser()}
+        onCreateCancel={() => {
           setIsCreateOpen(false);
           resetCreateForm();
         }}
-      />
-
-      <TypeToConfirmDialog
-        open={pendingDeleteUser !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setPendingDeleteUser(null);
-          }
+        onDeleteOpenChange={(open) => {
+          if (!open) setPendingDeleteUser(null);
         }}
-        title="Delete User"
-        description={
-          pendingDeleteUser
-            ? `Delete user "${pendingDeleteUser.displayName}"? This action cannot be undone.`
-            : ""
-        }
-        impactItems={[
-          "All active listings",
-          "All chat conversations",
-          "All submitted reviews",
-        ]}
-        confirmPhrase="DELETE"
-        onConfirm={() => {
-          if (!pendingDeleteUser) {
-            return;
-          }
-
+        onDeleteConfirm={() => {
+          if (!pendingDeleteUser) return;
           void handleDeleteUser(pendingDeleteUser.id);
           setPendingDeleteUser(null);
         }}
-      />
-
-      <SuspendUserDialog
-        open={pendingSuspendUser !== null}
-        onOpenChange={(open) => {
+        onSuspendOpenChange={(open) => {
           if (!open) setPendingSuspendUser(null);
         }}
-        userName={pendingSuspendUser?.displayName}
-        durationHours={suspendDurationHours}
-        onDurationChange={setSuspendDurationHours}
+        onSuspendDurationChange={setSuspendDurationHours}
         onSuspend={() => void handleSuspendUser()}
-        isSuspending={isSuspending}
       />
     </div>
   );

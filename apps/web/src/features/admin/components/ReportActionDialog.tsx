@@ -1,4 +1,4 @@
-import { ShieldBan, ExternalLink } from "lucide-react";
+import { ShieldBan, ExternalLink, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "../../../shared/ui/button";
 import {
@@ -26,7 +26,7 @@ function formatReportTargetLabel(report: AdminReportItem): string {
     case "LISTING": return `Listing #${report.targetID}`;
     case "USER": return `User #${report.targetID}`;
     case "REVIEW": return `Review #${report.targetID}`;
-    case "CHAT": return `Conversation #${report.targetID}`;
+    case "COMMENT": return `Comment #${report.targetID}`;
     default: return `Target #${report.targetID}`;
   }
 }
@@ -54,6 +54,8 @@ interface ReportActionDialogProps {
   onBlockUser: () => void;
   isBlockingPost?: boolean;
   onBlockPost?: () => void;
+  isDeletingComment?: boolean;
+  onDeleteComment?: () => void;
 }
 
 export function ReportActionDialog({
@@ -71,6 +73,8 @@ export function ReportActionDialog({
   onBlockUser,
   isBlockingPost,
   onBlockPost,
+  isDeletingComment,
+  onDeleteComment,
 }: ReportActionDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -113,14 +117,18 @@ export function ReportActionDialog({
               </div>
             )}
 
-            {report.reportType === "USER" && (
+            {report.targetUserID && (
               <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <ShieldBan className="w-4 h-4 text-destructive" />
-                  <span className="text-sm font-semibold text-destructive">Block Reported User</span>
+                  <span className="text-sm font-semibold text-destructive">
+                    Block Reported User
+                  </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  This will immediately invalidate the user's active sessions. The report will be auto-resolved.
+                  {report.targetUserName
+                    ? `This will immediately invalidate ${report.targetUserName}'s active sessions. The report will be auto-resolved.`
+                    : "This will immediately invalidate the user's active sessions. The report will be auto-resolved."}
                 </p>
                 <div className="flex items-center gap-2">
                   <Select value={selectedSuspensionHours} onValueChange={onSuspensionHoursChange}>
@@ -193,6 +201,37 @@ export function ReportActionDialog({
                     )}
                   </Button>
                 </div>
+              </div>
+            )}
+
+            {report.reportType === "COMMENT" && (
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center gap-2">
+                  <Trash2 className="w-4 h-4 text-foreground" />
+                  <span className="text-sm font-semibold text-foreground">
+                    Delete Reported Comment
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  This will hide the comment from the listing. The report will be auto-resolved.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onDeleteComment}
+                  disabled={isDeletingComment}
+                  className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                  aria-label="Delete Comment"
+                >
+                  {isDeletingComment ? (
+                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                      Delete Comment
+                    </>
+                  )}
+                </Button>
               </div>
             )}
 

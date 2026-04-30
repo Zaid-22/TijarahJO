@@ -9,6 +9,7 @@ import { PostCardFavoriteButton } from "./PostCardFavoriteButton";
 import { CompareButton } from "./CompareButton";
 import { PostCardPriceBadge } from "./PostCardPriceBadge";
 import { postCardMediaClass } from "./postCardMediaClass";
+
 import { usePostCardState, type PostCardSharedProps } from "./usePostCardState";
 
 export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardSharedProps) {
@@ -20,6 +21,7 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
     widths: [240, 360, 480],
     sizes: resolveGridImageSizes(props.viewMode),
   });
+
   const {
     labels,
     priceLocale,
@@ -64,7 +66,7 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
           alt={post.name}
           width={480}
           height={600}
-          className="absolute inset-0 block h-full min-h-full w-full min-w-full object-cover object-center"
+          className="absolute inset-0 block h-full! w-full! max-w-none object-cover"
         />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.04)_0%,rgba(15,23,42,0)_42%,rgba(15,23,42,0.22)_100%)]" />
 

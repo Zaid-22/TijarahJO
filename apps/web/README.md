@@ -59,7 +59,6 @@
 - User management (view, block, delete, role assignment)
 - Post moderation and content management
 - Reports queue for flagged content
-- Fraud detection tools
 - Conversation monitoring
 - Audit log viewer
 - Location management

@@ -8,7 +8,6 @@ import {
   ShoppingBag,
   Star,
   MessageSquare,
-  MessageCircle,
   MapPin,
   Flag,
   FileText,
@@ -16,7 +15,6 @@ import {
   LogOut,
   Menu,
   Home,
-  AlertTriangle,
   Image,
 } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
@@ -44,12 +42,10 @@ function AdminLayoutInner() {
     { label: "Listings", path: "/admin/listings", icon: ShoppingBag, permission: ADMIN_PERMISSIONS.postsView },
     { label: "Comments", path: "/admin/comments", icon: MessageSquare, permission: ADMIN_PERMISSIONS.commentsView },
     { label: "Reviews", path: "/admin/reviews", icon: Star, permission: ADMIN_PERMISSIONS.reviewsView },
-    { label: "Chats", path: "/admin/chats", icon: MessageCircle, permission: ADMIN_PERMISSIONS.chatView },
     { label: "Categories", path: "/admin/categories", icon: Tags, permission: ADMIN_PERMISSIONS.categoriesManage },
     { label: "Roles", path: "/admin/roles", icon: Shield, permission: ADMIN_PERMISSIONS.rolesManage },
     { label: "Locations", path: "/admin/locations", icon: MapPin, permission: ADMIN_PERMISSIONS.locationsManage },
     { label: "Reports", path: "/admin/reports", icon: Flag, permission: ADMIN_PERMISSIONS.reportsView },
-    { label: "Fraud Detection", path: "/admin/fraud", icon: AlertTriangle, permission: ADMIN_PERMISSIONS.fraudView },
     { label: "Banners", path: "/admin/banners", icon: Image, permission: ADMIN_PERMISSIONS.bannersManage },
     { label: "Audit Log", path: "/admin/audit-log", icon: FileText, permission: ADMIN_PERMISSIONS.auditView },
     { label: "Settings", path: "/admin/settings", icon: Settings2, permission: ADMIN_PERMISSIONS.settingsManage },

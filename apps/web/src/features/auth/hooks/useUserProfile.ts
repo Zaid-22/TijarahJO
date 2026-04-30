@@ -3,7 +3,6 @@ import { UserProfile } from "../../../types";
 import { useAuth } from "../../../contexts/AuthContext";
 import { api } from "../../../services/api";
 import { logger } from "../../../shared/lib/logger";
-// DEFAULT_AVATAR_SRC removed - resolveAvatarSrc now handles null by returning null for letter fallbacks
 
 function formatJoinedDate(value: unknown, fallback: string): string {
   if (value !== null && value !== undefined && value !== "") {

@@ -48,10 +48,6 @@ BEGIN
         INSERT INTO dbo.Permissions (PermissionKey, Description, Category)
         VALUES (N'reports.resolve', N'Resolve or dismiss abuse and fraud reports.', N'Reports');
 
-    IF NOT EXISTS (SELECT 1 FROM dbo.Permissions WHERE PermissionKey = N'chat.view')
-        INSERT INTO dbo.Permissions (PermissionKey, Description, Category)
-        VALUES (N'chat.view', N'Inspect user conversations in admin tools.', N'Chat');
-
     IF NOT EXISTS (SELECT 1 FROM dbo.Permissions WHERE PermissionKey = N'locations.manage')
         INSERT INTO dbo.Permissions (PermissionKey, Description, Category)
         VALUES (N'locations.manage', N'Create, update, and delete cities and areas.', N'Locations');
@@ -67,10 +63,6 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM dbo.Permissions WHERE PermissionKey = N'audit.view')
         INSERT INTO dbo.Permissions (PermissionKey, Description, Category)
         VALUES (N'audit.view', N'View audit log entries.', N'System');
-
-    IF NOT EXISTS (SELECT 1 FROM dbo.Permissions WHERE PermissionKey = N'fraud.view')
-        INSERT INTO dbo.Permissions (PermissionKey, Description, Category)
-        VALUES (N'fraud.view', N'View fraud detection dashboards and signals.', N'Fraud');
 
     IF NOT EXISTS (SELECT 1 FROM dbo.Permissions WHERE PermissionKey = N'roles.manage')
         INSERT INTO dbo.Permissions (PermissionKey, Description, Category)

@@ -67,7 +67,7 @@ BEGIN
         ResolvedAt       DATETIME2      NULL,
         CONSTRAINT FK_Reports_Reporter FOREIGN KEY (ReporterUserID) REFERENCES dbo.Users(UserID),
         CONSTRAINT FK_Reports_Resolver FOREIGN KEY (ResolvedByUserID) REFERENCES dbo.Users(UserID),
-        CONSTRAINT CK_Reports_Type CHECK (ReportType IN (N'LISTING', N'USER', N'REVIEW', N'CHAT')),
+        CONSTRAINT CK_Reports_Type CHECK (ReportType IN (N'LISTING', N'USER', N'REVIEW', N'COMMENT')),
         CONSTRAINT CK_Reports_Status CHECK (Status IN (0, 1, 2, 3))
     );
 

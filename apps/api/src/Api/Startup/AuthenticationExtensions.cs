@@ -160,12 +160,10 @@ public static class AuthenticationExtensions
             .AddPolicy(AuthorizationPolicies.ReviewsModerate, RequirePermission(PermissionKeys.ReviewsModerate))
             .AddPolicy(AuthorizationPolicies.ReportsView, RequirePermission(PermissionKeys.ReportsView))
             .AddPolicy(AuthorizationPolicies.ReportsResolve, RequirePermission(PermissionKeys.ReportsResolve))
-            .AddPolicy(AuthorizationPolicies.ChatView, RequirePermission(PermissionKeys.ChatView))
             .AddPolicy(AuthorizationPolicies.LocationsManage, RequirePermission(PermissionKeys.LocationsManage))
             .AddPolicy(AuthorizationPolicies.BannersManage, RequirePermission(PermissionKeys.BannersManage))
             .AddPolicy(AuthorizationPolicies.SettingsManage, RequirePermission(PermissionKeys.SettingsManage))
             .AddPolicy(AuthorizationPolicies.AuditView, RequirePermission(PermissionKeys.AuditView))
-            .AddPolicy(AuthorizationPolicies.FraudView, RequirePermission(PermissionKeys.FraudView))
             .AddPolicy(AuthorizationPolicies.RolesManage, RequirePermission(PermissionKeys.RolesManage))
             .AddPolicy(AuthorizationPolicies.CategoriesManage, RequirePermission(PermissionKeys.CategoriesManage));
 

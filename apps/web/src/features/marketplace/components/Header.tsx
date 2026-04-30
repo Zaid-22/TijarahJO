@@ -1,4 +1,4 @@
-import { ArrowLeft, MessageCircle } from "lucide-react";
+import { ArrowLeft, Heart, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Suspense, lazy, useState } from "react";
 import { Button } from "../../../shared/ui/button";
@@ -124,7 +124,6 @@ export function Header({
                   isOpen={isMobileMenuOpen}
                   onOpenChange={setIsMobileMenuOpen}
                   onShowProfile={onShowProfile}
-                  onShowFavorites={onShowFavorites}
                   onShowMessages={onShowMessages}
                   onShowSettings={onShowSettings}
                   onShowAdminDashboard={onShowAdminDashboard}
@@ -184,6 +183,18 @@ export function Header({
                 variant="ghost"
                 size="sm"
                 className={actionIconButtonClassName}
+                onClick={onShowFavorites}
+                aria-label={language === "ar" ? "المفضلة" : "Favorites"}
+              >
+                <Heart className="w-5 h-5 transition-transform group-hover:scale-110" />
+              </Button>
+            )}
+
+            {shouldShowAuthenticatedActions && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className={actionIconButtonClassName}
                 onClick={onShowMessages}
                 aria-label={language === "ar" ? "الرسائل" : "Messages"}
               >
@@ -221,7 +232,6 @@ export function Header({
                   userAvatar={userAvatar}
                   unreadMessagesCount={normalizedUnreadMessagesCount}
                   onShowProfile={onShowProfile}
-                  onShowFavorites={onShowFavorites}
                   onShowMessages={onShowMessages}
                   onShowSettings={onShowSettings}
                   onShowAdminDashboard={onShowAdminDashboard}

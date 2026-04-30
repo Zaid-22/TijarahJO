@@ -7,11 +7,7 @@ namespace TijarahJo.Application.Common;
 /// </summary>
 public static class ValidationHelpers
 {
-    /// <summary>
-    /// Returns true when the stored avatar is effectively the app's generic placeholder
-    /// rather than a user-specific profile image.
-    /// </summary>
-    public static bool IsDefaultAvatarPlaceholder(string? avatar)
+    public static bool IsMissingOrInvalidAvatar(string? avatar)
     {
         string trimmed = avatar?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(trimmed))
@@ -19,9 +15,25 @@ public static class ValidationHelpers
             return true;
         }
 
-        return trimmed.Equals("/default-avatar.svg", StringComparison.OrdinalIgnoreCase) ||
-               trimmed.Equals("default-avatar.svg", StringComparison.OrdinalIgnoreCase) ||
-               trimmed.EndsWith("/default-avatar.svg", StringComparison.OrdinalIgnoreCase);
+        return !IsValidAvatarUrl(trimmed);
+    }
+
+    public static bool IsStoredUploadAvatar(string? avatar)
+    {
+        string trimmed = avatar?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            return false;
+        }
+
+        if (trimmed.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.StartsWith("uploads/", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri) &&
+               uri.AbsolutePath.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -34,7 +46,8 @@ public static class ValidationHelpers
         string trimmed = avatar.Trim();
 
         // Accept relative upload paths (local file storage)
-        if (trimmed.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+        if (trimmed.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.StartsWith("uploads/", StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }

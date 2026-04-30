@@ -84,6 +84,13 @@ function PostDetailsMarketplaceRouteScreen() {
         onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
         onOpenPost={(id) => navigateToPost(id, APP_ROUTE_PATHS.home)}
         onNavigateHome={() => navigate(APP_ROUTE_PATHS.home)}
+        onNavigateCategory={(categoryName, fromPath) =>
+          navigate(APP_ROUTE_BUILDERS.category(categoryName), {
+            state: {
+              fromPath: fromPath || APP_ROUTE_PATHS.home,
+            },
+          })
+        }
         onNavigateProfile={() => navigate(APP_ROUTE_PATHS.profile)}
         onNavigateSeller={(sellerId, fromPath) =>
           navigate(APP_ROUTE_BUILDERS.sellerProfile(sellerId), {

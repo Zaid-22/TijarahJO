@@ -1,7 +1,6 @@
 import { type Language } from "../../../../translations";
 
 export interface HeaderActionHandlers {
-  onShowFavorites?: () => void;
   onShowMessages?: () => void;
   onShowProfile?: () => void;
   onShowSettings?: () => void;

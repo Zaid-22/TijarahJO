@@ -78,12 +78,12 @@ export function PostSummaryCard({
       : post.description;
 
   return (
-    <Card>
+    <Card className="overflow-hidden rounded-2xl border-border/70 bg-card/95 shadow-sm">
       <CardContent className="pt-6">
         <div className="mb-4">
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <Badge
-              className="backdrop-blur-md rounded-full px-4 py-1.5 font-semibold text-sm bg-primary/10 text-primary border-0"
+              className="max-w-full whitespace-normal rounded-full border-0 bg-primary/10 px-4 py-1.5 text-start text-sm font-semibold text-primary backdrop-blur-md [overflow-wrap:anywhere]"
             >
               {post.category}
             </Badge>
@@ -98,19 +98,38 @@ export function PostSummaryCard({
           </div>
 
           <div className="flex flex-col gap-3 sm:gap-2">
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+            <h1
+              className={cn(
+                "text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-3xl [overflow-wrap:anywhere]",
+                isRTL ? "text-right" : "text-left",
+              )}
+              dir="auto"
+            >
               {post.name}
             </h1>
 
-            <div className={cn("flex items-baseline gap-2", isRTL ? "sm:justify-start" : "sm:justify-start")}>
-              <span className="text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
+            <div
+              className={cn(
+                "flex max-w-full items-baseline gap-2",
+                isRTL ? "justify-end" : "justify-start",
+              )}
+              dir="ltr"
+            >
+              <span className="min-w-0 text-3xl font-bold tracking-tight text-foreground tabular-nums">
                 {post.price.toLocaleString()}
               </span>
-              <span className={cn("text-lg font-semibold text-slate-500 dark:text-slate-400", "ms-1")}>JOD</span>
+              <span className="text-lg font-semibold text-muted-foreground">
+                JOD
+              </span>
             </div>
           </div>
 
-          <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+          <div
+            className={cn(
+              "mt-4 flex flex-wrap items-center gap-4 text-sm text-muted-foreground",
+              isRTL ? "justify-end" : "justify-start",
+            )}
+          >
             <div className="flex items-center gap-1">
               <MapPin className="w-4 h-4" />
               <span className="font-medium">{displayLocationLabel}</span>
@@ -138,7 +157,7 @@ export function PostSummaryCard({
               <h3 className="mb-3 text-lg font-bold text-foreground">
                 {labels.descriptionTitle}
               </h3>
-              <p className="text-foreground leading-relaxed whitespace-pre-wrap font-normal">
+              <p className="whitespace-pre-wrap text-foreground font-normal leading-relaxed [overflow-wrap:anywhere]">
                 {descriptionText}
               </p>
               {descriptionState?.isLong && (

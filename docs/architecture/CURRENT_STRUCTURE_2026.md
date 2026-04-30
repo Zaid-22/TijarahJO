@@ -27,7 +27,7 @@ final project primary/
 - **Main source:** `apps/web/src/`
   - `app/` — bootstrap, root composition, route shell
   - `features/` — domain slices:
-    - `admin/` — admin panel (dashboard, users, posts, analytics, fraud, reports)
+    - `admin/` — admin panel (dashboard, users, posts, analytics, reports)
     - `auth/` — login, signup, password reset, 2FA
     - `chat/` — real-time messaging via SignalR
     - `home/` — landing page & hero
@@ -53,7 +53,7 @@ final project primary/
 - **Source projects (Clean Architecture):**
   - `apps/api/src/Api/` (`TijarahJo.Api.csproj`) — Controllers, Hubs, Startup, Contracts
     - `Features/` — feature folders:
-      - `Admin/` — 13 admin controllers (analytics, audit log, conversations, dashboard, fraud detection, locations, permissions, posts, reports queue, reviews, search, settings, users)
+      - `Admin/` — admin controllers (analytics, audit log, dashboard, locations, permissions, posts, reports queue, reviews, search, settings, users)
       - `Auth/` — AuthController, OAuthController, PasswordResetController, TwoFactorController
       - `Categories/`, `Chat/`, `Compare/`, `Favorites/`, `Locations/`
       - `Notifications/`, `Posts/`, `Reviews/`, `Roles/`

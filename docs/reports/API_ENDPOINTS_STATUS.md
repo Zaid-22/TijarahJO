@@ -161,16 +161,9 @@
 - `GET /api/v1/admin/reports` — reports queue
 - `PUT /api/v1/admin/reports/{id}/status` — update report status
 
-#### Conversations
-- `GET /api/v1/admin/conversations` — list conversations
-- `GET /api/v1/admin/conversations/{id}/messages` — view conversation messages
-
 #### Reviews
 - `GET /api/v1/admin/reviews` — list reviews
 - `DELETE /api/v1/admin/reviews/{id}` — delete review
-
-#### Fraud Detection
-- `GET /api/v1/admin/fraud/signals` — fraud signals report
 
 #### Audit Log
 - `GET /api/v1/admin/audit-log` — list audit entries

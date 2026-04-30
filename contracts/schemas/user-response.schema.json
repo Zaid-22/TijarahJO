@@ -44,6 +44,13 @@
     "status": {
       "type": "integer"
     },
+    "suspendedUntil": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
     "isDeleted": {
       "type": "boolean"
     }

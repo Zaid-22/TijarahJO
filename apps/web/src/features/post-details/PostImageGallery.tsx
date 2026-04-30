@@ -51,8 +51,8 @@ export function PostImageGallery({ post }: PostImageGalleryProps) {
 
   return (
     <>
-      <Card className="overflow-hidden shadow-2xl">
-        <div className="relative w-full bg-muted">
+      <Card className="overflow-hidden rounded-2xl border-border/70 bg-card/95 shadow-sm">
+        <div className="relative w-full bg-muted/70 dark:bg-slate-950">
           <div className="relative aspect-4/3 w-full min-h-72 overflow-hidden sm:aspect-16/10 sm:min-h-80 lg:min-h-88">
             {hasMultipleImages &&
               displayImages.map((img, idx) => {
@@ -79,9 +79,8 @@ export function PostImageGallery({ post }: PostImageGalleryProps) {
               key={`img-${selectedImage}`}
               src={displayImages[selectedImage] || ""}
               alt={post.name}
-              className="absolute inset-0 h-full w-full cursor-pointer object-contain"
+              className="absolute inset-0 block h-full! w-full! max-w-none cursor-pointer object-cover object-center"
               onClick={() => setLightboxOpen(true)}
-              fallbackSrc="https://via.placeholder.com/800x600?text=No+Image+Available"
             />
 
             {hasMultipleImages && (

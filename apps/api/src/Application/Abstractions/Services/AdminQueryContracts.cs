@@ -102,8 +102,6 @@ public interface IAdminQueryHandler
     // Phase 3
     Task<AdminSettingsQueryResult> GetAllSettingsAsync(CancellationToken cancellationToken = default);
     Task<AdminSettingUpdateResult> UpdateSettingAsync(string key, string value, CancellationToken cancellationToken = default);
-    Task<AdminConversationsQueryResult> GetConversationsAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
-    Task<AdminConversationDetailQueryResult> GetConversationMessagesAsync(int conversationId, CancellationToken cancellationToken = default);
 }
 
 // Phase 3
@@ -121,20 +119,4 @@ public sealed class AdminSettingUpdateResult
     public bool Success { get; init; }
     public int StatusCode { get; init; }
     public string? Message { get; init; }
-}
-
-public sealed class AdminConversationsQueryResult
-{
-    public bool Success { get; init; }
-    public int StatusCode { get; init; }
-    public string? Message { get; init; }
-    public TijarahJo.Application.Abstractions.DataAccess.AdminConversationListResult? Result { get; init; }
-}
-
-public sealed class AdminConversationDetailQueryResult
-{
-    public bool Success { get; init; }
-    public int StatusCode { get; init; }
-    public string? Message { get; init; }
-    public TijarahJo.Application.Abstractions.DataAccess.AdminConversationDetail? Result { get; init; }
 }

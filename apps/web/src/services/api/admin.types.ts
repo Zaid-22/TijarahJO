@@ -134,36 +134,6 @@ export type SystemSettingItem = {
   updatedAt: string;
 };
 
-export type AdminConversationItem = {
-  conversationID: number;
-  user1ID: number;
-  user1Name: string;
-  user2ID: number;
-  user2Name: string;
-  postID: number | null;
-  lastMessageAt: string | null;
-  messageCount: number;
-};
-
-export type AdminConversationListResult = {
-  conversations: AdminConversationItem[];
-  totalCount: number;
-};
-
-export type AdminMessageItem = {
-  messageID: number;
-  senderID: number;
-  senderName: string;
-  content: string;
-  createdAt: string;
-  isRead: boolean;
-};
-
-export type AdminConversationDetail = {
-  conversation: AdminConversationItem;
-  messages: AdminMessageItem[];
-};
-
 export type AdminAreaItem = {
   areaID: number;
   cityID: number;
@@ -188,6 +158,8 @@ export type AdminReportItem = {
   reporterUserID: number;
   reporterName: string;
   reporterEmail: string;
+  targetUserID: number | null;
+  targetUserName: string | null;
   status: number;
   statusLabel: string;
   resolvedByUserID: number | null;
@@ -209,60 +181,4 @@ export type PermissionItem = {
   permissionKey: string;
   description: string;
   category: string;
-};
-
-// ── Fraud Detection Types ──
-
-export type FraudSignal = {
-  type: string;
-  severity: string;
-  count: number;
-  detail: string;
-};
-
-export type FraudUserCandidate = {
-  userID: number;
-  name: string;
-  email: string;
-  joinedAt: string;
-  status: number;
-};
-
-export type FraudPostCandidate = {
-  postID: number;
-  userID: number;
-  title: string;
-  categoryID: number;
-  categoryName: string;
-  sellerName: string;
-  price: number | null;
-  status: number;
-  createdAt: string;
-  signalReason: string;
-};
-
-export type FraudReviewCandidate = {
-  reviewID: number;
-  reviewerID: number;
-  reviewerName: string;
-  reviewedUserID: number;
-  reviewedUserName: string;
-  rating: number;
-  comment: string | null;
-  createdAt: string;
-  signalReason: string;
-};
-
-export type FraudSignalsResult = {
-  rapidRegistrations: boolean;
-  rapidRegistrationCount: number;
-  duplicateListings: number;
-  suspiciousPriceCount: number;
-  reviewBombingTargets: number;
-  checkedAt: string;
-  rapidRegistrationUsers: FraudUserCandidate[];
-  duplicateListingPosts: FraudPostCandidate[];
-  suspiciousPricePosts: FraudPostCandidate[];
-  reviewBombingReviews: FraudReviewCandidate[];
-  signals: FraudSignal[];
 };

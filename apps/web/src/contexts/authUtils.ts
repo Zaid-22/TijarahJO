@@ -208,6 +208,36 @@ export function userHasAdminPermission(
   return user.permissions.includes(permissionKey);
 }
 
+export const isAuthRejectionMessage = (message: string | undefined): boolean => {
+  const normalized = message?.trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  return (
+    normalized === "unauthorized" ||
+    normalized === "forbidden" ||
+    normalized.includes("401") ||
+    normalized.includes("403")
+  );
+};
+
+export const normalizeAuthRejectionMessage = (
+  error: { code?: string; message?: string } | undefined,
+  fallback: string,
+): string => {
+  if (
+    error?.code === "HTTP_401" ||
+    error?.code === "HTTP_403" ||
+    isAuthRejectionMessage(error?.message)
+  ) {
+    return fallback;
+  }
+
+  const trimmed = error?.message?.trim();
+  return trimmed ? trimmed : fallback;
+};
+
 export const shouldClearTokenForAuthError = (error: unknown): boolean => {
   const message = error instanceof Error ? error.message : String(error);
   const normalized = message.toLowerCase();

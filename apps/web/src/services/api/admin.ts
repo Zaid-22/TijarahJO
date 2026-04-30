@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import { apiRequest, debugError } from "./client";
 import { toCamelCaseKeys } from "./utils";
 import type {
@@ -10,11 +9,8 @@ import type {
   AdminPostCommentListResult,
   AdminAuditLogResult,
   SystemSettingItem,
-  AdminConversationListResult,
-  AdminConversationDetail,
   AdminReportListResult,
   PermissionItem,
-  FraudSignalsResult,
 } from "./admin.types";
 import { adminLocationsApi } from "./admin-locations";
 
@@ -371,49 +367,6 @@ export const adminApi = {
     }
   },
 
-  // ── Phase 3: Chat Inspection ──
-
-  getConversations: async (
-    page = 1,
-    pageSize = 50,
-  ): Promise<AdminConversationListResult> => {
-    try {
-      const response = await apiRequest<AdminConversationListResult>(
-        `/admin/conversations?page=${page}&pageSize=${pageSize}`,
-        { method: "GET" },
-      );
-      if (response.success && response.data) {
-        return toCamelCaseKeys<AdminConversationListResult>(response.data);
-      }
-      throw new Error("Failed to fetch conversations");
-    } catch (error) {
-      debugError("Failed to fetch conversations:", error);
-      throw error;
-    }
-  },
-
-  getConversationMessages: async (
-    conversationId: number,
-  ): Promise<AdminConversationDetail | null> => {
-    try {
-      const response = await apiRequest<AdminConversationDetail>(
-        `/admin/conversations/${conversationId}/messages`,
-        { method: "GET" },
-      );
-      if (response.success && response.data) {
-        return toCamelCaseKeys<AdminConversationDetail>(response.data);
-      }
-      return null;
-    } catch (error) {
-      debugError(
-        `Failed to fetch messages for conversation ${conversationId}:`,
-        error,
-      );
-      return null;
-    }
-  },
-
-
   // ── Reports ──
 
   getReports: async (
@@ -540,21 +493,5 @@ export const adminApi = {
   },
 
   ...adminLocationsApi,
-
-  // ── Fraud Detection ──
-
-  getFraudSignals: async (): Promise<FraudSignalsResult> => {
-    try {
-      const response = await apiRequest<FraudSignalsResult>(
-        "/admin/fraud/signals",
-        { method: "GET" },
-      );
-      if (response.success && response.data) return toCamelCaseKeys<FraudSignalsResult>(response.data);
-      throw new Error("Failed to fetch fraud signals");
-    } catch (error) {
-      debugError("adminApi.getFraudSignals", error);
-      throw error;
-    }
-  },
 
 };

@@ -33,6 +33,7 @@ interface PostDetailsPageProps {
   allPosts?: Post[];
   language: Language;
   onPostClick?: (postId: string) => void;
+  onCategoryClick?: (categoryName: string) => void;
   onSellerClick?: () => void;
   onUpdatePost?: (post: UpdatePostInput) => void | Promise<void>;
   onUpdatePostStatus?: (
@@ -53,6 +54,7 @@ export function PostDetailsPage({
   allPosts,
   language,
   onPostClick,
+  onCategoryClick,
   onSellerClick,
   onUpdatePost,
   onUpdatePostStatus,
@@ -310,13 +312,22 @@ export function PostDetailsPage({
               label: isRTL ? "الرئيسية" : "Home",
               onClick: onBack,
             },
-            ...(post.category ? [{ label: post.category }] : []),
+            ...(post.category
+              ? [
+                  {
+                    label: post.category,
+                    onClick: onCategoryClick
+                      ? () => onCategoryClick(post.category)
+                      : undefined,
+                  },
+                ]
+              : []),
             { label: post.name },
           ]}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid min-w-0 grid-cols-1 gap-6 sm:gap-8 lg:grid-cols-3">
+          <div className="min-w-0 space-y-6 lg:col-span-2">
             <PostImageGallery post={post} />
 
             <PostSummaryCard

@@ -30,6 +30,8 @@ export type RawUser = {
   status?: unknown;
   RoleID?: unknown;
   roleID?: unknown;
+  SuspendedUntil?: unknown;
+  suspendedUntil?: unknown;
   RoleName?: unknown;
   roleName?: unknown;
   IsDeleted?: unknown;
@@ -53,6 +55,7 @@ export type UserProfileRecord = {
   avatar?: string;
   joinedAt: string;
   status: number;
+  suspendedUntil?: string;
   roleId: number;
   isDeleted: boolean;
   name: string;
@@ -66,7 +69,8 @@ export type AdminUserRecord = {
   email: string;
   roleId: number;
   roleName: string;
-  status: "active" | "banned";
+  status: "active" | "suspended" | "banned";
+  suspendedUntil?: string;
   joinedDate: string;
   joinedAt: string;
   firstName: string;
@@ -123,6 +127,7 @@ export function normalizeUserProfile(
     avatar: parsedUser.avatar,
     joinedAt: parsedUser.joinedAt,
     status: parsedUser.status,
+    suspendedUntil: parsedUser.suspendedUntil,
     roleId: parsedUser.roleId,
     isDeleted: parsedUser.isDeleted,
     name: `${parsedUser.firstName} ${parsedUser.lastName}`.trim(),
@@ -134,6 +139,14 @@ export function normalizeAdminUser(user: RawUser): AdminUserRecord | null {
   if (!parsedUser) {
     return null;
   }
+
+  const suspendedUntil = parsedUser.suspendedUntil;
+  const suspendedUntilDate = suspendedUntil ? new Date(suspendedUntil) : null;
+  const isTimedSuspended =
+    parsedUser.status === 1 &&
+    suspendedUntilDate !== null &&
+    !Number.isNaN(suspendedUntilDate.getTime()) &&
+    suspendedUntilDate.getTime() > Date.now();
 
   return {
     rawStatus: parsedUser.status,
@@ -147,7 +160,12 @@ export function normalizeAdminUser(user: RawUser): AdminUserRecord | null {
       user.RoleName ?? user.roleName,
     ),
     status:
-      parsedUser.status === 1 && !parsedUser.isDeleted ? "active" : "banned",
+      parsedUser.status !== 1 || parsedUser.isDeleted
+        ? "banned"
+        : isTimedSuspended
+          ? "suspended"
+          : "active",
+    suspendedUntil,
     joinedDate: parsedUser.joinedDate,
     joinedAt: parsedUser.joinedAt,
     firstName: parsedUser.firstName,

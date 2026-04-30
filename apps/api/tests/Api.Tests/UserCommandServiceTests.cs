@@ -347,10 +347,10 @@ public sealed class UserCommandServiceTests
             => Task.FromResult(_account);
 
         public Task<UserModel?> GetUserByLoginAsync(string login, CancellationToken ct = default)
-            => Task.FromResult(_account);
+            => Task.FromResult(MatchesLogin(login) ? _account : null);
 
         public Task<UserModel?> GetUserByLoginCandidatesAsync(IReadOnlyList<string> candidates, CancellationToken ct = default)
-            => Task.FromResult(_account);
+            => Task.FromResult(candidates.Any(MatchesLogin) ? _account : null);
 
         public Task<int> AddUserAsync(UserModel user, CancellationToken ct = default)
             => Task.FromResult(1);
@@ -366,6 +366,24 @@ public sealed class UserCommandServiceTests
 
         public Task<IReadOnlyList<UserModel>> GetAllUsersAsync(int page = 1, int size = 50, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<UserModel>>(Array.Empty<UserModel>());
+
+        private bool MatchesLogin(string login)
+        {
+            if (_account == null || string.IsNullOrWhiteSpace(login))
+            {
+                return false;
+            }
+
+            string trimmedLogin = login.Trim();
+            if (trimmedLogin.Contains('@'))
+            {
+                return string.Equals(_account.Email, trimmedLogin, StringComparison.OrdinalIgnoreCase);
+            }
+
+            string? normalizedPhone = PhoneNumberNormalizer.NormalizeJordanPhone(trimmedLogin);
+            return !string.IsNullOrWhiteSpace(normalizedPhone) &&
+                   string.Equals(_account.Phone, normalizedPhone, StringComparison.Ordinal);
+        }
     }
 
     private sealed class FakeRoleService : IRoleService

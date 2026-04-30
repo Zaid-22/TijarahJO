@@ -510,11 +510,20 @@ public sealed class AuthCommandService(
             changed = true;
         }
 
-        if (ValidationHelpers.IsDefaultAvatarPlaceholder(user.Avatar) &&
-            !string.IsNullOrWhiteSpace(avatar) &&
-            ValidationHelpers.IsValidAvatarUrl(avatar))
+        string? normalizedGoogleAvatar =
+            !string.IsNullOrWhiteSpace(avatar) && ValidationHelpers.IsValidAvatarUrl(avatar)
+                ? avatar.Trim()
+                : null;
+        string? currentAvatar = user.Avatar?.Trim();
+        bool shouldRefreshExternalAvatar =
+            normalizedGoogleAvatar != null &&
+            (ValidationHelpers.IsMissingOrInvalidAvatar(currentAvatar) ||
+             (!ValidationHelpers.IsStoredUploadAvatar(currentAvatar) &&
+              !string.Equals(currentAvatar, normalizedGoogleAvatar, StringComparison.Ordinal)));
+
+        if (shouldRefreshExternalAvatar)
         {
-            user = user with { Avatar = avatar.Trim() };
+            user = user with { Avatar = normalizedGoogleAvatar };
             changed = true;
         }
 

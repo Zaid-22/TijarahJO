@@ -195,11 +195,11 @@ export function PostCommentsSection({
         </h2>
       </div>
 
-      <Card className="border-primary/20 bg-primary/5 shadow-sm overflow-hidden mb-8">
+      <Card className="mb-8 overflow-hidden rounded-2xl border-border/70 bg-card/95 shadow-sm">
         <CardContent className="p-4">
           <Textarea
             placeholder={labels.commentPlaceholder}
-            className="mb-3 min-h-24 border-primary/20 focus-visible:ring-primary/40 text-base cursor-text"
+            className="mb-3 min-h-24 cursor-text border-border bg-background text-base focus-visible:ring-primary/30"
             value={newComment}
             onChange={(e) => {
               if (!isAuthenticated) {

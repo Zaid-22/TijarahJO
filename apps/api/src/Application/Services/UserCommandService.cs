@@ -6,22 +6,14 @@ using TijarahJo.Application.Abstractions.DataAccess;
 
 namespace TijarahJo.Application.Services;
 
-public sealed class UserCommandService : IUserCommandService
+public sealed class UserCommandService(IUserDataAccess users, IRoleService roles, ILocationReadService locations, ILogger<UserCommandService> logger) : IUserCommandService
 {
     private const string DefaultUserRoleName = "User";
 
-    private readonly IUserDataAccess _users;
-    private readonly IRoleService _roles;
-    private readonly ILocationReadService _locations;
-    private readonly ILogger<UserCommandService> _logger;
-
-    public UserCommandService(IUserDataAccess users, IRoleService roles, ILocationReadService locations, ILogger<UserCommandService> logger)
-    {
-        _users = users;
-        _roles = roles;
-        _locations = locations;
-        _logger = logger;
-    }
+    private readonly IUserDataAccess _users = users;
+    private readonly IRoleService _roles = roles;
+    private readonly ILocationReadService _locations = locations;
+    private readonly ILogger<UserCommandService> _logger = logger;
 
     public async Task<UserCommandResult> RegisterAsync(RegisterUserCommand command, CancellationToken cancellationToken = default)
     {
@@ -56,13 +48,30 @@ public sealed class UserCommandService : IUserCommandService
             return Failure(UserCommandFailureReason.RoleResolutionFailed, $"Unable to resolve default role '{DefaultUserRoleName}'.");
         }
 
+        string normalizedEmail = command.Email!.Trim().ToLowerInvariant();
+        var existingEmailUser = await _users.GetUserByLoginAsync(normalizedEmail, cancellationToken);
+        if (existingEmailUser != null)
+        {
+            return Failure(UserCommandFailureReason.InvalidRequest, "Account already exists with this email.");
+        }
+
+        string? normalizedPhone = PhoneNumberNormalizer.NormalizeJordanPhone(command.Phone);
+        if (!string.IsNullOrWhiteSpace(normalizedPhone))
+        {
+            var existingPhoneUser = await _users.GetUserByLoginAsync(normalizedPhone, cancellationToken);
+            if (existingPhoneUser != null)
+            {
+                return Failure(UserCommandFailureReason.InvalidRequest, "Phone number is already associated with another account.");
+            }
+        }
+
         var user = new UserModel(
             null,
             PasswordHelper.HashPassword(command.Password!.Trim()),
-            command.Email!.Trim().ToLowerInvariant(),
+            normalizedEmail,
             command.FirstName!.Trim(),
             command.LastName?.Trim() ?? string.Empty,
-            PhoneNumberNormalizer.NormalizeJordanPhone(command.Phone),
+            normalizedPhone,
             command.CityId,
             command.AreaId,
             string.IsNullOrWhiteSpace(command.Bio) ? null : command.Bio.Trim(),

@@ -73,11 +73,6 @@ const SystemSettingsPanel = lazy(
     "lazy-import-retry:system-settings-panel",
   ),
 );
-const ChatInspection = lazy(() =>
-  import("../../features/admin/components/ChatInspection").then((m) => ({
-    default: m.ChatInspection,
-  })),
-);
 const LocationsManagement = lazy(() =>
   import("../../features/admin/components/LocationsManagement").then((m) => ({
     default: m.LocationsManagement,
@@ -86,11 +81,6 @@ const LocationsManagement = lazy(() =>
 const ReportsQueue = lazy(() =>
   import("../../features/admin/components/ReportsQueue").then((m) => ({
     default: m.ReportsQueue,
-  })),
-);
-const FraudDetectionPanel = lazy(() =>
-  import("../../features/admin/components/FraudDetectionPanel").then((m) => ({
-    default: m.FraudDetectionPanel,
   })),
 );
 const AdminBannersManagement = lazy(() =>
@@ -212,16 +202,6 @@ export function renderAdminRoutes() {
           }
         />
         <Route
-          path="chats"
-          element={
-            <AdminPermissionRoute
-              requiredPermission={ADMIN_PERMISSIONS.chatView}
-            >
-              <ChatInspection />
-            </AdminPermissionRoute>
-          }
-        />
-        <Route
           path="locations"
           element={
             <AdminPermissionRoute
@@ -238,16 +218,6 @@ export function renderAdminRoutes() {
               requiredPermission={ADMIN_PERMISSIONS.reportsView}
             >
               <ReportsQueue />
-            </AdminPermissionRoute>
-          }
-        />
-        <Route
-          path="fraud"
-          element={
-            <AdminPermissionRoute
-              requiredPermission={ADMIN_PERMISSIONS.fraudView}
-            >
-              <FraudDetectionPanel />
             </AdminPermissionRoute>
           }
         />

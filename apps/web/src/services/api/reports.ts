@@ -2,7 +2,7 @@ import { toPositiveIntegerId } from "../../utils/idValidation";
 import { apiRequest } from "./client";
 
 type SubmitReportPayload = {
-  reportType: "LISTING" | "USER" | "REVIEW" | "CHAT";
+  reportType: "LISTING" | "USER" | "REVIEW" | "COMMENT";
   targetId: number | string;
   reason: string;
   description?: string;

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AuthState, User } from "../types";
 import { api } from "../services/api";
 import {
+  normalizeAuthRejectionMessage,
   resolveUserFromAuthPayload,
   shouldClearTokenForAuthError,
 } from "./authUtils";
@@ -178,8 +179,8 @@ export function useAuthProviderController(): AuthContextType {
 
           return {
             status: "auth_error",
-            message: normalizeMessage(
-              response.error?.message,
+            message: normalizeAuthRejectionMessage(
+              response.error,
               SESSION_EXPIRED_MESSAGE,
             ),
           };
@@ -345,8 +346,7 @@ export function useAuthProviderController(): AuthContextType {
       debugAuthWarn("[AuthContext] No valid authenticated session");
 
       const wasAuthenticated =
-        currentAuthState.isAuthenticated ||
-        AUTH_LEGACY_KEYS.some((k) => localStorage.getItem(k) !== null);
+        currentAuthState.isAuthenticated;
 
       clearAuthStorage();
 

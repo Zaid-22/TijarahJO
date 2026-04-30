@@ -1,5 +1,4 @@
 import {
-  Heart,
   LogOut,
   MessageCircle,
   Settings,
@@ -43,7 +42,7 @@ export function HeaderDesktopProfileMenu({
   userAvatar,
   unreadMessagesCount,
   onShowProfile,
-  onShowFavorites,
+
   onShowMessages,
   onShowSettings,
   onShowAdminDashboard,
@@ -107,13 +106,6 @@ export function HeaderDesktopProfileMenu({
         >
           <User className={iconClass} />
           {language === "ar" ? "ملفي الشخصي" : "My Profile"}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={onShowFavorites}
-          className={`${menuItemClass} cursor-pointer`}
-        >
-          <Heart className={iconClass} />
-          {language === "ar" ? "المفضلة" : "Favorites"}
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={onShowMessages}
