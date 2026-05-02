@@ -397,6 +397,41 @@ export const authApi = {
   },
 
   /**
+   * Verify a password reset email code before collecting a new password
+   */
+  verifyPasswordResetCode: async (
+    email: string,
+    code: string,
+  ): Promise<AuthApiResponse> => {
+    const response = await apiRequest<unknown>(
+      "/auth/forgot-password/verify",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          Email: email.trim().toLowerCase(),
+          Code: code.trim(),
+        }),
+      },
+    );
+
+    if (response.success) {
+      return {
+        success: true,
+        message: resolveMessageFromPayload(
+          response.data,
+          "Verification code confirmed.",
+        ),
+      };
+    }
+
+    const errorMessage = resolveAuthFailureMessage(
+      response,
+      "Invalid or expired verification code.",
+    );
+    return toAuthFailure("PASSWORD_RESET_VERIFY_FAILED", errorMessage);
+  },
+
+  /**
    * Confirm password reset with email code and new password
    */
   confirmPasswordReset: async (

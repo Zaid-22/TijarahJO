@@ -41,6 +41,72 @@ public sealed class PasswordResetServiceTests
     }
 
     [Fact]
+    public async Task VerifyCodeAsync_RejectsInvalidVerificationCode()
+    {
+        var user = CreateUser("verify-invalid@example.com");
+        var users = new FakeUserDataAccess(user);
+        var sender = new CapturingPasswordResetEmailSender();
+        var service = BuildService(users, sender, new PasswordResetOptions
+        {
+            Enabled = true,
+            CodeLength = 6,
+            CodeLifetimeMinutes = 15,
+            MaxAttempts = 3,
+            RequestCooldownSeconds = 0
+        });
+
+        await service.RequestResetAsync(user.Email);
+
+        PasswordResetConfirmationResult result = await service.VerifyCodeAsync(
+            user.Email,
+            sender.LastCode == "000000" ? "111111" : "000000"
+        );
+
+        Assert.False(result.Success);
+        Assert.Equal(
+            PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
+            result.FailureReason
+        );
+        Assert.False(users.UpdateCalled);
+    }
+
+    [Fact]
+    public async Task VerifyCodeAsync_DoesNotConsumeValidVerificationCode()
+    {
+        var user = CreateUser("verify-valid@example.com");
+        var users = new FakeUserDataAccess(user);
+        var sender = new CapturingPasswordResetEmailSender();
+        var service = BuildService(users, sender, new PasswordResetOptions
+        {
+            Enabled = true,
+            CodeLength = 6,
+            CodeLifetimeMinutes = 15,
+            MaxAttempts = 3,
+            RequestCooldownSeconds = 0
+        });
+
+        await service.RequestResetAsync(user.Email);
+        Assert.False(string.IsNullOrWhiteSpace(sender.LastCode));
+
+        PasswordResetConfirmationResult verifyResult = await service.VerifyCodeAsync(
+            user.Email,
+            sender.LastCode
+        );
+
+        Assert.True(verifyResult.Success);
+        Assert.False(users.UpdateCalled);
+
+        PasswordResetConfirmationResult confirmResult = await service.ConfirmResetAsync(
+            user.Email,
+            sender.LastCode,
+            "NewPassword1!"
+        );
+
+        Assert.True(confirmResult.Success);
+        Assert.True(users.UpdateCalled);
+    }
+
+    [Fact]
     public async Task ConfirmResetAsync_ReturnsTooManyAttempts_AfterRepeatedInvalidCodes()
     {
         var user = CreateUser("user2@example.com");

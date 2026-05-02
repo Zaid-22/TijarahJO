@@ -10,6 +10,7 @@ test("skips CSRF priming for anonymous login and recovery writes", () => {
   assert.equal(shouldPrimeCsrfForEndpoint("/auth/signup"), false);
   assert.equal(shouldPrimeCsrfForEndpoint("/auth/2fa/verify-login"), false);
   assert.equal(shouldPrimeCsrfForEndpoint("/auth/forgot-password/request"), false);
+  assert.equal(shouldPrimeCsrfForEndpoint("/auth/forgot-password/verify"), false);
   assert.equal(shouldPrimeCsrfForEndpoint("/auth/forgot-password/confirm"), false);
 });
 

@@ -3,6 +3,7 @@ const ANONYMOUS_AUTH_WRITE_ENDPOINTS = [
   "/auth/signup",
   "/auth/2fa/verify-login",
   "/auth/forgot-password/request",
+  "/auth/forgot-password/verify",
   "/auth/forgot-password/confirm",
 ] as const;
 

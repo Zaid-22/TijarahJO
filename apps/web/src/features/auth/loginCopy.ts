@@ -41,6 +41,9 @@ export interface LoginCopy {
     twoFactorSubtitle: string;
     twoFactorCodeLabel: string;
     twoFactorCodePlaceholder: string;
+    twoFactorResendPrompt: string;
+    twoFactorResendAction: string;
+    twoFactorResending: string;
     verifyTwoFactorButton: string;
     verifyingTwoFactor: string;
     cancelTwoFactor: string;
@@ -108,6 +111,9 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       twoFactorSubtitle: "Enter the 6-digit code sent to your email.",
       twoFactorCodeLabel: "Verification Code",
       twoFactorCodePlaceholder: "",
+      twoFactorResendPrompt: "Didn't get the code?",
+      twoFactorResendAction: "Resend it",
+      twoFactorResending: "Resending...",
       verifyTwoFactorButton: "Verify Code",
       verifyingTwoFactor: "Verifying...",
       cancelTwoFactor: "Back to Sign In",
@@ -196,6 +202,9 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
         "أدخل رمز التحقق المكوّن من 6 أرقام المرسل إلى بريدك الإلكتروني.",
       twoFactorCodeLabel: "رمز التحقق",
       twoFactorCodePlaceholder: "",
+      twoFactorResendPrompt: "لم يصلك الرمز؟",
+      twoFactorResendAction: "إعادة الإرسال",
+      twoFactorResending: "جارٍ الإرسال...",
       verifyTwoFactorButton: "تأكيد الرمز",
       verifyingTwoFactor: "جارٍ التحقق...",
       cancelTwoFactor: "العودة لتسجيل الدخول",

@@ -35,6 +35,48 @@ public class PasswordResetController(IPasswordResetService passwordResetService)
         });
     }
 
+    [HttpPost("verify")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    public async Task<ActionResult<ApiMessageResponse>> VerifyPasswordResetCode(
+        [FromBody] VerifyPasswordResetCodeRequest request,
+        CancellationToken cancellationToken)
+    {
+        PasswordResetConfirmationResult result = await _passwordResetService.VerifyCodeAsync(
+            request?.Email,
+            request?.Code,
+            cancellationToken
+        );
+
+        if (!result.Success)
+        {
+            return result.FailureReason switch
+            {
+                PasswordResetConfirmationFailureReason.TooManyAttempts => Problem(
+                    statusCode: StatusCodes.Status429TooManyRequests,
+                    detail: result.Message
+                ),
+                PasswordResetConfirmationFailureReason.InvalidRequest or
+                PasswordResetConfirmationFailureReason.InvalidOrExpiredCode or
+                PasswordResetConfirmationFailureReason.UserUnavailable => Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    detail: result.Message
+                ),
+                _ => Problem(
+                    statusCode: StatusCodes.Status500InternalServerError,
+                    detail: "Failed to verify password reset code."
+                )
+            };
+        }
+
+        return Ok(new ApiMessageResponse
+        {
+            Message = "Verification code confirmed."
+        });
+    }
+
     [HttpPost("confirm")]
     [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]

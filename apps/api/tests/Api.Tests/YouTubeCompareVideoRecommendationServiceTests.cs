@@ -34,6 +34,24 @@ public sealed class YouTubeCompareVideoRecommendationServiceTests
         Assert.DoesNotContain("+", video.SearchQuery, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task RecommendAsync_PrefersLongerReviewVideo_OverShortClip()
+    {
+        var handler = new LongVideoPreferenceYouTubeHandler();
+        var service = new YouTubeCompareVideoRecommendationService(
+            new HttpClient(handler),
+            new StubPostReadService(),
+            new StubCategoryService(),
+            new NoopCacheService(),
+            Options.Create(new YouTubeSettings { ApiKey = "test-youtube-key" }),
+            NullLogger<YouTubeCompareVideoRecommendationService>.Instance);
+
+        CompareVideoRecommendationResult result = await service.RecommendAsync([10], "en");
+
+        CompareVideoRecommendation video = Assert.Single(result.Videos);
+        Assert.Equal("long-review", video.VideoId);
+    }
+
     private sealed class RecordingYouTubeHandler : HttpMessageHandler
     {
         public List<(string Language, string Query)> SearchRequests { get; } = [];
@@ -99,6 +117,70 @@ public sealed class YouTubeCompareVideoRecommendationServiceTests
                 .ToDictionary(
                     parts => Uri.UnescapeDataString(parts[0]),
                     parts => Uri.UnescapeDataString(parts[1].Replace("+", " ", StringComparison.Ordinal)));
+        }
+    }
+
+    private sealed class LongVideoPreferenceYouTubeHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (request.RequestUri?.AbsolutePath.EndsWith("/youtube/v3/search", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                return Json("""{"items":[{"id":{"videoId":"short-clip"}},{"id":{"videoId":"long-review"}}]}""");
+            }
+
+            if (request.RequestUri?.AbsolutePath.EndsWith("/youtube/v3/videos", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                return Json(
+                    """
+                    {
+                      "items": [
+                        {
+                          "id": "short-clip",
+                          "snippet": {
+                            "title": "Mahindra KUV100 NXT K6 Review",
+                            "description": "Quick review clip.",
+                            "channelTitle": "Short Auto",
+                            "publishedAt": "2024-01-01T00:00:00Z",
+                            "defaultLanguage": "en",
+                            "defaultAudioLanguage": "en",
+                            "thumbnails": {
+                              "medium": { "url": "https://img.youtube.com/vi/short-clip/mqdefault.jpg" }
+                            }
+                          },
+                          "statistics": { "viewCount": "10000000" },
+                          "contentDetails": { "duration": "PT55S" }
+                        },
+                        {
+                          "id": "long-review",
+                          "snippet": {
+                            "title": "Mahindra KUV100 NXT K6 Full Review",
+                            "description": "Detailed review and buying guide.",
+                            "channelTitle": "Auto Reviews",
+                            "publishedAt": "2024-01-01T00:00:00Z",
+                            "defaultLanguage": "en",
+                            "defaultAudioLanguage": "en",
+                            "thumbnails": {
+                              "medium": { "url": "https://img.youtube.com/vi/long-review/mqdefault.jpg" }
+                            }
+                          },
+                          "statistics": { "viewCount": "1000" },
+                          "contentDetails": { "duration": "PT15M" }
+                        }
+                      ]
+                    }
+                    """);
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
+
+        private static Task<HttpResponseMessage> Json(string body)
+        {
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json")
+            });
         }
     }
 

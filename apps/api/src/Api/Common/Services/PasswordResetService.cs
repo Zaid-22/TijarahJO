@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
@@ -31,6 +30,12 @@ public interface IPasswordResetService
 {
     Task<bool> RequestResetAsync(string? email, CancellationToken cancellationToken = default);
 
+    Task<PasswordResetConfirmationResult> VerifyCodeAsync(
+        string? email,
+        string? code,
+        CancellationToken cancellationToken = default
+    );
+
     Task<PasswordResetConfirmationResult> ConfirmResetAsync(
         string? email,
         string? code,
@@ -48,8 +53,6 @@ public sealed class PasswordResetService(
     ITokenBlacklistService tokenBlacklist,
     JwtOptions jwtOptions) : IPasswordResetService
 {
-    private const int MinimumPasswordLength = 8;
-    
     private readonly IUserDataAccess _users = users;
     private readonly IVerificationChallengeDataAccess _challenges = challenges;
     private readonly IPasswordResetEmailSender _emailSender = emailSender;
@@ -143,6 +146,52 @@ public sealed class PasswordResetService(
         return true;
     }
 
+    public async Task<PasswordResetConfirmationResult> VerifyCodeAsync(
+        string? email,
+        string? code,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_options.Enabled)
+        {
+            return Failure(
+                PasswordResetConfirmationFailureReason.InvalidRequest,
+                "Password reset is currently unavailable."
+            );
+        }
+
+        string? normalizedEmail = NormalizeEmail(email);
+        string submittedCode = NormalizeSubmittedCode(code);
+
+        if (string.IsNullOrWhiteSpace(normalizedEmail))
+        {
+            return Failure(
+                PasswordResetConfirmationFailureReason.InvalidRequest,
+                "Email and verification code are required."
+            );
+        }
+
+        if (submittedCode.Length != GetCodeLength())
+        {
+            return Failure(
+                PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
+                "Invalid or expired verification code."
+            );
+        }
+
+        CodeValidationResult validation = await ValidateResetCodeAsync(
+            normalizedEmail,
+            submittedCode,
+            cancellationToken
+        );
+
+        if (!validation.Success)
+        {
+            return Failure(validation.FailureReason!.Value, validation.Message!);
+        }
+
+        return new PasswordResetConfirmationResult { Success = true };
+    }
+
     public async Task<PasswordResetConfirmationResult> ConfirmResetAsync(
         string? email,
         string? code,
@@ -158,7 +207,7 @@ public sealed class PasswordResetService(
         }
 
         string? normalizedEmail = NormalizeEmail(email);
-        string submittedCode = code?.Trim() ?? string.Empty;
+        string submittedCode = NormalizeSubmittedCode(code);
         string submittedPassword = newPassword?.Trim() ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(normalizedEmail) ||
@@ -171,6 +220,14 @@ public sealed class PasswordResetService(
             );
         }
 
+        if (submittedCode.Length != GetCodeLength())
+        {
+            return Failure(
+                PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
+                "Invalid or expired verification code."
+            );
+        }
+
         var (isPasswordValid, passwordError) = PasswordHelper.IsPasswordPolicyCompliant(submittedPassword);
         if (!isPasswordValid)
         {
@@ -180,19 +237,60 @@ public sealed class PasswordResetService(
             );
         }
 
+        CodeValidationResult validation = await ValidateResetCodeAsync(
+            normalizedEmail,
+            submittedCode,
+            cancellationToken
+        );
+
+        if (!validation.Success)
+        {
+            return Failure(validation.FailureReason!.Value, validation.Message!);
+        }
+
+        UserModel user = validation.User!;
+
+        user = user with { HashedPassword = PasswordHelper.HashPassword(submittedPassword) };
+        bool updated = await _users.UpdateUserAsync(user, user.UserID!.Value, cancellationToken);
+        if (!updated)
+        {
+            return Failure(
+                PasswordResetConfirmationFailureReason.PersistenceFailed,
+                "Unable to save the new password. Please try again."
+            );
+        }
+
+        await _tokenBlacklist.InvalidateAllUserSessionsAsync(user.UserID.Value, cancellationToken);
+        await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
+
+        return new PasswordResetConfirmationResult
+        {
+            Success = true
+        };
+    }
+
+    private async Task<CodeValidationResult> ValidateResetCodeAsync(
+        string normalizedEmail,
+        string submittedCode,
+        CancellationToken cancellationToken)
+    {
         UserModel? user = await _users.GetUserByLoginAsync(normalizedEmail, cancellationToken);
         if (user == null || user.UserID == null)
         {
-            return Failure(
+            return CodeValidationResult.Failed(
                 PasswordResetConfirmationFailureReason.UserUnavailable,
                 "Unable to reset password for this account."
             );
         }
 
-        string? stateStr = await _challenges.GetChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
+        string? stateStr = await _challenges.GetChallengeStateAsync(
+            user.UserID.Value,
+            "PasswordReset",
+            cancellationToken
+        );
         if (string.IsNullOrEmpty(stateStr))
         {
-            return Failure(
+            return CodeValidationResult.Failed(
                 PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
                 "Invalid or expired verification code."
             );
@@ -206,7 +304,7 @@ public sealed class PasswordResetService(
         catch (System.Text.Json.JsonException)
         {
             await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
-            return Failure(
+            return CodeValidationResult.Failed(
                 PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
                 "Invalid or expired verification code."
             );
@@ -216,7 +314,7 @@ public sealed class PasswordResetService(
         if (challenge == null || challenge.ExpiresAtUtc <= now)
         {
             await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
-            return Failure(
+            return CodeValidationResult.Failed(
                 PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
                 "Invalid or expired verification code."
             );
@@ -226,7 +324,7 @@ public sealed class PasswordResetService(
         if (challenge.FailedAttempts >= maxAttempts)
         {
             await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
-            return Failure(
+            return CodeValidationResult.Failed(
                 PasswordResetConfirmationFailureReason.TooManyAttempts,
                 "Too many invalid verification attempts. Please request a new code."
             );
@@ -250,7 +348,7 @@ public sealed class PasswordResetService(
             if (nextFailedAttempts >= maxAttempts)
             {
                 await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
-                return Failure(
+                return CodeValidationResult.Failed(
                     PasswordResetConfirmationFailureReason.TooManyAttempts,
                     "Too many invalid verification attempts. Please request a new code."
                 );
@@ -266,7 +364,7 @@ public sealed class PasswordResetService(
                 cancellationToken
             );
 
-            return Failure(
+            return CodeValidationResult.Failed(
                 PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
                 "Invalid or expired verification code."
             );
@@ -275,29 +373,13 @@ public sealed class PasswordResetService(
         if (user.IsDeleted || user.Status != UserStatusPolicy.Active)
         {
             await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
-            return Failure(
+            return CodeValidationResult.Failed(
                 PasswordResetConfirmationFailureReason.UserUnavailable,
                 "Unable to reset password for this account."
             );
         }
 
-        user = user with { HashedPassword = PasswordHelper.HashPassword(submittedPassword) };
-        bool updated = await _users.UpdateUserAsync(user, user.UserID.Value, cancellationToken);
-        if (!updated)
-        {
-            return Failure(
-                PasswordResetConfirmationFailureReason.PersistenceFailed,
-                "Unable to save the new password. Please try again."
-            );
-        }
-
-        await _tokenBlacklist.InvalidateAllUserSessionsAsync(user.UserID.Value, cancellationToken);
-        await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
-
-        return new PasswordResetConfirmationResult
-        {
-            Success = true
-        };
+        return CodeValidationResult.Valid(user);
     }
 
     private static string? NormalizeEmail(string? email)
@@ -305,6 +387,11 @@ public sealed class PasswordResetService(
         return string.IsNullOrWhiteSpace(email)
             ? null
             : email.Trim().ToLowerInvariant();
+    }
+
+    private static string NormalizeSubmittedCode(string? code)
+    {
+        return string.Concat((code ?? string.Empty).Where(char.IsDigit));
     }
 
     private byte[] ComputeCodeHash(string normalizedEmail, string code)
@@ -346,4 +433,19 @@ public sealed class PasswordResetService(
         DateTimeOffset SentAtUtc,
         int FailedAttempts
     );
+
+    private sealed record CodeValidationResult(
+        bool Success,
+        UserModel? User,
+        PasswordResetConfirmationFailureReason? FailureReason,
+        string? Message)
+    {
+        public static CodeValidationResult Valid(UserModel user) =>
+            new(true, user, null, null);
+
+        public static CodeValidationResult Failed(
+            PasswordResetConfirmationFailureReason reason,
+            string message) =>
+            new(false, null, reason, message);
+    }
 }

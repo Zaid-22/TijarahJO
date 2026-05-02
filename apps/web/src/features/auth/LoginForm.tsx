@@ -5,7 +5,6 @@ import {
   Mail,
   MapPin,
   Phone,
-  Shield,
   User,
 } from "lucide-react";
 import { Alert, AlertDescription } from "../../shared/ui/alert";
@@ -17,6 +16,7 @@ import { AuthGoogleButton } from "./AuthGoogleButton";
 import { AuthAvatarUpload } from "./AuthAvatarUpload";
 
 import { AuthPageLayout } from "./components/AuthPageLayout";
+import { OtpCodeInput } from "./components/OtpCodeInput";
 import type { Language } from "../../types";
 import {
   LoginField,
@@ -50,6 +50,8 @@ interface LoginFormProps {
   onContinueWithGoogle: () => void;
   onContinueAsGuest: () => void;
   onCancelTwoFactor: () => void;
+  onResendTwoFactor?: () => void;
+  isResendingTwoFactor?: boolean;
   onTwoFactorCodeChange: (value: string) => void;
   onFieldChange: (field: LoginField, value: string) => void;
   onFieldFocus: (field: LoginField) => void;
@@ -86,6 +88,8 @@ export function LoginForm({
   onContinueWithGoogle,
   onContinueAsGuest,
   onCancelTwoFactor,
+  onResendTwoFactor,
+  isResendingTwoFactor = false,
   onTwoFactorCodeChange,
   onFieldChange,
   onFieldFocus,
@@ -181,23 +185,17 @@ export function LoginForm({
             )}
 
             {isTwoFactorStep && (
-              <AuthInputField
+              <OtpCodeInput
                 id="twoFactorCode"
-                name="twoFactorCode"
                 label={copy.form.twoFactorCodeLabel}
-                required
-                placeholder={copy.form.twoFactorCodePlaceholder}
                 value={twoFactorCode}
-                error=""
                 disabled={isLoading}
-                type="text"
-                autoComplete="one-time-code"
-                icon={Shield}
-                focused={false}
                 onChange={onTwoFactorCodeChange}
-                onFocus={() => {}}
-                onBlur={() => {}}
-                isRTL={isRTL}
+                resendPrompt={copy.form.twoFactorResendPrompt}
+                resendLabel={copy.form.twoFactorResendAction}
+                resendingLabel={copy.form.twoFactorResending}
+                isResending={isResendingTwoFactor}
+                onResend={onResendTwoFactor}
               />
             )}
 

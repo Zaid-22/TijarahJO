@@ -539,7 +539,7 @@ export function ChatWindow({
                     : `${(await import("../../../constants/appConfig")).APP_CONFIG.apiBaseUrl}/chat/download-image?url=${encodeURIComponent(fullscreenImage)}`;
                   window.location.href = downloadUrl;
                 } catch {
-                  window.open(fullscreenImage, "_blank");
+                  window.open(fullscreenImage, "_blank", "noopener,noreferrer");
                 }
               }}
               className="flex items-center gap-2 text-sm font-medium transition-colors hover:text-white/80"

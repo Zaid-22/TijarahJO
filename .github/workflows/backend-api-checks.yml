@@ -7,6 +7,8 @@ on:
       - "scripts/**"
       - "infra/docker-compose.yml"
       - "apps/api/**"
+      - "apps/web/tests/frontend_api_contract.sh"
+      - ".github/workflows/backend-api-checks.yml"
   push:
     branches:
       - main
@@ -14,9 +16,15 @@ on:
       - "scripts/**"
       - "infra/docker-compose.yml"
       - "apps/api/**"
+      - "apps/web/tests/frontend_api_contract.sh"
+      - ".github/workflows/backend-api-checks.yml"
 
 permissions:
   contents: read
+
+concurrency:
+  group: backend-api-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend-api-checks:
@@ -24,6 +32,8 @@ jobs:
     timeout-minutes: 45
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+      DOTNET_NOLOGO: "true"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "true"
       MSSQL_SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
       JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY }}
       DB_APP_PASSWORD: ${{ secrets.DB_APP_PASSWORD }}
@@ -112,4 +122,9 @@ jobs:
 
       - name: Stop backend process
         if: always()
-        run: lsof -ti tcp:5033 | xargs -r kill -9 || true
+        run: |
+          if [ -f .tijarahjo_backend.pid ]; then
+            kill "$(cat .tijarahjo_backend.pid)" >/dev/null 2>&1 || true
+            rm -f .tijarahjo_backend.pid
+          fi
+          lsof -ti tcp:5033 | xargs -r kill -9 || true

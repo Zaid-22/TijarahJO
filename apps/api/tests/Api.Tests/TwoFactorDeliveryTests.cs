@@ -162,6 +162,29 @@ public sealed class TwoFactorDeliveryTests
         Assert.True(users.UpdateCalled);
     }
 
+    [Fact]
+    public async Task VerifyLoginCodeAsync_RejectsInvalidVerificationCode()
+    {
+        var service = CreateTwoFactorService();
+        string code = await service.GenerateAndStoreLoginCodeAsync(7);
+        string invalidCode = code == "000000" ? "111111" : "000000";
+
+        bool result = await service.VerifyLoginCodeAsync(7, invalidCode);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task VerifyLoginCodeAsync_AcceptsOnlyStoredVerificationCode()
+    {
+        var service = CreateTwoFactorService();
+        string code = await service.GenerateAndStoreLoginCodeAsync(7);
+
+        bool result = await service.VerifyLoginCodeAsync(7, code);
+
+        Assert.True(result);
+    }
+
     private static TwoFactorService CreateTwoFactorService()
     {
         return new TwoFactorService(

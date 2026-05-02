@@ -7,6 +7,7 @@ using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TijarahJo.Application.Abstractions.Services;
@@ -21,8 +22,12 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
     IOptions<YouTubeSettings> settings,
     ILogger<YouTubeCompareVideoRecommendationService> logger) : ICompareVideoRecommendationService
 {
-    private const string CacheVersion = "v4";
+    private const string CacheVersion = "v5";
     private const int MaxSearchResults = 8;
+    private static readonly TimeSpan s_shortVideoDuration = TimeSpan.FromMinutes(4);
+    private static readonly TimeSpan s_preferredVideoDuration = TimeSpan.FromMinutes(8);
+    private static readonly TimeSpan s_inDepthVideoDuration = TimeSpan.FromMinutes(12);
+    private static readonly TimeSpan s_veryLongVideoDuration = TimeSpan.FromMinutes(60);
     private static readonly TimeSpan s_cacheDuration = TimeSpan.FromHours(6);
 
     [GeneratedRegex(@"\s+")]
@@ -285,6 +290,7 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
 
         long viewCount = ParseLong(item.Statistics?.ViewCount);
         double score = Math.Log10(Math.Max(viewCount, 1));
+        TimeSpan? duration = ParseYouTubeDuration(item.ContentDetails?.Duration);
         string haystack = $"{title} {item.Snippet?.Description}".ToLowerInvariant();
 
         // Penalize YouTube Shorts
@@ -293,6 +299,11 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
             || title.StartsWith('#'))
         {
             score -= 10.0;
+        }
+
+        if (duration.HasValue)
+        {
+            score += ScoreDuration(duration.Value);
         }
 
         // Boost videos that mention "review", "full review", "مراجعة" in their title
@@ -368,7 +379,7 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
     {
         var parameters = new Dictionary<string, string>
         {
-            ["part"] = "snippet,statistics",
+            ["part"] = "snippet,statistics,contentDetails",
             ["id"] = string.Join(",", videoIds),
             ["key"] = _settings.ApiKey
         };
@@ -559,6 +570,43 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
             : 0;
     }
 
+    private static TimeSpan? ParseYouTubeDuration(string? rawValue)
+    {
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return null;
+        }
+
+        try
+        {
+            return XmlConvert.ToTimeSpan(rawValue);
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
+    }
+
+    private static double ScoreDuration(TimeSpan duration)
+    {
+        if (duration < s_shortVideoDuration)
+        {
+            return -8.0;
+        }
+
+        if (duration >= s_inDepthVideoDuration && duration <= s_veryLongVideoDuration)
+        {
+            return 5.0;
+        }
+
+        if (duration >= s_preferredVideoDuration)
+        {
+            return 3.5;
+        }
+
+        return 1.0;
+    }
+
     private static string BuildQueryString(Dictionary<string, string> parameters)
     {
         return string.Join(
@@ -594,6 +642,7 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
         public string? Id { get; init; }
         public YouTubeSnippet? Snippet { get; init; }
         public YouTubeStatistics? Statistics { get; init; }
+        public YouTubeContentDetails? ContentDetails { get; init; }
     }
 
     private sealed class YouTubeSnippet
@@ -621,5 +670,10 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
     private sealed class YouTubeStatistics
     {
         public string? ViewCount { get; init; }
+    }
+
+    private sealed class YouTubeContentDetails
+    {
+        public string? Duration { get; init; }
     }
 }

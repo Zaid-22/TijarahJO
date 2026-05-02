@@ -30,5 +30,6 @@ public class ReportConfiguration : IEntityTypeConfiguration<ReportEntity>
             .WithMany()
             .HasForeignKey(e => e.ResolvedByUserID)
             .OnDelete(DeleteBehavior.Restrict);
+
     }
 }

@@ -166,6 +166,7 @@ const AUTH_ENDPOINTS_NO_RETRY = [
   "/auth/me",
   "/auth/logout",
   "/auth/forgot-password/request",
+  "/auth/forgot-password/verify",
   "/auth/forgot-password/confirm",
   "/auth/2fa/verify-login",
 ];
@@ -248,7 +249,7 @@ export async function apiRequest<T>(
   let didTimeout = false;
   const syncAbortFromCaller = () => {
     if (!controller.signal.aborted) {
-      controller.abort();
+      controller.abort(callerSignal?.reason ?? "Request cancelled by caller");
     }
   };
   if (callerSignal) {
@@ -263,7 +264,7 @@ export async function apiRequest<T>(
   const timeoutId = setTimeout(() => {
     didTimeout = true;
     if (!controller.signal.aborted) {
-      controller.abort();
+      controller.abort("Request timed out");
     }
   }, timeoutMs);
 

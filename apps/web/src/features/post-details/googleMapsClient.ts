@@ -220,6 +220,8 @@ export async function loadGoogleMapsApi(
     script.async = true;
     script.defer = true;
     script.onerror = () => {
+      delete mapsGlobal.__tijarahJoGoogleMapsPromise;
+      delete mapsGlobal.__tijarahJoInitGoogleMaps;
       reject(new Error("Unable to load Google Maps."));
     };
     document.head.appendChild(script);

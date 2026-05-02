@@ -38,7 +38,8 @@
 ### Password Reset (`/api/v1/auth/forgot-password`)
 
 - `POST /api/v1/auth/forgot-password/request` — request reset code via email
-- `POST /api/v1/auth/forgot-password/confirm` — verify code and set new password
+- `POST /api/v1/auth/forgot-password/verify` — verify reset code before collecting a new password
+- `POST /api/v1/auth/forgot-password/confirm` — verify code again and set new password
 
 ### Users (`/api/v1/users`)
 

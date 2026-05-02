@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using TijarahJo.Application.Abstractions.DataAccess;
+using TijarahJo.Domain.Entities;
 using TijarahJo.Domain.Enums;
 using TijarahJo.Infrastructure.Persistence;
 
@@ -590,9 +591,7 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
     {
         try
         {
-            var query = _dbContext.Reports
-                .AsNoTracking()
-                .Where(r => r.ReportType != "CHAT");
+            var query = _dbContext.Reports.AsNoTracking();
 
             if (status.HasValue)
                 query = query.Where(r => r.Status == status.Value);
@@ -716,17 +715,7 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
         var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.UserID == userId, cancellationToken);
         if (user == null) return false;
 
-        if (suspendedUntil.HasValue)
-        {
-            // Timed suspension — keep Status ACTIVE but set SuspendedUntil
-            user.SuspendedUntil = suspendedUntil.Value;
-        }
-        else
-        {
-            // Permanent ban
-            user.Status = 2; // BANNED
-            user.SuspendedUntil = null;
-        }
+        ApplySuspensionState(user, suspendedUntil);
 
         // Invalidate all active sessions immediately
         user.LastInvalidatedAt = System.DateTime.UtcNow;
@@ -734,5 +723,21 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
         _dbContext.AuditActorUserId = adminUserId;
         await _dbContext.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    internal static void ApplySuspensionState(UserEntity user, System.DateTime? suspendedUntil)
+    {
+        if (suspendedUntil.HasValue)
+        {
+            // Timed suspensions use ACTIVE status; SuspendedUntil carries the login lockout.
+            user.Status = (int)UserStatus.Active;
+            user.SuspendedUntil = suspendedUntil.Value;
+        }
+        else
+        {
+            // Permanent ban
+            user.Status = (int)UserStatus.Banned;
+            user.SuspendedUntil = null;
+        }
     }
 }

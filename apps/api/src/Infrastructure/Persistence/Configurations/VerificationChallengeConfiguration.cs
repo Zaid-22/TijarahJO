@@ -24,13 +24,13 @@ public class VerificationChallengeConfiguration : IEntityTypeConfiguration<Verif
 
         builder.HasIndex(e => e.ExpiresAt)
             .HasDatabaseName("IX_VerificationChallenges_ExpiresAt");
-        builder.HasIndex(e => new { e.UserId, e.ChallengeType })
-            .HasDatabaseName("IX_VerificationChallenges_User_Type");
 
         builder.HasOne(e => e.User)
             .WithMany()
             .HasForeignKey(e => e.UserId)
             .HasConstraintName("FK_VerificationChallenges_User")
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasQueryFilter(e => e.User != null && !e.User.IsDeleted);
     }
 }

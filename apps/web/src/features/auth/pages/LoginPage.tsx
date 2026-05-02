@@ -78,6 +78,7 @@ export function LoginPage({
   });
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [isResendingTwoFactor, setIsResendingTwoFactor] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const submitInFlightRef = useRef(false);
 
@@ -510,6 +511,81 @@ export function LoginPage({
     });
   };
 
+  const handleResendTwoFactor = async () => {
+    if (
+      state.isLoading ||
+      isResendingTwoFactor ||
+      !state.values.identifier.trim() ||
+      !state.values.password
+    ) {
+      return;
+    }
+
+    setIsResendingTwoFactor(true);
+    dispatch({ type: "SET_GENERAL_ERROR", error: "" });
+
+    try {
+      const response = await api.auth.login({
+        email: state.values.identifier.trim(),
+        password: state.values.password,
+      });
+
+      if (!response.success) {
+        const message = extractErrorMessage(
+          response,
+          copy.errors.loginFailedFallback,
+          backendConnectionMessage,
+        );
+        dispatch({ type: "SET_GENERAL_ERROR", error: message });
+        return;
+      }
+
+      if (response.requiresTwoFactor) {
+        if (!response.twoFactorToken) {
+          dispatch({
+            type: "SET_GENERAL_ERROR",
+            error: copy.errors.twoFactorSessionExpired,
+          });
+          return;
+        }
+
+        dispatch({
+          type: "ENTER_TWO_FACTOR",
+          token: response.twoFactorToken,
+          message: response.message || copy.errors.twoFactorRequiredPrompt,
+        });
+        return;
+      }
+
+      const user = response.user;
+      await finalizeAuthenticatedLogin({
+        id: user?.id,
+        firstName: user?.firstName || "",
+        lastName: user?.lastName || "",
+        email: user?.email || state.values.identifier.trim(),
+        phone: user?.phone || "",
+        city: user?.city || "",
+        area: user?.area || "",
+        avatar: user?.avatar,
+        joinedDate: user?.joinedDate,
+        role: resolveLoginRole(user),
+        hasAdminAccess: resolveHasAdminAccessFromPayload(user),
+        permissions: readAuthPermissions(user),
+      });
+    } catch (error) {
+      dispatch({
+        type: "SET_GENERAL_ERROR",
+        error: toExceptionMessage(
+          error,
+          copy.errors.unexpected,
+          backendConnectionMessage,
+        ),
+      });
+    } finally {
+      setIsResendingTwoFactor(false);
+    }
+  };
+
   const handleGoogleAuth = () => {
     if (!googleAuthEnabled) {
       dispatch({
@@ -691,6 +767,8 @@ export function LoginPage({
       onContinueWithGoogle={handleGoogleAuth}
       onContinueAsGuest={onContinueAsGuest}
       onCancelTwoFactor={handleCancelTwoFactor}
+      onResendTwoFactor={handleResendTwoFactor}
+      isResendingTwoFactor={isResendingTwoFactor}
       onTwoFactorCodeChange={(value) =>
         dispatch({
           type: "SET_TWO_FACTOR_CODE",

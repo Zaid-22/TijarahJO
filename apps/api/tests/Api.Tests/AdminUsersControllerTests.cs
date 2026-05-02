@@ -4,7 +4,10 @@ using Microsoft.AspNetCore.Mvc;
 using TijarahJo.Api.Features.Admin;
 using TijarahJo.Application.Abstractions.DataAccess;
 using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Domain.Entities;
+using TijarahJo.Domain.Enums;
 using TijarahJo.Domain.Models;
+using TijarahJo.Infrastructure.DataAccess;
 
 namespace TijarahJo.Api.Tests;
 
@@ -58,6 +61,33 @@ public sealed class AdminUsersControllerTests
         Assert.True(adminData.SuspendUserCalled);
         Assert.NotNull(adminData.LastSuspendedUntil);
         Assert.True(adminData.LastSuspendedUntil > DateTime.UtcNow);
+    }
+
+    [Fact]
+    public void ApplySuspensionState_UsesActiveStatus_ForTimedSuspension()
+    {
+        var user = new UserEntity { Status = (int)UserStatus.Banned };
+        var suspendedUntil = DateTime.UtcNow.AddHours(24);
+
+        AdminDataAccessAdapter.ApplySuspensionState(user, suspendedUntil);
+
+        Assert.Equal((int)UserStatus.Active, user.Status);
+        Assert.Equal(suspendedUntil, user.SuspendedUntil);
+    }
+
+    [Fact]
+    public void ApplySuspensionState_UsesBannedStatus_ForPermanentSuspension()
+    {
+        var user = new UserEntity
+        {
+            Status = (int)UserStatus.Active,
+            SuspendedUntil = DateTime.UtcNow.AddHours(24)
+        };
+
+        AdminDataAccessAdapter.ApplySuspensionState(user, null);
+
+        Assert.Equal((int)UserStatus.Banned, user.Status);
+        Assert.Null(user.SuspendedUntil);
     }
 
     private static AdminUsersController CreateController(RecordingAdminDataAccess adminData)

@@ -40,5 +40,13 @@ public sealed class AuthControllerMetadataTests
         Assert.NotNull(method);
         Assert.NotNull(method!.GetCustomAttributes(typeof(AllowAnonymousAttribute), inherit: true).SingleOrDefault());
     }
-}
 
+    [Fact]
+    public void VerifyPasswordResetCode_HasAllowAnonymousAttribute()
+    {
+        var method = typeof(PasswordResetController).GetMethod(nameof(PasswordResetController.VerifyPasswordResetCode));
+
+        Assert.NotNull(method);
+        Assert.NotNull(method!.GetCustomAttributes(typeof(AllowAnonymousAttribute), inherit: true).SingleOrDefault());
+    }
+}
