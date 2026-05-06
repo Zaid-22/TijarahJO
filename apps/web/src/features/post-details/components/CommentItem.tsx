@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { MoreVertical, Reply, Trash2, Edit2, ChevronDown, ChevronUp, Flag } from "lucide-react";
 import { api } from "../../../services/api";
 import { logger } from "../../../shared/lib/logger";
@@ -28,6 +28,7 @@ interface CommentItemProps {
   postOwnerId?: string;
   onDelete: (id: number) => Promise<boolean>;
   onUpdate: (id: number, content: string) => Promise<boolean>;
+  onRequireAuth?: () => void;
   isRTL: boolean;
   nowTimestamp: number;
   isReply?: boolean;
@@ -42,12 +43,11 @@ export function CommentItem({
   postOwnerId,
   onDelete,
   onUpdate,
+  onRequireAuth,
   isRTL,
   nowTimestamp,
   isReply = false,
 }: CommentItemProps) {
-  const navigate = useNavigate();
-  const currentPathLocation = useLocation();
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [replyContent, setReplyContent] = useState("");
   const [showReplies, setShowReplies] = useState(false);
@@ -187,7 +187,7 @@ export function CommentItem({
                     <DropdownMenuItem
                       onClick={() => {
                         if (!currentUser) {
-                          navigate("/auth/login", { state: { from: currentPathLocation.pathname } });
+                          onRequireAuth?.();
                           return;
                         }
                         setIsReportOpen(true);
@@ -234,7 +234,7 @@ export function CommentItem({
                   className="h-7 text-xs font-bold text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-full"
                   onClick={() => {
                     if (!currentUser) {
-                      navigate("/auth/login", { state: { from: currentPathLocation.pathname } });
+                      onRequireAuth?.();
                       return;
                     }
                     setShowReplyForm(!showReplyForm);
@@ -297,6 +297,7 @@ export function CommentItem({
                     postOwnerId={postOwnerId}
                     onDelete={handleDeleteReply}
                     onUpdate={onUpdate}
+                    onRequireAuth={onRequireAuth}
                     isRTL={isRTL}
                     nowTimestamp={nowTimestamp}
                     isReply={true}

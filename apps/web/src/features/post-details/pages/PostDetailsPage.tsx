@@ -349,6 +349,7 @@ export function PostDetailsPage({
               postId={post.id}
               language={language}
               postOwnerId={post.sellerId}
+              onRequireAuth={onRequireAuth}
               labels={{
                 commentsTitle: t.commentsTitle,
                 addComment: t.addComment,

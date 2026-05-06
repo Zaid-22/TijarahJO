@@ -145,7 +145,6 @@ export function OtpCodeInput({
             inputMode="numeric"
             pattern="[0-9]*"
             autoComplete={index === 0 ? "one-time-code" : "off"}
-            autoFocus={index === 0}
             value={digit}
             disabled={disabled}
             maxLength={1}

@@ -29,7 +29,7 @@ export function CompareResultsSection({
   const t = marketplaceTranslations[language as keyof typeof marketplaceTranslations] || marketplaceTranslations.en;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* ── AI Analysis Divider ── */}
       <div className="compare-ai-divider flex items-center gap-3 py-2">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
@@ -110,10 +110,14 @@ export function CompareResultsSection({
           </div>
           <h2 className="text-xl font-bold text-foreground">{t.prosAndCons}</h2>
         </div>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {result.ProsCons.map((pc: PostProsConsDTO) => (
-            <div key={pc.PostName} className="rounded-xl border border-border/30 bg-muted/10 p-5 sm:p-6">
-              <h3 className="mb-4 text-base font-bold text-foreground">{pc.PostName}</h3>
+            <div key={pc.PostName} className="rounded-xl border border-border/30 bg-muted/10 p-4 sm:p-5">
+              <h3 className="mb-1 text-base font-bold text-foreground">{pc.PostName}</h3>
+              <p className="mb-3 flex items-center gap-2 text-xs">
+                <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 font-semibold text-emerald-600">{pc.Pros.length} {t.prosLabel?.toLowerCase() || "pros"}</span>
+                <span className="inline-flex items-center rounded-full bg-red-500/10 px-2 py-0.5 font-semibold text-red-500">{pc.Cons.length} {t.consLabel?.toLowerCase() || "cons"}</span>
+              </p>
               <div className="rounded-lg bg-emerald-500/6 px-3.5 py-3">
                 <div className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-600">
                   {t.prosLabel}
@@ -156,17 +160,17 @@ export function CompareResultsSection({
           </div>
           <div className="mb-5 flex flex-wrap gap-2.5 sm:gap-3">
             {([
-              { key: "Budget" as const, icon: DollarSign, label: t.budgetPick || "Budget", activeColor: "blue" },
-              { key: "Performance" as const, icon: Zap, label: t.performancePick || "Performance", activeColor: "blue" },
-              { key: "DailyUse" as const, icon: Home, label: t.dailyUsePick || "Daily Use", activeColor: "violet" },
-            ]).map(({ key, icon: Icon, label, activeColor }) => (
+              { key: "Budget" as const, icon: DollarSign, label: t.budgetPick || "Budget", activeClass: "border-blue-500 bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400" },
+              { key: "Performance" as const, icon: Zap, label: t.performancePick || "Performance", activeClass: "border-blue-500 bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400" },
+              { key: "DailyUse" as const, icon: Home, label: t.dailyUsePick || "Daily Use", activeClass: "border-violet-500 bg-violet-500/10 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400" },
+            ]).map(({ key, icon: Icon, label, activeClass }) => (
               <button
                 type="button"
                 key={key}
                 onClick={() => setActiveBestFor(key)}
                 className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition-all ${
                   activeBestFor === key
-                    ? `border-${activeColor}-500 bg-${activeColor}-500/10 text-${activeColor}-600 dark:bg-${activeColor}-500/20 dark:text-${activeColor}-400`
+                    ? activeClass
                     : "border-border/50 bg-background text-muted-foreground"
                 }`}
               >
@@ -187,9 +191,9 @@ export function CompareResultsSection({
 
       {/* ── Final Recommendation — Winner Card ── */}
       {result.FinalRecommendation && (
-        <section className="compare-card compare-recommendation rounded-2xl border-2 border-primary/30 bg-card p-5 shadow-sm sm:p-6">
+        <section className="compare-card compare-recommendation rounded-2xl border-2 border-amber-500/30 bg-linear-to-br from-amber-500/5 via-card to-card p-5 shadow-md sm:p-6">
           <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 ring-4 ring-amber-500/5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/15 ring-4 ring-amber-500/10 shadow-sm">
               <Trophy className="h-6 w-6 text-amber-500" />
             </div>
             <div>
@@ -200,7 +204,7 @@ export function CompareResultsSection({
             </div>
           </div>
           <div className="mb-5 flex items-center gap-4">
-            <span className="text-2xl font-bold tracking-tight text-primary sm:text-3xl">
+            <span className="text-3xl font-extrabold tracking-tight text-primary sm:text-4xl">
               {result.FinalRecommendation.WinnerName}
             </span>
           </div>
@@ -223,7 +227,7 @@ export function CompareResultsSection({
               (p) => p.name?.toLowerCase().trim() === result.FinalRecommendation?.WinnerName?.toLowerCase().trim()
             ) || selectedPosts[0];
             return (
-              <div className="flex flex-wrap items-center gap-3.5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <button type="button" 
                   onClick={() => winnerPost.sellerId ? navigate(`/chat/${encodeURIComponent(winnerPost.sellerId)}`, { state: { fromPath: "/compare" } }) : navigate(`/post/${winnerPost.id}`, { state: { fromPath: "/compare" } })}
                   className="flex items-center justify-center gap-2 rounded-xl border border-input bg-background px-6 py-3 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">

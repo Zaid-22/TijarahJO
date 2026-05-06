@@ -550,9 +550,41 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
             .FirstOrDefaultAsync(c => c.CityID == cityId, cancellationToken);
         if (entity == null) return false;
 
+        var areaIds = entity.Areas.Select(a => a.AreaID).ToList();
+
+        // Nullify FK references in Posts that point to this city or its areas
+        var referencingPosts = await _dbContext.Posts
+            .IgnoreQueryFilters()
+            .Where(p => p.CityID == cityId || (p.AreaID.HasValue && areaIds.Contains(p.AreaID.Value)))
+            .ToListAsync(cancellationToken);
+        foreach (var post in referencingPosts)
+        {
+            post.CityID = null;
+            post.AreaID = null;
+        }
+
+        // Nullify FK references in Users that point to this city or its areas
+        var referencingUsers = await _dbContext.Users
+            .IgnoreQueryFilters()
+            .Where(u => u.CityID == cityId || (u.AreaID.HasValue && areaIds.Contains(u.AreaID.Value)))
+            .ToListAsync(cancellationToken);
+        foreach (var user in referencingUsers)
+        {
+            user.CityID = null;
+            user.AreaID = null;
+        }
+
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+        // First save: flush FK nullifications before deleting the location rows.
+        // EF Core doesn't model the DB-level FK_Users_Areas / FK_Posts_Cities constraints,
+        // so it may reorder DELETEs before UPDATEs within a single SaveChanges batch.
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
         _dbContext.Areas.RemoveRange(entity.Areas);
         _dbContext.Cities.Remove(entity);
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return true;
     }
 
@@ -578,8 +610,35 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
     {
         var entity = await _dbContext.Areas.FindAsync([areaId], cancellationToken);
         if (entity == null) return false;
+
+        // Nullify FK references in Posts that point to this area
+        var referencingPosts = await _dbContext.Posts
+            .IgnoreQueryFilters()
+            .Where(p => p.AreaID == areaId)
+            .ToListAsync(cancellationToken);
+        foreach (var post in referencingPosts)
+        {
+            post.AreaID = null;
+        }
+
+        // Nullify FK references in Users that point to this area
+        var referencingUsers = await _dbContext.Users
+            .IgnoreQueryFilters()
+            .Where(u => u.AreaID == areaId)
+            .ToListAsync(cancellationToken);
+        foreach (var user in referencingUsers)
+        {
+            user.AreaID = null;
+        }
+
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+        // First save: flush FK nullifications before deleting the area row.
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
         _dbContext.Areas.Remove(entity);
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return true;
     }
 

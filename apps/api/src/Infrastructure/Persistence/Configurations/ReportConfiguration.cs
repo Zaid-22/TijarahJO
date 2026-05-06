@@ -31,5 +31,6 @@ public class ReportConfiguration : IEntityTypeConfiguration<ReportEntity>
             .HasForeignKey(e => e.ResolvedByUserID)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasQueryFilter(e => e.Reporter != null && !e.Reporter.IsDeleted);
     }
 }

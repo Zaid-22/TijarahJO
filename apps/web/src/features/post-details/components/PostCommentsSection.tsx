@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
 import { MessageSquare, Send } from "lucide-react";
 import { api } from "../../../services/api";
 import { logger } from "../../../shared/lib/logger";
@@ -36,6 +35,7 @@ interface PostCommentsSectionProps {
     replies: string;
   };
   postOwnerId?: string;
+  onRequireAuth?: () => void;
 }
 
 export function PostCommentsSection({
@@ -43,9 +43,8 @@ export function PostCommentsSection({
   language,
   labels,
   postOwnerId,
+  onRequireAuth,
 }: PostCommentsSectionProps) {
-  const navigate = useNavigate();
-  const currentPathLocation = useLocation();
   const { user, isAuthenticated } = useAuth();
   const [comments, setComments] = useState<PostComment[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -57,6 +56,9 @@ export function PostCommentsSection({
   const [nowTimestamp, setNowTimestamp] = useState(Date.now());
 
   const isRTL = language === "ar";
+  const requireAuthForComment = () => {
+    onRequireAuth?.();
+  };
 
   const fetchComments = useCallback(
     async (pageNum: number, append = false) => {
@@ -203,14 +205,14 @@ export function PostCommentsSection({
             value={newComment}
             onChange={(e) => {
               if (!isAuthenticated) {
-                navigate("/auth/login", { state: { from: currentPathLocation.pathname } });
+                requireAuthForComment();
                 return;
               }
               setNewComment(e.target.value);
             }}
             onClick={() => {
               if (!isAuthenticated) {
-                navigate("/auth/login", { state: { from: currentPathLocation.pathname } });
+                requireAuthForComment();
               }
             }}
             readOnly={!isAuthenticated}
@@ -219,7 +221,7 @@ export function PostCommentsSection({
             <Button
               onClick={() => {
                 if (!isAuthenticated) {
-                  navigate("/auth/login", { state: { from: currentPathLocation.pathname } });
+                  requireAuthForComment();
                   return;
                 }
                 handleAddComment();
@@ -271,6 +273,7 @@ export function PostCommentsSection({
                 postOwnerId={postOwnerId}
                 onDelete={handleDeleteComment}
                 onUpdate={handleUpdateComment}
+                onRequireAuth={onRequireAuth}
                 isRTL={isRTL}
                 nowTimestamp={nowTimestamp}
               />
