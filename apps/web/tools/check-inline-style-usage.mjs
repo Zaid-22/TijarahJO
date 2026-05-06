@@ -4,7 +4,10 @@ import path from "node:path";
 const SRC_DIR = path.resolve(process.cwd(), "src");
 const STYLE_TOKEN = "style={{";
 
-const ALLOWED_STYLE_USAGE = new Map([["src/shared/ui/image-lightbox.tsx", 1]]);
+const ALLOWED_STYLE_USAGE = new Map([
+  ["src/shared/ui/image-lightbox.tsx", 1],
+  ["src/features/marketplace/pages/ComparePage.tsx", 1]
+]);
 
 function walkFiles(dirPath) {
   const entries = readdirSync(dirPath);

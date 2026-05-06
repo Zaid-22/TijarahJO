@@ -415,7 +415,7 @@ export default function ComparePage() {
                       </div>
                     </div>
                     {isLowest && (
-                      <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
+                      <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-600">
                         {language === "ar" ? "أقل" : "Best"}
                       </span>
                     )}
