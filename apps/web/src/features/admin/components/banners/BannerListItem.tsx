@@ -54,7 +54,7 @@ export function BannerListItem({
           </div>
 
           {/* Preview Image */}
-          <div className="relative w-32 h-20 rounded-lg overflow-hidden border border-border flex-shrink-0 bg-muted">
+          <div className="relative w-32 h-20 rounded-lg overflow-hidden border border-border shrink-0 bg-muted">
             {banner.imageUrl ? (
               <img
                 src={banner.imageUrl}
@@ -76,7 +76,7 @@ export function BannerListItem({
               </p>
               <Badge
                 variant={banner.isActive ? "default" : "outline"}
-                className="text-xs flex-shrink-0"
+                className="text-xs shrink-0"
               >
                 {banner.isActive ? "Active" : "Hidden"}
               </Badge>
@@ -100,12 +100,12 @@ export function BannerListItem({
           </div>
 
           {/* Order */}
-          <div className="text-xs text-muted-foreground font-mono w-8 text-center flex-shrink-0">
+          <div className="text-xs text-muted-foreground font-mono w-8 text-center shrink-0">
              #{banner.displayOrder} ({index + 1})
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <Button
               variant="ghost"
               size="icon"

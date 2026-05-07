@@ -52,7 +52,7 @@ export function HomeCategoriesSection({
           ? Array.from({ length: 10 }).map((_, i) => (
               <div
                 key={`cat-skeleton-${i}`}
-                className="group relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-border bg-card aspect-[4/3] animate-pulse"
+                className="group relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-border bg-card aspect-4/3 animate-pulse"
               >
                 <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-muted overflow-hidden flex items-center justify-center">
                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-muted-foreground/20" />
@@ -84,7 +84,7 @@ export function HomeCategoriesSection({
                   type="button"
                   aria-label={categoryLabel}
                   onClick={() => setSelectedCategoryForPage(category.name)}
-                  className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 aspect-[4/3]"
+                  className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 aspect-4/3"
                 >
                   {hasImage ? (
                     /* Database image */
@@ -111,9 +111,11 @@ export function HomeCategoriesSection({
                           }
                         }}
                       />
-                      {/* Label over image */}
-                      <div className="absolute inset-x-0 bottom-3 z-10 flex justify-center px-4">
-                        <span className="max-w-full rounded-full border border-white/15 bg-slate-950/35 px-5 py-2.5 text-sm font-medium leading-tight text-white/95 text-center shadow-md backdrop-blur-[1px] sm:text-base">
+                      {/* Subtle bottom gradient scrim — only covers bottom ~35% */}
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-linear-to-t from-black/50 via-black/20 to-transparent" />
+                      {/* Compact label anchored bottom-left */}
+                      <div className="absolute inset-x-0 bottom-0 z-10 flex items-end px-3 pb-2.5 sm:px-3.5 sm:pb-3">
+                        <span className="text-[13px] font-semibold leading-snug tracking-wide text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] sm:text-sm">
                           {categoryLabel}
                         </span>
                       </div>
@@ -142,7 +144,7 @@ function CategoryIconFallback({
   label: string;
 }) {
   return (
-    <div className="flex h-full w-full items-end bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-4 sm:p-5">
+    <div className="flex h-full w-full items-end bg-linear-to-br from-primary/8 via-background to-secondary/8 p-4 sm:p-5">
       <span className="text-sm sm:text-base font-semibold text-foreground text-center line-clamp-2 leading-tight group-hover:text-primary transition-colors duration-200 w-full">
         {label}
       </span>
