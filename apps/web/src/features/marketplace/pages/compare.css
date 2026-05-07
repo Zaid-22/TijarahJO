@@ -104,11 +104,6 @@
 
 /* ── Final recommendation glow ── */
 
-/* Recommendation card styles (Animations removed for professional look) */
-.compare-price-bar {
-  transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
 /* ── Compare Panel thumbnail ── */
 
 .compare-panel-thumb-wrapper {

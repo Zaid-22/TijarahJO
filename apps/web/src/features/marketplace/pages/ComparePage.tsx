@@ -1,7 +1,7 @@
 /* eslint-disable max-lines */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Scale, ArrowLeft, Sparkles, AlertTriangle, RefreshCw, Star, Eye, PlayCircle, Video, DollarSign } from "lucide-react";
+import { Scale, ArrowLeft, Sparkles, AlertTriangle, RefreshCw, Star, Eye, PlayCircle, Video } from "lucide-react";
 import { useCompare } from "../../../contexts/CompareContext";
 import { useAppSettings } from "../../../contexts/AppSettingsContext";
 import { api } from "../../../services/api";
@@ -368,63 +368,6 @@ export default function ComparePage() {
             })}
           </div>
         </div>
-
-        {/* ──────────────── Price Comparison Strip ──────────────── */}
-        {selectedPosts.length >= 2 && (
-          <div className="compare-section-enter mb-5 rounded-2xl border border-border/50 bg-card p-4 shadow-sm sm:p-5">
-            <div className="mb-3 flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10">
-                <DollarSign className="h-5 w-5 text-emerald-600" />
-              </div>
-              <h2 className="text-base font-bold text-foreground">{language === "ar" ? "مقارنة الأسعار" : "Price Comparison"}</h2>
-            </div>
-            <div className="space-y-2.5">
-              {selectedPosts.map((post) => {
-                const details = postDetailsById[post.id];
-                const price = details?.price ?? post.price ?? 0;
-                const maxPrice = Math.max(
-                  ...selectedPosts.map((p) => {
-                    const d = postDetailsById[p.id];
-                    return d?.price ?? p.price ?? 0;
-                  }),
-                );
-                const barWidth = maxPrice > 0 ? Math.max(10, (price / maxPrice) * 100) : 0;
-                const isLowest = price > 0 && price === Math.min(
-                  ...selectedPosts.map((p) => {
-                    const d = postDetailsById[p.id];
-                    return d?.price ?? p.price ?? 0;
-                  }).filter((v) => v > 0),
-                );
-                return (
-                  <div key={post.id} className="flex items-center gap-3">
-                    <span className="w-28 truncate text-sm font-medium text-foreground sm:w-40">
-                      {post.name}
-                    </span>
-                    <div className="relative h-7 flex-1 overflow-hidden rounded-lg bg-muted/30">
-                      <div
-                        className={`compare-price-bar absolute inset-y-0 left-0 flex items-center justify-end rounded-lg pr-2.5 ${
-                          isLowest
-                            ? "bg-linear-to-r from-emerald-500/80 to-emerald-500/50"
-                            : "bg-linear-to-r from-primary/70 to-primary/40"
-                        }`}
-                        style={{ width: `${barWidth}%` }}
-                      >
-                        <span className="whitespace-nowrap text-xs font-bold text-white">
-                          {price > 0 ? `${price.toLocaleString()} JOD` : "—"}
-                        </span>
-                      </div>
-                    </div>
-                    {isLowest && (
-                      <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-600">
-                        {language === "ar" ? "أقل" : "Best"}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         {/* ──────────────── Recommended YouTube Videos ──────────────── */}
         <section className="compare-section-enter mb-6 rounded-2xl border border-border/50 bg-card p-5 shadow-sm sm:p-6">
