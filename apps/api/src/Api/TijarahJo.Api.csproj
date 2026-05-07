@@ -29,6 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="uploads/category-images/*.jpg" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="uploads/post-images/sample-*.webp" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 

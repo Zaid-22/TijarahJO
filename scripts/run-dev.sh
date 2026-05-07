@@ -9,7 +9,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND_DIR="$ROOT_DIR/apps/api/src/Api"
 FRONTEND_DIR="$ROOT_DIR/apps/web"
 DOCKER_COMPOSE_FILE="$ROOT_DIR/infra/docker-compose.yml"
-BACKEND_URL="${ASPNETCORE_URLS:-http://localhost:5033}"
+FRONTEND_PORT=5173
+FRONTEND_URL="http://localhost:${FRONTEND_PORT}"
 DATABASE_CONNECTION_SOURCE=""
 
 resolve_primary_backend_url() {
@@ -25,6 +26,8 @@ if [[ -f "$ROOT_DIR/.env" ]]; then
   source "$ROOT_DIR/.env"
   set +a
 fi
+
+BACKEND_URL="${ASPNETCORE_URLS:-http://localhost:5033}"
 
 if [[ -z "${JWT_SIGNING_KEY:-}" ]]; then
   echo "Error: JWT_SIGNING_KEY is not configured."
@@ -111,18 +114,40 @@ echo "Starting TijarahJo Development Servers..."
 echo
 
 cleanup() {
+  if [[ -z "${BACKEND_PID:-}" && -z "${FRONTEND_PID:-}" ]]; then
+    return 0
+  fi
+
   echo
   echo "Stopping servers..."
   if [[ -n "${BACKEND_PID:-}" ]]; then
-    kill "$BACKEND_PID" 2>/dev/null || true
+    terminate_process_tree "$BACKEND_PID"
   fi
-  pkill -f "TijarahJo.Api" 2>/dev/null || true
   if [[ -n "${FRONTEND_PID:-}" ]]; then
-    kill "$FRONTEND_PID" 2>/dev/null || true
+    terminate_process_tree "$FRONTEND_PID"
   fi
 }
 
 trap cleanup SIGINT SIGTERM EXIT
+
+terminate_process_tree() {
+  local pid="${1:-}"
+  local child_pid=""
+
+  if [[ -z "$pid" ]]; then
+    return 0
+  fi
+
+  if command -v pgrep >/dev/null 2>&1; then
+    while IFS= read -r child_pid; do
+      if [[ -n "$child_pid" ]]; then
+        terminate_process_tree "$child_pid"
+      fi
+    done < <(pgrep -P "$pid" 2>/dev/null || true)
+  fi
+
+  kill "$pid" 2>/dev/null || true
+}
 
 wait_for_http_endpoint() {
   local endpoint="$1"
@@ -156,7 +181,49 @@ wait_for_http_endpoint() {
   return 1
 }
 
-echo "Starting Backend (ASP.NET Core) on http://localhost:5033..."
+extract_url_port() {
+  local url="$1"
+
+  if [[ "$url" =~ ^https?://[^/:]+:([0-9]+)($|/) ]]; then
+    printf "%s" "${BASH_REMATCH[1]}"
+    return 0
+  fi
+
+  if [[ "$url" =~ ^https:// ]]; then
+    printf "443"
+    return 0
+  fi
+
+  printf "80"
+}
+
+require_listen_port_available() {
+  local name="$1"
+  local port="$2"
+
+  if command -v lsof >/dev/null 2>&1 && lsof -nP -tiTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
+    echo "Error: $name port $port is already in use."
+    echo "Stop the existing process first:"
+    echo "  ./scripts/kill-port.sh $port"
+    return 1
+  fi
+
+  return 0
+}
+
+PRIMARY_BACKEND_URL="$(resolve_primary_backend_url "$BACKEND_URL")"
+BACKEND_PORT="$(extract_url_port "$PRIMARY_BACKEND_URL")"
+BACKEND_LIVE_ENDPOINT="${PRIMARY_BACKEND_URL}/health/live"
+BACKEND_HEALTH_ENDPOINT="${PRIMARY_BACKEND_URL}/api/v1/categories"
+
+PORT_CHECK_FAILED=0
+require_listen_port_available "backend" "$BACKEND_PORT" || PORT_CHECK_FAILED=1
+require_listen_port_available "frontend" "$FRONTEND_PORT" || PORT_CHECK_FAILED=1
+if [[ "$PORT_CHECK_FAILED" -ne 0 ]]; then
+  exit 1
+fi
+
+echo "Starting Backend (ASP.NET Core) on $PRIMARY_BACKEND_URL..."
 (
   cd "$BACKEND_DIR"
   ASPNETCORE_ENVIRONMENT=Development \
@@ -167,11 +234,7 @@ echo "Starting Backend (ASP.NET Core) on http://localhost:5033..."
 ) &
 BACKEND_PID=$!
 
-PRIMARY_BACKEND_URL="$(resolve_primary_backend_url "$BACKEND_URL")"
-BACKEND_LIVE_ENDPOINT="${PRIMARY_BACKEND_URL}/health/live"
-BACKEND_HEALTH_ENDPOINT="${PRIMARY_BACKEND_URL}/api/v1/categories"
-
-BACKEND_LIVE_CODE="$(wait_for_http_endpoint "$BACKEND_LIVE_ENDPOINT" "any-success" 30 2 || true)"
+BACKEND_LIVE_CODE="$(wait_for_http_endpoint "$BACKEND_LIVE_ENDPOINT" "any-success" 120 2 || true)"
 if [[ "$BACKEND_LIVE_CODE" == "000" ]]; then
   echo "Error: backend did not respond on $BACKEND_URL."
   echo "Check backend startup logs above."
@@ -192,7 +255,7 @@ if [[ "$BACKEND_HEALTH_CODE" =~ ^5 ]]; then
   exit 1
 fi
 
-echo "Starting Frontend (Vite) on http://localhost:5173..."
+echo "Starting Frontend (Vite) on $FRONTEND_URL..."
 (
   cd "$FRONTEND_DIR"
   npm run dev
@@ -201,9 +264,9 @@ FRONTEND_PID=$!
 
 echo
 echo "Both servers are starting..."
-echo "Backend API: http://localhost:5033"
-echo "Frontend: http://localhost:5173"
-echo "Swagger: http://localhost:5033/swagger"
+echo "Backend API: $PRIMARY_BACKEND_URL"
+echo "Frontend: $FRONTEND_URL"
+echo "Swagger: ${PRIMARY_BACKEND_URL}/swagger"
 echo
 echo "Press Ctrl+C to stop both servers"
 

@@ -320,11 +320,12 @@ app.UseTijarahJoSecurityHeaders();
 // Access-Control-Allow-Origin headers (static files short-circuit the pipeline).
 app.UseCors("TijarahJoCors");
 
-// Static files (uploads root: post images, chat images, user avatars)
+// Static files (uploads root: category images, post images, chat images, user avatars)
 var fileStorageOptions = app.Services.GetRequiredService<IOptions<FileStorageOptions>>().Value;
 string uploadsRootPath = LocalPostImageFileStorageService.ResolveAbsoluteUploadsRootPath(
     app.Environment.ContentRootPath, fileStorageOptions);
 Directory.CreateDirectory(uploadsRootPath);
+CopyBundledUploadDirectory(app.Environment.ContentRootPath, uploadsRootPath, "category-images", app.Logger);
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(uploadsRootPath),
@@ -387,5 +388,51 @@ if (featureFlags.EnableHealthChecks)
 app.MapHub<TijarahJo.Api.Hubs.ChatHub>("/chatHub");
 
 app.Run();
+
+static void CopyBundledUploadDirectory(
+    string contentRootPath,
+    string uploadsRootPath,
+    string relativeDirectory,
+    ILogger logger)
+{
+    string sourceRoot = Path.GetFullPath(Path.Combine(contentRootPath, "uploads", relativeDirectory));
+    if (!Directory.Exists(sourceRoot))
+    {
+        return;
+    }
+
+    string targetRoot = Path.GetFullPath(Path.Combine(uploadsRootPath, relativeDirectory));
+    string normalizedSourceRoot = sourceRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+    string normalizedTargetRoot = targetRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+    if (string.Equals(normalizedSourceRoot, normalizedTargetRoot, StringComparison.OrdinalIgnoreCase))
+    {
+        return;
+    }
+
+    Directory.CreateDirectory(targetRoot);
+
+    int copiedCount = 0;
+    foreach (string sourcePath in Directory.EnumerateFiles(sourceRoot, "*", SearchOption.TopDirectoryOnly))
+    {
+        string targetPath = Path.Combine(targetRoot, Path.GetFileName(sourcePath));
+        if (File.Exists(targetPath) &&
+            File.GetLastWriteTimeUtc(targetPath) >= File.GetLastWriteTimeUtc(sourcePath))
+        {
+            continue;
+        }
+
+        File.Copy(sourcePath, targetPath, overwrite: true);
+        copiedCount++;
+    }
+
+    if (copiedCount > 0)
+    {
+        logger.LogInformation(
+            "Copied {CopiedCount} bundled upload assets from {SourceRoot} to {TargetRoot}.",
+            copiedCount,
+            sourceRoot,
+            targetRoot);
+    }
+}
 
 public partial class Program;
