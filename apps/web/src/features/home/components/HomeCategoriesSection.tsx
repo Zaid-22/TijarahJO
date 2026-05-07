@@ -113,7 +113,7 @@ export function HomeCategoriesSection({
                       />
                       {/* Label over image */}
                       <div className="absolute inset-x-0 bottom-3 z-10 flex justify-center px-4">
-                        <span className="max-w-full rounded-full border border-white/60 bg-white/68 px-5 py-2.5 text-sm font-medium leading-tight text-slate-900 text-center shadow-sm backdrop-blur-[1px] supports-backdrop-filter:bg-white/58 sm:text-base">
+                        <span className="max-w-full rounded-full border border-white/15 bg-slate-950/35 px-5 py-2.5 text-sm font-medium leading-tight text-white/95 text-center shadow-md backdrop-blur-[1px] sm:text-base">
                           {categoryLabel}
                         </span>
                       </div>
