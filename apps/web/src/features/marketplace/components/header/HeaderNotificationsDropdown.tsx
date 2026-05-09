@@ -121,12 +121,12 @@ export function HeaderNotificationsDropdown({
   const normalizedUnread = Math.max(0, Math.floor(unreadCount));
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen} modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
-          className="group relative h-10 w-10 rounded-full border border-border/60 bg-background/70 p-0 text-muted-foreground shadow-sm hover:border-primary/35 hover:bg-primary/5 hover:text-primary hover:shadow-md transition-all"
+          className="group relative flex h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
           aria-label={language === "ar" ? "الإشعارات" : "Notifications"}
         >
           <Bell className="w-5 h-5 transition-transform group-hover:scale-110" />
@@ -191,7 +191,7 @@ export function HeaderNotificationsDropdown({
                   }`}
                 >
                   <div
-                    className={`flex-shrink-0 mt-0.5 h-8 w-8 rounded-full flex items-center justify-center ${
+                    className={`shrink-0 mt-0.5 h-8 w-8 rounded-full flex items-center justify-center ${
                       !notification.isRead
                         ? "bg-primary/15 text-primary"
                         : "bg-muted text-muted-foreground"
@@ -213,7 +213,7 @@ export function HeaderNotificationsDropdown({
                     </p>
                   </div>
                   {!notification.isRead && (
-                    <div className="flex-shrink-0 mt-1">
+                    <div className="shrink-0 mt-1">
                       <div className="h-2.5 w-2.5 rounded-full bg-primary" />
                     </div>
                   )}

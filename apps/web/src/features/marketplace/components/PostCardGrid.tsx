@@ -12,7 +12,9 @@ import { postCardMediaClass } from "./postCardMediaClass";
 
 import { usePostCardState, type PostCardSharedProps } from "./usePostCardState";
 
-export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardSharedProps) {
+export const PostCardGrid = React.memo(function PostCardGrid(
+  props: PostCardSharedProps,
+) {
   const { post, isFavorite = false } = props;
   const imageProps = getResponsiveImageProps(post.image, {
     width: 480,
@@ -39,15 +41,20 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
     typeof post.reviewCount === "number" && post.reviewCount > 0
       ? post.reviewCount
       : null;
-  const hasSellerRating = sellerAverageRating !== null && sellerReviewCount !== null;
+  const hasSellerRating =
+    sellerAverageRating !== null && sellerReviewCount !== null;
   const isArabic = resolvedLanguage === "ar";
-  const displayLocation = isArabic ? post.locationAr || post.location : post.location;
+  const displayLocation = isArabic
+    ? post.locationAr || post.location
+    : post.location;
   const displayArea = isArabic ? post.areaAr || post.area : post.area;
   const separator = isArabic ? "، " : ", ";
-  const detailLocation = displayArea ? displayLocation + separator + displayArea : displayLocation;
+  const detailLocation = displayArea
+    ? displayLocation + separator + displayArea
+    : displayLocation;
 
   return (
-    <article className="group relative flex cursor-pointer flex-col overflow-hidden rounded-[14px] bg-card shadow-md ring-1 ring-black/5 dark:ring-white/5">
+    <article className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-black/5 transition-all duration-300 hover:bg-slate-50 hover:shadow-inner hover:ring-black/10 dark:ring-white/5 dark:hover:bg-slate-900/60">
       <button
         type="button"
         onClick={openPost}
@@ -56,7 +63,10 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
       />
 
       <div
-        className={postCardMediaClass + " pointer-events-none relative aspect-4/5 overflow-hidden bg-muted/30"}
+        className={
+          postCardMediaClass +
+          " pointer-events-none relative aspect-4/5 overflow-hidden bg-muted/30"
+        }
       >
         <ImageWithFallback
           src={imageProps.src || post.image}
@@ -127,28 +137,35 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
           <h3 className="line-clamp-2 text-base font-semibold leading-tight text-foreground sm:text-lg">
             {post.name}
           </h3>
-          <div className="min-w-0 text-muted-foreground" title={detailLocation || post.location || ""}>
-            <span className="truncate text-xs font-medium text-muted-foreground sm:text-xs">
+          <div className="flex flex-wrap items-center gap-x-2 text-xs font-medium text-muted-foreground sm:text-xs">
+            <span
+              className="truncate"
+              title={detailLocation || post.location || ""}
+            >
               {detailLocation || "-"}
             </span>
+            {hasSellerRating && (
+              <>
+                <span className="text-slate-300 dark:text-slate-700">•</span>
+                <div className="flex items-center gap-1 text-amber-500 font-bold">
+                  <Star className="h-3 w-3 fill-current" />
+                  <span>{sellerAverageRating?.toFixed(1)}</span>
+                  <span className="text-xs font-medium opacity-60">
+                    ({sellerReviewCount})
+                  </span>
+                </div>
+              </>
+            )}
           </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {hasSellerRating ? (
-            <div className="inline-flex items-center gap-1 rounded-full bg-amber-500/12 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
-              <Star className="h-3.5 w-3.5 fill-current" />
-              <span>{sellerAverageRating?.toFixed(1)}</span>
-              <span className="text-xs font-medium opacity-70">({sellerReviewCount})</span>
-            </div>
-          ) : null}
         </div>
       </CardContent>
     </article>
   );
 });
 
-function resolveGridImageSizes(viewMode: PostCardSharedProps["viewMode"]): string {
+function resolveGridImageSizes(
+  viewMode: PostCardSharedProps["viewMode"],
+): string {
   switch (viewMode) {
     case "grid-2":
       return "(max-width: 639px) 92vw, 46vw";

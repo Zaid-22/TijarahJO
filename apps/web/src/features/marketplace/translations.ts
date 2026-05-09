@@ -1,6 +1,7 @@
 export const marketplaceTranslations = {
   en: {
-    searchPlaceholder: "Search in TijarahJo...",
+    searchPlaceholder: "Search for anything...",
+    searchButtonLabel: "Search",
     backToMarketplace: "Back to Marketplace",
     filters: "Filters",
     priceRange: "Price Range",
@@ -160,7 +161,8 @@ export const marketplaceTranslations = {
     goBack: "Go Back"
   },
   ar: {
-    searchPlaceholder: "ابحث في تجارة جو...",
+    searchPlaceholder: "ابحث عن أي شيء...",
+    searchButtonLabel: "بحث",
     backToMarketplace: "العودة إلى السوق",
     filters: "الفلاتر",
     priceRange: "نطاق السعر",

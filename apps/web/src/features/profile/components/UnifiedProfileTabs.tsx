@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Plus, Star } from "lucide-react";
+import { Star, ShoppingBag, BadgeCheck } from "lucide-react";
 import { getViewModeGridClass } from "../../../shared/lib/viewModeGrid";
 import { Button } from "../../../shared/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../shared/ui/tabs";
@@ -29,14 +29,12 @@ export function UnifiedProfileTabs({
   labels,
   viewModel,
   listingViewMode,
-  averageRating,
   rating,
   comment,
   isSubmittingReview,
   onRatingChange,
   onCommentChange,
   onReviewSubmit,
-  onAddPostClick,
   renderListingCard,
   dateLocale,
 }: UnifiedProfileTabsProps) {
@@ -44,127 +42,118 @@ export function UnifiedProfileTabs({
     <div className="mt-2">
       <Tabs defaultValue="active" className="w-full gap-5">
         <div className="mb-4 flex flex-col gap-3 px-2 sm:px-4 md:flex-row md:items-center md:justify-between">
-          <TabsList className="h-auto w-full min-w-0 flex-nowrap justify-start gap-2 overflow-x-auto whitespace-nowrap bg-transparent p-1 sm:flex-wrap sm:gap-3 md:w-fit hide-scrollbar">
+          <TabsList className="h-auto w-full min-w-0 flex-nowrap justify-start gap-6 overflow-x-auto whitespace-nowrap bg-transparent p-0 border-b border-border/60 sm:flex-wrap md:w-fit hide-scrollbar">
             <TabsTrigger
               value="active"
-              className="flex-none h-auto rounded-[14px] border border-transparent px-4 py-2.5 text-sm font-semibold text-muted-foreground shadow-none data-[state=active]:bg-card dark:data-[state=active]:bg-muted/50 data-[state=active]:text-primary data-[state=active]:border-border/60 data-[state=active]:shadow-sm transition-all"
+              className="flex-none relative h-auto rounded-none border-0 border-b-2 border-transparent px-2 py-3.5 text-sm font-semibold text-muted-foreground shadow-none data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-transparent data-[state=active]:border-b-primary data-[state=active]:shadow-none transition-all hover:text-foreground"
             >
               <span>{labels.activeListings}</span>
               <span className="opacity-80 ms-1.5">({viewModel.activeListings.length})</span>
             </TabsTrigger>
             <TabsTrigger
               value="sold"
-              className="flex-none h-auto rounded-[14px] border border-transparent px-4 py-2.5 text-sm font-semibold text-muted-foreground shadow-none data-[state=active]:bg-card dark:data-[state=active]:bg-muted/50 data-[state=active]:text-primary data-[state=active]:border-border/60 data-[state=active]:shadow-sm transition-all"
+              className="flex-none relative h-auto rounded-none border-0 border-b-2 border-transparent px-2 py-3.5 text-sm font-semibold text-muted-foreground shadow-none data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-transparent data-[state=active]:border-b-primary data-[state=active]:shadow-none transition-all hover:text-foreground"
             >
               <span>{labels.soldListings}</span>
               <span className="opacity-80 ms-1.5">({viewModel.soldListings.length})</span>
             </TabsTrigger>
             <TabsTrigger
               value="reviews"
-              className="flex-none h-auto rounded-[14px] border border-transparent px-4 py-2.5 text-sm font-semibold text-muted-foreground shadow-none data-[state=active]:bg-card dark:data-[state=active]:bg-muted/50 data-[state=active]:text-primary data-[state=active]:border-border/60 data-[state=active]:shadow-sm transition-all"
+              className="flex-none relative h-auto rounded-none border-0 border-b-2 border-transparent px-2 py-3.5 text-sm font-semibold text-muted-foreground shadow-none data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-transparent data-[state=active]:border-b-primary data-[state=active]:shadow-none transition-all hover:text-foreground"
             >
               <span>{labels.reviews}</span>
               <span className="opacity-80 ms-1.5">({viewModel.reviews.length})</span>
             </TabsTrigger>
           </TabsList>
-
-          {viewModel.canManageListings && onAddPostClick ? (
-            <Button
-              variant="outline"
-              className="h-10 w-full rounded-xl border border-primary/15 bg-primary/5 px-4 text-sm font-semibold text-primary shadow-none hover:bg-primary/10 hover:text-primary sm:w-auto"
-              onClick={onAddPostClick}
-            >
-              <Plus className="me-2 h-4 w-4 text-primary/90" />
-              {labels.addPost}
-            </Button>
-          ) : null}
         </div>
 
-        <TabsContent value="active" className="mt-1">
+        <TabsContent value="active" className="mt-4">
           {viewModel.activeListings.length > 0 ? (
             <div className={`grid gap-4 ${getViewModeGridClass(listingViewMode)}`}>
               {viewModel.activeListings.map((post) => renderListingCard(post))}
             </div>
           ) : (
-            <p className="py-6 text-muted-foreground">{labels.noActiveListings}</p>
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-muted/20 py-16 text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                <ShoppingBag className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="mb-1 text-lg font-bold text-foreground">
+                {labels.noActiveListings}
+              </h3>
+            </div>
           )}
         </TabsContent>
 
-        <TabsContent value="sold" className="mt-1">
+        <TabsContent value="sold" className="mt-4">
           {viewModel.soldListings.length > 0 ? (
             <div className={`grid gap-4 ${getViewModeGridClass(listingViewMode)}`}>
               {viewModel.soldListings.map((post) => renderListingCard(post))}
             </div>
           ) : (
-            <p className="py-6 text-muted-foreground">{labels.noSoldListings}</p>
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-muted/20 py-16 text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                <BadgeCheck className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="mb-1 text-lg font-bold text-foreground">
+                {labels.noSoldListings}
+              </h3>
+            </div>
           )}
         </TabsContent>
 
         <TabsContent value="reviews" className="mt-1">
-          <div className="mb-5 flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-foreground">{labels.reviews}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {labels.reviewsDescription}
-              </p>
-            </div>
-            <div className="flex items-center gap-3 rounded-2xl bg-muted/60 px-4 py-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/15">
-                <Star className="h-5 w-5 fill-current text-amber-500" />
-              </div>
-              <div>
-                <p className="text-base font-semibold text-foreground">
-                  {averageRating}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {viewModel.reviews.length} {labels.reviewCountWord}
-                </p>
-              </div>
-            </div>
+          <div className="mb-6 border-b border-border pb-4">
+            <h2 className="text-xl font-bold text-foreground">{labels.reviews}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {labels.reviewsDescription}
+            </p>
           </div>
 
           {viewModel.canReview ? (
-            <div className="mb-5 rounded-2xl border border-border bg-muted/30 p-4">
-              <h3 className="mb-1 text-lg font-semibold text-foreground">
+            <div className="mb-8 rounded-2xl border border-border/60 bg-card p-5 sm:p-6 shadow-sm transition-shadow focus-within:border-primary/40 focus-within:shadow-md">
+              <h3 className="mb-1 text-lg font-bold text-foreground">
                 {labels.writeReview}
               </h3>
-              <p className="mb-4 text-sm text-muted-foreground">
+              <p className="mb-5 text-sm text-muted-foreground">
                 {labels.reviewPrompt}
               </p>
-              <div className="mb-3 flex gap-1">
+
+              <div className="mb-5 flex gap-1.5">
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <Button
+                  <button
                     key={star}
                     type="button"
                     onClick={() => onRatingChange(star)}
                     aria-label={labels.rateStar(star)}
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9"
+                    className="group flex h-10 w-10 items-center justify-center rounded-full outline-none transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-amber-500/50 active:scale-95"
                   >
                     <Star
-                      className={`h-5 w-5 ${
+                      className={`h-7 w-7 transition-colors ${
                         star <= rating
-                          ? "fill-current text-amber-500"
-                          : "text-muted-foreground/70"
+                          ? "fill-amber-500 text-amber-500"
+                          : "text-muted-foreground/20 group-hover:text-amber-500/40"
                       }`}
                     />
-                  </Button>
+                  </button>
                 ))}
               </div>
+
               <Textarea
                 placeholder={labels.reviewPlaceholder}
                 value={comment}
                 onChange={(event) => onCommentChange(event.target.value)}
-                className="mb-3 bg-background"
+                className="mb-5 min-h-32 resize-none rounded-xl bg-muted/40 border-border/50 focus:bg-background focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
               />
-              <Button
-                onClick={onReviewSubmit}
-                disabled={isSubmittingReview}
-                className="w-full sm:w-auto"
-              >
-                {isSubmittingReview ? labels.submitting : labels.postReview}
-              </Button>
+
+              <div className="flex justify-end">
+                <Button
+                  onClick={onReviewSubmit}
+                  disabled={isSubmittingReview || rating === 0}
+                  className="w-full rounded-xl px-8 font-bold sm:w-auto shadow-sm"
+                >
+                  {isSubmittingReview ? labels.submitting : labels.postReview}
+                </Button>
+              </div>
             </div>
           ) : null}
 
@@ -179,9 +168,13 @@ export function UnifiedProfileTabs({
                 />
               ))
             ) : (
-              <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-4 py-8 text-center">
-                <Star className="mx-auto mb-3 h-10 w-10 text-muted-foreground/30" />
-                <p className="text-sm text-muted-foreground">{labels.noReviews}</p>
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-muted/20 py-16 text-center">
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10">
+                  <Star className="h-6 w-6 text-amber-500 fill-amber-500" />
+                </div>
+                <h3 className="mb-1 text-lg font-bold text-foreground">
+                  {labels.noReviews}
+                </h3>
               </div>
             )}
           </div>

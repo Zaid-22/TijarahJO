@@ -121,7 +121,7 @@ export function AllPostsPage({
   return (
     <PageShell>
       {/* Unified Header Section */}
-      <div className="mx-auto w-full max-w-[94rem] px-4 pt-6 sm:px-6 lg:px-8 xl:px-10">
+      <div className="mx-auto w-full max-w-376 px-4 pt-6 sm:px-6 lg:px-8 xl:px-10">
         <button
           type="button"
           onClick={onBack}
@@ -140,25 +140,23 @@ export function AllPostsPage({
         </p>
       </div>
 
-      <main className="mx-auto w-full max-w-[94rem] px-4 py-8 sm:px-6 lg:px-8 xl:px-10">
-        <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)] xl:gap-7 xl:grid-cols-[15.5rem_minmax(0,1fr)]">
-          <aside className="hidden lg:block">
-            <div className="sticky top-24">
-              <AdvancedSearchFilters
-                language={language}
-                filters={appliedSearchFilters}
-                onFiltersChange={setAppliedSearchFilters}
-                onApply={() => {}}
-                onClear={() => {
-                  const defaultSort = { sortBy: initialSortBy, sortOrder: "desc" as const };
-                  setDraftSearchFilters(defaultSort);
-                  setAppliedSearchFilters(defaultSort);
-                }}
-                showCategory
-                showApplyButton={false}
-              />
-            </div>
-          </aside>
+      <main className="mx-auto w-full max-w-376 px-4 py-8 sm:px-6 lg:px-8 xl:px-10">
+        <div className="flex flex-col gap-6">
+          <div className="hidden lg:block">
+            <AdvancedSearchFilters
+              language={language}
+              filters={appliedSearchFilters}
+              onFiltersChange={setAppliedSearchFilters}
+              onApply={() => {}}
+              onClear={() => {
+                const defaultSort = { sortBy: initialSortBy, sortOrder: "desc" as const };
+                setDraftSearchFilters(defaultSort);
+                setAppliedSearchFilters(defaultSort);
+              }}
+              showCategory
+              showApplyButton={false}
+            />
+          </div>
 
           <div className="min-w-0 flex-1">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-4 px-2">
@@ -172,7 +170,7 @@ export function AllPostsPage({
 
             <MarketplaceDiscoveryControls
               language={language}
-              className="mb-6"
+              className="mb-6 lg:hidden"
               toolbarClassName="flex-none"
               mobileFilters={{
                 isOpen: showFilters,

@@ -154,7 +154,7 @@ export function CategoryPage({
   return (
     <PageShell>
       {/* Category Header Section */}
-      <div className="mx-auto w-full max-w-[94rem] px-4 pt-6 sm:px-6 lg:px-8 xl:px-10">
+      <div className="mx-auto w-full max-w-376 px-4 pt-6 sm:px-6 lg:px-8 xl:px-10">
         <button
           type="button"
           onClick={onBack}
@@ -174,23 +174,21 @@ export function CategoryPage({
       </div>
 
       {/* Main Content */}
-      <main className="mx-auto w-full max-w-[94rem] px-4 py-8 sm:px-6 lg:px-8 xl:px-10">
-        <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)] xl:gap-7 xl:grid-cols-[15.5rem_minmax(0,1fr)]">
-          {/* Sidebar Filters (Desktop) */}
-          <aside className="hidden lg:block">
-            <div className="sticky top-24">
-              <AdvancedSearchFilters
-                language={language}
-                filters={{ ...appliedSearchFilters, category: displayCategoryName }}
-                onFiltersChange={setAppliedSearchFilters}
-                onApply={() => {}}
-                onClear={() => {
-                  setAppliedSearchFilters({ sortBy: "views", sortOrder: "desc" });
-                }}
-                showApplyButton={false}
-              />
-            </div>
-          </aside>
+      <main className="mx-auto w-full max-w-376 px-4 py-8 sm:px-6 lg:px-8 xl:px-10">
+        <div className="flex flex-col gap-6">
+          {/* Top Filters (Desktop) */}
+          <div className="hidden lg:block">
+            <AdvancedSearchFilters
+              language={language}
+              filters={{ ...appliedSearchFilters, category: displayCategoryName }}
+              onFiltersChange={setAppliedSearchFilters}
+              onApply={() => {}}
+              onClear={() => {
+                setAppliedSearchFilters({ sortBy: "views", sortOrder: "desc" });
+              }}
+              showApplyButton={false}
+            />
+          </div>
 
           {/* Main Results Area */}
           <div className="min-w-0 flex-1">
@@ -206,7 +204,7 @@ export function CategoryPage({
             {/* Controls Bar */}
             <MarketplaceDiscoveryControls
               language={language}
-              className="mb-5"
+              className="mb-5 lg:hidden"
               toolbarClassName="flex-none"
               leftSlotClassName="gap-2 flex-1 sm:flex-initial"
             />

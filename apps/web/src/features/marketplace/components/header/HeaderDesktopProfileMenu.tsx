@@ -1,4 +1,6 @@
+import { useState } from "react";
 import {
+  ChevronDown,
   LogOut,
   MessageCircle,
   Settings,
@@ -10,7 +12,10 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "../../../../shared/ui/avatar";
-import { resolveAvatarSrc, getAvatarInitial } from "../../../../shared/lib/avatar";
+import {
+  resolveAvatarSrc,
+  getAvatarInitial,
+} from "../../../../shared/lib/avatar";
 import { Button } from "../../../../shared/ui/button";
 import {
   DropdownMenu,
@@ -19,6 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../../../../shared/ui/dropdown-menu";
+import { cn } from "../../../../shared/ui/utils";
 import { type HeaderActionHandlers, type HeaderIdentity } from "./headerTypes";
 
 type HeaderDesktopProfileMenuProps = HeaderActionHandlers &
@@ -48,10 +54,11 @@ export function HeaderDesktopProfileMenu({
   onShowAdminDashboard,
   onLogout,
 }: HeaderDesktopProfileMenuProps) {
-  const iconSpacingClass = language === "ar" ? "ml-3" : "mr-3";
+  const [isOpen, setIsOpen] = useState(false);
+  const iconSpacingClass = language === "ar" ? "ml-2" : "mr-2";
   const menuItemClass =
-    "h-11 rounded-xl px-3 text-sm font-medium text-foreground/90 transition-colors hover:bg-accent/70 focus:bg-accent/70";
-  const iconClass = `h-4 w-4 text-muted-foreground/90 ${iconSpacingClass}`;
+    "group h-[38px] cursor-pointer rounded-xl px-3 text-sm font-bold text-slate-700 outline-hidden transition-all duration-200 hover:bg-primary/[0.04] hover:text-primary focus:bg-primary/[0.04] focus:text-primary dark:text-slate-200 dark:hover:bg-primary/10";
+  const iconClass = `h-4.5 w-4.5 text-slate-400 group-hover:text-primary transition-colors duration-200 ${iconSpacingClass}`;
 
   if (authLoading) {
     return <div className="hidden h-10 w-24 sm:block" aria-hidden="true" />;
@@ -73,32 +80,43 @@ export function HeaderDesktopProfileMenu({
   const normalizedUnread = Math.max(0, Math.floor(unreadMessagesCount));
 
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={setIsOpen} modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          size="icon"
-          className="hidden h-10 w-10 rounded-full border border-border/60 bg-background/70 p-0 shadow-sm transition-colors duration-200 hover:border-primary/35 hover:bg-primary/5 sm:flex"
+          className={cn(
+            "hidden h-10 items-center gap-2 rounded-full border border-slate-200/80 bg-white/40 p-0.5 transition-all duration-300 hover:bg-white/80 hover:shadow-sm sm:flex",
+            language === "ar"
+              ? "flex-row-reverse pl-3 pr-0.5"
+              : "flex-row pl-0.5 pr-3",
+          )}
           aria-label={
             language === "ar" ? "فتح قائمة الحساب" : "Open account menu"
           }
         >
-          <Avatar className="h-9 w-9 border border-border/70 bg-muted shadow-sm ring-2 ring-background">
+          <Avatar className="h-9 w-9 border border-white/50 shadow-md">
             <AvatarImage
               src={resolveAvatarSrc(userAvatar) || undefined}
               alt={currentUserDisplayName || "User"}
               className="object-cover object-center"
             />
-            <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
+            <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs uppercase">
               {getAvatarInitial(currentUserDisplayName)}
             </AvatarFallback>
           </Avatar>
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 text-slate-400 transition-transform duration-300 ease-in-out",
+              isOpen && "rotate-180 text-primary",
+            )}
+            strokeWidth={2.5}
+          />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
         sideOffset={8}
-        className="w-52 rounded-2xl border border-border/70 bg-background/96 p-2 shadow-xl backdrop-blur-sm"
+        className="w-64 rounded-3xl border border-slate-200/60 bg-white/95 p-1.5 shadow-2xl backdrop-blur-md dark:border-white/10 dark:bg-slate-900/95"
       >
         <DropdownMenuItem
           onClick={onShowProfile}
@@ -135,12 +153,12 @@ export function HeaderDesktopProfileMenu({
             {language === "ar" ? "لوحة الإدارة" : "Admin Dashboard"}
           </DropdownMenuItem>
         )}
-        <DropdownMenuSeparator className="my-2" />
+        <DropdownMenuSeparator className="my-1" />
         <DropdownMenuItem
           onClick={onLogout}
-          className="h-11 cursor-pointer rounded-xl px-3 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 focus:bg-rose-50 focus:text-rose-700 dark:hover:bg-rose-950/20 dark:focus:bg-rose-950/20 dark:focus:text-rose-400"
+          className="group h-[38px] cursor-pointer rounded-xl px-3 text-sm font-bold text-rose-600 outline-hidden transition-all duration-200 hover:bg-rose-50 focus:bg-rose-50 dark:hover:bg-rose-950/30"
         >
-          <LogOut className={`h-4 w-4 text-rose-500 ${iconSpacingClass}`} />
+          <LogOut className={`h-4.5 w-4.5 text-rose-500 transition-colors duration-200 group-hover:text-rose-700 ${iconSpacingClass}`} />
           {language === "ar" ? "تسجيل الخروج" : "Logout"}
         </DropdownMenuItem>
       </DropdownMenuContent>

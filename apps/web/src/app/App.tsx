@@ -303,8 +303,8 @@ function AppContent() {
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
       onSearchSubmit={submitSearch}
-      onShowFavorites={() => navigate("/favorites")}
-      onShowMessages={() => navigate("/chat")}
+      onShowFavorites={() => navigate("/favorites", { state: { fromPath: location.pathname + location.search } })}
+      onShowMessages={() => navigate("/chat", { state: { fromPath: location.pathname + location.search } })}
       onShowProfile={() => {
         if (isAuthenticated) navigate("/profile");
         else navigate("/login");

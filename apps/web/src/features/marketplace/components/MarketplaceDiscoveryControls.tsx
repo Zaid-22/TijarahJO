@@ -12,6 +12,7 @@ interface DiscoverySearchConfig {
   clearLabel: string;
   onChange: (value: string) => void;
   onSubmit?: (value: string) => void;
+  submitLabel: string;
 }
 
 interface DiscoveryMobileFiltersConfig {
@@ -52,6 +53,7 @@ export function MarketplaceDiscoveryControls({
           clearLabel={search.clearLabel}
           onChange={search.onChange}
           onSubmit={search.onSubmit}
+          submitLabel={search.submitLabel}
           isRTL={isRTL}
         />
       ) : null}

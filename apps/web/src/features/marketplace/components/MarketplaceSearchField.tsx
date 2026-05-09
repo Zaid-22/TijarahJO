@@ -1,5 +1,5 @@
-import { useState, type KeyboardEvent } from "react";
-import { Search, X } from "lucide-react";
+import { useRef, type KeyboardEvent } from "react";
+import { Search } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
 import { cn } from "../../../shared/ui/utils";
@@ -19,20 +19,15 @@ interface MarketplaceSearchFieldProps {
   inputClassName?: string;
   iconClassName?: string;
   clearButtonClassName?: string;
+  submitLabel?: string;
 }
 
-const INPUT_SIZE_CLASS: Record<
-  NonNullable<MarketplaceSearchFieldProps["size"]>,
-  string
-> = {
-  default: "h-14 rounded-2xl text-base",
-  compact: "h-12 rounded-full text-base",
-};
+
 
 export function MarketplaceSearchField({
   value,
   placeholder,
-  clearLabel,
+  submitLabel,
   onChange,
   onSubmit,
   id,
@@ -42,10 +37,10 @@ export function MarketplaceSearchField({
   size = "default",
   className,
   inputClassName,
-  iconClassName,
-  clearButtonClassName,
 }: MarketplaceSearchFieldProps) {
-  const [isFocused, setIsFocused] = useState(false);
+
+
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== "Enter" || !onSubmit) {
@@ -54,27 +49,21 @@ export function MarketplaceSearchField({
 
     event.preventDefault();
     onSubmit(value);
+    inputRef.current?.blur();
   };
 
-  return (
-    <div
-      className={cn(
-        "relative group transition-all duration-300",
-        className,
-      )}
-    >
-      <Search
-        className={cn(
-          "absolute top-1/2 -translate-y-1/2 h-5 w-5 transition-colors duration-300",
-          isFocused
-            ? "text-primary"
-            : "text-muted-foreground group-hover:text-foreground/70",
-          isRTL ? "right-4" : "left-4",
-          iconClassName,
-        )}
-      />
+  const paddingClass = isRTL
+    ? size === "default"
+      ? "pr-4 pl-16"
+      : "pr-4 pl-14"
+    : size === "default"
+      ? "pl-4 pr-16"
+      : "pl-4 pr-14";
 
+  return (
+    <div className={cn("relative group transition-all duration-300", className)}>
       <Input
+        ref={inputRef}
         id={id}
         name={name || "search"}
         autoComplete={autoComplete || "off"}
@@ -83,36 +72,37 @@ export function MarketplaceSearchField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={handleKeyDown}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
+
         className={cn(
-          "border border-border/30 bg-muted/20 shadow-sm backdrop-blur-xl hover:bg-muted/40 hover:border-border/60 hover:shadow-md text-foreground placeholder:text-muted-foreground/70 focus-visible:bg-background focus-visible:border-primary/60 focus-visible:ring-4 focus-visible:ring-primary/10 focus-visible:shadow-lg transition-all duration-300",
-          INPUT_SIZE_CLASS[size],
-          "px-12",
+          "border border-slate-200/50 bg-white/60 shadow-sm backdrop-blur-2xl hover:bg-white/80 hover:border-slate-300 hover:shadow-lg text-slate-900 placeholder:text-slate-400 focus-visible:bg-white focus-visible:border-primary/40 focus-visible:ring-[6px] focus-visible:ring-primary/5 focus-visible:shadow-xl transition-all duration-500 ease-out",
+          "h-14 rounded-xl text-base",
+          size === "compact" && "h-12",
+          paddingClass,
           inputClassName,
         )}
       />
 
-      {value ? (
+
+
+      <div
+        className={cn(
+          "absolute top-1/2 -translate-y-1/2 flex items-center gap-1",
+          isRTL ? "left-1" : "right-1",
+        )}
+      >
         <Button
           type="button"
-          variant="ghost"
           size="icon"
-          aria-label={clearLabel}
-          title={clearLabel}
-          onClick={() => {
-            onChange("");
-            onSubmit?.("");
-          }}
+          aria-label={submitLabel}
+          onClick={() => onSubmit?.(value)}
           className={cn(
-            "absolute top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-foreground",
-            isRTL ? "left-4" : "right-4",
-            clearButtonClassName,
+            "h-[calc(100%-8px)] w-12 rounded-xl bg-linear-to-b from-primary to-primary/90 font-bold text-primary-foreground shadow-sm transition-all duration-300 hover:shadow-md hover:brightness-110 active:scale-95",
+            size === "compact" && "h-10 w-10",
           )}
         >
-          <X className="h-5 w-5" />
+          <Search className="h-5 w-5" strokeWidth={2.5} />
         </Button>
-      ) : null}
+      </div>
     </div>
   );
 }

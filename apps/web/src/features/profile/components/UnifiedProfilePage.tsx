@@ -232,6 +232,7 @@ export function UnifiedProfilePage({
           onSettingsClick={onSettingsClick}
           onEditProfileClick={onEditProfileClick}
           onChatWithSeller={onChatWithSeller}
+          onAddPostClick={onAddPostClick}
         />
 
         <div className="space-y-6">

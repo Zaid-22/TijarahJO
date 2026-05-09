@@ -25,9 +25,7 @@ import { PostCardPhoneDialog } from "./PostCardPhoneDialog.tsx";
 import { usePostCardState, type PostCardSharedProps } from "./usePostCardState";
 import { useCompare } from "../../../contexts/CompareContext";
 import { api } from "../../../services/api";
-import {
-  type PhoneLookupStatus,
-} from "./postCardPhoneDialog";
+import { type PhoneLookupStatus } from "./postCardPhoneDialog";
 import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
 import { normalizeSellerDisplayName } from "../../../utils/sellerDisplayName";
 
@@ -133,7 +131,7 @@ export const PostCardList = React.memo(function PostCardList(
       : null;
   const hasSellerRating = Boolean(
     typeof sellerAverageRating === "number" &&
-      typeof sellerReviewCount === "number",
+    typeof sellerReviewCount === "number",
   );
   const postedAgo = formatPostedAgo(
     post.createdAt,
@@ -142,13 +140,20 @@ export const PostCardList = React.memo(function PostCardList(
     "",
   );
   const isArabic = resolvedLanguage === "ar";
-  const displayLocation = isArabic ? post.locationAr || post.location : post.location;
+  const displayLocation = isArabic
+    ? post.locationAr || post.location
+    : post.location;
   const displayArea = isArabic ? post.areaAr || post.area : post.area;
   const separator = isArabic ? "، " : ", ";
-  const detailLocation = displayArea ? displayLocation + separator + displayArea : displayLocation;
+  const detailLocation = displayArea
+    ? displayLocation + separator + displayArea
+    : displayLocation;
   const currentPath = buildCurrentPath(location.pathname, location.search);
   const trimmedSellerId = String(post.sellerId || "").trim();
-  const sellerDisplayName = normalizeSellerDisplayName(post.seller, trimmedSellerId);
+  const sellerDisplayName = normalizeSellerDisplayName(
+    post.seller,
+    trimmedSellerId,
+  );
   const trimmedPhone = String(resolvedPhone || post.phone || "").trim();
   const hasChatTarget = trimmedSellerId.length > 0;
   const hasPhone = trimmedPhone.length > 0;
@@ -204,7 +209,9 @@ export const PostCardList = React.memo(function PostCardList(
     openPost();
   };
 
-  const handleCallClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleCallClick = async (
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
     event.stopPropagation();
     event.preventDefault();
 
@@ -217,7 +224,8 @@ export const PostCardList = React.memo(function PostCardList(
     if (trimmedSellerId.length > 0) {
       try {
         setIsResolvingPhone(true);
-        const sellerProfile = await api.sellers.getSellerProfile(trimmedSellerId);
+        const sellerProfile =
+          await api.sellers.getSellerProfile(trimmedSellerId);
         if (!sellerProfile) {
           setPhoneLookupStatus("error");
           setShowPhoneDialog(true);
@@ -225,7 +233,8 @@ export const PostCardList = React.memo(function PostCardList(
         }
 
         const matchedPost = sellerProfile?.posts?.find(
-          (sellerPost) => String(sellerPost.id || "").trim() === String(post.id || "").trim(),
+          (sellerPost) =>
+            String(sellerPost.id || "").trim() === String(post.id || "").trim(),
         );
         const sellerPhone = String(
           sellerProfile?.seller?.phone || matchedPost?.phone || "",
@@ -283,7 +292,6 @@ export const PostCardList = React.memo(function PostCardList(
               </Badge>
             </div>
           )}
-
         </div>
       </div>
 
@@ -303,9 +311,7 @@ export const PostCardList = React.memo(function PostCardList(
                 {post.name}
               </h3>
 
-              <div
-                className="flex max-w-full items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200"
-              >
+              <div className="flex max-w-full items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
                 <Avatar className="h-7 w-7 border border-white/70 shadow-sm dark:border-white/10">
                   <AvatarImage
                     src={resolveAvatarSrc(sellerAvatar) || undefined}
@@ -364,26 +370,26 @@ export const PostCardList = React.memo(function PostCardList(
           <Button
             aria-label={labels.chatButton}
             title={labels.chatButton}
-            className="flex h-11 min-w-0 flex-[0.92] basis-[calc(46%-0.5rem)] items-center justify-center gap-2 rounded-[16px] bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-none transition-colors hover:bg-primary/92 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none dark:disabled:bg-slate-800 dark:disabled:text-slate-400 sm:min-w-38 sm:flex-[0_0_auto] sm:px-4"
+            className="flex h-10 min-w-0 flex-[0.92] basis-[calc(46%-0.5rem)] items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-38 sm:flex-[0_0_auto] sm:px-4"
             onClick={handleChatClick}
             disabled={isOwner}
           >
-            <MessageCircle className="h-[1.2rem] w-[1.2rem] text-primary-foreground" />
+            <MessageCircle className="h-4 w-4" strokeWidth={2.5} />
             <span>{labels.chatButton}</span>
           </Button>
 
           <Button
-            variant="outline"
+            variant="secondary"
             aria-label={labels.callButton}
             title={labels.callButton}
-            className="flex h-11 min-w-0 flex-[1.08] basis-[calc(54%-0.5rem)] items-center justify-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-none transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:disabled:border-white/10 dark:disabled:bg-slate-800 dark:disabled:text-slate-400 sm:min-w-42 sm:flex-[0_0_auto] sm:px-4"
+            className="flex h-10 min-w-0 flex-[1.08] basis-[calc(54%-0.5rem)] items-center justify-center gap-2 rounded-xl bg-primary/5 px-4 text-sm font-bold text-primary transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-42 sm:flex-[0_0_auto] sm:px-4"
             onClick={handleCallClick}
             disabled={canResolvePhone === false || isResolvingPhone}
           >
             {isResolvingPhone ? (
-              <Loader2 className="h-[1.2rem] w-[1.2rem] animate-spin text-slate-700 dark:text-slate-200" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Phone className="h-[1.05rem] w-[1.05rem] text-slate-500 dark:text-slate-400" />
+              <Phone className="h-4 w-4" strokeWidth={2.5} />
             )}
             <span>{labels.callButton}</span>
           </Button>
@@ -397,15 +403,15 @@ export const PostCardList = React.memo(function PostCardList(
                 title={labels.favoriteLabel}
                 className={
                   isFavorite
-                    ? "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-rose-200 bg-rose-50 text-rose-500 shadow-none transition-colors hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:border-rose-900/70 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-950/60"
-                    : "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-slate-200 bg-white text-slate-400 shadow-none transition-colors hover:bg-slate-50 hover:text-rose-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:border-white/10 dark:bg-slate-950 dark:text-slate-500 dark:hover:bg-slate-900 dark:hover:text-rose-300"
+                    ? "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-500 transition-colors hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:bg-rose-500/10 dark:text-rose-400"
+                    : "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted/40 text-muted-foreground transition-colors hover:bg-muted hover:text-rose-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
                 }
               >
                 <Heart
                   className={
                     isFavorite
-                      ? "h-5 w-5 fill-current stroke-[2.1]"
-                      : "h-5 w-5 stroke-[2.1]"
+                      ? "h-4 w-4 fill-current stroke-[2.5]"
+                      : "h-4 w-4 stroke-[2.5]"
                   }
                 />
               </button>
@@ -440,15 +446,23 @@ export const PostCardList = React.memo(function PostCardList(
                   addToCompare(comparePost);
                 }
               }}
-              aria-label={isInCompare(String(post.id)) ? "Remove from comparison" : "Add to comparison"}
-              title={isInCompare(String(post.id)) ? "Remove from comparison" : "Add to comparison"}
+              aria-label={
+                isInCompare(String(post.id))
+                  ? "Remove from comparison"
+                  : "Add to comparison"
+              }
+              title={
+                isInCompare(String(post.id))
+                  ? "Remove from comparison"
+                  : "Add to comparison"
+              }
               className={
                 isInCompare(String(post.id))
-                  ? "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-primary/30 bg-primary/10 text-primary shadow-none transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
-                  : "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-slate-200 bg-white text-slate-400 shadow-none transition-colors hover:bg-slate-50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 dark:border-white/10 dark:bg-slate-950 dark:text-slate-500 dark:hover:bg-slate-900 dark:hover:text-primary"
+                  ? "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+                  : "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted/40 text-muted-foreground transition-colors hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
               }
             >
-              <Scale className="h-5 w-5" />
+              <Scale className="h-4 w-4 stroke-[2.5]" />
             </button>
           </div>
 

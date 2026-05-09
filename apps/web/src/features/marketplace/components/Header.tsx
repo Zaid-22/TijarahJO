@@ -1,10 +1,11 @@
-import { ArrowLeft, Heart, MessageCircle } from "lucide-react";
+import { ArrowLeft, Heart, MessageCircle, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Suspense, lazy, useState } from "react";
 import { Button } from "../../../shared/ui/button";
 import { Logo } from "../../../shared/ui/logo";
 import { type Language } from "../../../translations";
 import { useCatalogCategories } from "../../../shared/hooks/useCatalogCategories";
+import { cn } from "../../../shared/ui/utils";
 import { HeaderMobileMenuSheet } from "./header/HeaderMobileMenuSheet";
 import { HeaderSearchInput } from "./header/HeaderSearchInput";
 
@@ -86,12 +87,12 @@ export function Header({
     Math.floor(unreadMessagesCount),
   );
   const actionIconButtonClassName =
-    "group relative h-10 w-10 rounded-full border border-border/60 bg-background/70 p-0 text-muted-foreground shadow-sm hover:border-primary/35 hover:bg-primary/5 hover:text-primary hover:shadow-md transition-all";
+    "group relative flex h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100";
   const notificationFallbackClassName =
-    "h-10 w-10 rounded-full border border-border/60 bg-background/40";
+    "h-10 w-10 rounded-full bg-slate-100/50 dark:bg-slate-800/50";
   const shouldShowAuthenticatedActions = !authLoading && isAuthenticated;
   const authIconFallbackClassName =
-    "hidden h-10 w-10 rounded-full border border-border/60 bg-background/40 sm:flex";
+    "hidden h-10 w-10 rounded-full bg-slate-100/50 dark:bg-slate-800/50 sm:flex";
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/20 bg-background/80 shadow-md backdrop-blur-xl supports-backdrop-filter:bg-background/60 transition-all duration-300">
@@ -167,87 +168,94 @@ export function Header({
           )}
 
           {/* Right section: Profile, Actions & Sell Button */}
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            {shouldShowAuthenticatedActions && (
-              <Suspense fallback={<div className={notificationFallbackClassName} aria-hidden="true" />}>
-                <HeaderNotificationsDropdown
-                  language={language}
-                  unreadCount={normalizedUnreadMessagesCount}
-                  onNavigate={onNotificationsNavigate}
-                />
-              </Suspense>
-            )}
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            {/* Utility Icons Group */}
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              {shouldShowAuthenticatedActions && (
+                <Suspense fallback={<div className={notificationFallbackClassName} aria-hidden="true" />}>
+                  <HeaderNotificationsDropdown
+                    language={language}
+                    unreadCount={normalizedUnreadMessagesCount}
+                    onNavigate={onNotificationsNavigate}
+                  />
+                </Suspense>
+              )}
 
-            {shouldShowAuthenticatedActions && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className={actionIconButtonClassName}
-                onClick={onShowFavorites}
-                aria-label={language === "ar" ? "المفضلة" : "Favorites"}
-              >
-                <Heart className="w-5 h-5 transition-transform group-hover:scale-110" />
-              </Button>
-            )}
+              {shouldShowAuthenticatedActions && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={actionIconButtonClassName}
+                  onClick={onShowFavorites}
+                  aria-label={language === "ar" ? "المفضلة" : "Favorites"}
+                >
+                  <Heart className="w-5 h-5 transition-transform group-hover:scale-110" />
+                </Button>
+              )}
 
-            {shouldShowAuthenticatedActions && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className={actionIconButtonClassName}
-                onClick={onShowMessages}
-                aria-label={language === "ar" ? "الرسائل" : "Messages"}
-              >
-                <MessageCircle className="w-5 h-5 transition-transform group-hover:scale-110" />
-              </Button>
-            )}
+              {shouldShowAuthenticatedActions && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={actionIconButtonClassName}
+                  onClick={onShowMessages}
+                  aria-label={language === "ar" ? "الرسائل" : "Messages"}
+                >
+                  <MessageCircle className="w-5 h-5 transition-transform group-hover:scale-110" />
+                </Button>
+              )}
+            </div>
 
-            {shouldShowAuthenticatedActions && (
-              <Button
-                size="sm"
-                className="h-10 rounded-full bg-primary px-4 text-primary-foreground shadow-lg active:scale-95 sm:px-6"
-                onClick={onShowCreatePost}
-              >
-                <span className="text-sm font-semibold">
-                  <span className="sr-only sm:not-sr-only">
-                    {language === "ar" ? "إنشاء منشور" : "Create Post"}
+            {/* Active Group: Profile & Create Post */}
+            <div className="flex items-center gap-3 sm:gap-4 pl-1">
+              {authLoading ? (
+                <div className="hidden h-10 w-24 sm:block" aria-hidden="true" />
+              ) : isAuthenticated ? (
+                <Suspense fallback={<div className={authIconFallbackClassName} aria-hidden="true" />}>
+                  <HeaderDesktopProfileMenu
+                    language={language}
+                    isAuthenticated={isAuthenticated}
+                    authLoading={authLoading}
+                    isAdmin={isAdmin}
+                    currentUserDisplayName={currentUserDisplayName}
+                    userAvatar={userAvatar}
+                    unreadMessagesCount={normalizedUnreadMessagesCount}
+                    onShowProfile={onShowProfile}
+                    onShowMessages={onShowMessages}
+                    onShowSettings={onShowSettings}
+                    onShowAdminDashboard={onShowAdminDashboard}
+                    onLogout={onLogout}
+                  />
+                </Suspense>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="hidden h-10 rounded-full border border-primary/35 bg-background/85 px-5 font-semibold text-primary shadow-sm hover:border-primary hover:bg-primary hover:text-primary-foreground hover:shadow-md sm:flex"
+                  onClick={onShowProfile}
+                >
+                  {language === "ar" ? "تسجيل الدخول" : "Sign In"}
+                </Button>
+              )}
+
+              {shouldShowAuthenticatedActions && (
+                <Button
+                  size="sm"
+                  className="h-10 rounded-full bg-linear-to-b from-primary to-primary/90 px-4 text-primary-foreground transition-all duration-300 hover:brightness-110 active:scale-95 sm:px-5"
+                  onClick={onShowCreatePost}
+                >
+                  <Plus className={cn("h-4 w-4", language === "ar" ? "ml-1.5" : "mr-1.5")} strokeWidth={2.5} />
+                  <span className="text-sm font-bold tracking-tight">
+                    <span className="sr-only sm:not-sr-only">
+                      {language === "ar" ? "إنشاء منشور" : "Create Post"}
+                    </span>
+                    <span className="sm:hidden" aria-hidden="true">
+                      {language === "ar" ? "نشر" : "Post"}
+                    </span>
                   </span>
-                  <span className="sm:hidden" aria-hidden="true">
-                    {language === "ar" ? "نشر" : "Post"}
-                  </span>
-                </span>
-              </Button>
-            )}
-
-            {authLoading ? (
-              <div className="hidden h-10 w-24 sm:block" aria-hidden="true" />
-            ) : isAuthenticated ? (
-              <Suspense fallback={<div className={authIconFallbackClassName} aria-hidden="true" />}>
-                <HeaderDesktopProfileMenu
-                  language={language}
-                  isAuthenticated={isAuthenticated}
-                  authLoading={authLoading}
-                  isAdmin={isAdmin}
-                  currentUserDisplayName={currentUserDisplayName}
-                  userAvatar={userAvatar}
-                  unreadMessagesCount={normalizedUnreadMessagesCount}
-                  onShowProfile={onShowProfile}
-                  onShowMessages={onShowMessages}
-                  onShowSettings={onShowSettings}
-                  onShowAdminDashboard={onShowAdminDashboard}
-                  onLogout={onLogout}
-                />
-              </Suspense>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                className="hidden h-10 rounded-full border border-primary/35 bg-background/85 px-5 font-semibold text-primary shadow-sm hover:border-primary hover:bg-primary hover:text-primary-foreground hover:shadow-md sm:flex"
-                onClick={onShowProfile}
-              >
-                {language === "ar" ? "تسجيل الدخول" : "Sign In"}
-              </Button>
-            )}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 

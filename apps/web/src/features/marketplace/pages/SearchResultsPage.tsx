@@ -188,25 +188,23 @@ export function SearchResultsPage({
           <ArrowLeft className="h-4 w-4" />
           {language === "ar" ? "العودة" : "Back"}
         </button>
-        <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)] xl:gap-7 xl:grid-cols-[15.5rem_minmax(0,1fr)]">
-          {/* Sidebar Filters (Desktop) */}
-          <aside className="hidden lg:block">
-            <div className="sticky top-24">
-              <AdvancedSearchFilters
-                language={language}
-                filters={appliedSearchFilters}
-                onFiltersChange={setAppliedSearchFilters}
-                onApply={() => {}}
-                onClear={() => {
-                  const defaultSort = { sortBy: "views" as const, sortOrder: "desc" as const };
-                  setDraftSearchFilters(defaultSort);
-                  setAppliedSearchFilters(defaultSort);
-                }}
-                showApplyButton={false}
-                showCategory
-              />
-            </div>
-          </aside>
+        <div className="flex flex-col gap-6">
+          {/* Top Filters (Desktop) */}
+          <div className="hidden lg:block">
+            <AdvancedSearchFilters
+              language={language}
+              filters={appliedSearchFilters}
+              onFiltersChange={setAppliedSearchFilters}
+              onApply={() => {}}
+              onClear={() => {
+                const defaultSort = { sortBy: "views" as const, sortOrder: "desc" as const };
+                setDraftSearchFilters(defaultSort);
+                setAppliedSearchFilters(defaultSort);
+              }}
+              showApplyButton={false}
+              showCategory
+            />
+          </div>
 
           {/* Main Results Area */}
           <div className="min-w-0 flex-1">

@@ -5,6 +5,7 @@ import {
   MapPin,
   MessageCircle,
   Phone,
+  Plus,
   Settings,
   Star,
 } from "lucide-react";
@@ -38,6 +39,7 @@ interface UnifiedProfileHeaderCardProps {
   onSettingsClick?: () => void;
   onEditProfileClick?: () => void;
   onChatWithSeller?: () => void;
+  onAddPostClick?: () => void;
 }
 
 export function UnifiedProfileHeaderCard({
@@ -49,6 +51,7 @@ export function UnifiedProfileHeaderCard({
   onSettingsClick,
   onEditProfileClick,
   onChatWithSeller,
+  onAddPostClick,
 }: UnifiedProfileHeaderCardProps) {
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   const [showPhoneDialog, setShowPhoneDialog] = useState(false);
@@ -99,7 +102,7 @@ export function UnifiedProfileHeaderCard({
         <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start md:items-center">
           {/* Avatar */}
           <div className="relative shrink-0">
-            <Avatar className="h-24 w-24 border border-border/40 shadow-sm sm:h-32 sm:w-32 rounded-[28px] overflow-hidden">
+            <Avatar className="h-24 w-24 border border-border/40 shadow-sm sm:h-28 sm:w-28 rounded-full overflow-hidden">
               {shouldShowAvatarImage ? (
                 <AvatarImage
                   src={avatarSrc || undefined}
@@ -108,7 +111,7 @@ export function UnifiedProfileHeaderCard({
                   onError={() => setAvatarLoadFailed(true)}
                 />
               ) : null}
-              <AvatarFallback className="bg-primary/5 text-3xl font-bold text-primary sm:text-4xl rounded-[28px]">
+              <AvatarFallback className="bg-primary/5 text-3xl font-bold text-primary sm:text-4xl rounded-full">
                 {getAvatarInitial(viewModel.profile.name)}
               </AvatarFallback>
             </Avatar>
@@ -117,74 +120,100 @@ export function UnifiedProfileHeaderCard({
           {/* User Info */}
           <div className="flex-1 text-center sm:text-start pt-2">
             <h1 className="mb-3 text-2xl font-bold leading-tight text-foreground sm:text-3xl tracking-tight">
-              {viewModel.profile.name || `${labels.userLabel} ${viewModel.profileUserId}`}
+              {viewModel.profile.name ||
+                `${labels.userLabel} ${viewModel.profileUserId}`}
             </h1>
 
-            <div className="flex flex-wrap justify-center sm:justify-start gap-3 sm:gap-4 text-sm text-muted-foreground font-medium">
-              <div className="flex items-center gap-1.5 rounded-full bg-slate-100/80 px-3.5 py-1.5 dark:bg-slate-800/50">
-                <MapPin className="h-4 w-4 text-primary" />
-                <span>{displayLocation || viewModel.profile.location || labels.jordan}</span>
+            <div className="flex flex-wrap justify-center sm:justify-start gap-2.5 sm:gap-3 text-xs font-medium">
+              <div className="flex items-center gap-1.5 rounded-full bg-slate-100/80 px-3 py-1.5 text-slate-600 transition-colors hover:bg-slate-200/60 dark:bg-slate-800/50 dark:text-slate-300">
+                <MapPin className="h-[15px] w-[15px] text-slate-400" />
+                <span>
+                  {displayLocation ||
+                    viewModel.profile.location ||
+                    labels.jordan}
+                </span>
               </div>
-              <div className="flex items-center gap-1.5 rounded-full bg-slate-100/80 px-3.5 py-1.5 dark:bg-slate-800/50">
-                <Calendar className="h-4 w-4 text-primary" />
+              <div className="flex items-center gap-1.5 rounded-full bg-slate-100/80 px-3 py-1.5 text-slate-600 transition-colors hover:bg-slate-200/60 dark:bg-slate-800/50 dark:text-slate-300">
+                <Calendar className="h-[15px] w-[15px] text-slate-400" />
                 <span>
                   {labels.joined} {joinDateDisplay}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3.5 py-1.5 font-semibold text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
-                <Star className="h-4 w-4 fill-current" />
+              <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1.5 font-bold text-amber-500 transition-colors hover:bg-amber-500/15 dark:bg-amber-500/20 dark:text-amber-400">
+                <Star className="h-[15px] w-[15px] fill-current" />
                 <span>
                   {averageRating}{" "}
-                  <span className="font-medium opacity-80 ms-1">
+                  <span className="font-medium opacity-60 ms-0.5">
                     ({viewModel.reviews.length})
                   </span>
                 </span>
               </div>
             </div>
+
+            {/* Buyer Actions (Chat / Call) tightly coupled to the user metadata */}
+            {viewModel.mode !== "owner" && (
+              <div className="mt-5 flex flex-wrap justify-center sm:justify-start gap-3">
+                {viewModel.canChat && onChatWithSeller ? (
+                  <Button
+                    className="flex h-11 min-w-32 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 hover:shadow"
+                    onClick={onChatWithSeller}
+                  >
+                    <MessageCircle className="h-[1.15rem] w-[1.15rem]" />
+                    {labels.chatWithSeller}
+                  </Button>
+                ) : null}
+
+                {viewModel.canCall ? (
+                  <Button
+                    variant="outline"
+                    className="flex h-11 min-w-32 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:shadow disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:disabled:bg-slate-800"
+                    disabled={!phoneNumber}
+                    onClick={() => setShowPhoneDialog(true)}
+                  >
+                    <Phone className="h-[1.05rem] w-[1.05rem] text-slate-500 dark:text-slate-400" />
+                    {labels.callSeller}
+                  </Button>
+                ) : null}
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}
           <div className="flex shrink-0 flex-wrap justify-center sm:justify-end gap-3 pt-2">
-            {viewModel.canEditProfile && onSettingsClick ? (
-              <Button
-                variant="outline"
-                className="h-11 rounded-[16px] shadow-sm backdrop-blur-sm px-5"
-                onClick={onSettingsClick}
-              >
-                <Settings className="me-2 h-4 w-4" />
-                {labels.settings}
-              </Button>
-            ) : null}
-
             {viewModel.canEditProfile && onEditProfileClick ? (
               <Button
-                className="h-11 rounded-[16px] bg-primary shadow-sm hover:bg-primary/90 px-5"
+                variant="outline"
+                className="h-11 rounded-xl shadow-sm backdrop-blur-sm px-5 font-semibold"
                 onClick={onEditProfileClick}
               >
-                <Edit className="me-2 h-4 w-4 text-primary-foreground/90" />
+                <Edit className="me-2 h-4 w-4" />
                 {labels.editProfile}
               </Button>
             ) : null}
 
-            {viewModel.mode !== "owner" && viewModel.canChat && onChatWithSeller ? (
+            {viewModel.canManageListings && onAddPostClick ? (
               <Button
-                className="flex h-11 min-w-[9rem] items-center justify-center gap-2 rounded-[16px] bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-none transition-colors hover:bg-primary/92"
-                onClick={onChatWithSeller}
+                className="h-11 rounded-xl bg-primary shadow-sm hover:bg-primary/90 px-6 font-bold"
+                onClick={onAddPostClick}
               >
-                <MessageCircle className="h-[1.2rem] w-[1.2rem] text-primary-foreground" />
-                {labels.chatWithSeller}
+                <Plus
+                  className="me-2 h-4 w-4 text-primary-foreground"
+                  strokeWidth={2.5}
+                />
+                {labels.addPost}
               </Button>
             ) : null}
 
-            {viewModel.mode !== "owner" && viewModel.canCall ? (
+            {viewModel.canEditProfile && onSettingsClick ? (
               <Button
-                variant="outline"
-                className="flex h-11 min-w-[9rem] items-center justify-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-none transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:disabled:border-white/10 dark:disabled:bg-slate-800 dark:disabled:text-slate-400"
-                disabled={!phoneNumber}
-                onClick={() => setShowPhoneDialog(true)}
+                variant="ghost"
+                size="icon"
+                className="h-11 w-11 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted"
+                onClick={onSettingsClick}
+                aria-label={labels.settings}
+                title={labels.settings}
               >
-                <Phone className="h-[1.05rem] w-[1.05rem] text-slate-500 dark:text-slate-400" />
-                {labels.callSeller}
+                <Settings className="h-5 w-5" />
               </Button>
             ) : null}
           </div>
@@ -193,7 +222,9 @@ export function UnifiedProfileHeaderCard({
         {/* Integrated About Me Section */}
         {viewModel.profile.bio?.trim() && (
           <div className="mt-8">
-            <h2 className="text-xl font-bold text-foreground mb-3 tracking-tight">{labels.aboutMe}</h2>
+            <h2 className="text-xl font-bold text-foreground mb-3 tracking-tight">
+              {labels.aboutMe}
+            </h2>
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-600 dark:text-slate-300">
               {viewModel.profile.bio.trim()}
             </p>

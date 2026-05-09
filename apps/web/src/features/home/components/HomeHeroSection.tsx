@@ -25,7 +25,10 @@ type HomeHeroSectionProps = {
 
 const AUTO_PLAY_INTERVAL = 5000;
 
-function isLightColor(color: string | undefined, fallbackClass: string): boolean {
+function isLightColor(
+  color: string | undefined,
+  fallbackClass: string,
+): boolean {
   if (!color) {
     return /\b(50|100|200|white|sky|amber|background)\b/.test(fallbackClass);
   }
@@ -79,47 +82,52 @@ export function HomeHeroSection({
   onNavigate,
 }: HomeHeroSectionProps) {
   const titleId = useId();
-  const [banners, setBanners] = useState<HeroBanner[]>(() => getAllHeroBanners());
-  
+  const [banners, setBanners] = useState<HeroBanner[]>(() =>
+    getAllHeroBanners(),
+  );
+
   useEffect(() => {
     let isCurrent = true;
 
     const refreshBanners = () => {
-      bannersApi.getActiveBanners().then((apiBanners) => {
-        if (!isCurrent || apiBanners === null) {
-          return;
-        }
+      bannersApi
+        .getActiveBanners()
+        .then((apiBanners) => {
+          if (!isCurrent || apiBanners === null) {
+            return;
+          }
 
-        if (apiBanners.length === 0) {
-          setBanners([]);
-          clearSavedHeroBanners();
-          return;
-        }
+          if (apiBanners.length === 0) {
+            setBanners([]);
+            clearSavedHeroBanners();
+            return;
+          }
 
-        const resolvedBanners = apiBanners.map((b) => ({
-          id: `api-banner-${b.bannerID}`,
-          title: b.title,
-          titleAr: b.titleAr,
-          subtitle: b.subtitle,
-          subtitleAr: b.subtitleAr,
-          buttonText: b.buttonText,
-          buttonTextAr: b.buttonTextAr,
-          imageUrl: b.imageUrl,
-          bgClass: b.bgClass,
-          textClass: b.textClass,
-          altText: b.altText,
-          altTextAr: b.altTextAr,
-          linkUrl: b.linkUrl || undefined,
-          isActive: b.isActive,
-          order: b.displayOrder,
-          ...resolveHeroBannerMedia(b.imageUrl),
-        }));
+          const resolvedBanners = apiBanners.map((b) => ({
+            id: `api-banner-${b.bannerID}`,
+            title: b.title,
+            titleAr: b.titleAr,
+            subtitle: b.subtitle,
+            subtitleAr: b.subtitleAr,
+            buttonText: b.buttonText,
+            buttonTextAr: b.buttonTextAr,
+            imageUrl: b.imageUrl,
+            bgClass: b.bgClass,
+            textClass: b.textClass,
+            altText: b.altText,
+            altTextAr: b.altTextAr,
+            linkUrl: b.linkUrl || undefined,
+            isActive: b.isActive,
+            order: b.displayOrder,
+            ...resolveHeroBannerMedia(b.imageUrl),
+          }));
 
-        setBanners(resolvedBanners);
-        saveHeroBanners(resolvedBanners);
-      }).catch((_error) => {
-        // Keep cached/default banners in place when the refresh fails.
-      });
+          setBanners(resolvedBanners);
+          saveHeroBanners(resolvedBanners);
+        })
+        .catch((_error) => {
+          // Keep cached/default banners in place when the refresh fails.
+        });
     };
 
     refreshBanners();
@@ -184,9 +192,12 @@ export function HomeHeroSection({
     };
 
     if ("requestIdleCallback" in window) {
-      idleHandle = window.requestIdleCallback(() => {
-        warmNextBannerImage();
-      }, { timeout: 1500 });
+      idleHandle = window.requestIdleCallback(
+        () => {
+          warmNextBannerImage();
+        },
+        { timeout: 1500 },
+      );
     } else {
       timeoutHandle = setTimeout(() => {
         warmNextBannerImage();
@@ -215,7 +226,7 @@ export function HomeHeroSection({
         <div className="relative w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 pt-4 sm:pt-6 pb-2">
           {/* Main banner skeleton matching exact dimensions */}
           <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl bg-muted animate-pulse w-full min-h-96 sm:min-h-80 md:min-h-0 md:aspect-21/8" />
-          
+
           {/* Pagination dots skeleton matching exact margin/padding */}
           <div className="flex items-center justify-center gap-2 mt-3 sm:mt-4 pb-2">
             <div className="w-8 h-2.5 rounded-full bg-muted animate-pulse" />
@@ -254,11 +265,7 @@ export function HomeHeroSection({
               )}`;
               const slideClassName = `absolute inset-0 h-full w-full overflow-hidden transition-opacity duration-500 ease-in-out ${
                 banner.linkUrl ? "cursor-pointer" : "cursor-default"
-              } ${
-                isActive
-                  ? "opacity-100 z-10"
-                  : "opacity-0 z-0"
-              }`;
+              } ${isActive ? "opacity-100 z-10" : "opacity-0 z-0"}`;
               const backgroundColor = resolveBannerColor(banner.bgClass);
               const textColor = resolveBannerColor(banner.textClass);
               const slideStyle = backgroundColor
@@ -269,14 +276,28 @@ export function HomeHeroSection({
               const textStyle = textColor ? { color: textColor } : {};
               const isLightBg = isLightColor(backgroundColor, banner.bgClass);
               const buttonStyle = isLightBg
-                ? { backgroundColor: 'rgb(15, 23, 42)', color: 'rgb(255, 255, 255)' }
-                : { backgroundColor: 'rgb(255, 255, 255)', color: 'rgb(15, 23, 42)' };
+                ? {
+                    backgroundColor: "rgb(15, 23, 42)",
+                    color: "rgb(255, 255, 255)",
+                  }
+                : {
+                    backgroundColor: "rgb(255, 255, 255)",
+                    color: "rgb(15, 23, 42)",
+                  };
               const slideInner = (
-                <div style={slideStyle} className="absolute inset-0 h-full w-full"></div>
+                <div
+                  style={slideStyle}
+                  className="absolute inset-0 h-full w-full"
+                ></div>
               );
               const slideContent = (
-                <div className={`relative w-full h-full flex flex-col md:flex-row items-center justify-center md:justify-between px-6 sm:px-12 lg:px-24 py-6 md:py-0 gap-4 md:gap-0 ${isRTL ? 'md:flex-row-reverse' : ''}`}>
-                <div className={`flex flex-col items-center md:items-start text-center md:text-start space-y-3 sm:space-y-4 max-w-lg z-10 ${isRTL ? 'md:items-end md:text-end' : ''}`} style={textStyle}>
+                <div
+                  className={`relative w-full h-full flex flex-col md:flex-row items-center justify-center md:justify-between px-6 sm:px-12 lg:px-24 py-6 md:py-0 gap-4 md:gap-0 ${isRTL ? "md:flex-row-reverse" : ""}`}
+                >
+                  <div
+                    className={`flex flex-col items-center md:items-start text-center md:text-start space-y-3 sm:space-y-4 max-w-lg z-10 ${isRTL ? "md:items-end md:text-end" : ""}`}
+                    style={textStyle}
+                  >
                     <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold tracking-tight leading-tight">
                       {resolveLocalizedBannerCopy(
                         language,
@@ -304,7 +325,8 @@ export function HomeHeroSection({
                   </div>
 
                   <div className="relative w-[180px] h-[180px] sm:w-[220px] sm:h-[220px] md:w-[280px] md:h-[280px] lg:w-[350px] lg:h-[350px] shrink-0 z-0">
-                    {(isActive || index === ((currentIndex + 1) % totalSlides)) && (
+                    {(isActive ||
+                      index === (currentIndex + 1) % totalSlides) && (
                       <picture>
                         {banner.imageSrcSet && (
                           <source
