@@ -26,7 +26,6 @@ interface MarketplaceDiscoveryControlsProps {
   search?: DiscoverySearchConfig;
   leftControls?: ReactNode;
   mobileFilters?: DiscoveryMobileFiltersConfig;
-  activeFilters?: ReactNode;
   className?: string;
   toolbarClassName?: string;
   leftSlotClassName?: string;
@@ -37,7 +36,6 @@ export function MarketplaceDiscoveryControls({
   search,
   leftControls,
   mobileFilters,
-  activeFilters,
   className,
   toolbarClassName,
   leftSlotClassName,
@@ -93,7 +91,6 @@ export function MarketplaceDiscoveryControls({
         </div>
       ) : null}
 
-      {activeFilters}
     </div>
   );
 }

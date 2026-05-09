@@ -1,7 +1,6 @@
 import { PageShell } from "../../../shared/ui/page-shell";
 import { MarketplaceDiscoveryControls } from "../components/MarketplaceDiscoveryControls";
 import { MarketplaceQueryStatus } from "../components/MarketplaceQueryStatus";
-import { MarketplaceActiveFilters } from "../components/MarketplaceActiveFilters";
 import { MarketplaceResultsPagination } from "../components/MarketplaceResultsPagination";
 import {
   AdvancedSearchFilters,
@@ -14,7 +13,7 @@ import { PostResultsGridSkeleton } from "../components/PostResultsGridSkeleton";
 
 import { Language } from "../../../translations";
 import { Post } from "../../../types";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { rankMarketplacePosts } from "../search/marketplaceSearch";
 import { useMarketplaceSearchResults } from "../search/useMarketplaceSearchResults";
 import { useMarketplaceDiscoveryState } from "../../../shared/hooks/useMarketplaceDiscoveryState";
@@ -61,7 +60,6 @@ export function SearchResultsPage({
 
   const {
     normalizedSearchQuery,
-    activeSearchFilters: rawSearchFilters,
     clearSearch: clearAppliedSearch,
   } = useMarketplaceSearchFilter({
     language,
@@ -73,73 +71,10 @@ export function SearchResultsPage({
     onSearch("");
   }, [clearAppliedSearch, onSearch]);
 
-  // Build active filter items for the filter chips UI
-  const activeFilterItems = [
-    ...rawSearchFilters.map((item) => ({
-      ...item,
-      onRemove: clearSearch,
-    })),
-    ...(appliedSearchFilters.category
-      ? [
-          {
-            id: "category",
-            label: `${language === "ar" ? "الفئة: " : "Category: "}${appliedSearchFilters.category}`,
-            removeLabel:
-              language === "ar" ? "إزالة فلتر الفئة" : "Remove category filter",
-            onRemove: () =>
-              setAppliedSearchFilters((f) => ({ ...f, category: undefined })),
-          },
-        ]
-      : []),
-    ...(appliedSearchFilters.city
-      ? [
-          {
-            id: "city",
-            label: `${language === "ar" ? "المدينة: " : "City: "}${appliedSearchFilters.city}`,
-            removeLabel:
-              language === "ar" ? "إزالة فلتر المدينة" : "Remove city filter",
-            onRemove: () =>
-              setAppliedSearchFilters((f) => ({ ...f, city: undefined })),
-          },
-        ]
-      : []),
-    ...(appliedSearchFilters.minPrice || appliedSearchFilters.maxPrice
-      ? [
-          {
-            id: "price",
-            label: `${language === "ar" ? "السعر: " : "Price: "}${appliedSearchFilters.minPrice ?? 0} - ${appliedSearchFilters.maxPrice ?? "∞"} ${language === "ar" ? "د.أ" : "JOD"}`,
-            removeLabel:
-              language === "ar" ? "إزالة فلتر السعر" : "Remove price filter",
-            onRemove: () =>
-              setAppliedSearchFilters((f) => ({
-                ...f,
-                minPrice: undefined,
-                maxPrice: undefined,
-              })),
-          },
-        ]
-      : []),
-  ];
-
   const buildFallbackPosts = useCallback(
     ({ activePosts, query }: { activePosts: Post[]; query: string }) => {
       let results = activePosts;
 
-      // Apply local filters
-      if (appliedSearchFilters.category) {
-        results = results.filter(
-          (p) =>
-            p.category?.toLowerCase() ===
-            appliedSearchFilters.category?.toLowerCase(),
-        );
-      }
-      if (appliedSearchFilters.city) {
-        results = results.filter((p) =>
-          p.location?.toLowerCase().includes(
-            appliedSearchFilters.city!.toLowerCase(),
-          ),
-        );
-      }
       if (appliedSearchFilters.minPrice != null) {
         results = results.filter((p) => p.price >= appliedSearchFilters.minPrice!);
       }
@@ -178,7 +113,7 @@ export function SearchResultsPage({
     [],
   );
   const {
-    posts: filteredPosts,
+    posts: searchPosts,
     isSearching,
     error: searchError,
   } = useMarketplaceSearchResults({
@@ -194,6 +129,27 @@ export function SearchResultsPage({
     buildFallbackPosts,
     transformRemotePosts,
   });
+
+  // Apply category & city filters client-side (API doesn't support them)
+  const filteredPosts = useMemo(() => {
+    let results = searchPosts;
+    if (appliedSearchFilters.category) {
+      results = results.filter(
+        (p) =>
+          p.category?.toLowerCase() ===
+          appliedSearchFilters.category?.toLowerCase(),
+      );
+    }
+    if (appliedSearchFilters.city) {
+      results = results.filter((p) =>
+        p.location?.toLowerCase().includes(
+          appliedSearchFilters.city!.toLowerCase(),
+        ),
+      );
+    }
+    return results;
+  }, [searchPosts, appliedSearchFilters.category, appliedSearchFilters.city]);
+
   const {
     viewMode,
     displayedResults: displayedPosts,
@@ -220,43 +176,18 @@ export function SearchResultsPage({
     setShowFilters(false);
   }, [draftSearchFilters]);
 
-  const clearAllFilters = useCallback(() => {
-    const defaultSort = { sortBy: "views" as const, sortOrder: "desc" as const };
-    setDraftSearchFilters(defaultSort);
-    setAppliedSearchFilters(defaultSort);
-    clearSearch();
-  }, [clearSearch]);
-
   return (
     <PageShell>
-      {/* Unified Header Section */}
-      <div className="mx-auto w-full max-w-[94rem] px-4 pt-6 sm:px-6 lg:px-8 xl:px-10">
+      {/* Main Content */}
+      <main className="mx-auto w-full max-w-376 px-4 pt-6 pb-8 sm:px-6 lg:px-8 xl:px-10">
         <button
           type="button"
           onClick={onBack}
-          className="mb-4 flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+          className="mb-4 flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
         >
           <ArrowLeft className="h-4 w-4" />
-          {language === "ar" ? "العودة" : "Back to Marketplace"}
+          {language === "ar" ? "العودة" : "Back"}
         </button>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">
-          {normalizedSearchQuery
-            ? language === "ar"
-              ? `نتائج البحث عن "${normalizedSearchQuery}"`
-              : `Search results for "${normalizedSearchQuery}"`
-            : language === "ar"
-              ? "نتائج البحث"
-              : "Search results"}
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {language === "ar"
-            ? "تصفح جميع الإعلانات التي تطابق بحثك"
-            : "Browse all listings that match your search query"}
-        </p>
-      </div>
-
-      {/* Main Content */}
-      <main className="mx-auto w-full max-w-[94rem] px-4 py-8 sm:px-6 lg:px-8 xl:px-10">
         <div className="grid items-start gap-5 lg:grid-cols-[15rem_minmax(0,1fr)] xl:gap-7 xl:grid-cols-[15.5rem_minmax(0,1fr)]">
           {/* Sidebar Filters (Desktop) */}
           <aside className="hidden lg:block">
@@ -272,20 +203,22 @@ export function SearchResultsPage({
                   setAppliedSearchFilters(defaultSort);
                 }}
                 showApplyButton={false}
+                showCategory
               />
             </div>
           </aside>
 
           {/* Main Results Area */}
           <div className="min-w-0 flex-1">
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-4 px-2">
-              <h2 className="text-2xl font-bold tracking-tight text-slate-800">
-                {normalizedSearchQuery ? (language === "ar" ? `نتائج البحث عن "${normalizedSearchQuery}"` : `Search results for "${normalizedSearchQuery}"`) : (language === "ar" ? "نتائج البحث" : "Search Results")}
-              </h2>
-              <span className="inline-flex items-center justify-center rounded-full bg-slate-100/80 px-3.5 py-1.5 text-xs font-semibold text-slate-600">
-                {language === "ar" ? `${displayedPosts.length} نتيجة` : `${displayedPosts.length} results`}
-              </span>
-            </div>
+            <p className="mb-4 text-sm text-muted-foreground">
+              {normalizedSearchQuery
+                ? language === "ar"
+                  ? `${filteredPosts.length} نتيجة لـ "${normalizedSearchQuery}"`
+                  : `${filteredPosts.length} results for "${normalizedSearchQuery}"`
+                : language === "ar"
+                  ? `${filteredPosts.length} نتيجة`
+                  : `${filteredPosts.length} results`}
+            </p>
             <MarketplaceQueryStatus
               isLoading={isSearching}
               error={searchError}
@@ -312,22 +245,12 @@ export function SearchResultsPage({
                       setAppliedSearchFilters(defaultSort);
                       setShowFilters(false);
                     }}
+                    showCategory
                   />
                 ),
                 onToggle: () => setShowFilters(!showFilters),
               }}
-              activeFilters={
-                activeFilterItems.length > 0 ? (
-                  <MarketplaceActiveFilters
-                    title={
-                      language === "ar" ? "الفلاتر النشطة" : "Active filters"
-                    }
-                    items={activeFilterItems}
-                    clearAllLabel={language === "ar" ? "مسح الكل" : "Clear all"}
-                    onClearAll={clearAllFilters}
-                  />
-                ) : undefined
-              }
+
             />
 
             {isSearching ? (

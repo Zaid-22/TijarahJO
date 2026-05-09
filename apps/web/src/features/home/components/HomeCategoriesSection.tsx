@@ -115,7 +115,7 @@ export function HomeCategoriesSection({
                       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-linear-to-t from-black/50 via-black/20 to-transparent" />
                       {/* Compact label anchored bottom-left */}
                       <div className="absolute inset-x-0 bottom-0 z-10 flex items-end px-3 pb-2.5 sm:px-3.5 sm:pb-3">
-                        <span className="text-[13px] font-semibold leading-snug tracking-wide text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] sm:text-sm">
+                        <span className="text-xs font-semibold leading-snug tracking-wide text-white drop-shadow-md sm:text-sm">
                           {categoryLabel}
                         </span>
                       </div>

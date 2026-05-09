@@ -72,9 +72,9 @@ export function Logo({
   const isLight = finalVariant === "light";
   const isIconOnly = finalVariant === "icon";
 
-  const brandColorClass = isLight ? "text-secondary" : "text-primary";
+  const brandColorClass = "text-primary";
   const textColorClass = isLight || isDarkMode ? "text-white" : "text-black";
-  const glyphColorClass = isDarkMode ? "text-secondary" : brandColorClass;
+  const glyphColorClass = "text-primary";
 
   if (isIconOnly) {
     return (

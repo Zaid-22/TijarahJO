@@ -16,7 +16,7 @@
   --popover-foreground: oklch(0.145 0 0);
   --primary: #0a4abf;
   --primary-foreground: #ffffff;
-  --secondary: #1f5fcc;
+  --secondary: #0d9488;
   --secondary-foreground: #ffffff;
   --muted: #ececf0;
   --muted-foreground: #717182;
@@ -24,6 +24,12 @@
   --accent-foreground: #030213;
   --destructive: #d4183d;
   --destructive-foreground: #ffffff;
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+  --warning: #d97706;
+  --warning-foreground: #ffffff;
+  --info: #0284c7;
+  --info-foreground: #ffffff;
   --border: rgba(0, 0, 0, 0.1);
   --input: transparent;
   --input-background: #f3f3f5;
@@ -57,14 +63,20 @@
   --popover-foreground: #e6edf8;
   --primary: #6ea8ff;
   --primary-foreground: #081326;
-  --secondary: #3a76e8;
-  --secondary-foreground: #f0f5ff;
+  --secondary: #2dd4bf;
+  --secondary-foreground: #042f2e;
   --muted: #18253a;
   --muted-foreground: #99a8c3;
   --accent: #1f2f49;
   --accent-foreground: #e8f0ff;
   --destructive: #e24c72;
   --destructive-foreground: #ffffff;
+  --success: #4ade80;
+  --success-foreground: #052e16;
+  --warning: #fbbf24;
+  --warning-foreground: #422006;
+  --info: #38bdf8;
+  --info-foreground: #0c4a6e;
   --border: rgba(148, 163, 184, 0.24);
   --input: #18253a;
   --input-background: #18253a;
@@ -103,6 +115,12 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-input-background: var(--input-background);
@@ -148,7 +166,7 @@
       ),
       radial-gradient(
         900px 360px at 92% -20%,
-        rgba(58, 118, 232, 0.16),
+        rgba(45, 212, 191, 0.10),
         transparent 60%
       );
     background-attachment: fixed;
@@ -292,7 +310,7 @@ html {
 }
 
 .card-shadow-brand:hover {
-  box-shadow: 0 12px 28px rgba(10, 74, 191, 0.15);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
 }
 
 .min-h-content-60vh {

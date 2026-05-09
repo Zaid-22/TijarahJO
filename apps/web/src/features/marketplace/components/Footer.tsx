@@ -113,7 +113,7 @@ export function Footer({ language }: FooterProps) {
       dir={isRTL ? "rtl" : "ltr"}
       className="relative border-t border-white/10 bg-slate-950 text-slate-100 [content-visibility:auto] [contain-intrinsic-size:720px]"
     >
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/75 to-transparent" />
+      <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-primary/60 via-55% to-secondary/40" />
 
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
         <div className="grid grid-cols-1 gap-10 border-b border-white/10 pb-10 md:grid-cols-2 lg:grid-cols-12 lg:gap-8">

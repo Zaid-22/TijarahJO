@@ -77,6 +77,7 @@ const KNOWN_PRIMARY_SEGMENTS = new Set([
   "admin",
   "compare",
   "category",
+  "search",
   ...Array.from(ROUTES_WITH_LOCAL_HEADER),
 ]);
 const AUTH_ROUTE_SEGMENTS = new Set([
