@@ -15,11 +15,12 @@ import {
 } from "../../../shared/ui/alert-dialog";
 import { Dialog } from "../../../shared/ui/dialog";
 import { EditPostDialog } from "../../marketplace/components/EditPostDialog";
+import { ReportPostDialog } from "../../marketplace/components/ReportPostDialog";
 import { toPositiveIntegerId } from "../../../utils/idValidation";
 import type { Language } from "../../../translations";
 import type { Post, ViewMode } from "../../../types";
 import type { UpdatePostInput } from "../../../app/routes/usePostActions";
-import type { UnifiedProfileViewModel } from "../types";
+import type { UnifiedProfileViewModel, UnifiedProfileReview } from "../types";
 import { UnifiedProfileHeaderCard } from "./UnifiedProfileHeaderCard";
 import { UnifiedProfileListingCard } from "./UnifiedProfileListingCard";
 import { UnifiedProfileTabs } from "./UnifiedProfileTabs";
@@ -78,6 +79,8 @@ export function UnifiedProfilePage({
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [postToEdit, setPostToEdit] = useState<Post | null>(null);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
+  const [isReportUserOpen, setIsReportUserOpen] = useState(false);
+  const [reviewToReport, setReviewToReport] = useState<UnifiedProfileReview | null>(null);
   const listingViewMode: ViewMode = "list";
 
   const averageRating =
@@ -233,6 +236,7 @@ export function UnifiedProfilePage({
           onEditProfileClick={onEditProfileClick}
           onChatWithSeller={onChatWithSeller}
           onAddPostClick={onAddPostClick}
+          onReportUserClick={isAuthenticated ? () => setIsReportUserOpen(true) : undefined}
         />
 
         <div className="space-y-6">
@@ -268,6 +272,8 @@ export function UnifiedProfilePage({
               />
             )}
             dateLocale={dateLocale}
+            currentUserId={currentUserId}
+            onReportReview={isAuthenticated ? setReviewToReport : undefined}
           />
         </div>
       </div>
@@ -309,6 +315,26 @@ export function UnifiedProfilePage({
           />
         ) : null}
       </Dialog>
+
+      <ReportPostDialog
+        open={isReportUserOpen}
+        onOpenChange={setIsReportUserOpen}
+        language={language}
+        reportType="USER"
+        targetId={viewModel.profileUserId}
+        targetTitle={viewModel.profile.name || viewModel.profileUserId}
+      />
+
+      <ReportPostDialog
+        open={reviewToReport !== null}
+        onOpenChange={(open) => {
+          if (!open) setReviewToReport(null);
+        }}
+        language={language}
+        reportType="REVIEW"
+        targetId={reviewToReport?.reviewID}
+        targetTitle={reviewToReport?.comment?.slice(0, 80) || "Review"}
+      />
     </PageShell>
   );
 }

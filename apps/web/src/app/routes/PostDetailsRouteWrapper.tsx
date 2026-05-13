@@ -28,7 +28,6 @@ interface PostDetailsRouteWrapperProps {
   onNavigateProfile: () => void;
   onNavigateSeller: (sellerId: string, fromPath?: string) => void;
   onNavigateChat: (sellerId: string, fromPath?: string) => void;
-  onNavigateLogin: () => void;
   onRequireAuth?: () => void;
   onUpdatePost: (updatedPost: UpdatePostInput) => Promise<void>;
   onUpdatePostStatus: (statusData: UpdatePostStatusInput) => Promise<void>;
@@ -49,7 +48,6 @@ export function PostDetailsRouteWrapper({
   onNavigateProfile,
   onNavigateSeller,
   onNavigateChat,
-  onNavigateLogin,
   onRequireAuth,
   onUpdatePost,
   onUpdatePostStatus,
@@ -58,7 +56,7 @@ export function PostDetailsRouteWrapper({
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { resolvedPost, isLoadingRoutePost, isOwnPost } =
+  const { resolvedPost, isLoadingRoutePost, isOwnPost, mutateRoutePost } =
     usePostDetailsRouteData({
       id,
       availablePosts,
@@ -172,7 +170,7 @@ export function PostDetailsRouteWrapper({
         }
 
         if (!isAuthenticated) {
-          onNavigateLogin();
+          onRequireAuth?.();
           return;
         }
 
@@ -188,6 +186,16 @@ export function PostDetailsRouteWrapper({
       onUpdatePost={async (updatedPost) => {
         try {
           await onUpdatePost(updatedPost);
+          mutateRoutePost({
+            name: updatedPost.name,
+            description: updatedPost.description,
+            price: updatedPost.price,
+            category: updatedPost.category,
+            location: updatedPost.location,
+            area: updatedPost.area,
+            status: updatedPost.status as "ACTIVE" | "SOLD" | "DELETED" | undefined,
+            images: updatedPost.images?.filter((img): img is string => typeof img === "string"),
+          });
           deferredToast.success(labels.postUpdated);
         } catch {
           deferredToast.error(labels.updateError);
@@ -196,6 +204,7 @@ export function PostDetailsRouteWrapper({
       onUpdatePostStatus={async (statusData) => {
         try {
           await onUpdatePostStatus(statusData);
+          mutateRoutePost({ status: statusData.status as "ACTIVE" | "SOLD" | "DELETED" });
           deferredToast.success(labels.postUpdated);
         } catch {
           deferredToast.error(labels.updateError);

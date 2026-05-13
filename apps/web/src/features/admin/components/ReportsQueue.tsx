@@ -38,10 +38,10 @@ const STATUS_LABELS: Record<number, string> = {
 };
 
 const STATUS_COLORS: Record<number, string> = {
-  0: "bg-yellow-100 text-yellow-800",
-  1: "bg-blue-100 text-blue-800",
-  2: "bg-green-100 text-green-800",
-  3: "bg-gray-100 text-gray-800",
+  0: "bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20",
+  1: "bg-blue-500/10 text-blue-600 dark:text-blue-500 border border-blue-500/20",
+  2: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border border-emerald-500/20",
+  3: "bg-muted text-muted-foreground border border-border",
 };
 
 const STATUS_ICONS: Record<number, typeof Clock> = {
@@ -52,10 +52,10 @@ const STATUS_ICONS: Record<number, typeof Clock> = {
 };
 
 const REPORT_TYPE_COLORS: Record<string, string> = {
-  LISTING: "bg-violet-100 text-violet-800",
-  USER: "bg-blue-100 text-blue-800",
-  REVIEW: "bg-amber-100 text-amber-800",
-  COMMENT: "bg-cyan-100 text-cyan-800",
+  LISTING: "bg-secondary text-secondary-foreground border border-border",
+  USER: "bg-secondary text-secondary-foreground border border-border",
+  REVIEW: "bg-secondary text-secondary-foreground border border-border",
+  COMMENT: "bg-secondary text-secondary-foreground border border-border",
 };
 
 function formatReportTargetLabel(report: AdminReportItem): string {
@@ -97,7 +97,8 @@ export function ReportsQueue() {
   const [resolutionNotes, setResolutionNotes] = useState("");
 
   // Block user state
-  const [selectedSuspensionHours, setSelectedSuspensionHours] = useState<string>("24");
+  const [selectedSuspensionHours, setSelectedSuspensionHours] =
+    useState<string>("24");
   const [isSuspending, setIsSuspending] = useState(false);
 
   // Block post state
@@ -222,7 +223,7 @@ export function ReportsQueue() {
         await api.admin.updateReportStatus(
           selectedReport.reportID,
           2, // Resolved
-          `Post blocked via report #${selectedReport.reportID}`
+          `Post blocked via report #${selectedReport.reportID}`,
         );
 
         setActionDialogOpen(false);
@@ -368,23 +369,23 @@ export function ReportsQueue() {
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Badge
-                        className={
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wider ${
                           REPORT_TYPE_COLORS[report.reportType] ??
-                          "bg-gray-100 text-gray-800"
-                        }
+                          "bg-secondary text-secondary-foreground border border-border"
+                        }`}
                       >
                         {report.reportType}
-                      </Badge>
-                      <Badge
-                        className={
-                          STATUS_COLORS[report.status] ?? "bg-gray-100"
-                        }
+                      </span>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shadow-sm ${
+                          STATUS_COLORS[report.status] ?? "bg-muted text-muted-foreground border border-border"
+                        }`}
                       >
-                        <StatusIcon className="w-3 h-3 mr-1" />
+                        <StatusIcon className="w-3.5 h-3.5 mr-1.5" />
                         {STATUS_LABELS[report.status] ?? "Unknown"}
-                      </Badge>
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                      </span>
+                      <CardTitle className="text-sm font-medium text-muted-foreground/70 ml-1">
                         #{report.reportID}
                       </CardTitle>
                     </div>

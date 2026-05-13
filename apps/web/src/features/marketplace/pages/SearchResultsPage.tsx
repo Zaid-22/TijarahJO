@@ -50,22 +50,19 @@ export function SearchResultsPage({
     initialSearchQuery.trim(),
   );
   const [showFilters, setShowFilters] = useState(false);
-  const [appliedSearchFilters, setAppliedSearchFilters] = useState<SearchFilters>(
-    { sortBy: "views", sortOrder: "desc" },
-  );
+  const [appliedSearchFilters, setAppliedSearchFilters] =
+    useState<SearchFilters>({ sortBy: "views", sortOrder: "desc" });
   const [draftSearchFilters, setDraftSearchFilters] = useState<SearchFilters>({
     sortBy: "views",
     sortOrder: "desc",
   });
 
-  const {
-    normalizedSearchQuery,
-    clearSearch: clearAppliedSearch,
-  } = useMarketplaceSearchFilter({
-    language,
-    searchQuery: appliedSearchQuery,
-    setSearchQuery: setAppliedSearchQuery,
-  });
+  const { normalizedSearchQuery, clearSearch: clearAppliedSearch } =
+    useMarketplaceSearchFilter({
+      language,
+      searchQuery: appliedSearchQuery,
+      setSearchQuery: setAppliedSearchQuery,
+    });
   const clearSearch = useCallback(() => {
     clearAppliedSearch();
     onSearch("");
@@ -76,10 +73,14 @@ export function SearchResultsPage({
       let results = activePosts;
 
       if (appliedSearchFilters.minPrice != null) {
-        results = results.filter((p) => p.price >= appliedSearchFilters.minPrice!);
+        results = results.filter(
+          (p) => p.price >= appliedSearchFilters.minPrice!,
+        );
       }
       if (appliedSearchFilters.maxPrice != null) {
-        results = results.filter((p) => p.price <= appliedSearchFilters.maxPrice!);
+        results = results.filter(
+          (p) => p.price <= appliedSearchFilters.maxPrice!,
+        );
       }
       if (query) {
         results = rankMarketplacePosts(results, query);
@@ -142,9 +143,9 @@ export function SearchResultsPage({
     }
     if (appliedSearchFilters.city) {
       results = results.filter((p) =>
-        p.location?.toLowerCase().includes(
-          appliedSearchFilters.city!.toLowerCase(),
-        ),
+        p.location
+          ?.toLowerCase()
+          .includes(appliedSearchFilters.city!.toLowerCase()),
       );
     }
     return results;
@@ -197,7 +198,10 @@ export function SearchResultsPage({
               onFiltersChange={setAppliedSearchFilters}
               onApply={() => {}}
               onClear={() => {
-                const defaultSort = { sortBy: "views" as const, sortOrder: "desc" as const };
+                const defaultSort = {
+                  sortBy: "views" as const,
+                  sortOrder: "desc" as const,
+                };
                 setDraftSearchFilters(defaultSort);
                 setAppliedSearchFilters(defaultSort);
               }}
@@ -208,15 +212,11 @@ export function SearchResultsPage({
 
           {/* Main Results Area */}
           <div className="min-w-0 flex-1">
-            <p className="mb-4 text-sm text-muted-foreground">
-              {normalizedSearchQuery
-                ? language === "ar"
-                  ? `${filteredPosts.length} نتيجة لـ "${normalizedSearchQuery}"`
-                  : `${filteredPosts.length} results for "${normalizedSearchQuery}"`
-                : language === "ar"
-                  ? `${filteredPosts.length} نتيجة`
-                  : `${filteredPosts.length} results`}
-            </p>
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4 px-2">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-800">
+                {language === "ar" ? "نتائج البحث" : "Search Results"}
+              </h1>
+            </div>
             <MarketplaceQueryStatus
               isLoading={isSearching}
               error={searchError}
@@ -238,7 +238,10 @@ export function SearchResultsPage({
                     onFiltersChange={setDraftSearchFilters}
                     onApply={applySearchFilters}
                     onClear={() => {
-                      const defaultSort = { sortBy: "views" as const, sortOrder: "desc" as const };
+                      const defaultSort = {
+                        sortBy: "views" as const,
+                        sortOrder: "desc" as const,
+                      };
                       setDraftSearchFilters(defaultSort);
                       setAppliedSearchFilters(defaultSort);
                       setShowFilters(false);
@@ -248,7 +251,6 @@ export function SearchResultsPage({
                 ),
                 onToggle: () => setShowFilters(!showFilters),
               }}
-
             />
 
             {isSearching ? (
@@ -267,7 +269,8 @@ export function SearchResultsPage({
                 language={language}
                 animated
                 emptyState={{
-                  title: language === "ar" ? "لا توجد نتائج" : "No results found",
+                  title:
+                    language === "ar" ? "لا توجد نتائج" : "No results found",
                   description:
                     language === "ar"
                       ? `لم نتمكن من العثور على أي منشورات تطابق "${normalizedSearchQuery}"`

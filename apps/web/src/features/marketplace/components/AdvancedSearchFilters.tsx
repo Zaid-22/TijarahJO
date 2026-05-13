@@ -244,7 +244,7 @@ export function AdvancedSearchFilters({
       ) : null}
 
       {showApplyButton ? (
-        <div className="-mx-5 mt-2 border-t border-border/70 bg-card/95 px-5 pt-4 pb-1 backdrop-blur-sm lg:hidden sm:-mx-6 sm:px-6">
+        <div className="mt-4 border-t border-border/70 pt-4 lg:hidden w-full">
           <Button
             type="button"
             className="w-full rounded-xl shadow-md"

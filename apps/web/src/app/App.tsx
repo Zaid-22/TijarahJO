@@ -345,7 +345,8 @@ function AppContent() {
   const shouldShowComparePanel = 
     isAuthenticated && !isAuthRoute && !COMPARISON_EXCLUDED_SEGMENTS.has(primarySegment);
   const isComparePanelVisible = shouldShowComparePanel && compareCount > 0;
-  const shouldShowFooter = !isAuthRoute && primarySegment !== "admin";
+  const shouldShowFooter =
+    !isAuthRoute && primarySegment !== "admin" && primarySegment !== "sell";
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">

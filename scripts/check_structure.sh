@@ -45,6 +45,7 @@ done
 
 stale_refs="$(grep -rn '\./\(run-dev\|bootstrap_db\|verify_all_apis\|kill-port\|test_delete_post_with_chat\)\.sh' \
   README.md README-RUN.md docs apps scripts Makefile .github \
+  --exclude-dir='node_modules' --exclude-dir='dist' --exclude-dir='.unit-dist' --exclude-dir='bin' --exclude-dir='obj' \
   --include='*.md' --include='*.sh' --include='*.yml' --include='Makefile' \
   2>/dev/null | grep -v '/archive/' || true)"
 if [[ -n "$stale_refs" ]]; then

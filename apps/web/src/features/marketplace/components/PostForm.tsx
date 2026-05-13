@@ -202,7 +202,7 @@ export function PostForm({
 
         <div className="space-y-2">
           <Label id="area-label" htmlFor="area" className="text-start block font-semibold">
-            {isRTL ? "المنطقة / الحي" : "Area / Neighborhood"} *
+            {t.area || (isRTL ? "المنطقة / الحي" : "Area / Neighborhood")} *
           </Label>
           <Select
             name="area"
@@ -216,12 +216,12 @@ export function PostForm({
             <SelectTrigger id="area" className={cn("text-start", errors.area ? "border-destructive" : "")}>
               <SelectValue placeholder={
                 !formData.location
-                  ? isRTL ? "اختر المدينة أولاً" : "Select a city first"
+                  ? t.selectCityFirst || (isRTL ? "اختر المدينة أولاً" : "Select a city first")
                   : isLoadingAreas
                     ? isRTL ? "جارٍ تحميل المناطق..." : "Loading areas..."
-                    : isRTL
-                      ? "مثال: الدوار السابع، الصويفية، إلخ"
-                      : "e.g. 7th Circle, Sweifieh, etc."
+                    : t.areaPlaceholder || (isRTL
+                      ? "مثال: عبدون، خلدا، طبربور..."
+                      : "e.g. Abdoun, Khalda, Tabarbour...")
               } />
             </SelectTrigger>
             <SelectContent>

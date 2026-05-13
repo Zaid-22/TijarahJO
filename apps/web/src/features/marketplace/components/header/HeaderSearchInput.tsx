@@ -17,11 +17,14 @@ export function HeaderSearchInput({
   onSearchSubmit,
 }: HeaderSearchInputProps) {
   const t = translations[language];
+  const searchLabel =
+    language === "ar" ? "ابحث في تجارة جو" : "Search in TijarahJo";
 
   return (
     <MarketplaceSearchField
       value={searchQuery}
       placeholder={t.searchPlaceholder}
+      ariaLabel={searchLabel}
       clearLabel={language === "ar" ? "مسح البحث" : "Clear search"}
       onChange={(value) => onSearchChange?.(value)}
       onSubmit={onSearchSubmit}

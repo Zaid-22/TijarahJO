@@ -10,6 +10,7 @@ import { Button } from "../../../shared/ui/button";
 import { Ban, CheckCircle, Eye, ExternalLink, Trash2 } from "lucide-react";
 import type { AdminPostItem } from "../../../services/api/admin.types";
 import { formatCompactDate } from "../../../shared/lib/dateTime";
+import { Link } from "react-router-dom";
 
 type ListingDetailModalProps = {
   post: AdminPostItem | null;
@@ -82,7 +83,15 @@ export function ListingDetailModal({
             </div>
             <div>
               <span className="text-muted-foreground">Seller</span>
-              <p className="font-medium">{post.sellerName}</p>
+              <p className="font-medium">
+                <Link
+                  to={`/admin/users/${post.userID}`}
+                  className="text-primary hover:underline transition-colors"
+                  onClick={() => onOpenChange(false)}
+                >
+                  {post.sellerName}
+                </Link>
+              </p>
             </div>
             <div>
               <span className="text-muted-foreground">Posted</span>

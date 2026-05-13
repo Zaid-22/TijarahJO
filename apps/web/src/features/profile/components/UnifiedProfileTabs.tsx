@@ -5,7 +5,7 @@ import { Button } from "../../../shared/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../shared/ui/tabs";
 import { Textarea } from "../../../shared/ui/textarea";
 import type { Post, ViewMode } from "../../../types";
-import type { UnifiedProfileViewModel } from "../types";
+import type { UnifiedProfileViewModel, UnifiedProfileReview } from "../types";
 import { UnifiedProfileReviewCard } from "./UnifiedProfileReviewCard";
 import type { UnifiedProfileLabels } from "./unifiedProfileLabels";
 
@@ -23,6 +23,8 @@ interface UnifiedProfileTabsProps {
   onAddPostClick?: () => void;
   renderListingCard: (post: Post) => ReactNode;
   dateLocale: string;
+  onReportReview?: (review: UnifiedProfileReview) => void;
+  currentUserId?: string;
 }
 
 export function UnifiedProfileTabs({
@@ -37,6 +39,8 @@ export function UnifiedProfileTabs({
   onReviewSubmit,
   renderListingCard,
   dateLocale,
+  onReportReview,
+  currentUserId,
 }: UnifiedProfileTabsProps) {
   return (
     <div className="mt-2">
@@ -104,9 +108,6 @@ export function UnifiedProfileTabs({
         <TabsContent value="reviews" className="mt-1">
           <div className="mb-6 border-b border-border pb-4">
             <h2 className="text-xl font-bold text-foreground">{labels.reviews}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {labels.reviewsDescription}
-            </p>
           </div>
 
           {viewModel.canReview ? (
@@ -165,6 +166,8 @@ export function UnifiedProfileTabs({
                   review={review}
                   labels={labels}
                   dateLocale={dateLocale}
+                  onReportReview={onReportReview}
+                  currentUserId={currentUserId}
                 />
               ))
             ) : (

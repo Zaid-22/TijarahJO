@@ -202,6 +202,11 @@ export function Header({
                   aria-label={language === "ar" ? "الرسائل" : "Messages"}
                 >
                   <MessageCircle className="w-5 h-5 transition-transform group-hover:scale-110" />
+                  {normalizedUnreadMessagesCount > 0 && (
+                    <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full border-2 border-background bg-destructive px-1 text-xs font-bold text-destructive-foreground leading-none">
+                      {normalizedUnreadMessagesCount > 99 ? "99+" : normalizedUnreadMessagesCount}
+                    </span>
+                  )}
                 </Button>
               )}
             </div>
@@ -219,7 +224,6 @@ export function Header({
                     isAdmin={isAdmin}
                     currentUserDisplayName={currentUserDisplayName}
                     userAvatar={userAvatar}
-                    unreadMessagesCount={normalizedUnreadMessagesCount}
                     onShowProfile={onShowProfile}
                     onShowMessages={onShowMessages}
                     onShowSettings={onShowSettings}

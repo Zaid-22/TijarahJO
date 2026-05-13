@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -198,9 +198,14 @@ export function PostCommentsModeration() {
                         Post #{comment.postID}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground">
-                      <div>{comment.authorName || "Unknown user"}</div>
-                      <div className="text-xs text-muted-foreground/80">
+                    <td className="px-6 py-4">
+                      <Link
+                        to={`/admin/users/${comment.userID}`}
+                        className="text-primary hover:underline font-medium transition-colors block"
+                      >
+                        {comment.authorName || "Unknown user"}
+                      </Link>
+                      <div className="text-xs text-muted-foreground/80 mt-1">
                         User #{comment.userID}
                       </div>
                     </td>

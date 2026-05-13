@@ -158,14 +158,13 @@ export function AllPostsPage({
             />
           </div>
 
+
           <div className="min-w-0 flex-1">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-4 px-2">
               <h2 className="text-2xl font-bold tracking-tight text-slate-800">
                 {language === "ar" ? "الإعلانات المتاحة" : "Available Listings"}
               </h2>
-              <span className="inline-flex items-center justify-center rounded-full bg-slate-100/80 px-3.5 py-1.5 text-xs font-semibold text-slate-600">
-                {language === "ar" ? `${displayedPosts.length} نتيجة` : `${displayedPosts.length} results`}
-              </span>
+
             </div>
 
             <MarketplaceDiscoveryControls

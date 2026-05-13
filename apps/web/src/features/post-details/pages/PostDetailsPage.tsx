@@ -386,7 +386,13 @@ export function PostDetailsPage({
             sellerReviewCount={sellerReviewCount}
             onSellerClick={onSellerClick}
             onChatWithSeller={onChatWithSeller}
-            onShowPhoneDialog={() => setActiveDialog("phone")}
+            onShowPhoneDialog={() => {
+              if (!isAuthenticated) {
+                onRequireAuth?.();
+                return;
+              }
+              setActiveDialog("phone");
+            }}
             onShowEditDialog={() => setActiveDialog("edit")}
             onShowDeleteDialog={() => setActiveDialog("delete")}
             hasOwnerActions={hasOwnerActions}

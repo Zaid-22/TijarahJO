@@ -14,7 +14,7 @@ import {
 } from "../components/AdvancedSearchFilters";
 import { MarketplaceDiscoveryControls } from "../components/MarketplaceDiscoveryControls";
 import { MarketplaceResultsPagination } from "../components/MarketplaceResultsPagination";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useMarketplaceDiscoveryState } from "../../../shared/hooks/useMarketplaceDiscoveryState";
 
@@ -82,6 +82,15 @@ export function CategoryPage({
   const [appliedSearchFilters, setAppliedSearchFilters] = useState<SearchFilters>(
     { sortBy: "views", sortOrder: "desc" },
   );
+  const [draftSearchFilters, setDraftSearchFilters] = useState<SearchFilters>({
+    sortBy: "views",
+    sortOrder: "desc",
+  });
+  const [showFilters, setShowFilters] = useState(false);
+
+  useEffect(() => {
+    setDraftSearchFilters(appliedSearchFilters);
+  }, [appliedSearchFilters]);
 
   const currentCategory = categories.find(
     (category) => categoryMatchesRequest(category.name, categoryName),
@@ -146,10 +155,7 @@ export function CategoryPage({
     defaultViewMode: "list",
     storageKey: "tijarahjo_view_mode_category",
   });
-  const resultsSummary =
-    language === "ar"
-      ? `${sortedPosts.length} ${sortedPosts.length === 1 ? "نتيجة" : "نتائج"}`
-      : `${sortedPosts.length} ${sortedPosts.length === 1 ? "result" : "results"}`;
+
 
   return (
     <PageShell>
@@ -184,11 +190,14 @@ export function CategoryPage({
               onFiltersChange={setAppliedSearchFilters}
               onApply={() => {}}
               onClear={() => {
-                setAppliedSearchFilters({ sortBy: "views", sortOrder: "desc" });
+                const defaultSort = { sortBy: "views" as const, sortOrder: "desc" as const };
+                setDraftSearchFilters(defaultSort);
+                setAppliedSearchFilters(defaultSort);
               }}
               showApplyButton={false}
             />
           </div>
+
 
           {/* Main Results Area */}
           <div className="min-w-0 flex-1">
@@ -196,9 +205,7 @@ export function CategoryPage({
               <h2 className="text-2xl font-bold tracking-tight text-slate-800">
                 {language === "ar" ? "الإعلانات المتاحة" : "Available Listings"}
               </h2>
-              <span className="inline-flex items-center justify-center rounded-full bg-slate-100/80 px-3.5 py-1.5 text-xs font-semibold text-slate-600">
-                {resultsSummary}
-              </span>
+
             </div>
 
             {/* Controls Bar */}
@@ -207,6 +214,28 @@ export function CategoryPage({
               className="mb-5 lg:hidden"
               toolbarClassName="flex-none"
               leftSlotClassName="gap-2 flex-1 sm:flex-initial"
+              mobileFilters={{
+                isOpen: showFilters,
+                toggleLabel: language === "ar" ? "الفلاتر" : "Filters",
+                content: (
+                  <AdvancedSearchFilters
+                    language={language}
+                    filters={{ ...draftSearchFilters, category: displayCategoryName }}
+                    onFiltersChange={setDraftSearchFilters}
+                    onApply={() => {
+                      setAppliedSearchFilters(draftSearchFilters);
+                      setShowFilters(false);
+                    }}
+                    onClear={() => {
+                      const defaultSort = { sortBy: "views" as const, sortOrder: "desc" as const };
+                      setDraftSearchFilters(defaultSort);
+                      setAppliedSearchFilters(defaultSort);
+                      setShowFilters(false);
+                    }}
+                  />
+                ),
+                onToggle: () => setShowFilters(!showFilters),
+              }}
             />
 
             {isLoading ? (

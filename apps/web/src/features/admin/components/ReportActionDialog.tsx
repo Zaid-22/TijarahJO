@@ -87,191 +87,216 @@ export function ReportActionDialog({
           </DialogDescription>
         </DialogHeader>
         {report && (
-          <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="space-y-6 py-4">
+            {/* Report Details Block */}
+            <div className="bg-muted/30 rounded-xl p-4 grid grid-cols-2 gap-y-5 gap-x-6">
               <div>
-                <span className="text-muted-foreground">Type:</span>{" "}
-                <span className="font-medium">{report.reportType}</span>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                  Report Type
+                </p>
+                <p className="text-sm font-medium text-foreground">{report.reportType}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Target:</span>{" "}
-                <span className="font-medium">{formatReportTargetLabel(report)}</span>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                  Target
+                </p>
+                <p className="text-sm font-medium text-foreground">{formatReportTargetLabel(report)}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Reason:</span>{" "}
-                <span className="font-medium">{report.reason}</span>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                  Reason
+                </p>
+                <p className="text-sm font-medium text-foreground">{report.reason}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Reporter:</span>{" "}
-                <span className="font-medium">{report.reporterName}</span>
-                {report.reporterEmail && (
-                  <p className="text-xs text-muted-foreground mt-0.5">{report.reporterEmail}</p>
-                )}
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                  Reporter
+                </p>
+                <div className="text-sm">
+                  <p className="font-medium text-foreground">{report.reporterName}</p>
+                  {report.reporterEmail && (
+                    <p className="text-muted-foreground text-xs mt-0.5">{report.reporterEmail}</p>
+                  )}
+                </div>
               </div>
             </div>
 
             {report.description && (
-              <div className="text-sm">
-                <span className="text-muted-foreground">Description:</span>
-                <p className="mt-1 border-l-2 border-border pl-3">{report.description}</p>
-              </div>
-            )}
-
-            {report.targetUserID && (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <ShieldBan className="w-4 h-4 text-destructive" />
-                  <span className="text-sm font-semibold text-destructive">
-                    Block Reported User
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {report.targetUserName
-                    ? `This will immediately invalidate ${report.targetUserName}'s active sessions. The report will be auto-resolved.`
-                    : "This will immediately invalidate the user's active sessions. The report will be auto-resolved."}
+              <div className="space-y-2">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  Description
                 </p>
-                <div className="flex items-center gap-2">
-                  <Select value={selectedSuspensionHours} onValueChange={onSuspensionHoursChange}>
-                    <SelectTrigger id="suspension-duration" className="flex-1" aria-label="Select suspension duration">
-                      <SelectValue placeholder="Duration" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SUSPENSION_OPTIONS.map((opt) => (
-                        <SelectItem key={String(opt.hours)} value={String(opt.hours)}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={onBlockUser}
-                    disabled={isSuspending}
-                    className="shrink-0"
-                    aria-label="Block User"
-                  >
-                    {isSuspending ? (
-                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                    ) : (
-                      <>
-                        <ShieldBan className="w-3.5 h-3.5 mr-1.5" />
-                        Block User
-                      </>
-                    )}
-                  </Button>
+                <div className="bg-muted/20 border border-border/50 rounded-lg p-3 text-sm text-foreground leading-relaxed">
+                  {report.description}
                 </div>
               </div>
             )}
 
-            {report.reportType === "LISTING" && (
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <ShieldBan className="w-4 h-4 text-foreground" />
-                    <span className="text-sm font-semibold text-foreground">Block Reported Post</span>
+            {/* Moderation Actions Section */}
+            {(report.targetUserID || report.reportType === "LISTING" || report.reportType === "COMMENT") && (
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-foreground border-b border-border/50 pb-2">
+                  Moderation Actions
+                </h4>
+
+                {report.targetUserID && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-destructive/20 bg-destructive/5 p-4 transition-colors hover:border-destructive/30">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <ShieldBan className="w-4 h-4 text-destructive" />
+                        <span className="text-sm font-semibold text-destructive">
+                          Suspend User
+                        </span>
+                      </div>
+                      <p className="text-xs text-destructive/80 max-w-[280px] leading-relaxed">
+                        {report.targetUserName
+                          ? `Invalidates ${report.targetUserName}'s active sessions. Auto-resolves report.`
+                          : "Invalidates active sessions. Auto-resolves report."}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <Select value={selectedSuspensionHours} onValueChange={onSuspensionHoursChange}>
+                        <SelectTrigger className="w-[130px] h-9 text-xs" aria-label="Select suspension duration">
+                          <SelectValue placeholder="Duration" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SUSPENSION_OPTIONS.map((opt) => (
+                            <SelectItem key={String(opt.hours)} value={String(opt.hours)} className="text-xs">
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={onBlockUser}
+                        disabled={isSuspending}
+                        className="h-9 px-4 shrink-0 shadow-sm"
+                      >
+                        {isSuspending ? (
+                          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                        ) : (
+                          "Apply"
+                        )}
+                      </Button>
+                    </div>
                   </div>
-                  <Link
-                    to={`/post/${report.targetID}`}
-                    target="_blank"
-                    className="text-xs text-primary hover:underline flex items-center gap-1"
-                  >
-                    View Post <ExternalLink className="w-3 h-3" />
-                  </Link>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  This will hide the post from the marketplace. The report will be auto-resolved.
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onBlockPost}
-                    disabled={isBlockingPost}
-                    className="border-destructive/30 text-destructive hover:bg-destructive/10"
-                    aria-label="Block Post"
-                  >
-                    {isBlockingPost ? (
-                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                    ) : (
-                      <>
-                        <ShieldBan className="w-3.5 h-3.5 mr-1.5" />
-                        Block Post
-                      </>
-                    )}
-                  </Button>
-                </div>
+                )}
+
+                {report.reportType === "LISTING" && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <ShieldBan className="w-4 h-4 text-foreground/80" />
+                          <span className="text-sm font-semibold text-foreground">Block Listing</span>
+                        </div>
+                        <Link
+                          to={`/post/${report.targetID}`}
+                          target="_blank"
+                          className="text-xs text-primary hover:underline flex items-center gap-1 sm:hidden"
+                        >
+                          View <ExternalLink className="w-3 h-3" />
+                        </Link>
+                      </div>
+                      <p className="text-xs text-muted-foreground max-w-[280px] leading-relaxed">
+                        Hides the post from the marketplace and auto-resolves this report.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <Link
+                        to={`/post/${report.targetID}`}
+                        target="_blank"
+                        className="text-xs text-primary hover:underline hidden sm:flex items-center gap-1"
+                      >
+                        View Post <ExternalLink className="w-3 h-3" />
+                      </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onBlockPost}
+                        disabled={isBlockingPost}
+                        className="w-full sm:w-auto h-9 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive shadow-sm"
+                      >
+                        {isBlockingPost ? (
+                          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-destructive/30 border-t-destructive" />
+                        ) : (
+                          "Block Post"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {report.reportType === "COMMENT" && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <Trash2 className="w-4 h-4 text-foreground/80" />
+                        <span className="text-sm font-semibold text-foreground">Delete Comment</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground max-w-[280px] leading-relaxed">
+                        Permanently hides the comment and auto-resolves this report.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onDeleteComment}
+                      disabled={isDeletingComment}
+                      className="w-full sm:w-auto h-9 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive shadow-sm"
+                    >
+                      {isDeletingComment ? (
+                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-destructive/30 border-t-destructive" />
+                      ) : (
+                        "Delete Comment"
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
-            {report.reportType === "COMMENT" && (
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center gap-2">
-                  <Trash2 className="w-4 h-4 text-foreground" />
-                  <span className="text-sm font-semibold text-foreground">
-                    Delete Reported Comment
-                  </span>
+            {/* Resolution Form */}
+            <div className="space-y-4 pt-2">
+              <div className="grid gap-2">
+                <div id="report-status-update-label" className="text-sm font-semibold text-foreground">
+                  Update Status
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  This will hide the comment from the listing. The report will be auto-resolved.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onDeleteComment}
-                  disabled={isDeletingComment}
-                  className="border-destructive/30 text-destructive hover:bg-destructive/10"
-                  aria-label="Delete Comment"
+                <Select
+                  name="reportStatusUpdate"
+                  value={String(newStatus)}
+                  onValueChange={(v) => onStatusChange(Number(v))}
                 >
-                  {isDeletingComment ? (
-                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  ) : (
-                    <>
-                      <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                      Delete Comment
-                    </>
-                  )}
-                </Button>
+                  <SelectTrigger
+                    id="report-status-update"
+                    className="h-10 shadow-sm"
+                    aria-labelledby="report-status-update-label"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Pending</SelectItem>
+                    <SelectItem value="1">Under Review</SelectItem>
+                    <SelectItem value="2">Resolved</SelectItem>
+                    <SelectItem value="3">Dismissed</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            )}
 
-            <div>
-              <div id="report-status-update-label" className="text-sm font-medium text-foreground mb-1.5">
-                Update Status
+              <div className="grid gap-2">
+                <label htmlFor="resolution-notes" className="text-sm font-semibold text-foreground">
+                  Resolution Notes
+                </label>
+                <Textarea
+                  id="resolution-notes"
+                  className="resize-none min-h-24 shadow-sm"
+                  placeholder="Add details about how this report was handled..."
+                  value={resolutionNotes}
+                  onChange={(e) => onResolutionNotesChange(e.target.value)}
+                />
               </div>
-              <Select
-                name="reportStatusUpdate"
-                value={String(newStatus)}
-                onValueChange={(v) => onStatusChange(Number(v))}
-              >
-                <SelectTrigger
-                  id="report-status-update"
-                  className="mt-1.5"
-                  aria-labelledby="report-status-update-label"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">Pending</SelectItem>
-                  <SelectItem value="1">Under Review</SelectItem>
-                  <SelectItem value="2">Resolved</SelectItem>
-                  <SelectItem value="3">Dismissed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label htmlFor="resolution-notes" className="text-sm font-medium text-foreground">
-                Resolution Notes
-              </label>
-              <Textarea
-                id="resolution-notes"
-                className="mt-1.5"
-                placeholder="Add notes about how this was resolved..."
-                value={resolutionNotes}
-                onChange={(e) => onResolutionNotesChange(e.target.value)}
-                rows={3}
-              />
             </div>
           </div>
         )}

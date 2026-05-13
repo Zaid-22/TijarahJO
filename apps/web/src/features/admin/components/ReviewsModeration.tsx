@@ -11,6 +11,7 @@ import {
 import { ConfirmActionDialog } from "../../../shared/ui/confirm-action-dialog";
 import { formatCompactDate } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
+import { Link } from "react-router-dom";
 
 export function ReviewsModeration() {
   const [reviewsResult, setReviewsResult] = useState<AdminReviewListResult>({
@@ -158,11 +159,21 @@ export function ReviewsModeration() {
                     className="border-b border-border hover:bg-muted/50 transition-colors"
                   >
                     <td className="px-6 py-4 font-medium">{review.reviewID}</td>
-                    <td className="px-6 py-4 text-muted-foreground">
-                      {review.reviewerName}
+                    <td className="px-6 py-4">
+                      <Link
+                        to={`/admin/users/${review.reviewerID}`}
+                        className="text-primary hover:underline font-medium transition-colors"
+                      >
+                        {review.reviewerName}
+                      </Link>
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground">
-                      {review.reviewedUserName}
+                    <td className="px-6 py-4">
+                      <Link
+                        to={`/admin/users/${review.reviewedUserID}`}
+                        className="text-primary hover:underline font-medium transition-colors"
+                      >
+                        {review.reviewedUserName}
+                      </Link>
                     </td>
                     <td className="px-6 py-4">{renderStars(review.rating)}</td>
                     <td

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Star, User } from "lucide-react";
+import { Star, User, Flag } from "lucide-react";
+import { Button } from "../../../shared/ui/button";
 import type { UnifiedProfileReview } from "../types";
 import type { UnifiedProfileLabels } from "./unifiedProfileLabels";
 import { formatCompactDateTime } from "../../../shared/lib/dateTime";
@@ -10,15 +11,22 @@ interface UnifiedProfileReviewCardProps {
   review: UnifiedProfileReview;
   labels: UnifiedProfileLabels;
   dateLocale: string;
+  onReportReview?: (review: UnifiedProfileReview) => void;
+  currentUserId?: string;
 }
 
 export function UnifiedProfileReviewCard({
   review,
   labels,
   dateLocale,
+  onReportReview,
+  currentUserId,
 }: UnifiedProfileReviewCardProps) {
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   const formattedTimestamp = formatCompactDateTime(review.timestamp, dateLocale);
+  const handleReportClick = () => {
+    onReportReview?.(review);
+  };
   const reviewerAvatarSrc = resolveAvatarSrc(review.reviewerAvatar);
 
   useEffect(() => {
@@ -77,9 +85,23 @@ export function UnifiedProfileReviewCard({
               </div>
             </div>
           </div>
-          <span className="text-xs font-medium text-muted-foreground">
-            {formattedTimestamp}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">
+              {formattedTimestamp}
+            </span>
+            {currentUserId && currentUserId !== String(review.reviewerID) && onReportReview && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
+                onClick={handleReportClick}
+                aria-label={labels.reportReview}
+                title={labels.reportReview}
+              >
+                <Flag className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
         </div>
         <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
           {review.comment}

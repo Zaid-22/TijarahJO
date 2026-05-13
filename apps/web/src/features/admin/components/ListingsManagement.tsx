@@ -11,6 +11,7 @@ import { logger } from "../../../shared/lib/logger";
 import { exportToCsv } from "../utils/exportCsv";
 import { ListingDetailModal } from "./ListingDetailModal";
 import { useAdminKeyboardShortcuts } from "../hooks/useAdminKeyboardShortcuts";
+import { Link } from "react-router-dom";
 
 export function ListingsManagement() {
   const [postsResult, setPostsResult] = useState<AdminPostListResult>({
@@ -337,8 +338,14 @@ export function ListingsManagement() {
                     >
                       {post.title || "Untitled"}
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground">
-                      {post.sellerName}
+                    <td className="px-6 py-4">
+                      <Link
+                        to={`/admin/users/${post.userID}`}
+                        className="text-primary hover:underline font-medium transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {post.sellerName}
+                      </Link>
                     </td>
                     <td className="px-6 py-4">{post.categoryName}</td>
                     <td className="px-6 py-4">{post.price ?? 0} JOD</td>

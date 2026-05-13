@@ -1,6 +1,6 @@
 export const marketplaceTranslations = {
   en: {
-    searchPlaceholder: "Search for anything...",
+    searchPlaceholder: "Search for cars, real estate, electronics and more...",
     searchButtonLabel: "Search",
     backToMarketplace: "Back to Marketplace",
     filters: "Filters",
@@ -43,6 +43,9 @@ export const marketplaceTranslations = {
     categoryPlaceholder: "Choose a category for your post",
     location: "City",
     locationPlaceholder: "Which city is this post in?",
+    area: "Area / Neighborhood",
+    areaPlaceholder: "Select your area",
+    selectCityFirst: "Select a city first",
     itemImages: "Post Images",
     uploadImages: "Upload Images",
     imagesHint: "Add up to 5 images. First image will be the cover photo.",
@@ -161,7 +164,7 @@ export const marketplaceTranslations = {
     goBack: "Go Back"
   },
   ar: {
-    searchPlaceholder: "ابحث عن أي شيء...",
+    searchPlaceholder: "ابحث عن سيارات، عقارات، إلكترونيات والمزيد...",
     searchButtonLabel: "بحث",
     backToMarketplace: "العودة إلى السوق",
     filters: "الفلاتر",
@@ -204,6 +207,9 @@ export const marketplaceTranslations = {
     categoryPlaceholder: "اختر فئة لمنشورك",
     location: "المدينة",
     locationPlaceholder: "في أي مدينة يقع هذا المنشور؟",
+    area: "المنطقة / الحي",
+    areaPlaceholder: "اختر منطقتك",
+    selectCityFirst: "اختر المدينة أولاً",
     itemImages: "صور المنشور",
     uploadImages: "رفع الصور",
     imagesHint: "أضف حتى 5 صور. الصورة الأولى ستكون صورة الغلاف.",

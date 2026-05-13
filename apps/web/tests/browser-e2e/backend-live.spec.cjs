@@ -40,26 +40,15 @@ async function forceEnglishUi(page) {
   });
 }
 
-async function primeLocationLookups(page, cityName, areaName) {
+async function resolveLiveLocation(page) {
   const apiBaseUrl = normalizeApiBaseUrl(process.env.VITE_API_BASE_URL);
   const lookupState = await page.evaluate(
-    async ({ resolvedApiBaseUrl, targetCityName, targetAreaName }) => {
+    async ({ resolvedApiBaseUrl }) => {
       const citiesResponse = await fetch(`${resolvedApiBaseUrl}/cities`, {
         credentials: "include",
       });
       const citiesPayload = citiesResponse.ok ? await citiesResponse.json() : [];
-      const normalizedCityName = targetCityName.trim().toLowerCase();
-      const city = Array.isArray(citiesPayload)
-        ? citiesPayload.find((item) => {
-            const cityName = String(item?.cityName ?? item?.CityName ?? "")
-              .trim()
-              .toLowerCase();
-            return cityName === normalizedCityName;
-          })
-        : null;
-
-      const cityId = Number(city?.cityId ?? city?.CityId ?? 0);
-      if (!citiesResponse.ok || !Number.isFinite(cityId) || cityId < 1) {
+      if (!citiesResponse.ok || !Array.isArray(citiesPayload)) {
         return {
           citiesOk: citiesResponse.ok,
           cityResolved: false,
@@ -67,45 +56,67 @@ async function primeLocationLookups(page, cityName, areaName) {
         };
       }
 
-      const areasResponse = await fetch(
-        `${resolvedApiBaseUrl}/cities/${cityId}/areas`,
-        {
-          credentials: "include",
-        },
-      );
-      const areasPayload = areasResponse.ok ? await areasResponse.json() : [];
-      const normalizedAreaName = targetAreaName.trim().toLowerCase();
-      const areaResolved = Array.isArray(areasPayload)
-        ? areasPayload.some((item) => {
-            const areaName = String(item?.areaName ?? item?.AreaName ?? "")
-              .trim()
-              .toLowerCase();
-            return areaName === normalizedAreaName;
-          })
-        : false;
+      for (const cityCandidate of citiesPayload) {
+        const cityId = Number(cityCandidate?.cityId ?? cityCandidate?.CityId ?? 0);
+        const cityName = String(
+          cityCandidate?.cityName ?? cityCandidate?.CityName ?? "",
+        ).trim();
+        if (!Number.isFinite(cityId) || cityId < 1 || !cityName) {
+          continue;
+        }
+
+        const areasResponse = await fetch(
+          `${resolvedApiBaseUrl}/cities/${cityId}/areas`,
+          {
+            credentials: "include",
+          },
+        );
+        const areasPayload = areasResponse.ok ? await areasResponse.json() : [];
+        const area = Array.isArray(areasPayload)
+          ? areasPayload.find((item) => {
+              const areaName = String(item?.areaName ?? item?.AreaName ?? "")
+                .trim()
+                .toLowerCase();
+              return areaName === "sweifieh";
+            })
+          : null;
+
+        const areaName = String(area?.areaName ?? area?.AreaName ?? "").trim();
+        if (areaName) {
+          return {
+            citiesOk: true,
+            cityResolved: true,
+            areaResolved: true,
+            cityName,
+            areaName,
+          };
+        }
+      }
 
       return {
-        citiesOk: citiesResponse.ok,
-        cityResolved: true,
-        areaResolved,
+        citiesOk: true,
+        cityResolved: false,
+        areaResolved: false,
       };
     },
     {
       resolvedApiBaseUrl: apiBaseUrl,
-      targetCityName: cityName,
-      targetAreaName: areaName,
     },
   );
 
   expect(lookupState.citiesOk).toBeTruthy();
   expect(lookupState.cityResolved).toBeTruthy();
   expect(lookupState.areaResolved).toBeTruthy();
+  return {
+    cityName: lookupState.cityName,
+    areaName: lookupState.areaName,
+  };
 }
 
 async function registerUser(page, user) {
   await forceEnglishUi(page);
   await page.goto("/login");
-  await primeLocationLookups(page, "Amman", "Sweifieh");
+  const location = await resolveLiveLocation(page);
 
   const firstNameField = page.locator("#firstName");
   const isSignUpMode = await firstNameField.isVisible().catch(() => false);
@@ -118,9 +129,9 @@ async function registerUser(page, user) {
   await page.locator("#firstName").fill(user.firstName);
   await page.locator("#lastName").fill(user.lastName);
   await page.locator("#phone").fill(user.phone);
-  await page.locator("#city").selectOption("Amman");
+  await page.locator("#city").selectOption(location.cityName);
   await expect(page.locator("#area")).toBeEnabled({ timeout: 20_000 });
-  await page.locator("#area").selectOption("Sweifieh");
+  await page.locator("#area").selectOption(location.areaName);
   await page.locator("#authIdentifier").fill(user.email);
   await page.locator("#password").fill(user.password);
   await page.locator("#confirmPassword").fill(user.password);
@@ -138,12 +149,12 @@ async function registerUser(page, user) {
     }
     const citySelect = page.locator("#city");
     if (await citySelect.inputValue().then((v) => !v.trim()).catch(() => true)) {
-      await citySelect.selectOption("Amman");
+      await citySelect.selectOption(location.cityName);
     }
     const areaSelect = page.locator("#area");
     await expect(areaSelect).toBeEnabled({ timeout: 20_000 });
     if (await areaSelect.inputValue().then((v) => !v.trim()).catch(() => true)) {
-      await areaSelect.selectOption("Sweifieh");
+      await areaSelect.selectOption(location.areaName);
     }
     await page.getByRole("button", { name: /save and continue/i }).click();
     await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
@@ -282,12 +293,13 @@ test("backend live journey: auth, search, favorites, and post CRUD", async ({
   test.setTimeout(300_000);
 
   await registerUser(page, userOne);
+  const listingLocation = await resolveLiveLocation(page);
 
   await page.goto("/sell");
   await page.locator("#title").fill(createdPostTitle);
   await page.locator("#price").fill("777");
   await selectRadixOption(page, "#category", "Electronics");
-  await selectRadixOption(page, "#location", "Amman");
+  await selectRadixOption(page, "#location", listingLocation.cityName);
   await page.locator("#description").fill("Playwright backend live post creation");
   
   // Wait a small moment to ensure the "Area" fetch resulting from "Amman" doesn't clobber the input

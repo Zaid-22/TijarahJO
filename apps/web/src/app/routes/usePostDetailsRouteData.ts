@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { api } from "../../services/api";
 import { Post, UserProfile } from "../../types";
 import { isOwnPostForUser } from "./appRoutesUtils";
@@ -56,7 +56,9 @@ export const usePostDetailsRouteData = ({
     };
   }, [id, isLoadingPosts, post]);
 
-  const resolvedPost = post || fallbackPost;
+  const fallbackPostForRoute =
+    fallbackPost && String(fallbackPost.id) === String(id) ? fallbackPost : null;
+  const resolvedPost = fallbackPostForRoute || post;
   const isFallbackDoneForId = fallbackState.id === id && fallbackState.status === "done";
   const isLoadingRoutePost = !!id && !resolvedPost && (isLoadingPosts || !isFallbackDoneForId);
 
@@ -68,9 +70,22 @@ export const usePostDetailsRouteData = ({
     [resolvedPost, userProfile, isAuthenticated],
   );
 
+  const mutateRoutePost = useCallback((updatedFields: Partial<Post>) => {
+    setFallbackPost((prev) => {
+      if (prev) {
+        return { ...prev, ...updatedFields };
+      }
+      if (post) {
+        return { ...post, ...updatedFields };
+      }
+      return null;
+    });
+  }, [post]);
+
   return {
     resolvedPost,
     isLoadingRoutePost,
     isOwnPost,
+    mutateRoutePost,
   };
 };

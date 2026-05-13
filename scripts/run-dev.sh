@@ -12,6 +12,7 @@ DOCKER_COMPOSE_FILE="$ROOT_DIR/infra/docker-compose.yml"
 FRONTEND_PORT=5173
 FRONTEND_URL="http://localhost:${FRONTEND_PORT}"
 DATABASE_CONNECTION_SOURCE=""
+DOTNET_BIN="${DOTNET_BIN:-}"
 
 resolve_primary_backend_url() {
   local configured_urls="$1"
@@ -25,6 +26,24 @@ if [[ -f "$ROOT_DIR/.env" ]]; then
   set -a
   source "$ROOT_DIR/.env"
   set +a
+fi
+
+if [[ -z "$DOTNET_BIN" ]]; then
+  if command -v dotnet >/dev/null 2>&1; then
+    DOTNET_BIN="$(command -v dotnet)"
+  elif [[ -x "/usr/local/share/dotnet/dotnet" ]]; then
+    DOTNET_BIN="/usr/local/share/dotnet/dotnet"
+  elif [[ -x "/opt/homebrew/bin/dotnet" ]]; then
+    DOTNET_BIN="/opt/homebrew/bin/dotnet"
+  fi
+fi
+
+if [[ -z "$DOTNET_BIN" || ! -x "$DOTNET_BIN" ]]; then
+  cat <<EOF
+Error: dotnet is not available.
+Install the .NET SDK or set DOTNET_BIN to the dotnet executable path.
+EOF
+  exit 1
 fi
 
 BACKEND_URL="${ASPNETCORE_URLS:-http://localhost:5033}"
@@ -230,7 +249,7 @@ echo "Starting Backend (ASP.NET Core) on $PRIMARY_BACKEND_URL..."
   ASPNETCORE_URLS="$BACKEND_URL" \
   JWT_SIGNING_KEY="$JWT_SIGNING_KEY" \
   DATABASE_CONNECTION_STRING="$DATABASE_CONNECTION_STRING" \
-  dotnet run --no-launch-profile
+  "$DOTNET_BIN" run --no-launch-profile
 ) &
 BACKEND_PID=$!
 

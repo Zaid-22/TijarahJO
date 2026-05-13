@@ -106,7 +106,6 @@ function PostDetailsMarketplaceRouteScreen() {
             },
           })
         }
-        onNavigateLogin={() => navigate(APP_ROUTE_PATHS.login)}
         onRequireAuth={promptLoginModal}
         onUpdatePost={postActions.updatePost}
         onUpdatePostStatus={postActions.updatePostStatus}

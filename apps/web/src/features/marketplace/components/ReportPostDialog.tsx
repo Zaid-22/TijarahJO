@@ -20,7 +20,7 @@ interface ReportPostDialogProps {
   postId?: string;
   postTitle?: string;
   language: Language;
-  reportType?: "LISTING" | "COMMENT";
+  reportType?: "LISTING" | "COMMENT" | "USER" | "REVIEW";
   targetId?: number | string;
   targetTitle?: string;
 }
@@ -75,23 +75,39 @@ export function ReportPostDialog({
   const resolvedTargetId = targetId ?? postId;
   const resolvedTargetTitle = targetTitle ?? postTitle ?? "";
   const targetLabel =
-    reportType === "COMMENT"
+    reportType === "USER"
       ? language === "ar"
-        ? "التعليق"
-        : "Comment"
-      : language === "ar"
-        ? "الإعلان"
-        : "Listing";
+        ? "المستخدم"
+        : "User"
+      : reportType === "REVIEW"
+        ? language === "ar"
+          ? "التقييم"
+          : "Review"
+      : reportType === "COMMENT"
+        ? language === "ar"
+          ? "التعليق"
+          : "Comment"
+        : language === "ar"
+          ? "الإعلان"
+          : "Listing";
 
   const labels = {
     title:
       language === "ar"
-        ? reportType === "COMMENT"
-          ? "الإبلاغ عن هذا التعليق"
-          : "الإبلاغ عن هذا الإعلان"
-        : reportType === "COMMENT"
-          ? "Report This Comment"
-          : "Report This Listing",
+        ? reportType === "USER"
+          ? "الإبلاغ عن هذا المستخدم"
+          : reportType === "REVIEW"
+            ? "الإبلاغ عن هذا التقييم"
+          : reportType === "COMMENT"
+            ? "الإبلاغ عن هذا التعليق"
+            : "الإبلاغ عن هذا الإعلان"
+        : reportType === "USER"
+          ? "Report This User"
+          : reportType === "REVIEW"
+            ? "Report This Review"
+          : reportType === "COMMENT"
+            ? "Report This Comment"
+            : "Report This Listing",
     subtitle:
       language === "ar"
         ? `الإبلاغ عن ${targetLabel} "${resolvedTargetTitle}"`

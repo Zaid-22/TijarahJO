@@ -8,6 +8,7 @@ import {
   Plus,
   Settings,
   Star,
+  Flag,
 } from "lucide-react";
 import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
 import { Avatar, AvatarFallback, AvatarImage } from "../../../shared/ui/avatar";
@@ -40,6 +41,7 @@ interface UnifiedProfileHeaderCardProps {
   onEditProfileClick?: () => void;
   onChatWithSeller?: () => void;
   onAddPostClick?: () => void;
+  onReportUserClick?: () => void;
 }
 
 export function UnifiedProfileHeaderCard({
@@ -52,6 +54,7 @@ export function UnifiedProfileHeaderCard({
   onEditProfileClick,
   onChatWithSeller,
   onAddPostClick,
+  onReportUserClick,
 }: UnifiedProfileHeaderCardProps) {
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   const [showPhoneDialog, setShowPhoneDialog] = useState(false);
@@ -214,6 +217,19 @@ export function UnifiedProfileHeaderCard({
                 title={labels.settings}
               >
                 <Settings className="h-5 w-5" />
+              </Button>
+            ) : null}
+
+            {viewModel.mode !== "owner" && onReportUserClick ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-11 w-11 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                onClick={onReportUserClick}
+                aria-label={labels.reportUser}
+                title={labels.reportUser}
+              >
+                <Flag className="h-5 w-5" />
               </Button>
             ) : null}
           </div>

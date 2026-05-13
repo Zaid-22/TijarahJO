@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   ChevronDown,
   LogOut,
-  MessageCircle,
   Settings,
   Shield,
   User,
@@ -36,7 +35,6 @@ type HeaderDesktopProfileMenuProps = HeaderActionHandlers &
     | "isAdmin"
     | "currentUserDisplayName"
     | "userAvatar"
-    | "unreadMessagesCount"
   >;
 
 export function HeaderDesktopProfileMenu({
@@ -46,10 +44,9 @@ export function HeaderDesktopProfileMenu({
   isAdmin,
   currentUserDisplayName,
   userAvatar,
-  unreadMessagesCount,
   onShowProfile,
 
-  onShowMessages,
+
   onShowSettings,
   onShowAdminDashboard,
   onLogout,
@@ -77,7 +74,7 @@ export function HeaderDesktopProfileMenu({
     );
   }
 
-  const normalizedUnread = Math.max(0, Math.floor(unreadMessagesCount));
+
 
   return (
     <DropdownMenu onOpenChange={setIsOpen} modal={false}>
@@ -85,16 +82,16 @@ export function HeaderDesktopProfileMenu({
         <Button
           variant="ghost"
           className={cn(
-            "hidden h-10 items-center gap-2 rounded-full border border-slate-200/80 bg-white/40 p-0.5 transition-all duration-300 hover:bg-white/80 hover:shadow-sm sm:flex",
+            "group hidden h-10 items-center gap-2 rounded-full border border-slate-200/80 bg-white/75 px-1.5 py-1 shadow-sm transition-all duration-300 hover:border-primary/25 hover:bg-white hover:shadow-md sm:flex",
             language === "ar"
-              ? "flex-row-reverse pl-3 pr-0.5"
-              : "flex-row pl-0.5 pr-3",
+              ? "flex-row-reverse pl-2 pr-1.5"
+              : "flex-row pl-1.5 pr-2",
           )}
           aria-label={
             language === "ar" ? "فتح قائمة الحساب" : "Open account menu"
           }
         >
-          <Avatar className="h-9 w-9 border border-white/50 shadow-md">
+          <Avatar className="h-8 w-8 border border-white/80 shadow-none ring-1 ring-slate-200/80 transition-all duration-300 group-hover:ring-primary/25">
             <AvatarImage
               src={resolveAvatarSrc(userAvatar) || undefined}
               alt={currentUserDisplayName || "User"}
@@ -104,13 +101,21 @@ export function HeaderDesktopProfileMenu({
               {getAvatarInitial(currentUserDisplayName)}
             </AvatarFallback>
           </Avatar>
-          <ChevronDown
+          <span
             className={cn(
-              "h-4 w-4 text-slate-400 transition-transform duration-300 ease-in-out",
-              isOpen && "rotate-180 text-primary",
+              "grid h-7 w-7 place-items-center rounded-full text-slate-500 transition-all duration-300 group-hover:bg-primary/5 group-hover:text-primary",
+              isOpen && "bg-primary/8 text-primary",
             )}
-            strokeWidth={2.5}
-          />
+            aria-hidden="true"
+          >
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 transition-transform duration-300 ease-in-out",
+                isOpen && "rotate-180",
+              )}
+              strokeWidth={2.25}
+            />
+          </span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -125,18 +130,7 @@ export function HeaderDesktopProfileMenu({
           <User className={iconClass} />
           {language === "ar" ? "ملفي الشخصي" : "My Profile"}
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={onShowMessages}
-          className={`${menuItemClass} cursor-pointer`}
-        >
-          <MessageCircle className={iconClass} />
-          <span>{language === "ar" ? "الرسائل" : "Messages"}</span>
-          {normalizedUnread > 0 && (
-            <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-xs font-semibold text-destructive-foreground">
-              {normalizedUnread > 99 ? "99+" : normalizedUnread}
-            </span>
-          )}
-        </DropdownMenuItem>
+
         <DropdownMenuItem
           onClick={onShowSettings}
           className={`${menuItemClass} cursor-pointer`}
