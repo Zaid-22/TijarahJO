@@ -4,18 +4,12 @@ using TijarahJo.Infrastructure.Persistence;
 
 namespace TijarahJo.Infrastructure.Queries;
 
-public sealed class LocationReadService : ILocationReadService
+public sealed class LocationReadService(TijarahJoDbContext dbContext) : ILocationReadService
 {
-    private readonly TijarahJoDbContext _dbContext;
-
-    public LocationReadService(TijarahJoDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
 
     public async Task<IReadOnlyList<CityLookupResult>> GetCitiesAsync(CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Cities
+        return await dbContext.Cities
             .AsNoTracking()
             .OrderBy(city => city.CityName)
             .Select(city => new CityLookupResult
@@ -29,7 +23,7 @@ public sealed class LocationReadService : ILocationReadService
 
     public async Task<IReadOnlyList<AreaLookupResult>> GetAreasByCityAsync(int cityId, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Areas
+        return await dbContext.Areas
             .AsNoTracking()
             .Where(area => area.CityID == cityId)
             .OrderBy(area => area.AreaName)

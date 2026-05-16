@@ -60,7 +60,7 @@ export function ImageLightbox({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center"
+      className="fixed inset-0 z-100 flex items-center justify-center"
       role="dialog"
       aria-modal="true"
       aria-label="Image viewer"
@@ -73,7 +73,7 @@ export function ImageLightbox({
       />
 
       {/* Top bar */}
-      <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/60 to-transparent">
+      <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-3 bg-linear-to-b from-black/60 to-transparent">
         <span className="text-white/80 text-sm font-medium">
           {currentIndex + 1} / {images.length}
         </span>
@@ -102,7 +102,7 @@ export function ImageLightbox({
       </div>
 
       {/* Image */}
-      <div className="relative z-[1] flex items-center justify-center w-full h-full px-16 py-16 overflow-auto">
+      <div className="relative z-1 flex items-center justify-center w-full h-full px-16 py-16 overflow-auto">
         <button
           type="button"
           onClick={toggleZoom}
@@ -142,7 +142,7 @@ export function ImageLightbox({
 
       {/* Thumbnail strip */}
       {images.length > 1 && (
-        <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-center gap-2 px-4 py-4 bg-gradient-to-t from-black/60 to-transparent">
+        <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-center gap-2 px-4 py-4 bg-linear-to-t from-black/60 to-transparent">
           {images.map((img, idx) => (
             <button
               key={idx}
@@ -151,7 +151,7 @@ export function ImageLightbox({
                 setCurrentIndex(idx);
                 setZoom(1);
               }}
-              className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${
+              className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${
                 idx === currentIndex
                   ? "border-white shadow-lg scale-110"
                   : "border-white/30 opacity-60 hover:opacity-100"

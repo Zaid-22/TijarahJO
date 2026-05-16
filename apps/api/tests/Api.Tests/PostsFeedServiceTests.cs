@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Hosting;
 using TijarahJo.Api.Common.Services;
 using TijarahJo.Api.Common.Configuration;
+using TijarahJo.Infrastructure;
 using TijarahJo.Infrastructure.Queries;
-using TijarahJo.Infrastructure.DataAccess;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;

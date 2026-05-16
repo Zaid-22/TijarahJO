@@ -9,14 +9,8 @@ using TijarahJo.Infrastructure.Persistence;
 namespace TijarahJo.Infrastructure.DataAccess;
 
 
-public sealed class PostDataAccessAdapter : IPostDataAccess
+public sealed class PostDataAccessAdapter(TijarahJoDbContext dbContext) : IPostDataAccess
 {
-    private readonly TijarahJoDbContext _dbContext;
-
-    public PostDataAccessAdapter(TijarahJoDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
 
     public async Task<PostModel?> GetPostByIDAsync(int? postId, CancellationToken cancellationToken = default)
     {
@@ -25,7 +19,7 @@ public sealed class PostDataAccessAdapter : IPostDataAccess
             return null;
         }
 
-        PostEntity? entity = await _dbContext.Posts
+        PostEntity? entity = await dbContext.Posts
             .AsNoTracking()
             .FirstOrDefaultAsync(item => item.PostID == postId.Value, cancellationToken);
         return entity is null ? null : ToModel(entity);
@@ -53,9 +47,9 @@ public sealed class PostDataAccessAdapter : IPostDataAccess
             AreaID = post.AreaId
         };
 
-        await _dbContext.Posts.AddAsync(entity, cancellationToken);
-        _dbContext.AuditActorUserId = post.UserID > 0 ? post.UserID : null;
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await dbContext.Posts.AddAsync(entity, cancellationToken);
+        dbContext.AuditActorUserId = post.UserID > 0 ? post.UserID : null;
+        await dbContext.SaveChangesAsync(cancellationToken);
         return entity.PostID;
     }
 
@@ -66,7 +60,7 @@ public sealed class PostDataAccessAdapter : IPostDataAccess
             return false;
         }
 
-        PostEntity? entity = await _dbContext.Posts
+        PostEntity? entity = await dbContext.Posts
             .FirstOrDefaultAsync(item => item.PostID == post.PostID.Value, cancellationToken);
         if (entity is null)
         {
@@ -83,8 +77,8 @@ public sealed class PostDataAccessAdapter : IPostDataAccess
         entity.CityID = post.CityId;
         entity.AreaID = post.AreaId;
 
-        _dbContext.AuditActorUserId = post.UserID > 0 ? post.UserID : null;
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        dbContext.AuditActorUserId = post.UserID > 0 ? post.UserID : null;
+        await dbContext.SaveChangesAsync(cancellationToken);
         return true;
     }
 
@@ -95,7 +89,7 @@ public sealed class PostDataAccessAdapter : IPostDataAccess
             return false;
         }
 
-        PostEntity? post = await _dbContext.Posts.FirstOrDefaultAsync(item => item.PostID == postId.Value, cancellationToken);
+        PostEntity? post = await dbContext.Posts.FirstOrDefaultAsync(item => item.PostID == postId.Value, cancellationToken);
         if (post is null)
         {
             return false;
@@ -106,17 +100,17 @@ public sealed class PostDataAccessAdapter : IPostDataAccess
             return false;
         }
 
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
         try
         {
             post.IsDeleted = true;
 
             int effectiveActorId = actorUserId > 0 ? actorUserId : (post.UserID > 0 ? post.UserID : 0);
-            _dbContext.AuditActorUserId = effectiveActorId == 0 ? null : effectiveActorId;
+            dbContext.AuditActorUserId = effectiveActorId == 0 ? null : effectiveActorId;
 
             if (effectiveActorId > 0)
             {
-                _dbContext.AuditLogs.Add(new AuditLogEntity
+                dbContext.AuditLogs.Add(new AuditLogEntity
                 {
                     TableName = "PostImages",
                     Action = "UPDATE",
@@ -126,7 +120,7 @@ public sealed class PostDataAccessAdapter : IPostDataAccess
                     NewValues = $"{{\"PostID\":{postId.Value},\"IsDeleted\":true}}"
                 });
 
-                _dbContext.AuditLogs.Add(new AuditLogEntity
+                dbContext.AuditLogs.Add(new AuditLogEntity
                 {
                     TableName = "Favorites",
                     Action = "UPDATE",
@@ -136,15 +130,15 @@ public sealed class PostDataAccessAdapter : IPostDataAccess
                     NewValues = $"{{\"PostID\":{postId.Value},\"IsDeleted\":true}}"
                 });
             }
-            await _dbContext.PostImages
+            await dbContext.PostImages
                 .Where(item => item.PostID == postId.Value && !item.IsDeleted)
                 .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.IsDeleted, true), cancellationToken);
 
-            await _dbContext.Favorites
+            await dbContext.Favorites
                 .Where(item => item.PostID == postId.Value && !item.IsDeleted)
                 .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.IsDeleted, true), cancellationToken);
 
-            bool deleted = await _dbContext.SaveChangesAsync(cancellationToken) > 0;
+            bool deleted = await dbContext.SaveChangesAsync(cancellationToken) > 0;
             if (!deleted)
             {
                 await transaction.RollbackAsync(cancellationToken);
@@ -165,7 +159,7 @@ public sealed class PostDataAccessAdapter : IPostDataAccess
     {
         return postId.HasValue
                && postId.Value > 0
-               && await _dbContext.Posts
+               && await dbContext.Posts
                    .AsNoTracking()
                    .AnyAsync(item => item.PostID == postId.Value, cancellationToken);
     }
@@ -177,7 +171,7 @@ public sealed class PostDataAccessAdapter : IPostDataAccess
             return false;
         }
 
-        int rowsAffected = await _dbContext.Posts
+        int rowsAffected = await dbContext.Posts
             .Where(item => item.PostID == postId.Value && !item.IsDeleted)
             .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.Views, item => item.Views + 1), cancellationToken);
         return rowsAffected > 0;
@@ -185,7 +179,7 @@ public sealed class PostDataAccessAdapter : IPostDataAccess
 
     public async Task<IReadOnlyList<PostModel>> GetPostsByUserIDAsync(int userId, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
     {
-        List<PostEntity> entities = await _dbContext.Posts
+        List<PostEntity> entities = await dbContext.Posts
             .AsNoTracking()
             .Where(item => item.UserID == userId && !item.IsDeleted)
             .OrderByDescending(item => item.CreatedAt)
@@ -194,12 +188,12 @@ public sealed class PostDataAccessAdapter : IPostDataAccess
             .Take(Math.Clamp(pageSize, 1, 100))
             .ToListAsync(cancellationToken);
 
-        return entities.Select(ToModel).ToList();
+        return [.. entities.Select(ToModel)];
     }
 
     public async Task<IReadOnlyList<PostModel>> GetPostsByCategoryIDAsync(int categoryId, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
     {
-        List<PostEntity> entities = await _dbContext.Posts
+        List<PostEntity> entities = await dbContext.Posts
             .AsNoTracking()
             .Where(item => item.CategoryID == categoryId && !item.IsDeleted)
             .OrderByDescending(item => item.CreatedAt)
@@ -208,7 +202,7 @@ public sealed class PostDataAccessAdapter : IPostDataAccess
             .Take(Math.Clamp(pageSize, 1, 100))
             .ToListAsync(cancellationToken);
 
-        return entities.Select(ToModel).ToList();
+        return [.. entities.Select(ToModel)];
     }
 
     private static PostModel ToModel(PostEntity entity)

@@ -9,14 +9,8 @@ using TijarahJo.Infrastructure.Persistence;
 namespace TijarahJo.Infrastructure.DataAccess;
 
 
-public sealed class PostImageDataAccessAdapter : IPostImageDataAccess
+public sealed class PostImageDataAccessAdapter(TijarahJoDbContext dbContext) : IPostImageDataAccess
 {
-    private readonly TijarahJoDbContext _dbContext;
-
-    public PostImageDataAccessAdapter(TijarahJoDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
 
     public PostImageModel GetPostImageByID(int? postImageId)
     {
@@ -25,7 +19,7 @@ public sealed class PostImageDataAccessAdapter : IPostImageDataAccess
             return null!;
         }
 
-        PostImageEntity? entity = _dbContext.PostImages
+        PostImageEntity? entity = dbContext.PostImages
             .AsNoTracking()
             .FirstOrDefault(item => item.PostImageID == postImageId.Value);
         return entity is null ? null! : ToModel(entity);
@@ -38,7 +32,7 @@ public sealed class PostImageDataAccessAdapter : IPostImageDataAccess
             return null!;
         }
 
-        PostImageEntity? entity = await _dbContext.PostImages
+        PostImageEntity? entity = await dbContext.PostImages
             .AsNoTracking()
             .FirstOrDefaultAsync(item => item.PostImageID == postImageId.Value, cancellationToken);
         return entity is null ? null! : ToModel(entity);
@@ -54,8 +48,8 @@ public sealed class PostImageDataAccessAdapter : IPostImageDataAccess
             IsDeleted = postImage.IsDeleted
         };
 
-        _dbContext.PostImages.Add(entity);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        dbContext.PostImages.Add(entity);
+        await dbContext.SaveChangesAsync(cancellationToken);
         return entity.PostImageID;
     }
 
@@ -66,7 +60,7 @@ public sealed class PostImageDataAccessAdapter : IPostImageDataAccess
             return false;
         }
 
-        PostImageEntity? entity = await _dbContext.PostImages
+        PostImageEntity? entity = await dbContext.PostImages
             .FirstOrDefaultAsync(item => item.PostImageID == postImage.PostImageID.Value, cancellationToken);
         if (entity is null)
         {
@@ -78,7 +72,7 @@ public sealed class PostImageDataAccessAdapter : IPostImageDataAccess
         entity.UploadedAt = postImage.UploadedAt == default ? entity.UploadedAt : postImage.UploadedAt;
         entity.IsDeleted = postImage.IsDeleted;
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
         return true;
     }
 
@@ -89,7 +83,7 @@ public sealed class PostImageDataAccessAdapter : IPostImageDataAccess
             return false;
         }
 
-        PostImageEntity? entity = await _dbContext.PostImages
+        PostImageEntity? entity = await dbContext.PostImages
             .FirstOrDefaultAsync(item => item.PostImageID == postImageId.Value, cancellationToken);
         if (entity is null)
         {
@@ -102,21 +96,21 @@ public sealed class PostImageDataAccessAdapter : IPostImageDataAccess
         }
 
         entity.IsDeleted = true;
-        return await _dbContext.SaveChangesAsync(cancellationToken) > 0;
+        return await dbContext.SaveChangesAsync(cancellationToken) > 0;
     }
 
     public bool DoesPostImageExist(int? postImageId)
     {
         return postImageId.HasValue
                && postImageId.Value > 0
-               && _dbContext.PostImages.AsNoTracking().Any(item => item.PostImageID == postImageId.Value);
+               && dbContext.PostImages.AsNoTracking().Any(item => item.PostImageID == postImageId.Value);
     }
 
     public async Task<bool> DoesPostImageExistAsync(int? postImageId, CancellationToken cancellationToken = default)
     {
         return postImageId.HasValue
                && postImageId.Value > 0
-               && await _dbContext.PostImages
+               && await dbContext.PostImages
                    .AsNoTracking()
                    .AnyAsync(item => item.PostImageID == postImageId.Value, cancellationToken);
     }
@@ -126,7 +120,7 @@ public sealed class PostImageDataAccessAdapter : IPostImageDataAccess
         int safePage = Math.Max(1, pageNumber);
         int safeSize = Math.Clamp(pageSize, 1, 200);
 
-        List<PostImageEntity> entities = await _dbContext.PostImages
+        List<PostImageEntity> entities = await dbContext.PostImages
             .AsNoTracking()
             .Where(item => !item.IsDeleted)
             .OrderBy(item => item.UploadedAt)
@@ -135,30 +129,31 @@ public sealed class PostImageDataAccessAdapter : IPostImageDataAccess
             .Take(safeSize)
             .ToListAsync(cancellationToken);
 
-        return entities.Select(ToModel).ToList();
+        return [.. entities.Select(ToModel)];
     }
 
     public IReadOnlyList<PostImageModel> GetPostImagesByPostID(int postId)
     {
-        return _dbContext.PostImages
+        var images = dbContext.PostImages
             .AsNoTracking()
             .Where(item => item.PostID == postId && !item.IsDeleted)
             .OrderBy(item => item.UploadedAt)
             .ThenBy(item => item.PostImageID)
-            .Select(ToModel)
-            .ToList();
+            .Select(ToModel);
+
+        return [.. images];
     }
 
     public async Task<IReadOnlyList<PostImageModel>> GetPostImagesByPostIDAsync(int postId, CancellationToken cancellationToken = default)
     {
-        List<PostImageEntity> entities = await _dbContext.PostImages
+        List<PostImageEntity> entities = await dbContext.PostImages
             .AsNoTracking()
             .Where(item => item.PostID == postId && !item.IsDeleted)
             .OrderBy(item => item.UploadedAt)
             .ThenBy(item => item.PostImageID)
             .ToListAsync(cancellationToken);
 
-        return entities.Select(ToModel).ToList();
+        return [.. entities.Select(ToModel)];
     }
 
     private static PostImageModel ToModel(PostImageEntity entity)

@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Api\TijarahJo.Api.csproj" />
+    <ProjectReference Include="..\..\src\Infrastructure\TijarahJo.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

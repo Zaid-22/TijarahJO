@@ -46,7 +46,7 @@ export function ScrollToTop({ avoidBottomOverlay = false }: ScrollToTopProps) {
   return (
     <div
       className={cn(
-        "fixed right-6 z-[150] hidden transition-all duration-300 sm:block sm:right-8",
+        "fixed right-6 z-150 hidden transition-all duration-300 sm:block sm:right-8",
         avoidBottomOverlay ? "bottom-72 sm:bottom-40 lg:bottom-32" : "bottom-24 sm:bottom-28",
       )}
     >

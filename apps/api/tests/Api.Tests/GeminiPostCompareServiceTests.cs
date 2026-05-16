@@ -5,7 +5,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using TijarahJo.Application.Abstractions.Services;
-using TijarahJo.Infrastructure.DataAccess;
+using TijarahJo.Infrastructure;
 using TijarahJo.Infrastructure.Services;
 
 namespace TijarahJo.Api.Tests;
@@ -72,6 +72,13 @@ public sealed class GeminiPostCompareServiceTests
 
     private sealed class RecordingGeminiHandler : HttpMessageHandler
     {
+        private static readonly string[] s_phoneFeatures = ["Portable"];
+        private static readonly string[] s_tabletFeatures = ["Larger screen"];
+        private static readonly string[] s_phonePros = ["Lower price"];
+        private static readonly string[] s_phoneCons = ["Small screen"];
+        private static readonly string[] s_tabletPros = ["Large screen"];
+        private static readonly string[] s_tabletCons = ["Higher price"];
+
         public Uri? LastRequestUri { get; private set; }
         public string? LastApiKeyHeader { get; private set; }
 
@@ -92,13 +99,13 @@ public sealed class GeminiPostCompareServiceTests
                 priceComparison = "Tablet costs more.",
                 featureDifferences = new[]
                 {
-                    new { postName = "Phone", features = new[] { "Portable" } },
-                    new { postName = "Tablet", features = new[] { "Larger screen" } }
+                    new { postName = "Phone", features = s_phoneFeatures },
+                    new { postName = "Tablet", features = s_tabletFeatures }
                 },
                 prosCons = new[]
                 {
-                    new { postName = "Phone", pros = new[] { "Lower price" }, cons = new[] { "Small screen" } },
-                    new { postName = "Tablet", pros = new[] { "Large screen" }, cons = new[] { "Higher price" } }
+                    new { postName = "Phone", pros = s_phonePros, cons = s_phoneCons },
+                    new { postName = "Tablet", pros = s_tabletPros, cons = s_tabletCons }
                 },
                 bestFor = new
                 {

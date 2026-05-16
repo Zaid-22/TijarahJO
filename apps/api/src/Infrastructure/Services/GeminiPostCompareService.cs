@@ -12,7 +12,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TijarahJo.Application.Abstractions.Services;
-using TijarahJo.Infrastructure.DataAccess;
+using TijarahJo.Infrastructure;
 
 namespace TijarahJo.Infrastructure.Services;
 

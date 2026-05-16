@@ -5,14 +5,8 @@ using TijarahJo.Infrastructure.Persistence;
 
 namespace TijarahJo.Infrastructure.DataAccess;
 
-public sealed class ExternalIdentityDataAccessAdapter : IExternalIdentityDataAccess
+public sealed class ExternalIdentityDataAccessAdapter(TijarahJoDbContext dbContext) : IExternalIdentityDataAccess
 {
-    private readonly TijarahJoDbContext _dbContext;
-
-    public ExternalIdentityDataAccessAdapter(TijarahJoDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
 
     public async Task<int?> FindUserIdByProviderSubjectAsync(
         string provider,
@@ -26,7 +20,7 @@ public sealed class ExternalIdentityDataAccessAdapter : IExternalIdentityDataAcc
             return null;
         }
 
-        return await _dbContext.UserExternalIdentities
+        return await dbContext.UserExternalIdentities
             .AsNoTracking()
             .Where(item =>
                 item.Provider == normalizedProvider &&
@@ -54,7 +48,7 @@ public sealed class ExternalIdentityDataAccessAdapter : IExternalIdentityDataAcc
             };
         }
 
-        UserExternalIdentityEntity? bySubject = await _dbContext.UserExternalIdentities
+        UserExternalIdentityEntity? bySubject = await dbContext.UserExternalIdentities
             .FirstOrDefaultAsync(
                 item => item.Provider == normalizedProvider && item.ProviderSubject == normalizedSubject,
                 cancellationToken
@@ -80,7 +74,7 @@ public sealed class ExternalIdentityDataAccessAdapter : IExternalIdentityDataAcc
             if (changed)
             {
                 bySubject.UpdatedAt = DateTime.UtcNow;
-                await _dbContext.SaveChangesAsync(cancellationToken);
+                await dbContext.SaveChangesAsync(cancellationToken);
             }
 
             return new ExternalIdentityLinkResult
@@ -90,7 +84,7 @@ public sealed class ExternalIdentityDataAccessAdapter : IExternalIdentityDataAcc
             };
         }
 
-        UserExternalIdentityEntity? byUserAndProvider = await _dbContext.UserExternalIdentities
+        UserExternalIdentityEntity? byUserAndProvider = await dbContext.UserExternalIdentities
             .FirstOrDefaultAsync(
                 item => item.UserID == userId && item.Provider == normalizedProvider,
                 cancellationToken
@@ -104,7 +98,7 @@ public sealed class ExternalIdentityDataAccessAdapter : IExternalIdentityDataAcc
             };
         }
 
-        await _dbContext.UserExternalIdentities.AddAsync(new UserExternalIdentityEntity
+        await dbContext.UserExternalIdentities.AddAsync(new UserExternalIdentityEntity
         {
             UserID = userId,
             Provider = normalizedProvider,
@@ -116,7 +110,7 @@ public sealed class ExternalIdentityDataAccessAdapter : IExternalIdentityDataAcc
 
         try
         {
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
             return new ExternalIdentityLinkResult
             {
                 Status = ExternalIdentityLinkStatus.Linked,
@@ -125,7 +119,7 @@ public sealed class ExternalIdentityDataAccessAdapter : IExternalIdentityDataAcc
         }
         catch (DbUpdateException)
         {
-            UserExternalIdentityEntity? afterConflict = await _dbContext.UserExternalIdentities
+            UserExternalIdentityEntity? afterConflict = await dbContext.UserExternalIdentities
                 .AsNoTracking()
                 .FirstOrDefaultAsync(
                     item => item.Provider == normalizedProvider && item.ProviderSubject == normalizedSubject,

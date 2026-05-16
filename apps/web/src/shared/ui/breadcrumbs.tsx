@@ -45,7 +45,7 @@ export function Breadcrumbs({
             {index > 0 && (
               <Separator
                 className={cn(
-                  "h-3.5 w-3.5 flex-shrink-0 text-muted-foreground/50 dark:text-slate-500",
+                  "h-3.5 w-3.5 shrink-0 text-muted-foreground/50 dark:text-slate-500",
                   isRTL && "rotate-180",
                 )}
                 aria-hidden="true"

@@ -10,19 +10,10 @@ namespace TijarahJo.Infrastructure.Services;
 /// Database-backed token blacklist that survives server restarts.
 /// Replaces the in-memory implementation for production resilience.
 /// </summary>
-public sealed class DatabaseTokenBlacklistService : ITokenBlacklistService
+public sealed class DatabaseTokenBlacklistService(
+    TijarahJoDbContext dbContext,
+    ILogger<DatabaseTokenBlacklistService> logger) : ITokenBlacklistService
 {
-    private readonly TijarahJoDbContext _dbContext;
-    private readonly ILogger<DatabaseTokenBlacklistService> _logger;
-
-    public DatabaseTokenBlacklistService(
-        TijarahJoDbContext dbContext,
-        ILogger<DatabaseTokenBlacklistService> logger)
-    {
-        _dbContext = dbContext;
-        _logger = logger;
-    }
-
     public async Task AddToBlacklistAsync(string jti, DateTimeOffset expiration, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(jti))
@@ -30,7 +21,7 @@ public sealed class DatabaseTokenBlacklistService : ITokenBlacklistService
             return;
         }
 
-        bool alreadyExists = await _dbContext.BlacklistedTokens
+        bool alreadyExists = await dbContext.BlacklistedTokens
             .AnyAsync(t => t.Jti == jti, cancellationToken);
 
         if (alreadyExists)
@@ -38,15 +29,18 @@ public sealed class DatabaseTokenBlacklistService : ITokenBlacklistService
             return;
         }
 
-        _dbContext.BlacklistedTokens.Add(new BlacklistedTokenEntity
+        dbContext.BlacklistedTokens.Add(new BlacklistedTokenEntity
         {
             Jti = jti,
             ExpiresAt = expiration.UtcDateTime
         });
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Token {Jti} blacklisted until {Expiration}", jti, expiration);
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Token {Jti} blacklisted until {Expiration}", jti, expiration);
+        }
     }
 
     public async Task<bool> IsBlacklistedAsync(string jti, CancellationToken cancellationToken = default)
@@ -56,7 +50,7 @@ public sealed class DatabaseTokenBlacklistService : ITokenBlacklistService
             return false;
         }
 
-        return await _dbContext.BlacklistedTokens
+        return await dbContext.BlacklistedTokens
             .AsNoTracking()
             .AnyAsync(t => t.Jti == jti && t.ExpiresAt > DateTime.UtcNow, cancellationToken);
     }
@@ -67,13 +61,13 @@ public sealed class DatabaseTokenBlacklistService : ITokenBlacklistService
     /// </summary>
     public async Task<int> PurgeExpiredAsync(CancellationToken cancellationToken = default)
     {
-        int deleted = await _dbContext.BlacklistedTokens
+        int deleted = await dbContext.BlacklistedTokens
             .Where(t => t.ExpiresAt <= DateTime.UtcNow)
             .ExecuteDeleteAsync(cancellationToken);
 
-        if (deleted > 0)
+        if (deleted > 0 && logger.IsEnabled(LogLevel.Information))
         {
-            _logger.LogInformation("Purged {Count} expired blacklisted tokens", deleted);
+            logger.LogInformation("Purged {Count} expired blacklisted tokens", deleted);
         }
 
         return deleted;
@@ -81,16 +75,19 @@ public sealed class DatabaseTokenBlacklistService : ITokenBlacklistService
 
     public async Task InvalidateAllUserSessionsAsync(int userId, CancellationToken cancellationToken = default)
     {
-        await _dbContext.Users
+        await dbContext.Users
             .Where(u => u.UserID == userId)
             .ExecuteUpdateAsync(s => s.SetProperty(u => u.LastInvalidatedAt, DateTime.UtcNow), cancellationToken);
-            
-        _logger.LogInformation("Invalidated all sessions for user {UserId}", userId);
+
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Invalidated all sessions for user {UserId}", userId);
+        }
     }
 
     public async Task<bool> IsUserSessionInvalidatedAsync(int userId, DateTimeOffset tokenIssuedAt, CancellationToken cancellationToken = default)
     {
-        var lastInvalidatedAt = await _dbContext.Users
+        var lastInvalidatedAt = await dbContext.Users
             .Where(u => u.UserID == userId)
             .Select(u => u.LastInvalidatedAt)
             .FirstOrDefaultAsync(cancellationToken);
