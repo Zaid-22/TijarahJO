@@ -1,5 +1,4 @@
-import { useRef, useState, useEffect, useCallback, useId } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useId } from "react";
 import { PostCard } from "../../marketplace/components/PostCard";
 import type { Language, Post } from "../../../types";
 import { cn } from "../../../shared/ui/utils";
@@ -47,49 +46,6 @@ export function PostCarousel({
   const isRTL = language === "ar";
   const headingId = useId();
   const descriptionId = useId();
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  const checkScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const threshold = 4;
-    if (isRTL) {
-      setCanScrollRight(el.scrollLeft < -threshold);
-      setCanScrollLeft(
-        el.scrollLeft > -(el.scrollWidth - el.clientWidth) + threshold,
-      );
-    } else {
-      setCanScrollLeft(el.scrollLeft > threshold);
-      setCanScrollRight(
-        el.scrollLeft < el.scrollWidth - el.clientWidth - threshold,
-      );
-    }
-  }, [isRTL]);
-
-  useEffect(() => {
-    checkScroll();
-    const el = scrollRef.current;
-    if (!el) return;
-    el.addEventListener("scroll", checkScroll, { passive: true });
-    const resizeObserver = new ResizeObserver(checkScroll);
-    resizeObserver.observe(el);
-    return () => {
-      el.removeEventListener("scroll", checkScroll);
-      resizeObserver.disconnect();
-    };
-  }, [checkScroll, posts.length]);
-
-  const scroll = (direction: "left" | "right") => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const scrollAmount = el.clientWidth * 0.7;
-    el.scrollBy({
-      left: direction === "left" ? -scrollAmount : scrollAmount,
-      behavior: "smooth",
-    });
-  };
 
   if (posts.length === 0) return null;
 
@@ -152,7 +108,7 @@ export function PostCarousel({
                 "px-5 py-2.5 rounded-xl whitespace-nowrap text-sm sm:text-base font-semibold transition-all duration-200 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                 activeTagId === tag.id
                   ? "bg-muted text-foreground border-transparent shadow-sm"
-                  : "bg-transparent text-muted-foreground hover:bg-muted/50 border-transparent shadow-none"
+                  : "bg-transparent text-muted-foreground hover:bg-muted/50 border-transparent shadow-none",
               )}
             >
               {tag.label}
@@ -163,32 +119,7 @@ export function PostCarousel({
 
       {/* Carousel */}
       <div className="relative group/carousel">
-        {/* Left Arrow */}
-        {canScrollLeft && (
-          <button
-            type="button"
-            onClick={() => scroll("left")}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-lg transition-all opacity-100 sm:opacity-0 sm:group-hover/carousel:opacity-100 hover:bg-primary hover:text-primary-foreground hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:opacity-100"
-            aria-label={language === "ar" ? "التمرير لليسار" : "Scroll left"}
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-        )}
-
-        {/* Right Arrow */}
-        {canScrollRight && (
-          <button
-            type="button"
-            onClick={() => scroll("right")}
-            className="absolute right-0 top-1/2 z-10 flex h-10 w-10 translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-lg transition-all opacity-100 sm:opacity-0 sm:group-hover/carousel:opacity-100 hover:bg-primary hover:text-primary-foreground hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:opacity-100"
-            aria-label={language === "ar" ? "التمرير لليمين" : "Scroll right"}
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        )}
-
         <div
-          ref={scrollRef}
           className="flex gap-4 sm:gap-5 overflow-x-auto scrollbar-none pb-2 snap-x snap-mandatory"
         >
           {posts.map((post) => (
