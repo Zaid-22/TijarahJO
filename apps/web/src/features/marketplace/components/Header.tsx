@@ -1,4 +1,4 @@
-import { ArrowLeft, Heart, MessageCircle, Plus } from "lucide-react";
+import { ArrowLeft, MessageCircle, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Suspense, lazy, useState } from "react";
 import { Button } from "../../../shared/ui/button";
@@ -168,7 +168,7 @@ export function Header({
           )}
 
           {/* Right section: Profile, Actions & Sell Button */}
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
             {/* Utility Icons Group */}
             <div className="flex items-center gap-1 sm:gap-1.5">
               {shouldShowAuthenticatedActions && (
@@ -181,17 +181,7 @@ export function Header({
                 </Suspense>
               )}
 
-              {shouldShowAuthenticatedActions && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={actionIconButtonClassName}
-                  onClick={onShowFavorites}
-                  aria-label={language === "ar" ? "المفضلة" : "Favorites"}
-                >
-                  <Heart className="w-5 h-5 transition-transform group-hover:scale-110" />
-                </Button>
-              )}
+
 
               {shouldShowAuthenticatedActions && (
                 <Button
@@ -212,7 +202,7 @@ export function Header({
             </div>
 
             {/* Active Group: Profile & Create Post */}
-            <div className="flex items-center gap-3 sm:gap-4 pl-1">
+            <div className="flex items-center gap-3 sm:gap-4">
               {authLoading ? (
                 <div className="hidden h-10 w-24 sm:block" aria-hidden="true" />
               ) : isAuthenticated ? (
@@ -225,6 +215,7 @@ export function Header({
                     currentUserDisplayName={currentUserDisplayName}
                     userAvatar={userAvatar}
                     onShowProfile={onShowProfile}
+                    onShowFavorites={onShowFavorites}
                     onShowMessages={onShowMessages}
                     onShowSettings={onShowSettings}
                     onShowAdminDashboard={onShowAdminDashboard}

@@ -51,6 +51,8 @@ export type UserProfileRecord = {
   phone: string;
   city: string;
   area: string;
+  cityId?: number;
+  areaId?: number;
   bio: string;
   avatar?: string;
   joinedAt: string;
@@ -123,6 +125,8 @@ export function normalizeUserProfile(
     phone: parsedUser.phone,
     city: parsedUser.city,
     area: parsedUser.area,
+    cityId: parsedUser.cityId,
+    areaId: parsedUser.areaId,
     bio: parsedUser.bio,
     avatar: parsedUser.avatar,
     joinedAt: parsedUser.joinedAt,

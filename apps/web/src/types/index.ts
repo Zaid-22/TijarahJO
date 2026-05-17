@@ -37,6 +37,8 @@ export interface UserProfile {
   phone: string;
   city?: string;
   area?: string;
+  cityId?: number;
+  areaId?: number;
   location: string;
   locationId?: string; // Link to location entity
   bio: string;

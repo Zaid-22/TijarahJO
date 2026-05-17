@@ -249,6 +249,9 @@ export const applyLoginUserDataToProfile = (
     userData.area || (preserveExistingFields ? userProfile.area : "") || "",
   );
 
+  const cityId = userData.cityId ?? (preserveExistingFields ? userProfile.cityId : undefined);
+  const areaId = userData.areaId ?? (preserveExistingFields ? userProfile.areaId : undefined);
+
   return {
     ...userProfile,
     id: userData.id || userProfile.id || userData.email,
@@ -259,6 +262,8 @@ export const applyLoginUserDataToProfile = (
     phone: userData.phone || (preserveExistingFields ? userProfile.phone : ""),
     city,
     area,
+    cityId,
+    areaId,
     location: city && area ? `${city}, ${area}` : city,
     avatar: userData.avatar || (preserveExistingFields ? userProfile.avatar : null),
     joinedDate:

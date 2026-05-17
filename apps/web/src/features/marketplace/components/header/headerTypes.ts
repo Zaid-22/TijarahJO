@@ -3,6 +3,7 @@ import { type Language } from "../../../../translations";
 export interface HeaderActionHandlers {
   onShowMessages?: () => void;
   onShowProfile?: () => void;
+  onShowFavorites?: () => void;
   onShowSettings?: () => void;
   onShowAdminDashboard?: () => void;
   onLogout?: () => void;

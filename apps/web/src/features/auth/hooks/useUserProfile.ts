@@ -32,6 +32,8 @@ export function useUserProfile() {
     phone: "",
     city: "",
     area: "",
+    cityId: undefined,
+    areaId: undefined,
     location: "",
     bio: "",
     avatar: null,
@@ -105,6 +107,8 @@ export function useUserProfile() {
         avatar: backendUser.avatar || prev.avatar || null,
         city,
         area,
+        cityId: backendUser.cityId ?? prev.cityId,
+        areaId: backendUser.areaId ?? prev.areaId,
         location: area ? `${city}, ${area}` : city,
         joinedDate: formatJoinedDate(
           backendUser.joinedAt,
@@ -128,7 +132,16 @@ export function useUserProfile() {
   }, [fetchProfileData]);
 
   const isProfileComplete = Boolean(
-    userProfile.phone && userProfile.city && userProfile.area
+    userProfile.phone &&
+    (
+      (userProfile.city && userProfile.area) ||
+      (
+        Number.isInteger(userProfile.cityId) &&
+        Number(userProfile.cityId) > 0 &&
+        Number.isInteger(userProfile.areaId) &&
+        Number(userProfile.areaId) > 0
+      )
+    )
   );
 
   // Guard against the render gap between auth state changing to authenticated

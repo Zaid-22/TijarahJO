@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   ChevronDown,
+  Heart,
   LogOut,
   Settings,
   Shield,
@@ -45,17 +46,25 @@ export function HeaderDesktopProfileMenu({
   currentUserDisplayName,
   userAvatar,
   onShowProfile,
-
-
+  onShowFavorites,
   onShowSettings,
   onShowAdminDashboard,
   onLogout,
 }: HeaderDesktopProfileMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const iconSpacingClass = language === "ar" ? "ml-2" : "mr-2";
+  const isRTL = language === "ar";
+  const iconSpacingClass = isRTL ? "ml-2.5" : "mr-2.5";
+  
+  // Premium menu item styling with micro-animations
   const menuItemClass =
-    "group h-[38px] cursor-pointer rounded-xl px-3 text-sm font-bold text-slate-700 outline-hidden transition-all duration-200 hover:bg-primary/[0.04] hover:text-primary focus:bg-primary/[0.04] focus:text-primary dark:text-slate-200 dark:hover:bg-primary/10";
-  const iconClass = `h-4.5 w-4.5 text-slate-400 group-hover:text-primary transition-colors duration-200 ${iconSpacingClass}`;
+    "group flex h-10 cursor-pointer items-center rounded-xl px-3 text-sm font-semibold text-slate-700 outline-hidden transition-all duration-200 hover:bg-primary/5 hover:text-primary focus:bg-primary/5 focus:text-primary dark:text-slate-200 dark:hover:bg-primary/10";
+  
+  const iconClass = cn(
+    "h-4.5 w-4.5 text-slate-400 transition-all duration-300 group-hover:text-primary",
+    iconSpacingClass,
+    // Add a subtle bounce/move effect on hover
+    isRTL ? "group-hover:-translate-x-0.5" : "group-hover:translate-x-0.5"
+  );
 
   if (authLoading) {
     return <div className="hidden h-10 w-24 sm:block" aria-hidden="true" />;
@@ -69,29 +78,31 @@ export function HeaderDesktopProfileMenu({
         className="hidden h-10 rounded-full border border-primary/35 bg-background/85 px-5 font-semibold text-primary shadow-sm hover:border-primary hover:bg-primary hover:text-primary-foreground hover:shadow-md sm:flex"
         onClick={onShowProfile}
       >
-        {language === "ar" ? "تسجيل الدخول" : "Sign In"}
+        {isRTL ? "تسجيل الدخول" : "Sign In"}
       </Button>
     );
   }
 
-
-
   return (
     <DropdownMenu onOpenChange={setIsOpen} modal={false}>
       <DropdownMenuTrigger asChild>
+        {/* 
+          Premium Unified Pill: 
+          No internal borders or backgrounds for the chevron.
+          The entire pill reacts as one single element.
+        */}
         <Button
           variant="ghost"
           className={cn(
-            "group hidden h-10 items-center gap-2 rounded-full border border-slate-200/80 bg-white/75 px-1.5 py-1 shadow-sm transition-all duration-300 hover:border-primary/25 hover:bg-white hover:shadow-md sm:flex",
-            language === "ar"
-              ? "flex-row-reverse pl-2 pr-1.5"
-              : "flex-row pl-1.5 pr-2",
+            "group hidden h-10 items-center gap-1.5 rounded-full p-1 transition-colors duration-300 hover:bg-slate-100 sm:flex dark:hover:bg-slate-800",
+            // Logical padding to keep it balanced in both LTR and RTL
+            isRTL ? "pl-2.5 pr-1 flex-row-reverse" : "pr-2.5 pl-1 flex-row"
           )}
           aria-label={
-            language === "ar" ? "فتح قائمة الحساب" : "Open account menu"
+            isRTL ? "فتح قائمة الحساب" : "Open account menu"
           }
         >
-          <Avatar className="h-8 w-8 border border-white/80 shadow-none ring-1 ring-slate-200/80 transition-all duration-300 group-hover:ring-primary/25">
+          <Avatar className="h-8 w-8 transition-transform duration-300 group-hover:scale-105">
             <AvatarImage
               src={resolveAvatarSrc(userAvatar) || undefined}
               alt={currentUserDisplayName || "User"}
@@ -101,59 +112,70 @@ export function HeaderDesktopProfileMenu({
               {getAvatarInitial(currentUserDisplayName)}
             </AvatarFallback>
           </Avatar>
-          <span
+
+          <ChevronDown
             className={cn(
-              "grid h-7 w-7 place-items-center rounded-full text-slate-500 transition-all duration-300 group-hover:bg-primary/5 group-hover:text-primary",
-              isOpen && "bg-primary/8 text-primary",
+              "h-4 w-4 text-slate-500 transition-all duration-300 ease-in-out group-hover:text-slate-900 dark:text-slate-400 dark:group-hover:text-slate-100",
+              isOpen && "rotate-180 text-slate-900 dark:text-slate-100"
             )}
-            aria-hidden="true"
-          >
-            <ChevronDown
-              className={cn(
-                "h-4 w-4 transition-transform duration-300 ease-in-out",
-                isOpen && "rotate-180",
-              )}
-              strokeWidth={2.25}
-            />
-          </span>
+            strokeWidth={2.5}
+          />
         </Button>
       </DropdownMenuTrigger>
+
       <DropdownMenuContent
         align="end"
         sideOffset={8}
-        className="w-64 rounded-3xl border border-slate-200/60 bg-white/95 p-1.5 shadow-2xl backdrop-blur-md dark:border-white/10 dark:bg-slate-900/95"
+        className="w-56 rounded-2xl border border-slate-200/60 bg-white/95 p-1.5 shadow-2xl backdrop-blur-md dark:border-white/10 dark:bg-slate-900/95"
       >
         <DropdownMenuItem
           onClick={onShowProfile}
-          className={`${menuItemClass} cursor-pointer`}
+          className={menuItemClass}
         >
           <User className={iconClass} />
-          {language === "ar" ? "ملفي الشخصي" : "My Profile"}
+          {isRTL ? "ملفي الشخصي" : "My Profile"}
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={onShowFavorites}
+          className={menuItemClass}
+        >
+          <Heart className={iconClass} />
+          {isRTL ? "المفضلة" : "Favorites"}
         </DropdownMenuItem>
 
         <DropdownMenuItem
           onClick={onShowSettings}
-          className={`${menuItemClass} cursor-pointer`}
+          className={menuItemClass}
         >
           <Settings className={iconClass} />
-          {language === "ar" ? "الإعدادات" : "Settings"}
+          {isRTL ? "الإعدادات" : "Settings"}
         </DropdownMenuItem>
+
         {isAdmin && (
           <DropdownMenuItem
             onClick={onShowAdminDashboard}
-            className={`${menuItemClass} cursor-pointer`}
+            className={menuItemClass}
           >
             <Shield className={iconClass} />
-            {language === "ar" ? "لوحة الإدارة" : "Admin Dashboard"}
+            {isRTL ? "لوحة الإدارة" : "Admin Dashboard"}
           </DropdownMenuItem>
         )}
-        <DropdownMenuSeparator className="my-1" />
+
+        <DropdownMenuSeparator className="mx-1 my-1 border-slate-100 dark:border-slate-800" />
+
         <DropdownMenuItem
           onClick={onLogout}
-          className="group h-[38px] cursor-pointer rounded-xl px-3 text-sm font-bold text-rose-600 outline-hidden transition-all duration-200 hover:bg-rose-50 focus:bg-rose-50 dark:hover:bg-rose-950/30"
+          className="group flex h-10 cursor-pointer items-center rounded-xl px-3 text-sm font-semibold text-rose-600 outline-hidden transition-all duration-200 hover:bg-rose-50 focus:bg-rose-50 dark:hover:bg-rose-950/30"
         >
-          <LogOut className={`h-4.5 w-4.5 text-rose-500 transition-colors duration-200 group-hover:text-rose-700 ${iconSpacingClass}`} />
-          {language === "ar" ? "تسجيل الخروج" : "Logout"}
+          <LogOut 
+            className={cn(
+              "h-4.5 w-4.5 text-rose-400 transition-all duration-300 group-hover:text-rose-600",
+              iconSpacingClass,
+              isRTL ? "group-hover:-translate-x-0.5" : "group-hover:translate-x-0.5"
+            )} 
+          />
+          {isRTL ? "تسجيل الخروج" : "Logout"}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -23,6 +23,8 @@ type ParsedUserSchema = {
   roleId: number;
   isDeleted: boolean;
   raw: Record<string, unknown>;
+  cityId?: number;
+  areaId?: number;
 };
 
 function resolveRawUserId(
@@ -118,6 +120,8 @@ export function parseUserSchema(
     ),
     isDeleted: Boolean(userRecord.IsDeleted ?? userRecord.isDeleted ?? false),
     raw: userRecord,
+    cityId: toPositiveIntegerId(userRecord.CityId ?? userRecord.cityId),
+    areaId: toPositiveIntegerId(userRecord.AreaId ?? userRecord.areaId),
   };
 }
 
