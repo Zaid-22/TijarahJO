@@ -43,12 +43,12 @@ export function ChatList({
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-md backdrop-blur-sm">
-      <div className="border-b border-border/60 bg-gradient-to-r from-muted/70 via-muted/50 to-transparent px-4 py-3">
+      <div className="border-b border-border/60 bg-linear-to-r from-muted/70 via-muted/50 to-transparent px-4 py-3">
         <h2 className="text-lg font-semibold tracking-tight text-foreground">
           {labels.messages}
         </h2>
       </div>
-      <div className="flex-1 overflow-y-auto bg-gradient-to-b from-background/30 to-transparent">
+      <div className="flex-1 overflow-y-auto bg-linear-to-b from-background/30 to-transparent">
         {chats.length === 0 ? (
           <div className="p-6 text-center text-sm text-muted-foreground">
             {labels.noConversations}

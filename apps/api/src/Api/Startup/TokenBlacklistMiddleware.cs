@@ -13,14 +13,8 @@ namespace TijarahJo.Api.Startup;
 /// Intercepts authenticated requests and verifies that the provided JWT is not blacklisted.
 /// This middleware must be added to the pipeline between UseAuthentication and UseAuthorization.
 /// </summary>
-public sealed class TokenBlacklistMiddleware
+public sealed class TokenBlacklistMiddleware(RequestDelegate next)
 {
-    private readonly RequestDelegate _next;
-
-    public TokenBlacklistMiddleware(RequestDelegate next)
-    {
-        _next = next;
-    }
 
     public async Task InvokeAsync(HttpContext context, ITokenBlacklistService tokenBlacklistService)
     {
@@ -58,6 +52,6 @@ public sealed class TokenBlacklistMiddleware
             }
         }
 
-        await _next(context);
+        await next(context);
     }
 }

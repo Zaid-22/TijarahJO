@@ -32,12 +32,12 @@ export function AccountSection({
       <CardHeader>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <div className="flex items-center gap-3 flex-1 w-full sm:w-auto">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-primary/20">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-primary/20">
               <User className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
               <CardTitle>{text.accountSettings}</CardTitle>
-              <CardDescription className="break-words">
+              <CardDescription className="wrap-break-word">
                 {text.accountDesc}
               </CardDescription>
             </div>

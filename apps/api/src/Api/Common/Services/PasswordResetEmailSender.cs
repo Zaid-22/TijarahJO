@@ -40,7 +40,7 @@ public sealed class PasswordResetEmailSender(
 
         if (!IsApiConfigured())
         {
-            if (_options.LogCodesWhenEmailDisabled)
+            if (_options.LogCodesWhenEmailDisabled && _logger.IsEnabled(LogLevel.Information))
             {
                 _logger.LogInformation(
                     "Password reset email transport disabled. Recipient={Recipient} Code={Code} TTLMinutes={TtlMinutes}",
@@ -70,7 +70,7 @@ public sealed class PasswordResetEmailSender(
         {
             from = $"{_options.FromName} <{_options.FromAddress}>",
             to = new[] { recipientEmail },
-            subject = subject,
+            subject,
             text = body
         };
 

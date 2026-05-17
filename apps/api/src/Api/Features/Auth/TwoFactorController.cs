@@ -175,8 +175,11 @@ public class TwoFactorController(
                 );
             }
 
-            _logger.LogInformation("[2FA] Disable code email sent to {Email}", user.Email);
-            if (sendResult.DebugCode is { Length: > 0 })
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("[2FA] Disable code email sent to {Email}", user.Email);
+            }
+            if (sendResult.DebugCode is { Length: > 0 } && _logger.IsEnabled(LogLevel.Information))
             {
                 _logger.LogInformation("[2FA] Disable code debug fallback active for {Email}: {DebugCode}", user.Email, sendResult.DebugCode);
             }
@@ -216,8 +219,11 @@ public class TwoFactorController(
             );
         }
 
-        _logger.LogInformation("[2FA] Setup code email sent to {Email}", user.Email);
-        if (setupSendResult.DebugCode is { Length: > 0 })
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("[2FA] Setup code email sent to {Email}", user.Email);
+        }
+        if (setupSendResult.DebugCode is { Length: > 0 } && _logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation("[2FA] Setup code debug fallback active for {Email}: {DebugCode}", user.Email, setupSendResult.DebugCode);
         }
@@ -340,7 +346,7 @@ public class TwoFactorController(
         });
     }
 
-    private static string BuildTwoFactorPromptMessage(string message, string? _debugCode)
+    private static string BuildTwoFactorPromptMessage(string message, string? _)
     {
         return message;
     }

@@ -219,7 +219,7 @@ export function ChatWindow({
     <>
       <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-md backdrop-blur-sm relative z-10">
         {/* Header */}
-        <div className="flex items-center border-b border-border/60 bg-gradient-to-r from-muted/70 via-muted/50 to-transparent p-4">
+        <div className="flex items-center border-b border-border/60 bg-linear-to-r from-muted/70 via-muted/50 to-transparent p-4">
           {showBackButton ? (
             <Button
               variant="ghost"
@@ -306,7 +306,7 @@ export function ChatWindow({
                     <div
                       className={cn(
                         parsedContent.type === "image"
-                          ? "max-w-[17rem] sm:max-w-[21rem] rounded-[1.4rem] p-1.5 text-sm shadow-sm"
+                          ? "max-w-68 sm:max-w-84 rounded-[1.4rem] p-1.5 text-sm shadow-sm"
                           : "max-w-[78%] rounded-2xl px-3 py-2 text-sm shadow-sm",
                         isMe
                           ? "rounded-tr-md bg-primary text-primary-foreground"
@@ -337,7 +337,7 @@ export function ChatWindow({
                             )}
                           >
                             {parsedContent.caption ? (
-                              <p className="whitespace-pre-wrap break-words text-sm leading-5">
+                              <p className="whitespace-pre-wrap wrap-break-word text-sm leading-5">
                                 {parsedContent.caption}
                               </p>
                             ) : (
@@ -368,7 +368,7 @@ export function ChatWindow({
                         </div>
                       ) : (
                         <>
-                          <p className="whitespace-pre-wrap break-words">{parsedContent.text}</p>
+                          <p className="whitespace-pre-wrap wrap-break-word">{parsedContent.text}</p>
                           <span
                             className={cn(
                               "mt-1 flex items-center justify-end gap-1.5 text-xs opacity-75",
@@ -400,7 +400,7 @@ export function ChatWindow({
         </div>
 
         {/* Input */}
-        <div className="border-t border-border/60 bg-gradient-to-r from-muted/70 via-muted/50 to-transparent p-4">
+        <div className="border-t border-border/60 bg-linear-to-r from-muted/70 via-muted/50 to-transparent p-4">
           {selectedImagePreview && (
             <div className="mb-3 flex items-start gap-3 rounded-xl border border-border/70 bg-background/80 p-2">
               <img

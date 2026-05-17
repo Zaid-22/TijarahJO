@@ -12,14 +12,12 @@ namespace TijarahJo.Api.Features.SystemStatus;
 public sealed class SystemStatusController(
     ISystemSettingsRuntimeService systemSettingsRuntimeService) : ControllerBase
 {
-    private readonly ISystemSettingsRuntimeService _systemSettingsRuntimeService = systemSettingsRuntimeService;
-
     [HttpGet("status")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult> GetStatus(CancellationToken cancellationToken)
     {
         PublicSystemStatus status =
-            await _systemSettingsRuntimeService.GetPublicStatusAsync(cancellationToken);
+            await systemSettingsRuntimeService.GetPublicStatusAsync(cancellationToken);
 
         return Ok(status);
     }

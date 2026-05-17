@@ -18,21 +18,10 @@ namespace TijarahJo.Api.Features.Posts
     [ApiController]
     [ApiVersion("1.0")]
     [Route("api/v{version:apiVersion}/posts/{postId:int}/comments")]
-    public class PostCommentsController : ControllerBase
+    public class PostCommentsController(
+        IPostCommentService commentService,
+        IPostReadService postReads) : ControllerBase
     {
-        private readonly ILogger<PostCommentsController> _logger;
-        private readonly IPostCommentService _commentService;
-        private readonly IPostReadService _postReads;
-
-        public PostCommentsController(
-            ILogger<PostCommentsController> logger,
-            IPostCommentService commentService,
-            IPostReadService postReads)
-        {
-            _logger = logger;
-            _commentService = commentService;
-            _postReads = postReads;
-        }
 
         // GET /api/v1/posts/{postId}/comments?page=1&limit=20
         [HttpGet]
@@ -47,13 +36,13 @@ namespace TijarahJo.Api.Features.Posts
             if (postId < 1)
                 return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid post ID.");
 
-            var result = await _commentService.GetTopLevelCommentsAsync(postId, page, limit, cancellationToken);
+            var result = await commentService.GetTopLevelCommentsAsync(postId, page, limit, cancellationToken);
             if (!result.Success)
                 return ToCommentProblem(result.FailureReason, result.Message);
 
             return Ok(new PostCommentListResponseDTO
             {
-                Comments = result.Comments.Select(c => DTOMapper.ToPostCommentResponseDTO(c, Request)).ToList(),
+                Comments = [.. result.Comments.Select(c => DTOMapper.ToPostCommentResponseDTO(c, Request))],
                 TotalCount = result.TotalCount,
                 Page = page,
                 PageSize = limit
@@ -71,16 +60,17 @@ namespace TijarahJo.Api.Features.Posts
             [FromQuery] int limit = 20,
             CancellationToken cancellationToken = default)
         {
+            _ = postId; // Bound from route template
             if (commentId < 1)
                 return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid comment ID.");
 
-            var result = await _commentService.GetRepliesAsync(commentId, page, limit, cancellationToken);
+            var result = await commentService.GetRepliesAsync(commentId, page, limit, cancellationToken);
             if (!result.Success)
                 return ToCommentProblem(result.FailureReason, result.Message);
 
             return Ok(new PostCommentListResponseDTO
             {
-                Comments = result.Comments.Select(c => DTOMapper.ToPostCommentResponseDTO(c, Request)).ToList(),
+                Comments = [.. result.Comments.Select(c => DTOMapper.ToPostCommentResponseDTO(c, Request))],
                 TotalCount = result.TotalCount,
                 Page = page,
                 PageSize = limit
@@ -105,7 +95,7 @@ namespace TijarahJo.Api.Features.Posts
             if (request == null)
                 return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Comment payload is required.");
 
-            var result = await _commentService.AddCommentAsync(
+            var result = await commentService.AddCommentAsync(
                 postId, currentUserId, request.Content, request.ParentCommentId, cancellationToken);
 
             if (!result.Success || result.Comment == null)
@@ -131,13 +121,14 @@ namespace TijarahJo.Api.Features.Posts
             [FromBody] UpdatePostCommentRequest? request,
             CancellationToken cancellationToken = default)
         {
+            _ = postId; // Bound from route template
             if (!ApiControllerHelpers.TryGetCurrentUserId(User, out int currentUserId))
                 return Problem(statusCode: StatusCodes.Status401Unauthorized, detail: "Invalid authentication token.");
 
             if (request == null)
                 return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Update payload is required.");
 
-            var result = await _commentService.UpdateCommentAsync(commentId, currentUserId, request.Content, cancellationToken);
+            var result = await commentService.UpdateCommentAsync(commentId, currentUserId, request.Content, cancellationToken);
 
             if (!result.Success || result.Comment == null)
                 return ToCommentProblem(result.FailureReason, result.Message);
@@ -162,7 +153,7 @@ namespace TijarahJo.Api.Features.Posts
 
             // Resolve post owner for permission check
             int? postOwnerId = null;
-            var postResult = await _postReads.GetByIdAsync(postId, cancellationToken);
+            var postResult = await postReads.GetByIdAsync(postId, cancellationToken);
             if (postResult.Success && postResult.Post != null)
             {
                 postOwnerId = postResult.Post.PostModel.UserID;
@@ -170,7 +161,7 @@ namespace TijarahJo.Api.Features.Posts
 
             bool actorIsAdmin = ApiControllerHelpers.IsAdminUser(User);
 
-            var result = await _commentService.DeleteCommentAsync(
+            var result = await commentService.DeleteCommentAsync(
                 commentId, currentUserId, actorIsAdmin, postOwnerId, cancellationToken);
 
             if (!result.Success)
@@ -181,7 +172,7 @@ namespace TijarahJo.Api.Features.Posts
 
         // --- Helpers ---
 
-        private ActionResult ToCommentProblem(PostCommentFailureReason? reason, string? message)
+        private ObjectResult ToCommentProblem(PostCommentFailureReason? reason, string? message)
         {
             return reason switch
             {

@@ -6,19 +6,11 @@ using TijarahJo.Application.Common;
 
 namespace TijarahJo.Infrastructure.Queries;
 
-public sealed class SearchReadService : ISearchReadService, ISearchCacheInvalidationService
+public sealed class SearchReadService(
+    IPostListingQueryService postListingQueries,
+    IMemoryCache cache) : ISearchReadService, ISearchCacheInvalidationService
 {
     private static readonly ConcurrentDictionary<string, byte> CacheKeys = new(StringComparer.Ordinal);
-    private readonly IPostListingQueryService _postListingQueries;
-    private readonly IMemoryCache _cache;
-
-    public SearchReadService(
-        IPostListingQueryService postListingQueries,
-        IMemoryCache cache)
-    {
-        _postListingQueries = postListingQueries;
-        _cache = cache;
-    }
 
     public async Task<SearchReadResult> SearchAsync(SearchQueryModel query, CancellationToken cancellationToken = default)
     {
@@ -67,7 +59,7 @@ public sealed class SearchReadService : ISearchReadService, ISearchCacheInvalida
         {
             if (!PostStatusPolicy.TryNormalizeClientStatus(query.Status, out string normalizedStatus))
             {
-                throw new ArgumentException("Invalid status. Allowed values: ACTIVE, SOLD.", nameof(query.Status));
+                throw new ArgumentException("Invalid status. Allowed values: ACTIVE, SOLD.", nameof(query));
             }
 
             if (normalizedStatus == "ACTIVE")
@@ -80,17 +72,17 @@ public sealed class SearchReadService : ISearchReadService, ISearchCacheInvalida
             }
             else
             {
-                throw new ArgumentException("Invalid status. Allowed values: ACTIVE, SOLD.", nameof(query.Status));
+                throw new ArgumentException("Invalid status. Allowed values: ACTIVE, SOLD.", nameof(query));
             }
         }
 
         string cacheKey = BuildCacheKey(query, page, limit, visibility, sortField, ascending, categoryId, categoryNameLike);
-        if (_cache.TryGetValue(cacheKey, out SearchReadResult? cachedResult) && cachedResult is not null)
+        if (cache.TryGetValue(cacheKey, out SearchReadResult? cachedResult) && cachedResult is not null)
         {
             return cachedResult;
         }
 
-        PostListingPageResult pageResult = await _postListingQueries.QueryAsync(new PostListingQuery
+        PostListingPageResult pageResult = await postListingQueries.QueryAsync(new PostListingQuery
         {
             Page = page,
             Limit = limit,
@@ -134,7 +126,7 @@ public sealed class SearchReadService : ISearchReadService, ISearchCacheInvalida
         }
 
         int totalPages = pageResult.TotalPosts > 0 ? (int)Math.Ceiling(pageResult.TotalPosts / (double)limit) : 0;
-        SearchReadResult result = new SearchReadResult
+        SearchReadResult result = new()
         {
             Success = true,
             Posts = posts,
@@ -147,7 +139,7 @@ public sealed class SearchReadService : ISearchReadService, ISearchCacheInvalida
             }
         };
 
-        _cache.Set(
+        cache.Set(
             cacheKey,
             result,
             new MemoryCacheEntryOptions
@@ -163,7 +155,7 @@ public sealed class SearchReadService : ISearchReadService, ISearchCacheInvalida
     {
         foreach ((string cacheKey, _) in CacheKeys)
         {
-            _cache.Remove(cacheKey);
+            cache.Remove(cacheKey);
         }
 
         CacheKeys.Clear();

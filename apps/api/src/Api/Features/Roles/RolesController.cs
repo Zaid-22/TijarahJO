@@ -12,23 +12,14 @@ namespace TijarahJo.Api.Features.Roles;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/roles")]
-public class RolesController : ControllerBase
+public class RolesController(IRoleQueryHandler roleQueries, IRoleCommandService roleCommands) : ControllerBase
 {
-    private readonly IRoleQueryHandler _roleQueries;
-    private readonly IRoleCommandService _roleCommands;
-
-    public RolesController(IRoleQueryHandler roleQueries, IRoleCommandService roleCommands)
-    {
-        _roleQueries = roleQueries;
-        _roleCommands = roleCommands;
-    }
-
     [HttpGet("")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IEnumerable<RoleResponseDTO>>> GetAllRoles()
     {
-        RoleListQueryResult result = await _roleQueries.GetAllAsync(HttpContext.RequestAborted);
+        RoleListQueryResult result = await roleQueries.GetAllAsync(HttpContext.RequestAborted);
         if (!result.Success)
         {
             return this.ToRoleListQueryProblem(result, "Failed to fetch roles.");
@@ -36,12 +27,11 @@ public class RolesController : ControllerBase
 
         if (result.Roles.Count == 0)
         {
-            return Ok(new List<RoleResponseDTO>());
+            return Ok(Array.Empty<RoleResponseDTO>());
         }
 
-        List<RoleResponseDTO> dtoList = result.Roles
-            .Select(DTOMapper.ToRoleResponseDTO)
-            .ToList();
+        List<RoleResponseDTO> dtoList = [.. result.Roles
+            .Select(DTOMapper.ToRoleResponseDTO)];
 
         return Ok(dtoList);
     }
@@ -52,7 +42,7 @@ public class RolesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<RoleResponseDTO>> GetRoleById(int id)
     {
-        RoleByIdQueryResult result = await _roleQueries.GetByIdAsync(id, HttpContext.RequestAborted);
+        RoleByIdQueryResult result = await roleQueries.GetByIdAsync(id, HttpContext.RequestAborted);
         if (!result.Success || result.Role == null)
         {
             return this.ToRoleByIdQueryProblem(result, "Failed to fetch role.");
@@ -67,7 +57,7 @@ public class RolesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<RoleResponseDTO>> AddRole([FromBody] CreateRoleRequest request)
     {
-        RoleCommandResult result = await _roleCommands.CreateAsync(
+        RoleCommandResult result = await roleCommands.CreateAsync(
             new CreateRoleCommand
             {
                 RoleName = request.RoleName
@@ -93,7 +83,7 @@ public class RolesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<RoleResponseDTO>> UpdateRole(int id, [FromBody] UpdateRoleRequest request)
     {
-        RoleCommandResult result = await _roleCommands.UpdateAsync(
+        RoleCommandResult result = await roleCommands.UpdateAsync(
             new UpdateRoleCommand
             {
                 RoleId = id,
@@ -116,7 +106,7 @@ public class RolesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> DeleteRole(int id)
     {
-        RoleCommandResult result = await _roleCommands.DeleteAsync(id, HttpContext.RequestAborted);
+        RoleCommandResult result = await roleCommands.DeleteAsync(id, HttpContext.RequestAborted);
         if (!result.Success)
         {
             return this.ToRoleCommandProblem(result, "Role operation failed.");
@@ -130,7 +120,7 @@ public class RolesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<bool>> DoesRoleExist(int id)
     {
-        RoleExistsQueryResult result = await _roleQueries.ExistsAsync(id, HttpContext.RequestAborted);
+        RoleExistsQueryResult result = await roleQueries.ExistsAsync(id, HttpContext.RequestAborted);
         if (!result.Success)
         {
             return this.ToRoleExistsQueryProblem(result, "Failed to check role existence.");

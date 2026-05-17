@@ -22,7 +22,7 @@ export function DangerZoneSection({
 }: DangerZoneSectionProps) {
   return (
     <Card className="border-destructive/20 shadow-sm overflow-hidden bg-card/50">
-      <CardHeader className="pb-4 border-b border-destructive/10 bg-destructive/[0.02]">
+      <CardHeader className="pb-4 border-b border-destructive/10 bg-destructive/2">
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive shadow-inner">
             <AlertTriangle className="w-6 h-6" />

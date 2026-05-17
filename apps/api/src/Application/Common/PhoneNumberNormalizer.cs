@@ -13,7 +13,7 @@ public static class PhoneNumberNormalizer
             return null;
         }
 
-        string digitsOnly = new(rawPhone.Where(char.IsDigit).ToArray());
+        string digitsOnly = new([.. rawPhone.Where(char.IsDigit)]);
         if (digitsOnly.Length == 0)
         {
             return null;
@@ -21,12 +21,12 @@ public static class PhoneNumberNormalizer
 
         if (digitsOnly.StartsWith("962", StringComparison.Ordinal))
         {
-            digitsOnly = digitsOnly.Substring(3);
+            digitsOnly = digitsOnly[3..];
         }
 
         if (digitsOnly.StartsWith('0') && digitsOnly.Length == 10)
         {
-            digitsOnly = digitsOnly.Substring(1);
+            digitsOnly = digitsOnly[1..];
         }
 
         if (digitsOnly.Length != 9)

@@ -12,24 +12,15 @@ namespace TijarahJo.Api.Features.Reviews
     [ApiController]
     [ApiVersion("1.0")]
     [Route("api/v{version:apiVersion}/reviews")]
-    public class ReviewsController : ControllerBase
+    public class ReviewsController(IReviewService reviews, IReviewSubmissionService reviewSubmissions) : ControllerBase
     {
-        private readonly IReviewService _reviews;
-        private readonly IReviewSubmissionService _reviewSubmissions;
-
-        public ReviewsController(IReviewService reviews, IReviewSubmissionService reviewSubmissions)
-        {
-            _reviews = reviews;
-            _reviewSubmissions = reviewSubmissions;
-        }
-
         [HttpGet("user/{userId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<ReviewResponseDTO>>> GetUserReviews(int userId)
         {
             if (userId < 1) return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid user ID");
-            IReadOnlyList<TijarahJo.Domain.Models.ReviewModel> reviews = await _reviews.GetReviewsAsync(userId, HttpContext.RequestAborted);
-            return Ok(reviews.Select(r => DTOMapper.ToReviewResponseDTO(r, Request)).ToList());
+            IReadOnlyList<TijarahJo.Domain.Models.ReviewModel> reviewList = await reviews.GetReviewsAsync(userId, HttpContext.RequestAborted);
+            return Ok(reviewList.Select(r => DTOMapper.ToReviewResponseDTO(r, Request)).ToList());
         }
 
         [Authorize]
@@ -50,7 +41,7 @@ namespace TijarahJo.Api.Features.Reviews
                 return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Review payload is required.");
             }
 
-            ReviewSubmissionResult result = await _reviewSubmissions.SubmitAsync(
+            ReviewSubmissionResult result = await reviewSubmissions.SubmitAsync(
                 currentUserId,
                 request.ReviewedUserID,
                 request.Rating,

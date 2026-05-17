@@ -39,7 +39,7 @@ self.addEventListener("notificationclick", (event) => {
 
   const routeUrl = String(event.notification?.data?.routeUrl || "/chat");
   event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if ("focus" in client) {
           client.navigate(routeUrl);
@@ -47,8 +47,8 @@ self.addEventListener("notificationclick", (event) => {
         }
       }
 
-      if (clients.openWindow) {
-        return clients.openWindow(routeUrl);
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(routeUrl);
       }
 
       return undefined;

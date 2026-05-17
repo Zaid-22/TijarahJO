@@ -425,7 +425,7 @@ static void CopyBundledUploadDirectory(
         copiedCount++;
     }
 
-    if (copiedCount > 0)
+    if (copiedCount > 0 && logger.IsEnabled(LogLevel.Information))
     {
         logger.LogInformation(
             "Copied {CopiedCount} bundled upload assets from {SourceRoot} to {TargetRoot}.",

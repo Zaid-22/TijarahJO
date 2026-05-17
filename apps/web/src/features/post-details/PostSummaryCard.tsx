@@ -83,7 +83,7 @@ export function PostSummaryCard({
         <div className="mb-4">
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <Badge
-              className="max-w-full whitespace-normal rounded-full border-0 bg-primary/10 px-4 py-1.5 text-start text-sm font-semibold text-primary backdrop-blur-md [overflow-wrap:anywhere]"
+              className="max-w-full whitespace-normal rounded-full border-0 bg-primary/10 px-4 py-1.5 text-start text-sm font-semibold text-primary backdrop-blur-md wrap-anywhere"
             >
               {post.category}
             </Badge>
@@ -100,7 +100,7 @@ export function PostSummaryCard({
           <div className="flex flex-col gap-3 sm:gap-2">
             <h1
               className={cn(
-                "text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-3xl [overflow-wrap:anywhere]",
+                "text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-3xl wrap-anywhere",
                 isRTL ? "text-right" : "text-left",
               )}
               dir="auto"
@@ -157,7 +157,7 @@ export function PostSummaryCard({
               <h3 className="mb-3 text-lg font-bold text-foreground">
                 {labels.descriptionTitle}
               </h3>
-              <p className="whitespace-pre-wrap text-foreground font-normal leading-relaxed [overflow-wrap:anywhere]">
+              <p className="whitespace-pre-wrap text-foreground font-normal leading-relaxed wrap-anywhere">
                 {descriptionText}
               </p>
               {descriptionState?.isLong && (

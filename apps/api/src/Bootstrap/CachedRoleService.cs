@@ -10,30 +10,21 @@ namespace TijarahJo.Bootstrap;
 /// Roles are essentially static reference data — caching them eliminates
 /// a DB round-trip on every login and every user registration.
 /// </summary>
-public sealed class CachedRoleService : IRoleService
+public sealed class CachedRoleService(IRoleService inner, IMemoryCache cache) : IRoleService
 {
     private const string AllRolesCacheKey = "CachedRoleService:GetAllRolesAsync";
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
 
-    private readonly IRoleService _inner;
-    private readonly IMemoryCache _cache;
-
-    public CachedRoleService(IRoleService inner, IMemoryCache cache)
-    {
-        _inner = inner;
-        _cache = cache;
-    }
-
     public async Task<IReadOnlyList<RoleModel>> GetAllRolesAsync(CancellationToken cancellationToken = default)
     {
-        if (_cache.TryGetValue(AllRolesCacheKey, out IReadOnlyList<RoleModel>? cached) && cached is not null)
+        if (cache.TryGetValue(AllRolesCacheKey, out IReadOnlyList<RoleModel>? cached) && cached is not null)
         {
             return cached;
         }
 
-        IReadOnlyList<RoleModel> roles = await _inner.GetAllRolesAsync(cancellationToken);
+        IReadOnlyList<RoleModel> roles = await inner.GetAllRolesAsync(cancellationToken);
 
-        _cache.Set(AllRolesCacheKey, roles, new MemoryCacheEntryOptions
+        cache.Set(AllRolesCacheKey, roles, new MemoryCacheEntryOptions
         {
             SlidingExpiration = CacheDuration
         });
@@ -44,30 +35,30 @@ public sealed class CachedRoleService : IRoleService
     // Pass-through methods — mutations always go to the inner service and invalidate the cache.
 
     public Task<Role?> FindAsync(int? roleId, CancellationToken cancellationToken = default)
-        => _inner.FindAsync(roleId, cancellationToken);
+        => inner.FindAsync(roleId, cancellationToken);
 
-    public Role Create(RoleModel model) => _inner.Create(model);
+    public Role Create(RoleModel model) => inner.Create(model);
 
     public async Task<bool> SaveAsync(Role role, CancellationToken cancellationToken = default)
     {
-        bool result = await _inner.SaveAsync(role, cancellationToken);
+        bool result = await inner.SaveAsync(role, cancellationToken);
         if (result)
         {
-            _cache.Remove(AllRolesCacheKey);
+            cache.Remove(AllRolesCacheKey);
         }
         return result;
     }
 
     public async Task<bool> DeleteRoleAsync(int? roleId, CancellationToken cancellationToken = default)
     {
-        bool result = await _inner.DeleteRoleAsync(roleId, cancellationToken);
+        bool result = await inner.DeleteRoleAsync(roleId, cancellationToken);
         if (result)
         {
-            _cache.Remove(AllRolesCacheKey);
+            cache.Remove(AllRolesCacheKey);
         }
         return result;
     }
 
     public Task<bool> DoesRoleExistAsync(int? roleId, CancellationToken cancellationToken = default)
-        => _inner.DoesRoleExistAsync(roleId, cancellationToken);
+        => inner.DoesRoleExistAsync(roleId, cancellationToken);
 }

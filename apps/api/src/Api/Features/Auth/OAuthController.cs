@@ -221,7 +221,7 @@ public class OAuthController(
         return QueryHelpers.AddQueryString(frontendFailureUrl, "googleError", message);
     }
 
-    private static string BuildTwoFactorPromptMessage(string message, string? _debugCode)
+    private static string BuildTwoFactorPromptMessage(string message, string? _)
     {
         return message;
     }

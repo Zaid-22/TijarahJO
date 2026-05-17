@@ -15,7 +15,7 @@ public sealed class DashboardStatsResponse
     public int TotalReviews { get; init; }
     public double AverageRating { get; init; }
     public int SoldPosts { get; init; }
-    public System.Collections.Generic.IReadOnlyList<TijarahJo.Application.Abstractions.DataAccess.RecentAdminAction> RecentActions { get; init; } = System.Array.Empty<TijarahJo.Application.Abstractions.DataAccess.RecentAdminAction>();
+    public System.Collections.Generic.IReadOnlyList<TijarahJo.Application.Abstractions.DataAccess.RecentAdminAction> RecentActions { get; init; } = [];
 
     // Optional metrics that can be added later
     public int PendingReports { get; init; } = 0;

@@ -22,7 +22,7 @@ export function PostCarouselSkeleton({ hasSubtitle = true }: PostCarouselSkeleto
         {Array.from({ length: 4 }).map((_, index) => (
           <div
             key={`post-skeleton-${index}`}
-            className="w-[282px] flex-shrink-0 sm:w-[300px] md:w-[320px]"
+            className="w-[282px] shrink-0 sm:w-[300px] md:w-[320px]"
           >
             <PostCardSkeleton viewMode="grid-4" />
           </div>

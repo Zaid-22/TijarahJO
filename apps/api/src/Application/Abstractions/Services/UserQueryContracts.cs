@@ -14,7 +14,7 @@ public sealed class UserListQueryResult
     public bool Success { get; init; }
     public int StatusCode { get; init; }
     public string? Message { get; init; }
-    public IReadOnlyList<UserModel> Users { get; init; } = Array.Empty<UserModel>();
+    public IReadOnlyList<UserModel> Users { get; init; } = [];
 }
 
 public sealed class UserByIdQueryResult
