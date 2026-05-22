@@ -7,6 +7,7 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/../../../../.." && pwd)"
 
 CONTAINER_NAME="${CONTAINER_NAME:-tijarahjo-db}"
 SQLCMD_IN_CONTAINER="${SQLCMD_IN_CONTAINER:-/opt/mssql-tools18/bin/sqlcmd}"
+SQLCMD_UTF8_FLAGS=(-f 65001)
 PLAN_OUTPUT_DIR="${PLAN_OUTPUT_DIR:-/tmp/tijarahjo_query_plans}"
 PLAN_MANIFEST_FILE="${PLAN_MANIFEST_FILE:-$PLAN_OUTPUT_DIR/manifest.json}"
 
@@ -41,7 +42,7 @@ SQL
   local raw_output
   if ! raw_output="$(
     printf "%s\n" "$full_payload" \
-      | docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" \
+      | docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" "${SQLCMD_UTF8_FLAGS[@]}" \
         -S localhost -d TijarahJoDB -U sa -P "$MSSQL_SA_PASSWORD" -C -b -w 65535 -y 0 -Y 0 2>&1
   )"; then
     echo "::error::Failed to capture query plan for '$plan_name'." >&2

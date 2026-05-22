@@ -66,7 +66,17 @@ MSSQL_SA_PASSWORD='<sa-password>' ./apps/api/database/scripts/diagnostics/captur
 ./scripts/load_test_api.sh
 ```
 
-## 4. Manual Fallback Order (If Needed)
+## 4. Arabic / UTF-8 (Windows)
+
+If Arabic columns show mojibake (for example `Ø§Ù„Ø£Ø«Ø§Ø«` instead of `الأثاث`), SQL scripts were applied without UTF-8 input encoding.
+
+- **sqlcmd (Windows):** always pass `-f 65001` when applying `.sql` files that contain Arabic.
+- **SSMS:** save scripts as **UTF-8** (with or without BOM) and confirm the file displays Arabic correctly before execution.
+- **Canonical fix:** rerun `./scripts/bootstrap_db.sh` (uses UTF-8 sqlcmd flags) or apply migration `V202605220001__repair_arabic_utf8_mojibake.sql` after rebuilding bundles.
+
+Repo SQL seed files are UTF-8; the database stores correct Unicode once scripts are executed with UTF-8 encoding.
+
+## 5. Manual Fallback Order (If Needed)
 
 Apply only if troubleshooting a partial setup:
 
@@ -74,7 +84,9 @@ Apply only if troubleshooting a partial setup:
 2. `apps/api/database/bundles/migrations.sql`
 3. `apps/api/database/bundles/seed_data.sql` (optional baseline reference data)
 
-## 5. Database Verification Queries
+When using `sqlcmd` manually on Windows, add `-f 65001` to every invocation.
+
+## 6. Database Verification Queries
 
 Run in SSMS/sqlcmd after setup:
 
@@ -91,6 +103,17 @@ WHERE name IN (
   'Cities','Areas','UserStatusLookup','PostStatusLookup'
 )
 ORDER BY name;
+```
+
+```sql
+USE TijarahJoDB;
+GO
+
+-- Arabic reference data (should display real Arabic, not mojibake like Ø§Ù„Ø£Ø«Ø§Ø«)
+SELECT CategoryName, NameAr
+FROM dbo.Categories
+WHERE CategoryName = N'Furniture';
+GO
 ```
 
 ```sql
@@ -126,20 +149,20 @@ WHERE schema_id = SCHEMA_ID('dbo')
   AND (name LIKE 'SP[_]%' OR name LIKE 'USP[_]%');
 ```
 
-## 6. Index/Query Health Spot Checks
+## 7. Index/Query Health Spot Checks
 
 - [ ] Login lookup indexes exist (`IX_Users_Login_Email_Active`, normalized phone/email equivalents)
 - [ ] Post feed indexes exist on status/delete + recency paths
 - [ ] No blocking migration/index errors in SQL logs
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 - If setup fails midway: rerun `./scripts/bootstrap_db.sh --no-volume-reset`
 - If Docker login/password mismatch occurs: rerun with volume reset (default behavior)
 - If backend fails after DB success: inspect backend log referenced by `bootstrap_db.sh`
 - If SQL audit/guard fails: fix source SQL/runtime code before retrying bootstrap
 
-## 8. Done Criteria
+## 9. Done Criteria
 
 - [ ] Bootstrap command passes
 - [ ] SQL bundle build passes

@@ -1,0 +1,4 @@
+# Keep SQL and checksum lock files LF so guards match on all platforms (especially Windows).
+*.sql text eol=lf
+*.sha256 text eol=lf
+apps/api/database/** text eol=lf

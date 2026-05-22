@@ -72,6 +72,16 @@ Legacy `Tb*` migration scripts were moved under `../archive/migrations-legacy/` 
   - Operational rule: if one of these fails in a shared environment, do a full database reset and re-apply the canonical chain from baseline.
 - Legacy immutable migrations that still contain `USE ...;` are allowed as historical exceptions; bundle generation strips `USE` from migration output so execution follows the active connection/database context.
 
+## UTF-8 and Arabic text
+
+All `*.sql` seeds and migrations are **UTF-8**. On Windows, `sqlcmd` defaults to a legacy code page unless you pass **`-f 65001`**, which misreads Arabic and stores mojibake (for example `Ø§Ù„Ø£Ø«Ø§Ø«` instead of `الأثاث`).
+
+- `./scripts/bootstrap_db.sh` passes `-f 65001` to container `sqlcmd`.
+- Manual `sqlcmd` on Windows: `sqlcmd -S ... -f 65001 -i path/to/script.sql`
+- SSMS: save scripts as UTF-8 and verify Arabic renders correctly before running.
+
+Migration `V202605220001__repair_arabic_utf8_mojibake.sql` re-applies canonical Arabic for categories, cities, areas, and default hero banners.
+
 ## Canonical Runtime Path
 
 Use `./scripts/bootstrap_db.sh` (from repo root) for local setup.

@@ -23,6 +23,8 @@ USING
         (N'Maan', N'معان')
 ) AS source (CityName, CityNameAr)
 ON target.CityName = source.CityName
+WHEN MATCHED THEN
+    UPDATE SET target.CityNameAr = source.CityNameAr
 WHEN NOT MATCHED BY TARGET THEN
     INSERT (CityName, CityNameAr)
     VALUES (source.CityName, source.CityNameAr);
@@ -72,6 +74,8 @@ BEGIN
             (@AmmanId, N'Al Muqabalain', N'المقابلين')
     ) AS source (CityID, AreaName, AreaNameAr)
     ON target.CityID = source.CityID AND target.AreaName = source.AreaName
+    WHEN MATCHED THEN
+        UPDATE SET target.AreaNameAr = source.AreaNameAr
     WHEN NOT MATCHED BY TARGET THEN
         INSERT (CityID, AreaName, AreaNameAr)
         VALUES (source.CityID, source.AreaName, source.AreaNameAr);
@@ -99,6 +103,8 @@ BEGIN
             (@IrbidId, N'University Area', N'منطقة الجامعة')
     ) AS source (CityID, AreaName, AreaNameAr)
     ON target.CityID = source.CityID AND target.AreaName = source.AreaName
+    WHEN MATCHED THEN
+        UPDATE SET target.AreaNameAr = source.AreaNameAr
     WHEN NOT MATCHED BY TARGET THEN
         INSERT (CityID, AreaName, AreaNameAr)
         VALUES (source.CityID, source.AreaName, source.AreaNameAr);
@@ -124,6 +130,8 @@ BEGIN
             (@ZarqaId, N'Al Tatweer', N'التطوير')
     ) AS source (CityID, AreaName, AreaNameAr)
     ON target.CityID = source.CityID AND target.AreaName = source.AreaName
+    WHEN MATCHED THEN
+        UPDATE SET target.AreaNameAr = source.AreaNameAr
     WHEN NOT MATCHED BY TARGET THEN
         INSERT (CityID, AreaName, AreaNameAr)
         VALUES (source.CityID, source.AreaName, source.AreaNameAr);
@@ -149,6 +157,8 @@ BEGIN
             (@AqabaId, N'South Beach', N'الشاطئ الجنوبي')
     ) AS source (CityID, AreaName, AreaNameAr)
     ON target.CityID = source.CityID AND target.AreaName = source.AreaName
+    WHEN MATCHED THEN
+        UPDATE SET target.AreaNameAr = source.AreaNameAr
     WHEN NOT MATCHED BY TARGET THEN
         INSERT (CityID, AreaName, AreaNameAr)
         VALUES (source.CityID, source.AreaName, source.AreaNameAr);
@@ -172,6 +182,8 @@ BEGIN
             (@MafraqId, N'North Badia', N'البادية الشمالية')
     ) AS source (CityID, AreaName, AreaNameAr)
     ON target.CityID = source.CityID AND target.AreaName = source.AreaName
+    WHEN MATCHED THEN
+        UPDATE SET target.AreaNameAr = source.AreaNameAr
     WHEN NOT MATCHED BY TARGET THEN
         INSERT (CityID, AreaName, AreaNameAr)
         VALUES (source.CityID, source.AreaName, source.AreaNameAr);
@@ -195,6 +207,8 @@ BEGIN
             (@JerashId, N'Al Kitteh', N'الكتة')
     ) AS source (CityID, AreaName, AreaNameAr)
     ON target.CityID = source.CityID AND target.AreaName = source.AreaName
+    WHEN MATCHED THEN
+        UPDATE SET target.AreaNameAr = source.AreaNameAr
     WHEN NOT MATCHED BY TARGET THEN
         INSERT (CityID, AreaName, AreaNameAr)
         VALUES (source.CityID, source.AreaName, source.AreaNameAr);
@@ -218,6 +232,8 @@ BEGIN
             (@AjlounId, N'Rasoun', N'راسون')
     ) AS source (CityID, AreaName, AreaNameAr)
     ON target.CityID = source.CityID AND target.AreaName = source.AreaName
+    WHEN MATCHED THEN
+        UPDATE SET target.AreaNameAr = source.AreaNameAr
     WHEN NOT MATCHED BY TARGET THEN
         INSERT (CityID, AreaName, AreaNameAr)
         VALUES (source.CityID, source.AreaName, source.AreaNameAr);
@@ -241,6 +257,8 @@ BEGIN
             (@BalqaId, N'Sweileh', N'صويلح')
     ) AS source (CityID, AreaName, AreaNameAr)
     ON target.CityID = source.CityID AND target.AreaName = source.AreaName
+    WHEN MATCHED THEN
+        UPDATE SET target.AreaNameAr = source.AreaNameAr
     WHEN NOT MATCHED BY TARGET THEN
         INSERT (CityID, AreaName, AreaNameAr)
         VALUES (source.CityID, source.AreaName, source.AreaNameAr);
@@ -263,6 +281,8 @@ BEGIN
             (@MadabaId, N'Mlieh', N'مليح')
     ) AS source (CityID, AreaName, AreaNameAr)
     ON target.CityID = source.CityID AND target.AreaName = source.AreaName
+    WHEN MATCHED THEN
+        UPDATE SET target.AreaNameAr = source.AreaNameAr
     WHEN NOT MATCHED BY TARGET THEN
         INSERT (CityID, AreaName, AreaNameAr)
         VALUES (source.CityID, source.AreaName, source.AreaNameAr);
@@ -286,6 +306,8 @@ BEGIN
             (@KarakId, N'Ai', N'عي')
     ) AS source (CityID, AreaName, AreaNameAr)
     ON target.CityID = source.CityID AND target.AreaName = source.AreaName
+    WHEN MATCHED THEN
+        UPDATE SET target.AreaNameAr = source.AreaNameAr
     WHEN NOT MATCHED BY TARGET THEN
         INSERT (CityID, AreaName, AreaNameAr)
         VALUES (source.CityID, source.AreaName, source.AreaNameAr);
@@ -308,6 +330,8 @@ BEGIN
             (@TafilahId, N'Tafilah Al Jadeedah', N'الطفيلة الجديدة')
     ) AS source (CityID, AreaName, AreaNameAr)
     ON target.CityID = source.CityID AND target.AreaName = source.AreaName
+    WHEN MATCHED THEN
+        UPDATE SET target.AreaNameAr = source.AreaNameAr
     WHEN NOT MATCHED BY TARGET THEN
         INSERT (CityID, AreaName, AreaNameAr)
         VALUES (source.CityID, source.AreaName, source.AreaNameAr);
@@ -331,6 +355,8 @@ BEGIN
             (@MaanId, N'Jafr', N'الجفر')
     ) AS source (CityID, AreaName, AreaNameAr)
     ON target.CityID = source.CityID AND target.AreaName = source.AreaName
+    WHEN MATCHED THEN
+        UPDATE SET target.AreaNameAr = source.AreaNameAr
     WHEN NOT MATCHED BY TARGET THEN
         INSERT (CityID, AreaName, AreaNameAr)
         VALUES (source.CityID, source.AreaName, source.AreaNameAr);

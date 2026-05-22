@@ -121,8 +121,8 @@ fi
 
 if command -v sqlcmd >/dev/null 2>&1 && [[ -n "$DB_DATA_SOURCE" && -n "$DB_USER_FROM_CONN" && -n "$DB_PASSWORD_FROM_CONN" ]]; then
   echo "Checking database login with sqlcmd..."
-  if ! sqlcmd -S "$DB_DATA_SOURCE" -U "$DB_USER_FROM_CONN" -P "$DB_PASSWORD_FROM_CONN" -C -l 5 -Q "SELECT 1" >/dev/null 2>&1 \
-    && ! sqlcmd -S "$DB_DATA_SOURCE" -U "$DB_USER_FROM_CONN" -P "$DB_PASSWORD_FROM_CONN" -l 5 -Q "SELECT 1" >/dev/null 2>&1; then
+  if ! sqlcmd -f 65001 -S "$DB_DATA_SOURCE" -U "$DB_USER_FROM_CONN" -P "$DB_PASSWORD_FROM_CONN" -C -l 5 -Q "SELECT 1" >/dev/null 2>&1 \
+    && ! sqlcmd -f 65001 -S "$DB_DATA_SOURCE" -U "$DB_USER_FROM_CONN" -P "$DB_PASSWORD_FROM_CONN" -l 5 -Q "SELECT 1" >/dev/null 2>&1; then
     echo "Error: database login preflight failed for source '$DATABASE_CONNECTION_SOURCE'."
     print_db_fix_instructions
     exit 1

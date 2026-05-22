@@ -17,6 +17,8 @@ SEED_TEST_SQL_BUNDLE="$DB_BUNDLES_DIR/seed_test.sql"
 VERIFY_SCRIPT="$ROOT_DIR/scripts/verify_all_apis.sh"
 CONTAINER_NAME="tijarahjo-db"
 SQLCMD_IN_CONTAINER="/opt/mssql-tools18/bin/sqlcmd"
+# Force UTF-8 script input so Arabic NVARCHAR literals are not misread as Windows-1252 (mojibake like Ø§Ù„Ø£Ø«Ø§Ø«).
+SQLCMD_UTF8_FLAGS=(-f 65001)
 BACKEND_LOG_FILE="${BACKEND_LOG_FILE:-/tmp/tijarahjo_bootstrap_backend.log}"
 BACKEND_PID_FILE="${BACKEND_PID_FILE:-$ROOT_DIR/.tijarahjo_backend.pid}"
 CONFIGURATION="${CONFIGURATION:-Debug}"
@@ -185,7 +187,7 @@ MSSQL_SA_PASSWORD="$SA_PASSWORD" docker compose -f "$DOCKER_COMPOSE_FILE" up -d 
 
 echo "==> Waiting for SQL Server readiness..."
 for i in $(seq 1 90); do
-  if docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" -S localhost -U sa -P "$SA_PASSWORD" -C -b -Q "SELECT 1" >/dev/null 2>&1; then
+  if docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" "${SQLCMD_UTF8_FLAGS[@]}" -S localhost -U sa -P "$SA_PASSWORD" -C -b -Q "SELECT 1" >/dev/null 2>&1; then
     break
   fi
   sleep 2
@@ -196,17 +198,17 @@ for i in $(seq 1 90); do
 done
 
 echo "==> Recreating TijarahJoDB..."
-docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" -S localhost -U sa -P "$SA_PASSWORD" -C -b -Q "USE master; IF DB_ID('TijarahJoDB') IS NOT NULL BEGIN ALTER DATABASE [TijarahJoDB] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [TijarahJoDB]; END;"
+docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" "${SQLCMD_UTF8_FLAGS[@]}" -S localhost -U sa -P "$SA_PASSWORD" -C -b -Q "USE master; IF DB_ID('TijarahJoDB') IS NOT NULL BEGIN ALTER DATABASE [TijarahJoDB] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [TijarahJoDB]; END;"
 
 apply_sql_file() {
   local file_path="$1"
-  cat "$file_path" | docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" -S localhost -U sa -P "$SA_PASSWORD" -C -b -I
+  cat "$file_path" | docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" "${SQLCMD_UTF8_FLAGS[@]}" -S localhost -U sa -P "$SA_PASSWORD" -C -b -I
 }
 
 apply_admin_bootstrap_file() {
   local file_path="$1"
 
-  cat "$file_path" | docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" \
+  cat "$file_path" | docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" "${SQLCMD_UTF8_FLAGS[@]}" \
     -S localhost -U sa -P "$SA_PASSWORD" -C -b -I \
     -v "AdminEmail=$BOOTSTRAP_ADMIN_EMAIL" \
     -v "AdminFirstName=$BOOTSTRAP_ADMIN_FIRST_NAME" \
@@ -230,7 +232,7 @@ configure_runtime_db_principal() {
   local escaped_app_password
   escaped_app_password="$(printf "%s" "$DB_APP_PASSWORD" | sed "s/'/''/g")"
 
-  cat <<SQL | docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" -S localhost -U sa -P "$SA_PASSWORD" -C -b -I >/dev/null
+  cat <<SQL | docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" "${SQLCMD_UTF8_FLAGS[@]}" -S localhost -U sa -P "$SA_PASSWORD" -C -b -I >/dev/null
 USE master;
 IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = N'${DB_APP_LOGIN}')
 BEGIN

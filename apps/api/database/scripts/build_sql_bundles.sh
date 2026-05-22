@@ -210,9 +210,23 @@ EOT
   done
 }
 
+write_sqlcmd_session_preamble() {
+  local destination="$1"
+
+  cat >> "$destination" <<'EOT'
+-- sqlcmd defaults QUOTED_IDENTIFIER OFF; filtered indexes require ON for MERGE/DDL.
+SET QUOTED_IDENTIFIER ON;
+GO
+SET ANSI_NULLS ON;
+GO
+
+EOT
+}
+
 build_seed_bundle() {
   local destination="$BUNDLES_DIR/seed_data.sql"
   write_header "$destination" "Seed Data Bundle (Baseline)"
+  write_sqlcmd_session_preamble "$destination"
 
   append_seed_group "$destination" "Baseline Seeds" "${SEED_BASELINE_FILES[@]}"
 }

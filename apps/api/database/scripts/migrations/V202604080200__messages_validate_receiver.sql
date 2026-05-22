@@ -18,6 +18,13 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID(N'dbo.TR_Messages_ParticipantValidation', N'TR') IS NOT NULL
+BEGIN
+    DROP TRIGGER dbo.TR_Messages_ParticipantValidation;
+    PRINT 'Dropped existing trigger TR_Messages_ParticipantValidation.';
+END
+GO
+
 CREATE TRIGGER dbo.TR_Messages_ParticipantValidation
 ON dbo.Messages
 AFTER INSERT, UPDATE
