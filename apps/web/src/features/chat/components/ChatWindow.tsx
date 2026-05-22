@@ -47,7 +47,8 @@ export function ChatWindow({
   initialMessage,
 }: ChatWindowProps) {
   const { messages, isLoading, error, sendMessage, sendImageMessage } = useChat(otherUserId);
-  const [inputText, setInputText] = useState(initialMessage || "");
+  const [inputText, setInputText] = useState("");
+  const initialMessageAppliedRef = useRef(false);
   const [presence, setPresence] = useState<ChatPresence>({ isOnline: false });
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [selectedImagePreview, setSelectedImagePreview] = useState("");
@@ -91,6 +92,29 @@ export function ChatWindow({
   useEffect(() => {
     setAvatarError(false);
   }, [otherUserAvatar]);
+
+  // Only pre-fill the greeting message once, and only when the chat history
+  // has finished loading and contains zero messages (i.e. brand-new conversation).
+  // We track whether isLoading has ever been true to avoid the race condition where
+  // isLoading starts as false before the fetch begins.
+  const hasSeenLoadingRef = useRef(false);
+  useEffect(() => {
+    if (isLoading) {
+      hasSeenLoadingRef.current = true;
+      return;
+    }
+
+    // Only act after we've seen at least one loading cycle complete
+    if (
+      initialMessage &&
+      hasSeenLoadingRef.current &&
+      messages.length === 0 &&
+      !initialMessageAppliedRef.current
+    ) {
+      initialMessageAppliedRef.current = true;
+      setInputText(initialMessage);
+    }
+  }, [initialMessage, isLoading, messages.length]);
 
   const clearSelectedImage = () => {
     if (selectedImagePreview.startsWith("blob:")) {

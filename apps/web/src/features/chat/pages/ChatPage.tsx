@@ -132,6 +132,17 @@ export function ChatPage({ language }: ChatPageProps) {
     selectedUserId,
   });
 
+  // Clear postTitle from history state after first render so it only pre-fills once
+  useEffect(() => {
+    if (locationState?.postTitle) {
+      const { postTitle: _, ...restState } = locationState;
+      navigate(location.pathname + location.search, {
+        replace: true,
+        state: restState,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   useEffect(() => {
@@ -300,7 +311,7 @@ export function ChatPage({ language }: ChatPageProps) {
 
   return (
     <PageShell tone="account" className="h-[100dvh] overflow-hidden">
-      <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="flex h-[100dvh] min-h-0 flex-col overflow-hidden">
         <SubpageHeader
           onBack={handlePageBack}
           isRTL={isRTL}
