@@ -13,6 +13,9 @@ Required environment variables:
 - `JWT_SIGNING_KEY`
 - `DB_APP_PASSWORD` (required when using the default runtime principal `app`)
 
+The root `.env.example` also includes local defaults for `JWT_ISSUER`,
+`JWT_AUDIENCE`, `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, and `ALLOWED_HOSTS`.
+
 This command builds bundles and applies:
 1. `apps/api/database/bundles/master.sql` (`base schema + ordered migrations`)
 2. `apps/api/database/bundles/seed_data.sql` (`baseline seeds`)
@@ -45,7 +48,7 @@ Expected behavior:
 - `health/live` checks process liveness only.
 - `health/ready` checks dependency readiness (currently database connectivity).
 - Canonical API route prefix is `/api/v1`.
-- Selected compatibility aliases under `/api/v1/...` remain active; use `docs/reports/API_ENDPOINTS_STATUS.md` for the current inventory.
+- Unversioned `/api/...` routes are not part of the supported contract; use `docs/reports/API_ENDPOINTS_STATUS.md` for the current inventory.
 
 ## Manual Path
 
@@ -83,4 +86,4 @@ Problem: migration error after partial manual run
 For startup mode behavior (strict Redis vs degraded vs no Redis), see:
 - `docs/backend/OPERATIONS_RUNBOOK.md`
 
-Last Reviewed: 2026-04-14
+Last Reviewed: 2026-05-22

@@ -1,6 +1,6 @@
 # TijarahJo Frontend - Current Project Snapshot
 
-**Reviewed:** 2026-04-14  
+**Reviewed:** 2026-05-22  
 **Status:** Active frontend integrated with the current backend API
 
 ## Overview
@@ -48,6 +48,7 @@ The active frontend follows the current repo structure under `apps/web/src/`:
 - Production build path is active through `npm run build`
 - Unit, integration, policy, and browser E2E entry points exist under `apps/web/tests/`
 - Storybook/workflow and UI governance checks exist under `apps/web/docs/` and `apps/web/tools/`
+- Latest local verification on 2026-05-22: `npm run build` passed and `npm test` passed 67 tests
 
 ## Known Ongoing Work
 

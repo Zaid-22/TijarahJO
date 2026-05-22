@@ -1,15 +1,16 @@
 # API Endpoints Status Report
 
 **Base URL:** `http://localhost:5033`
-**Reviewed:** 2026-04-21
+**Reviewed:** 2026-05-22
 **Last live verification source:** `./scripts/verify_all_apis.sh` + CI backend checks
 **Last live verification date:** 2026-04-21
+**Latest static route/docs refresh:** 2026-05-22
 
 ## Summary
 
 - Canonical API version is exposed under:
   - `/api/v1/*`
-  - `/api/v1/*`
+- The frontend Docker build may use `VITE_API_BASE_URL=/api`; the frontend runtime normalizes that to `/api/v1`.
 - Legacy `Tb*` route namespaces are **not** part of the active runtime API.
 - Legacy `/All` and `/pagination` post routes are **removed** from canonical API.
 
@@ -133,10 +134,10 @@
 - `PUT /api/v1/notifications/{notificationId}/read` (`[Authorize]`)
 - `PUT /api/v1/notifications/read-all` (`[Authorize]`)
 
-### Locations (`/api/v1/locations`)
+### Locations
 
-- `GET /api/v1/locations` — list available locations
-- `GET /api/v1/locations/{id}` — get location details
+- `GET /api/v1/cities` — list available cities
+- `GET /api/v1/cities/{cityId}/areas` — list areas for a city
 
 ### Admin (`/api/v1/admin`)
 
@@ -167,7 +168,7 @@
 - `DELETE /api/v1/admin/reviews/{id}` — delete review
 
 #### Audit Log
-- `GET /api/v1/admin/audit-log` — list audit entries
+- `GET /api/v1/admin/audit-logs` — list audit entries
 
 #### Permissions & Roles
 - `GET /api/v1/admin/permissions` — list permissions
@@ -205,7 +206,7 @@
 - `POST /api/v1/admin/data-hygiene/approve/{cycleId}` — approve cleanup cycle
 
 #### Image Optimization
-- `POST /api/v1/admin/image-optimization/optimize-existing` — optimize existing images
+- `POST /api/v1/admin/images/optimize-existing` — optimize existing images
 
 ### Health (`/health`)
 

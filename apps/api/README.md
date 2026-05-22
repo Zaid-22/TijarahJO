@@ -505,7 +505,7 @@ Reference table for user status codes.
 - **Conversation pair model** — `User1ID < User2ID` prevents duplicate threads
 - **Audit logging** — mutations recorded in same transaction via EF Core interceptor
 - `CreatedAt` / `UpdatedAt` timestamps via EF Core `UpdatedAtInterceptor`
-- **23 entity tables** managed via **34 ordered migration scripts**
+- **23 entity tables** managed via **59 ordered migration scripts**
 
 ---
 
@@ -517,4 +517,4 @@ Reference table for user status codes.
 
 ---
 
-Last Updated: 2026-04-14
+Last Updated: 2026-05-22

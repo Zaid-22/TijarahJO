@@ -4,7 +4,7 @@
 > **Legacy Document**: This describes the original frontend string-based ID system.
 > The backend database now uses **integer primary keys** for all entities.
 > The API service layer handles ID translation between frontend representations and backend integers.
-> Refer to the [`apps/api/README.md`](../../../apps/api/README.md) ERD for the current database schema.
+> Refer to the [`apps/api/README.md`](../../apps/api/README.md) ERD for the current database schema.
 
 ## Overview
 TijarahJo originally used a string-based ID system for frontend entities. The backend has since migrated to integer IDs, but some frontend utilities and mock data may still reference this pattern.
@@ -360,6 +360,6 @@ const product = productsById.get("post_1734600100000_a1b2c");
 
 ---
 
-**Last Updated**: December 19, 2024
+**Last Updated**: 2026-05-22
 **Version**: 1.0
 **Status**: ✅ Implemented and Ready for Use

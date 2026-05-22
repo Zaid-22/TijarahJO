@@ -26,13 +26,20 @@ Fill in at least:
 
 - `MSSQL_SA_PASSWORD`
 - `JWT_SIGNING_KEY`
+- `JWT_ISSUER`
+- `JWT_AUDIENCE`
 - `DB_APP_PASSWORD`
+- `FRONTEND_URL`
+- `CORS_ALLOWED_ORIGINS`
+- `ALLOWED_HOSTS`
 
 Optional:
 
 - `DB_RUNTIME_PRINCIPAL`
 - `DATABASE_CONNECTION_STRING`
 - `GOOGLE_AUTH_*`
+- `PasswordResetEmail__ResendApiKey`
+- `EmailTwoFactor__ResendApiKey`
 
 ### 3. Bootstrap backend + database
 
@@ -141,4 +148,4 @@ Check backend logs and verify:
 - `docs/setup/DATABASE_SETUP_CHECKLIST.md`
 - `apps/api/src/Api/ENVIRONMENT_VARIABLES.md`
 
-**Last Updated:** 2026-04-14
+**Last Updated:** 2026-05-22

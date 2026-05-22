@@ -3,7 +3,7 @@
 ## Versioning Policy
 
 - Canonical API routes are route-versioned: `/api/v1/...`.
-- Selected compatibility aliases under `/api/v1/...` are still present for active clients; use `docs/reports/API_ENDPOINTS_STATUS.md` for the current inventory.
+- Unversioned `/api/...` routes are not part of the supported contract; use `docs/reports/API_ENDPOINTS_STATUS.md` for the current inventory.
 - Query/header version overrides are not part of the contract.
 
 ## Startup Modes

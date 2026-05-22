@@ -23,7 +23,9 @@ Use this checklist when setting up the project on a new computer.
 - [ ] Copy `.env.example` to `.env`
 - [ ] Set `MSSQL_SA_PASSWORD`
 - [ ] Set `JWT_SIGNING_KEY`
+- [ ] Confirm `JWT_ISSUER` and `JWT_AUDIENCE` are present (local defaults are fine for development)
 - [ ] Set `DB_APP_PASSWORD`
+- [ ] Confirm `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, and `ALLOWED_HOSTS` match your local ports
 - [ ] Confirm `VITE_API_BASE_URL=http://localhost:5033/api/v1`
 
 ## ✅ Database Setup
@@ -80,7 +82,7 @@ http://localhost:5033/api/v1
 
 ---
 
-**Last Updated:** 2026-04-14  
+**Last Updated:** 2026-05-22  
 **Setup Date:** _______________  
 **Setup By:** _______________  
 **Computer:** _______________

@@ -22,6 +22,15 @@ Set at least:
 - `FRONTEND_URL`
 - `CORS_ALLOWED_ORIGINS`
 - `ALLOWED_HOSTS`
+- `TwoFactor__SecretEncryptionKey`
+- `TwoFactor__ChallengeSigningKey`
+
+Set these when the related feature is enabled:
+
+- `Gemini__ApiKey` when `FeatureFlags__EnableAiComparison=true`
+- `YouTube__ApiKey` for YouTube recommendations
+- `PasswordResetEmail__ResendApiKey` when password reset email is enabled
+- `EmailTwoFactor__ResendApiKey` when email 2FA is enabled
 
 Provision the app database login before starting the API container. The normal path is to run the existing database bootstrap/provisioning workflow with `DB_RUNTIME_PRINCIPAL=app`, `DB_APP_LOGIN`, and `DB_APP_PASSWORD`, then use the same app login values in `infra/docker-compose.production.yml`.
 
@@ -49,6 +58,7 @@ The web container proxies:
 Build/runtime notes:
 
 - The web Docker build uses `VITE_API_BASE_URL=/api`
+- For standalone frontend builds, set `VITE_API_BASE_URL=https://your-api-domain.com/api/v1`
 - The API container listens on `5033`
 - The API container stores uploaded files under `/var/lib/tijarahjo/uploads`
 
@@ -76,4 +86,4 @@ The API serves them from:
 - For real production, terminate HTTPS at a trusted edge/load balancer and route to `web` on port `80`.
 - Review `docs/backend/OPERATIONS_RUNBOOK.md` before treating this as a deployable operational standard.
 
-**Last Reviewed:** 2026-04-22
+**Last Reviewed:** 2026-05-22

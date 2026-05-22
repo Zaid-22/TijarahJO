@@ -11,11 +11,11 @@ This folder contains frontend-specific technical documentation.
 
 These docs were generated during debugging/fix campaigns and are retained for historical reference:
 
-- `archive/README.md`
+- `archive/FIXES_APPLIED.md`
 
 ## Notes
 
 - Prefer active code and `../README.md` as the source of truth for current behavior.
 - Use archived docs only when investigating history/regressions.
 
-Last Updated: 2026-04-14
+Last Updated: 2026-05-22

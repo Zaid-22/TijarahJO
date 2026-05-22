@@ -40,24 +40,16 @@ PasswordReset__CodeLifetimeMinutes=15
 PasswordReset__MaxAttempts=5
 PasswordReset__RequestCooldownSeconds=60
 
-# SMTP transport for reset codes
+# Resend transport for reset codes
 PasswordResetEmail__Enabled=true
-PasswordResetEmail__Host=smtp.your-provider.com
-PasswordResetEmail__Port=587
-PasswordResetEmail__EnableSsl=true
-PasswordResetEmail__Username=your-smtp-username
-PasswordResetEmail__Password=your-smtp-password
+PasswordResetEmail__ResendApiKey=your-resend-api-key
 PasswordResetEmail__FromAddress=no-reply@your-domain.com
 PasswordResetEmail__FromName=TijarahJo Security
 PasswordResetEmail__LogCodesWhenEmailDisabled=false
 
-# SMTP transport for two-factor codes
+# Resend transport for two-factor codes
 EmailTwoFactor__Enabled=true
-EmailTwoFactor__Host=smtp.your-provider.com
-EmailTwoFactor__Port=587
-EmailTwoFactor__EnableSsl=true
-EmailTwoFactor__Username=your-smtp-username
-EmailTwoFactor__Password=your-smtp-password
+EmailTwoFactor__ResendApiKey=your-resend-api-key
 EmailTwoFactor__FromAddress=no-reply@your-domain.com
 EmailTwoFactor__FromName=TijarahJo Security
 EmailTwoFactor__LogCodesWhenEmailDisabled=false
@@ -157,6 +149,24 @@ FileStorage__ThumbnailMaxImageHeight=640
 FileStorage__ThumbnailWebpQuality=60
 ```
 
+#### Frontend Build-Time Configuration
+```bash
+VITE_API_BASE_URL=https://your-api-domain.com/api/v1
+VITE_GOOGLE_AUTH_ENABLED=true
+VITE_GOOGLE_MAPS_API_KEY=your-google-maps-browser-key
+VITE_GOOGLE_MAPS_MAP_ID=your-google-cloud-map-id
+VITE_REQUEST_TIMEOUT_MS=10000
+VITE_DEFAULT_CITY=Amman
+VITE_DEFAULT_PHONE_PREFIX=+962
+VITE_HOME_SEARCH_LIMIT=200
+VITE_ALL_POSTS_SEARCH_LIMIT=200
+VITE_SEARCH_RESULTS_LIMIT=100
+# Optional additional connect-src origins. In production these are ignored
+# unless VITE_CSP_ALLOW_PROD_CONNECT_SRC_EXTRA=1.
+VITE_CSP_CONNECT_SRC_EXTRA=
+VITE_CSP_ALLOW_PROD_CONNECT_SRC_EXTRA=0
+```
+
 ## 🛠️ Development Setup
 
 For local development, you can still use `appsettings.Development.json` or set these environment variables:
@@ -185,7 +195,7 @@ TwoFactor__ChallengeSigningKey=your-local-dev-2fa-challenge-signing-key
 ### API versioning contract
 
 - Canonical route prefix is `/api/v1`.
-- Selected compatibility aliases under `/api` remain active in runtime; use `docs/reports/API_ENDPOINTS_STATUS.md` when you need the current endpoint inventory.
+- Unversioned `/api/...` routes are not part of the supported contract; use `docs/reports/API_ENDPOINTS_STATUS.md` when you need the current endpoint inventory.
 - Query/header API version overrides are not part of the supported contract.
 
 ## ⚠️ Security Notes
@@ -235,6 +245,12 @@ environment:
   - DATABASE_CONNECTION_STRING=${DATABASE_CONNECTION_STRING}
 ```
 
+For the production compose stack, use `infra/docker-compose.production.yml`.
+It reads shell variables such as `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`,
+`ALLOWED_HOSTS`, `JWT_ISSUER`, `JWT_AUDIENCE`, `DB_APP_LOGIN`, and
+`DB_APP_PASSWORD`, then maps them to the ASP.NET configuration keys used by the
+API container.
+
 ### IIS
 Set in `web.config` or use IIS Environment Variables feature.
 
@@ -244,3 +260,5 @@ After setting environment variables, verify they're being read:
 1. Check application startup logs
 2. The app should fail fast if required variables are missing
 3. Test JWT token generation to ensure signing key is working
+
+Last Updated: 2026-05-22

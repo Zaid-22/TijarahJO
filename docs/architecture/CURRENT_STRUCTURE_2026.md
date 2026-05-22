@@ -71,8 +71,8 @@ final project primary/
   - Integration tests: `apps/api/tests/Integration.Tests/`
   - API contract/smoke scripts: `apps/api/tests/contracts/`
 - **Database assets:**
-  - `apps/api/database/scripts/migrations/` — 34 versioned migration files
-  - `apps/api/database/scripts/seeds/`, `diagnostics/`, `maintenance/`, `setup/`
+  - `apps/api/database/scripts/migrations/` — 59 versioned migration files
+  - `apps/api/database/scripts/bootstrap_overrides/`, `diagnostics/`, `maintenance/`, `seeds/`, `setup/`
   - `apps/api/database/schema/`
   - `apps/api/database/bundles/` — generated consolidated SQL bundles
 
@@ -82,7 +82,7 @@ final project primary/
 - `docs/architecture/` — active architecture documents
   - `docs/architecture/adr/` — architecture decision records
   - `docs/architecture/PATH_CONVENTIONS.md` — path and dependency boundary rules
-- `docs/api/v1/` — API conventions (versioning, route contracts)
+- `docs/api/` — API conventions (versioning, route contracts)
 - `docs/backend/` — backend operational notes & runbooks
 - `docs/frontend/` — frontend technical docs (ID system, auth QA matrix)
 - `docs/setup/` — environment and onboarding guides
@@ -101,4 +101,4 @@ final project primary/
 | `make ci-local` | Full local CI mirror |
 | `make sql-bundles` | Regenerate consolidated SQL bundles |
 
-Updated: 2026-04-21
+Updated: 2026-05-22

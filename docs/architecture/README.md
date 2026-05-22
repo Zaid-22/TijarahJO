@@ -8,4 +8,6 @@ Active architecture references:
 
 Historical restructure artifacts:
 
-- `archive/README.md`
+- `archive/PROJECT_RESTRUCTURE_PLAN.md`
+- `archive/PROJECT_STRUCTURE.md`
+- `archive/RESTRUCTURE_SUMMARY.md`

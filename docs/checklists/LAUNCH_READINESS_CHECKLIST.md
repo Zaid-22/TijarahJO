@@ -1,9 +1,19 @@
 # 🚀 TijarahJo Project - Launch Readiness Checklist
 
 **Project:** TijarahJo Marketplace Platform  
-**Status:** Launch Hardening — Final Phase  
-**Last Updated:** 2026-04-14  
-**Last Audit:** 2026-04-14 (automated code-level audit)
+**Status:** Launch Hardening — production environment not finalized  
+**Last Updated:** 2026-05-22  
+**Last Audit:** 2026-05-22 (docs/env refresh plus local automated checks)
+
+## Latest Verification Snapshot (2026-05-22)
+
+| Check | Result |
+|-------|--------|
+| `./scripts/check_structure.sh` | Passed |
+| `npm run build` in `apps/web` | Passed |
+| `npm test` in `apps/web` | Passed: 67 tests |
+| `dotnet test apps/api/TijarahJo.sln -c Release --verbosity minimal` | Passed: 229 backend unit tests; 26 live HTTP integration tests skipped because `BASE_URL` was unset |
+| `docker compose -f infra/docker-compose.production.yml config --quiet` | Blocked until production env vars are set in the shell or deployment environment |
 
 ---
 
@@ -225,13 +235,15 @@
   - [x] Feature flags: rate limiting, health checks, Redis all enabled for production
 
 - [x] **Frontend Environment Variables**
-  - [x] `.env.production` created (2026-04-14) — replace `your-production-domain.com` with real URL
+  - [x] `.env.production` exists — replace `your-production-domain.com` with the real API/domain before production builds
   - [x] `.env` files covered by `.gitignore`
+  - [x] `VITE_GOOGLE_MAPS_MAP_ID`, `VITE_CSP_CONNECT_SRC_EXTRA`, `VITE_CSP_ALLOW_PROD_CONNECT_SRC_EXTRA`, and debug flags documented in `.env.example` / `docs/setup/ENV_TEMPLATE.txt`
 
 ### Important (Should Fix Soon)
 
 - [x] **Configuration Management**
   - [x] Environment variables documented in `ENVIRONMENT_VARIABLES.md`
+  - [x] Resend email transport variables documented for password reset and email 2FA
   - [x] Startup validation (JWT key length, CORS origins, missing config throws on boot)
 
 ---
@@ -307,7 +319,8 @@
   - [x] Unit tests for critical business logic (12+ test files: Auth, Search, Password Reset, Chat, Rate Limiting, Categories, Sellers, Favorites, Post Images)
   - [x] Contract/integration test script (`backend_integration_contract.sh`)
   - [x] E2E test setup (Playwright configured, test directory exists)
-  - [ ] CI/CD pipeline with automated tests
+  - [x] GitHub quality workflows exist for backend API checks, frontend quality, frontend/backend e2e, and Storybook governance
+  - [ ] CI/CD deployment pipeline with approvals and rollback
 
 - [ ] **Load Testing**
   - [ ] Test API under load
@@ -331,10 +344,11 @@
 
   - [x] API endpoints documented via Swagger (with JWT auth support)
   - [x] Environment variables documented (`ENVIRONMENT_VARIABLES.md`)
-  - [x] Database architecture documented (`DATABASE.md`, `AUDIT_SUMMARY.md`)
+  - [x] Database architecture documented (`DATABASE.md`, `apps/api/README.md`)
   - [x] Architecture documented (`CURRENT_STRUCTURE_2026.md`, `PATH_CONVENTIONS.md`, ADRs)
   - [x] Setup guide exists (`BACKEND_SETUP_STEP_BY_STEP.md`, `QUICK_SETUP_CHECKLIST.md`)
   - [x] Operations runbook exists (`OPERATIONS_RUNBOOK.md`)
+  - [x] Documentation indices and setup templates refreshed against current repo paths/counts on 2026-05-22
 
 - [ ] **Code Quality**
   - [x] Prettier and ESLint configured (`.prettierrc.json`, `.eslintrc.cjs`)
@@ -495,9 +509,10 @@
 1. Choose hosting platform and set up environments
 2. SSL certificates
 3. Database backups
-4. CI/CD pipeline
+4. CI/CD deployment pipeline
 5. External monitoring/alerting
-6. Replace placeholder domains in production config
+6. Replace placeholder domains and provide production env vars
+7. Run live backend integration and browser E2E tests against staging/production
 
 ---
 
@@ -512,11 +527,10 @@
 
 **Status Tracking:**
 
-- Total Code Items: ~90
-- Code Items Completed: ~70 ✅
-- Remaining Code Tasks: ~5
-- Remaining Ops Tasks: ~10
-- Remaining Manual Testing: ~10
+- Code readiness: core local automated checks passed on 2026-05-22
+- Remaining Code Tasks: account lockout, CSP tuning, index review, cleanup
+- Remaining Ops Tasks: hosting/DNS/TLS, production DB/backups, deploy/rollback automation, monitoring/alerting, production env values
+- Remaining Manual Testing: authorization abuse cases, expired token, invalid data, role-based access, staging/live smoke
 
-**Last Audit Date:** 2026-04-14 (automated code-level audit)  
+**Last Audit Date:** 2026-05-22 (docs/env refresh plus local automated checks)  
 **Next Review Date:** Weekly until launch

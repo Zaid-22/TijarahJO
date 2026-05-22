@@ -14,17 +14,14 @@ docs/
 │   ├── adr/
 │   └── archive/
 ├── backend/                     # Operational runbooks & quick start
-│   └── archive/
 ├── frontend/                    # ID system, auth QA matrix
 │   └── archive/
 ├── setup/                       # Machine setup, env config, DB setup
 ├── reports/                     # Project reports & API status
-│   └── archive/
 ├── checklists/                  # Launch readiness & PR quality
 ├── troubleshooting/             # Active troubleshooting guides
-│   └── archive/
-├── assets/                      # Documentation assets (images, etc.)
-└── archive/                     # Top-level historical docs
+├── assets/                      # Documentation assets (diagrams, notes)
+└── assets/diagrams/             # Historical and generated diagram notes
 ```
 
 ## Architecture (`architecture/`)
@@ -68,9 +65,7 @@ API-specific documentation for contracts, endpoint conventions, route versioning
 ## Reports (`reports/`)
 
 - `API_ENDPOINTS_STATUS.md` — full API endpoint inventory (auth, posts, chat, admin, notifications, reviews, 2FA)
-- `FINAL_PROJECT_REPORT.md` — project summary
 - `FRONTEND_FILE_ASSESSMENT_2026-02-17.md` — frontend file assessment
-- `archive/` — historical snapshots
 
 ## Checklists (`checklists/`)
 
@@ -82,7 +77,7 @@ API-specific documentation for contracts, endpoint conventions, route versioning
 ## Troubleshooting (`troubleshooting/`)
 
 - `README.md` — active troubleshooting guides
-- `archive/` — historical troubleshooting logs
+- Historical troubleshooting logs should be added under `troubleshooting/archive/` only when files exist there.
 
 ## Quick Navigation
 
@@ -106,4 +101,4 @@ API-specific documentation for contracts, endpoint conventions, route versioning
 3. Prefer one canonical document per topic; link instead of duplicating.
 4. Mark legacy documents clearly and move them into section `archive/` folders.
 
-Last Updated: 2026-04-21
+Last Updated: 2026-05-22

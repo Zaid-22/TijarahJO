@@ -53,4 +53,4 @@ Pull request quality gates and pre-merge verification checklist.
 
 ---
 
-**Last Updated:** April 2, 2026
+**Last Updated:** 2026-05-22

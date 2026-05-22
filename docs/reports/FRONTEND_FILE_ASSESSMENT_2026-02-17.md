@@ -1,6 +1,7 @@
 # Frontend File Assessment (2026-02-17)
 
-Scope: `TijarahJo-frontend/src` static assessment (83 files).
+Scope: historical static assessment of the legacy frontend source tree before the
+current monorepo layout. Current frontend code now lives under `apps/web/src`.
 
 ## Summary
 
@@ -130,12 +131,12 @@ Scope: `TijarahJo-frontend/src` static assessment (83 files).
 
 ## Phase 4 Update (2026-02-17)
 
-- Added missing `TijarahJo-frontend/docs/README.md` to match references in
-  `TijarahJo-frontend/README.md`.
-- Archived historical frontend fix docs into `TijarahJo-frontend/docs/archive/`.
+- Added the missing frontend docs README in the legacy frontend tree before the
+  project moved into the current `apps/web` layout.
+- Archived historical frontend fix docs into the legacy frontend docs archive.
 - Replaced archived frontend docs at original paths with short pointer stubs to
   preserve path stability.
-- Set `TijarahJo-frontend/docs/ID_SYSTEM.md` as the active canonical frontend
+- Set the frontend ID system doc as the active canonical frontend
   technical doc.
 
 ## Phase 5 Update (2026-02-17)

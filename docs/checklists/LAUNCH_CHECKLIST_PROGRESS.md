@@ -1,7 +1,7 @@
 # Launch Checklist Progress Report
 
-**Date:** 2026-04-14  
-**Status:** Launch Hardening — Final Phase
+**Date:** 2026-05-22  
+**Status:** Launch Hardening — production environment not finalized
 
 This file is a lightweight progress view. The canonical launch gate list remains:
 
@@ -27,14 +27,26 @@ This file is a lightweight progress view. The canonical launch gate list remains
 - **Health check endpoints** (`/health/live`, `/health/ready`)
 - **`.env.production`** created for frontend deployment
 - **`appsettings.Production.json`** with complete production template
+- **Project documentation refresh** completed on 2026-05-22 for environment templates, structure counts, and stale paths
+- **Verification on 2026-05-22:** repository structure passed, web production build passed, frontend tests passed, backend unit tests passed
 
-## Audit Results (2026-04-14)
+## Audit Results (2026-05-22)
 
 | Category | Done | Remaining |
 |----------|------|-----------|
-| Code Items | ~70 | ~5 |
-| Ops/Infra Tasks | 0 | ~10 |
-| Manual Testing | ~11 | ~10 |
+| Code Items | Most launch-critical implementation items | Account lockout, CSP tuning, database index review, cleanup |
+| Ops/Infra Tasks | Docker production baseline and quality workflows exist | Hosting, DNS/TLS, production DB, backups, monitoring, deploy/rollback automation |
+| Manual Testing | Automated local checks passed | Live authorization, expired-token, browser, and staging deployment checks |
+
+## Latest Local Verification
+
+| Check | Result |
+|-------|--------|
+| `./scripts/check_structure.sh` | Passed |
+| `npm run build` in `apps/web` | Passed |
+| `npm test` in `apps/web` | Passed: 67 tests |
+| `dotnet test apps/api/TijarahJo.sln -c Release --verbosity minimal` | Passed: 229 backend unit tests; 26 live HTTP integration tests skipped because `BASE_URL` was unset |
+| `docker compose -f infra/docker-compose.production.yml config --quiet` | Blocked until production env vars such as `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, `ALLOWED_HOSTS`, `JWT_ISSUER`, and `JWT_AUDIENCE` are set |
 
 ## Remaining Code Tasks
 
@@ -48,9 +60,9 @@ This file is a lightweight progress view. The canonical launch gate list remains
 1. Choose hosting platform and provision environments
 2. SSL certificates
 3. Database backups and restore testing
-4. CI/CD pipeline
+4. CI/CD deployment pipeline and rollback procedure
 5. External monitoring/alerting (APM, log aggregation)
-6. Replace placeholder domains in production config files
+6. Replace placeholder domains and provide production env vars
 
 ## How to Use This File
 

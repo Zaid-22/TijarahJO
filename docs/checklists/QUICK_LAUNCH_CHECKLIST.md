@@ -1,7 +1,7 @@
 # 🚀 Quick Launch Checklist — Remaining Priorities
 
-**Last Updated:** 2026-04-14  
-**Status:** Most critical items are complete. See below for what's left.
+**Last Updated:** 2026-05-22  
+**Status:** Code/build readiness is strong; production publish is blocked on real environment and ops setup.
 
 > This is a condensed view. See [`LAUNCH_READINESS_CHECKLIST.md`](LAUNCH_READINESS_CHECKLIST.md) for the full audit.
 
@@ -31,6 +31,10 @@ These items from the original checklist are **done and verified** in the codebas
 - [x] Structured JSON logging for production
 - [x] Health check endpoints (`/health/live`, `/health/ready`)
 - [x] Debug logs gated behind environment check
+- [x] Structure check passed on 2026-05-22 (`./scripts/check_structure.sh`)
+- [x] Frontend production build passed on 2026-05-22 (`npm run build`)
+- [x] Frontend unit/integration/policy tests passed on 2026-05-22 (`npm test`: 67 passed)
+- [x] Backend unit tests passed on 2026-05-22 (`dotnet test apps/api/TijarahJo.sln -c Release`: 229 passed)
 
 ---
 
@@ -65,9 +69,10 @@ These items from the original checklist are **done and verified** in the codebas
 | 2 | Set up staging + production environments | — |
 | 3 | SSL certificates | Hosting provider |
 | 4 | Database backups | Automated schedule |
-| 5 | CI/CD pipeline | GitHub Actions or similar |
+| 5 | CI/CD deployment pipeline | Quality-check workflows exist; automated deploy/rollback remains |
 | 6 | External monitoring/alerting | Sentry, Application Insights, etc. |
-| 7 | Replace placeholder domains in config | `your-production-domain.com` → real domain |
+| 7 | Replace placeholder domains and production env values | `your-production-domain.com`, `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, `ALLOWED_HOSTS`, `JWT_ISSUER`, `JWT_AUDIENCE` |
+| 8 | Run live backend and browser E2E checks against deployed/staging URL | `BASE_URL=...`, Playwright backend-live suite |
 
 ---
 

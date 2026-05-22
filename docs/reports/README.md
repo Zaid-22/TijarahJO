@@ -4,24 +4,6 @@ This directory contains comprehensive project reports and documentation.
 
 ## Files
 
-### FINAL_PROJECT_REPORT.md
-**Condensed pointer** to the archived full final report.
-
-Active reports now used for day-to-day work:
-- `API_ENDPOINTS_STATUS.md`
-
-Full archived report:
-- `archive/FINAL_PROJECT_REPORT_FULL_2026-02-17.md`
-
----
-
-### archive/INTEGRATION_REPORT_2024.md
-**Historical integration analysis snapshot.**
-
-**Use when:** You need the older frontend-backend integration report for historical reference.
-
----
-
 ### API_ENDPOINTS_STATUS.md
 **API endpoints status and documentation:**
 - All available endpoints
@@ -40,7 +22,7 @@ Full archived report:
 - Non-src file cleanup recommendations
 
 Supporting data export:
-- `FRONTEND_FILE_ASSESSMENT_2026-02-17.csv`
+- No CSV export is currently stored in the repo.
 
 **Use when:** You need the Phase 4 frontend cleanup baseline.
 
@@ -50,11 +32,9 @@ Supporting data export:
 
 | Report | Purpose | Best For |
 |--------|---------|----------|
-| FINAL_PROJECT_REPORT.md | Condensed pointer to archived full report | Historical report lookup |
-| archive/INTEGRATION_REPORT_2024.md | Historical integration snapshot | Older architecture/reference history |
 | API_ENDPOINTS_STATUS.md | API reference | API development, testing |
 | FRONTEND_FILE_ASSESSMENT_2026-02-17.md | Frontend cleanup baseline | Planning refactor/dead-code removal |
 
 ---
 
-**Last Updated:** April 2, 2026
+**Last Updated:** 2026-05-22

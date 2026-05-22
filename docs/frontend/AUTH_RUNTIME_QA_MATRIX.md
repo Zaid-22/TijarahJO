@@ -1,6 +1,6 @@
 # Auth Runtime QA Matrix
 
-Date: 2026-04-14
+Date: 2026-05-22
 Scope: Frontend auth runtime behavior under network flaps and session revalidation.
 
 ## Preconditions
@@ -49,3 +49,6 @@ Scope: Frontend auth runtime behavior under network flaps and session revalidati
 - `src/features/marketplace/components/Header.tsx`
 - `tests/unit/auth-runtime-policy.test.cjs`
 - `tests/unit/auth-runtime-message-flow.test.cjs`
+
+Latest local check: `npm test` passed the auth runtime policy and message-flow
+coverage as part of the 67-test frontend suite on 2026-05-22.

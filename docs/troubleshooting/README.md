@@ -1,8 +1,8 @@
 # Troubleshooting Docs
 
 Active troubleshooting references are intentionally kept minimal.
-Use current product/setup docs first, then consult the archive for historical fix logs when needed.
+Use current product/setup docs first, then add issue-specific notes here when a
+repeatable troubleshooting workflow is needed.
 
-Historical troubleshooting and verification logs:
-
-- `archive/README.md`
+There are no active troubleshooting articles beyond this index as of
+2026-05-22.
