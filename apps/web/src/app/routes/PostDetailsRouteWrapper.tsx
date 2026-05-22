@@ -27,7 +27,7 @@ interface PostDetailsRouteWrapperProps {
   onNavigateCategory: (categoryName: string, fromPath?: string) => void;
   onNavigateProfile: () => void;
   onNavigateSeller: (sellerId: string, fromPath?: string) => void;
-  onNavigateChat: (sellerId: string, fromPath?: string) => void;
+  onNavigateChat: (sellerId: string, fromPath?: string, postTitle?: string) => void;
   onRequireAuth?: () => void;
   onUpdatePost: (updatedPost: UpdatePostInput) => Promise<void>;
   onUpdatePostStatus: (statusData: UpdatePostStatusInput) => Promise<void>;
@@ -180,7 +180,7 @@ export function PostDetailsRouteWrapper({
           return;
         }
 
-        onNavigateChat(targetSellerId, currentPath);
+        onNavigateChat(targetSellerId, currentPath, resolvedPost.name);
       }}
       isOwnPost={isOwnPost}
       onUpdatePost={async (updatedPost) => {

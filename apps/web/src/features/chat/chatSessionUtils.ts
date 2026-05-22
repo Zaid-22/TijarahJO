@@ -1,6 +1,7 @@
 export type ChatLocationState = {
   fromPath?: string;
   chatListPath?: string;
+  postTitle?: string;
 };
 
 export type PersistedChatReturnState = {

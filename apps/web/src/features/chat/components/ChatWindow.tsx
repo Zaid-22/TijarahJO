@@ -32,6 +32,7 @@ interface ChatWindowProps {
   postId?: number; // Optional context
   language?: Language;
   showBackButton?: boolean;
+  initialMessage?: string;
 }
 
 export function ChatWindow({
@@ -43,9 +44,10 @@ export function ChatWindow({
   postId,
   language = "en",
   showBackButton = true,
+  initialMessage,
 }: ChatWindowProps) {
   const { messages, isLoading, error, sendMessage, sendImageMessage } = useChat(otherUserId);
-  const [inputText, setInputText] = useState("");
+  const [inputText, setInputText] = useState(initialMessage || "");
   const [presence, setPresence] = useState<ChatPresence>({ isOnline: false });
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [selectedImagePreview, setSelectedImagePreview] = useState("");

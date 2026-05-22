@@ -85,6 +85,7 @@ export function Logo({
           xmlns="http://www.w3.org/2000/svg"
           className={`h-full w-full ${brandColorClass}`}
         >
+          <path d="M 28 26 H 72 V 46 H 60 V 72 H 40 V 46 H 28 Z" fill="white" />
           <path
             fillRule="evenodd"
             clipRule="evenodd"
@@ -109,6 +110,7 @@ export function Logo({
           xmlns="http://www.w3.org/2000/svg"
           className={`h-full w-full ${brandColorClass}`}
         >
+          <path d="M 28 26 H 72 V 46 H 60 V 72 H 40 V 46 H 28 Z" fill="white" />
           <path
             fillRule="evenodd"
             clipRule="evenodd"

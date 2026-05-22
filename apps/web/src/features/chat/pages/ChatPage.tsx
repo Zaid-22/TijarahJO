@@ -377,6 +377,12 @@ export function ChatPage({ language }: ChatPageProps) {
                 }}
                 language={resolvedLanguage}
                 showBackButton={isMobile}
+                initialMessage={locationState?.postTitle
+                  ? (resolvedLanguage === "ar"
+                    ? `مرحباً، أود الاستفسار عن: ${locationState.postTitle}`
+                    : `Hi, I'm interested in "${locationState.postTitle}". Could you provide more details?`)
+                  : undefined
+                }
               />
             ) : (
               <div className="h-full flex flex-col items-center justify-center rounded-lg border border-border bg-muted/40 p-8 text-center">

@@ -201,6 +201,7 @@ export const PostCardList = React.memo(function PostCardList(
       navigate(APP_ROUTE_BUILDERS.chatUser(trimmedSellerId), {
         state: {
           fromPath: currentPath,
+          postTitle: post.name,
         },
       });
       return;

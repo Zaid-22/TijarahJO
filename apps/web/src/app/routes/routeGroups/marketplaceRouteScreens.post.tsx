@@ -99,10 +99,11 @@ function PostDetailsMarketplaceRouteScreen() {
             },
           })
         }
-        onNavigateChat={(sellerId, fromPath) =>
+        onNavigateChat={(sellerId, fromPath, postTitle) =>
           navigate(APP_ROUTE_BUILDERS.chatUser(sellerId), {
             state: {
               fromPath: fromPath || APP_ROUTE_PATHS.home,
+              postTitle,
             },
           })
         }
