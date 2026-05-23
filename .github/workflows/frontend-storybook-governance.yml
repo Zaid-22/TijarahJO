@@ -31,6 +31,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Force LF line endings
+        run: git config core.autocrlf false && git rm --cached -r . > /dev/null 2>&1 && git reset --hard HEAD
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
