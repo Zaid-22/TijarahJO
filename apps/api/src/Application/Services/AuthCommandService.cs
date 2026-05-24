@@ -54,10 +54,10 @@ public sealed class AuthCommandService(
             AccountLockoutResult lockoutResult = await _accountLockout.IsLockedOutAsync(user.UserID.Value, cancellationToken);
             if (lockoutResult.IsLockedOut)
             {
-                string lockedUntil = lockoutResult.LockedUntilUtc?.ToString("yyyy-MM-dd HH:mm") + " UTC" ?? "shortly";
+                string remainingTime = FormatLockoutRemaining(lockoutResult.LockedUntilUtc);
                 return Failure(
                     AuthCommandFailureReason.AccountLocked,
-                    $"Too many failed login attempts. Your account is locked until {lockedUntil}. Please try again later."
+                    $"Too many failed login attempts. Please try again {remainingTime}."
                 );
             }
         }
@@ -75,10 +75,10 @@ public sealed class AuthCommandService(
                 AccountLockoutResult lockoutAfterFail = await _accountLockout.RecordFailedAttemptAsync(user.UserID.Value, cancellationToken);
                 if (lockoutAfterFail.IsLockedOut)
                 {
-                    string lockedUntil = lockoutAfterFail.LockedUntilUtc?.ToString("yyyy-MM-dd HH:mm") + " UTC" ?? "shortly";
+                    string remainingTime = FormatLockoutRemaining(lockoutAfterFail.LockedUntilUtc);
                     return Failure(
                         AuthCommandFailureReason.AccountLocked,
-                        $"Too many failed login attempts. Your account is locked until {lockedUntil}. Please try again later."
+                        $"Too many failed login attempts. Please try again {remainingTime}."
                     );
                 }
             }
@@ -692,6 +692,23 @@ public sealed class AuthCommandService(
         }
 
         return (true, string.Empty);
+    }
+
+    private static string FormatLockoutRemaining(DateTime? lockedUntilUtc)
+    {
+        if (!lockedUntilUtc.HasValue)
+        {
+            return "in a few minutes";
+        }
+
+        double remainingMinutes = Math.Ceiling((lockedUntilUtc.Value - DateTime.UtcNow).TotalMinutes);
+
+        return remainingMinutes switch
+        {
+            <= 1 => "in about a minute",
+            <= 2 => "in a couple of minutes",
+            _ => $"in {(int)remainingMinutes} minutes"
+        };
     }
 
     private static AuthCommandResult Failure(AuthCommandFailureReason reason, string message)
