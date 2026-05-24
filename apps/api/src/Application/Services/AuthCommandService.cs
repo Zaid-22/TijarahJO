@@ -444,6 +444,20 @@ public sealed class AuthCommandService(
         GoogleAuthCommand command,
         CancellationToken cancellationToken)
     {
+        // Block Google login when account is locked (lockout applies to all login methods)
+        if (user.UserID.HasValue)
+        {
+            AccountLockoutResult lockoutResult = await _accountLockout.IsLockedOutAsync(user.UserID.Value, cancellationToken);
+            if (lockoutResult.IsLockedOut)
+            {
+                string remainingTime = FormatLockoutRemaining(lockoutResult.LockedUntilUtc);
+                return Failure(
+                    AuthCommandFailureReason.AccountLocked,
+                    $"Too many failed login attempts. Please try again {remainingTime}."
+                );
+            }
+        }
+
         AuthCommandResult? userStateFailure = ValidateGoogleUserState(user);
         if (userStateFailure != null)
         {
