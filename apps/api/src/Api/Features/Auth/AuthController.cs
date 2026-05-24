@@ -63,6 +63,7 @@ public class AuthController(
                 AuthCommandFailureReason.InvalidCredentials => Problem(statusCode: StatusCodes.Status401Unauthorized, detail: InvalidLoginMessage),
                 AuthCommandFailureReason.UserDeleted => Problem(statusCode: StatusCodes.Status401Unauthorized, detail: InvalidLoginMessage),
                 AuthCommandFailureReason.UserInactive => Problem(statusCode: StatusCodes.Status401Unauthorized, detail: result.Message),
+                AuthCommandFailureReason.AccountLocked => Problem(statusCode: StatusCodes.Status429TooManyRequests, detail: result.Message),
                 AuthCommandFailureReason.RoleResolutionFailed => Problem(statusCode: StatusCodes.Status500InternalServerError, detail: result.Message),
                 _ => Problem(statusCode: StatusCodes.Status500InternalServerError, detail: "Authentication failed.")
             };

@@ -351,9 +351,10 @@ public sealed class AuthCommandServiceTests
         var externalIdentities = new FakeExternalIdentityDataAccess();
         var roles = new FakeRoleService();
         var locations = new FakeLocationReadService();
+        var lockout = new FakeAccountLockoutService();
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<AuthCommandService>.Instance;
 
-        return (new AuthCommandService(users, externalIdentities, roles, locations, logger), users);
+        return (new AuthCommandService(users, externalIdentities, roles, locations, lockout, logger), users);
     }
 
     // -------------------------------------------------------------------------
@@ -473,5 +474,17 @@ public sealed class AuthCommandServiceTests
 
         public Task<IReadOnlyList<AreaLookupResult>> GetAreasByCityAsync(int cityId, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<AreaLookupResult>>(Areas.Where(area => area.CityId == cityId).ToArray());
+    }
+
+    private sealed class FakeAccountLockoutService : IAccountLockoutService
+    {
+        public Task<AccountLockoutResult> IsLockedOutAsync(int userId, CancellationToken cancellationToken = default)
+            => Task.FromResult(new AccountLockoutResult(false));
+
+        public Task RecordFailedAttemptAsync(int userId, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task ClearLockoutAsync(int userId, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 }

@@ -12,6 +12,7 @@ public sealed class AuthCommandService(
     IExternalIdentityDataAccess externalIdentities,
     IRoleService roles,
     ILocationReadService locations,
+    IAccountLockoutService accountLockout,
     ILogger<AuthCommandService> logger) : IAuthCommandService
 {
     private const string DefaultUserRoleName = "User";
@@ -25,6 +26,7 @@ public sealed class AuthCommandService(
     private readonly IExternalIdentityDataAccess _externalIdentities = externalIdentities;
     private readonly IRoleService _roles = roles;
     private readonly ILocationReadService _locations = locations;
+    private readonly IAccountLockoutService _accountLockout = accountLockout;
     private readonly ILogger<AuthCommandService> _logger = logger;
 
     public async Task<AuthCommandResult> LoginAsync(LoginCommand command, CancellationToken cancellationToken = default)
@@ -46,6 +48,20 @@ public sealed class AuthCommandService(
 
         UserModel? user = await _users.GetUserByLoginCandidatesAsync(loginCandidates, cancellationToken);
 
+        // Check account lockout before password verification
+        if (user != null && user.UserID.HasValue)
+        {
+            AccountLockoutResult lockoutResult = await _accountLockout.IsLockedOutAsync(user.UserID.Value, cancellationToken);
+            if (lockoutResult.IsLockedOut)
+            {
+                string lockedUntil = lockoutResult.LockedUntilUtc?.ToString("yyyy-MM-dd HH:mm") + " UTC" ?? "shortly";
+                return Failure(
+                    AuthCommandFailureReason.AccountLocked,
+                    $"Too many failed login attempts. Your account is locked until {lockedUntil}. Please try again later."
+                );
+            }
+        }
+
         // Always run a hash comparison to prevent timing-based user enumeration.
         // When user is null, compare against a dummy hash so both paths take equal time.
         string hashToVerify = user?.HashedPassword ?? _dummyHash;
@@ -53,6 +69,12 @@ public sealed class AuthCommandService(
 
         if (user == null || user.UserID == null || !passwordValid)
         {
+            // Record failed attempt for lockout tracking
+            if (user != null && user.UserID.HasValue)
+            {
+                await _accountLockout.RecordFailedAttemptAsync(user.UserID.Value, cancellationToken);
+            }
+
             return Failure(AuthCommandFailureReason.InvalidCredentials, "Invalid email/phone or password.");
         }
 
@@ -85,6 +107,9 @@ public sealed class AuthCommandService(
                 _logger.LogWarning(ex, "Opportunistic password hash upgrade failed for user {UserId}.", user.UserID);
             }
         }
+
+        // Clear lockout on successful authentication
+        await _accountLockout.ClearLockoutAsync(user.UserID!.Value, cancellationToken);
 
         string? roleName = await ResolveRoleNameForTokenAsync(user.RoleID, cancellationToken);
         if (string.IsNullOrWhiteSpace(roleName))
