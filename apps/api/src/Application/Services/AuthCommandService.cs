@@ -72,7 +72,15 @@ public sealed class AuthCommandService(
             // Record failed attempt for lockout tracking
             if (user != null && user.UserID.HasValue)
             {
-                await _accountLockout.RecordFailedAttemptAsync(user.UserID.Value, cancellationToken);
+                AccountLockoutResult lockoutAfterFail = await _accountLockout.RecordFailedAttemptAsync(user.UserID.Value, cancellationToken);
+                if (lockoutAfterFail.IsLockedOut)
+                {
+                    string lockedUntil = lockoutAfterFail.LockedUntilUtc?.ToString("yyyy-MM-dd HH:mm") + " UTC" ?? "shortly";
+                    return Failure(
+                        AuthCommandFailureReason.AccountLocked,
+                        $"Too many failed login attempts. Your account is locked until {lockedUntil}. Please try again later."
+                    );
+                }
             }
 
             return Failure(AuthCommandFailureReason.InvalidCredentials, "Invalid email/phone or password.");

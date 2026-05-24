@@ -481,8 +481,8 @@ public sealed class AuthCommandServiceTests
         public Task<AccountLockoutResult> IsLockedOutAsync(int userId, CancellationToken cancellationToken = default)
             => Task.FromResult(new AccountLockoutResult(false));
 
-        public Task RecordFailedAttemptAsync(int userId, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
+        public Task<AccountLockoutResult> RecordFailedAttemptAsync(int userId, CancellationToken cancellationToken = default)
+            => Task.FromResult(new AccountLockoutResult(false));
 
         public Task ClearLockoutAsync(int userId, CancellationToken cancellationToken = default)
             => Task.CompletedTask;

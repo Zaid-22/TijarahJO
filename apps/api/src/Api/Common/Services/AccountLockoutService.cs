@@ -44,11 +44,11 @@ public sealed class AccountLockoutService(
         return new AccountLockoutResult(false, state.FailedAttempts);
     }
 
-    public async Task RecordFailedAttemptAsync(int userId, CancellationToken cancellationToken = default)
+    public async Task<AccountLockoutResult> RecordFailedAttemptAsync(int userId, CancellationToken cancellationToken = default)
     {
         if (!_options.Enabled)
         {
-            return;
+            return new AccountLockoutResult(false);
         }
 
         LockoutState? state = await GetStateAsync(userId, cancellationToken);
@@ -99,6 +99,14 @@ public sealed class AccountLockoutService(
         string stateJson = JsonSerializer.Serialize(state);
         DateTime expiresAt = state.LockedUntilUtc ?? now.AddHours(1);
         await _challenges.UpsertChallengeStateAsync(userId, ChallengeType, stateJson, expiresAt, cancellationToken);
+
+        // Return lockout info so the caller can respond immediately
+        if (state.LockedUntilUtc.HasValue && state.LockedUntilUtc.Value > now)
+        {
+            return new AccountLockoutResult(true, state.FailedAttempts, state.LockedUntilUtc.Value);
+        }
+
+        return new AccountLockoutResult(false, state.FailedAttempts);
     }
 
     public async Task ClearLockoutAsync(int userId, CancellationToken cancellationToken = default)
