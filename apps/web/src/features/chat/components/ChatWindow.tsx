@@ -22,6 +22,8 @@ import { usePrefersReducedMotion } from "../../../shared/hooks/usePrefersReduced
 import { parseChatMessageContent } from "../chatMessageContent";
 import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
 import { formatCompactTime } from "../../../shared/lib/dateTime";
+import { APP_CONFIG } from "../../../constants/appConfig";
+import { toast } from "sonner";
 
 interface ChatWindowProps {
   otherUserId: number;
@@ -540,15 +542,27 @@ export function ChatWindow({
             <button
               type="button"
               className="group flex items-center gap-2 text-sm font-medium transition-colors hover:text-white/80"
-              onClick={() => {
-                import("sonner").then(({ toast }) => {
+              onClick={async () => {
+                try {
+                  await api.reports.submitReport({
+                    reportType: "LISTING",
+                    targetId: "",
+                    reason: "OFFENSIVE",
+                    description: `Reported chat image: ${fullscreenImage}`,
+                  });
                   toast.success(
                     language === "ar"
                       ? "تم الإبلاغ عن هذه الصورة بنجاح. سنقوم بمراجعتها."
                       : "Image reported successfully. We will review it.",
                   );
-                  setFullscreenImage(null);
-                });
+                } catch {
+                  toast.error(
+                    language === "ar"
+                      ? "تعذر إرسال البلاغ حالياً."
+                      : "Could not submit the report right now.",
+                  );
+                }
+                setFullscreenImage(null);
               }}
               title={language === "ar" ? "الإبلاغ عن الصورة" : "Report image"}
             >
@@ -562,8 +576,15 @@ export function ChatWindow({
                 try {
                   const downloadUrl = fullscreenImage.includes("/chat/download-image?")
                     ? fullscreenImage
-                    : `${(await import("../../../constants/appConfig")).APP_CONFIG.apiBaseUrl}/chat/download-image?url=${encodeURIComponent(fullscreenImage)}`;
-                  window.location.href = downloadUrl;
+                    : `${APP_CONFIG.apiBaseUrl}/chat/download-image?url=${encodeURIComponent(fullscreenImage)}`;
+                  const response = await fetch(downloadUrl, { credentials: "include" });
+                  const blob = await response.blob();
+                  const blobUrl = URL.createObjectURL(blob);
+                  const anchor = document.createElement("a");
+                  anchor.href = blobUrl;
+                  anchor.download = `chat-image-${Date.now()}.jpg`;
+                  anchor.click();
+                  URL.revokeObjectURL(blobUrl);
                 } catch {
                   window.open(fullscreenImage, "_blank", "noopener,noreferrer");
                 }

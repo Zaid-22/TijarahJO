@@ -106,10 +106,18 @@ export function shouldLoadFavoritesForPath(pathname: string): boolean {
 
 export const getCategoryTranslation = (
   category: string,
-  _language: Language,
+  language: Language,
+  categories: { name: string; nameAr: string }[] = [],
 ): string => {
-  // TODO: Wire this up to the dynamically loaded categories instead of a hardcoded map
-  return category;
+  if (language !== "ar" || categories.length === 0) {
+    return category;
+  }
+
+  const match = categories.find(
+    (c) => c.name.trim().toLowerCase() === category.trim().toLowerCase(),
+  );
+
+  return match?.nameAr?.trim() || category;
 };
 
 export const decodeCategoryParam = (

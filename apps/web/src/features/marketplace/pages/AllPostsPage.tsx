@@ -76,14 +76,14 @@ export function AllPostsPage({
     }
     if (appliedSearchFilters.city) {
       results = results.filter((p) =>
-        p.location?.toLowerCase().includes(appliedSearchFilters.city!.toLowerCase())
+        p.location?.toLowerCase().includes(appliedSearchFilters.city?.toLowerCase() ?? "")
       );
     }
     if (appliedSearchFilters.minPrice != null) {
-      results = results.filter((p) => p.price >= appliedSearchFilters.minPrice!);
+      results = results.filter((p) => p.price >= (appliedSearchFilters.minPrice ?? 0));
     }
     if (appliedSearchFilters.maxPrice != null) {
-      results = results.filter((p) => p.price <= appliedSearchFilters.maxPrice!);
+      results = results.filter((p) => p.price <= (appliedSearchFilters.maxPrice ?? Infinity));
     }
     
     if (appliedSearchFilters.sortBy) {

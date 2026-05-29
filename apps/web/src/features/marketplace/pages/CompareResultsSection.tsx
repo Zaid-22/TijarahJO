@@ -82,7 +82,7 @@ export function CompareResultsSection({
                 ) || selectedPosts[0];
               return (
                 <div
-                  key={idx}
+                  key={`summary-${ps.PostName || idx}`}
                   className="compare-summary-card relative overflow-hidden rounded-xl border border-border/40 bg-muted/5 p-5 sm:p-6"
                 >
                   <h3 className="line-clamp-2 text-start text-base font-bold leading-snug text-foreground">
@@ -112,7 +112,7 @@ export function CompareResultsSection({
           {(result.FeatureDifferences || []).map(
             (fd: PostFeaturesDTO, pIdx: number) => (
               <div
-                key={pIdx}
+                key={`feat-${fd.PostName || pIdx}`}
                 className="rounded-xl border border-border/40 bg-muted/5 p-5 sm:p-6"
               >
                 <h3 className="mb-4 text-base font-bold text-foreground">
@@ -121,7 +121,7 @@ export function CompareResultsSection({
                 <ul className="space-y-3.5">
                   {fd.Features.map((feature, i) => (
                     <li
-                      key={i}
+                      key={`f-${i}-${feature.slice(0, 20)}`}
                       className="flex items-start gap-3 text-sm sm:text-base"
                     >
                       <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
@@ -176,7 +176,7 @@ export function CompareResultsSection({
                     <ul className="space-y-3">
                       {pc.Pros.map((pro, i) => (
                         <li
-                          key={i}
+                          key={`pro-${i}-${pro.slice(0, 20)}`}
                           className="flex items-start gap-3 text-sm sm:text-base"
                         >
                           <PlusCircle className="mt-0.5 h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
@@ -197,7 +197,7 @@ export function CompareResultsSection({
                     <ul className="space-y-3">
                       {pc.Cons.map((con, i) => (
                         <li
-                          key={i}
+                          key={`con-${i}-${con.slice(0, 20)}`}
                           className="flex items-start gap-3 text-sm sm:text-base"
                         >
                           <MinusCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500 dark:text-rose-400" />

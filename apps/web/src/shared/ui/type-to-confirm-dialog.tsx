@@ -66,8 +66,8 @@ export function TypeToConfirmDialog({
                 This will affect:
               </p>
               <ul className="text-sm text-muted-foreground space-y-1">
-                {impactItems.map((item, i) => (
-                  <li key={i} className="flex items-center gap-2">
+                {impactItems.map((item) => (
+                  <li key={item} className="flex items-center gap-2">
                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-destructive" />
                     {item}
                   </li>

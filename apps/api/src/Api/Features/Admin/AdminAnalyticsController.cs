@@ -11,9 +11,12 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/analytics")]
 [Authorize(Policy = AuthorizationPolicies.AdminAccess)]
-public class AdminAnalyticsController(TijarahJoDbContext dbContext) : ControllerBase
+public class AdminAnalyticsController(
+    TijarahJoDbContext dbContext,
+    ILogger<AdminAnalyticsController> logger) : ControllerBase
 {
     private readonly TijarahJoDbContext _dbContext = dbContext;
+    private readonly ILogger<AdminAnalyticsController> _logger = logger;
 
     /// <summary>
     /// Returns data for admin dashboard charts.
@@ -44,7 +47,10 @@ public class AdminAnalyticsController(TijarahJoDbContext dbContext) : Controller
                     Count = usersPastWeek.Count(u => u.JoinDate.Date == date)
                 })];
         }
-        catch { /* swallow to keep dashboard alive */ }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Analytics: weekly users query failed");
+        }
 
         // 2. Posts by category
         try 
@@ -75,7 +81,10 @@ public class AdminAnalyticsController(TijarahJoDbContext dbContext) : Controller
                 .Take(10)
                 .Cast<object>()];
         }
-        catch { /* swallow */ }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Analytics: category breakdown query failed");
+        }
 
         return Ok(new
         {

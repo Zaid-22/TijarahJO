@@ -1,6 +1,7 @@
 import { CategoriesResponse, Category } from "../../types/api";
 import { toPositiveIntegerId } from "../../utils/idValidation";
 import { apiRequest } from "./client";
+import { logger } from "../../shared/lib/logger";
 import {
   parseCategoryCollectionPayload,
   parseCategoryExistsPayload,
@@ -93,15 +94,13 @@ export const categoriesApi = {
       }
 
       const errorMessage = response.error?.message || "Failed to create category";
-      // eslint-disable-next-line no-console
-      console.warn("[categoriesApi.createCategory] API error:", response.error);
+      logger.warn("[categoriesApi.createCategory] API error:", response.error);
       return {
         success: false,
         message: errorMessage,
       };
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("[categoriesApi.createCategory] Exception:", error);
+      logger.error("[categoriesApi.createCategory] Exception:", error);
       return {
         success: false,
         message: error instanceof Error ? error.message : "Failed to create category",

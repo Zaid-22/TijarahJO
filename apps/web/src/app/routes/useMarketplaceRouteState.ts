@@ -12,6 +12,7 @@ import {
   shouldLoadFavoritesForPath,
   shouldLoadPostsForPath,
 } from "./appRoutesUtils";
+import { useCatalogCategories } from "../../shared/hooks/useCatalogCategories";
 
 interface UseMarketplaceRouteStateParams {
   pathname: string;
@@ -90,10 +91,13 @@ export function useMarketplaceRouteState({
     itemsPerPage: 12,
   });
 
+  const { categories: catalogCategories } = useCatalogCategories({
+    useInitialFallback: true,
+  });
   const t = translations[language];
   const isRTL = language === "ar";
   const translateCategory = (category: string) =>
-    getCategoryTranslation(category, language);
+    getCategoryTranslation(category, language, catalogCategories);
   const currentUserId = resolveCurrentUserId(userProfile) || undefined;
 
   return {

@@ -314,7 +314,7 @@ export function UserDetailAdminPage() {
                 }
               >
                 {isTimedSuspended
-                  ? `Suspended until ${suspendedUntil!.toLocaleString()}`
+                  ? `Suspended until ${suspendedUntil?.toLocaleString()}`
                   : isActive
                     ? "Active"
                     : "Banned"}
