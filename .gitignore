@@ -110,3 +110,4 @@ apps/web/screenshot*.mjs
 apps/web/login_gap.png
 .playwright-mcp/
 dev_server.log
+apps/web/.env.production

@@ -255,7 +255,9 @@ export default defineConfig(({ mode }) => {
           globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
           runtimeCaching: [
             {
-              urlPattern: /^\/api\//,
+              // Only cache safe, public API data — never cache auth, chat,
+              // user profile, notifications, or admin endpoints.
+              urlPattern: /\/api\/v\d+\/(?:categories|locations|posts|banners|search)\b/,
               handler: "NetworkFirst",
               options: {
                 cacheName: "api-cache",
