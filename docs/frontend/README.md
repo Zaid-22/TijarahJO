@@ -2,20 +2,16 @@
 
 This folder contains frontend-specific technical documentation.
 
-## Active Docs
+## Docs
 
-- `ID_SYSTEM.md`: canonical reference for the frontend ID model and related implementation details.
-- `AUTH_RUNTIME_QA_MATRIX.md`: runtime authentication behavior and QA matrix, including hard-refresh session revalidation and header-stability expectations.
-
-## Archived Historical Docs
-
-These docs were generated during debugging/fix campaigns and are retained for historical reference:
-
-- `archive/FIXES_APPLIED.md`
+- `ID_SYSTEM.md` — canonical reference for the frontend ID model and implementation details
+- `AUTH_RUNTIME_QA_MATRIX.md` — runtime authentication behavior and QA matrix
+- `UI_GOVERNANCE.md` — design system rules, accessibility standards, canonical components
+- `STORYBOOK_WORKFLOW.md` — Storybook usage, baseline stories, CI gate
+- `PERFORMANCE_BUDGETS.md` — bundle size budgets enforced in CI
 
 ## Notes
 
 - Prefer active code and `../README.md` as the source of truth for current behavior.
-- Use archived docs only when investigating history/regressions.
 
-Last Updated: 2026-05-22
+Last Updated: 2026-05-28

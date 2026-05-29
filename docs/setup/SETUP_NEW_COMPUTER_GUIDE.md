@@ -47,7 +47,6 @@ Important notes:
 Reference templates:
 
 - `.env.example`
-- `docs/setup/ENV_TEMPLATE.txt`
 - `apps/api/src/Api/ENVIRONMENT_VARIABLES.md`
 
 ## Step 2: Bootstrap the Database

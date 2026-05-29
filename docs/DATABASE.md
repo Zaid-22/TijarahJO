@@ -209,7 +209,7 @@ erDiagram
         bit IsRead
         datetime2 CreatedAt
         datetime2 ReadAt
-        nvarchar PayloadJson
+        nvarchar PayloadJson}
     %% ==========================================
     %% Moderation & Audit
     %% ==========================================

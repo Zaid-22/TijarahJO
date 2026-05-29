@@ -237,7 +237,7 @@
 - [x] **Frontend Environment Variables**
   - [x] `.env.production` exists — replace `your-production-domain.com` with the real API/domain before production builds
   - [x] `.env` files covered by `.gitignore`
-  - [x] `VITE_GOOGLE_MAPS_MAP_ID`, `VITE_CSP_CONNECT_SRC_EXTRA`, `VITE_CSP_ALLOW_PROD_CONNECT_SRC_EXTRA`, and debug flags documented in `.env.example` / `docs/setup/ENV_TEMPLATE.txt`
+  - [x] `VITE_GOOGLE_MAPS_MAP_ID`, `VITE_CSP_CONNECT_SRC_EXTRA`, `VITE_CSP_ALLOW_PROD_CONNECT_SRC_EXTRA`, and debug flags documented in `.env.example`
 
 ### Important (Should Fix Soon)
 
