@@ -1,10 +1,10 @@
 # API Endpoints Status Report
 
 **Base URL:** `http://localhost:5033`
-**Reviewed:** 2026-05-22
+**Reviewed:** 2026-05-30
 **Last live verification source:** `./scripts/verify_all_apis.sh` + CI backend checks
 **Last live verification date:** 2026-04-21
-**Latest static route/docs refresh:** 2026-05-22
+**Latest static route/docs refresh:** 2026-05-30
 
 ## Summary
 
@@ -126,6 +126,22 @@
 
 - `GET /api/v1/reviews/user/{userId}`
 - `POST /api/v1/reviews` (`[Authorize]`)
+
+### Post Comments (`/api/v1/posts/{postId}/comments`)
+
+- `GET /api/v1/posts/{postId}/comments`
+- `GET /api/v1/posts/{postId}/comments/{commentId}/replies`
+- `POST /api/v1/posts/{postId}/comments` (`[Authorize]`)
+- `PUT /api/v1/posts/{postId}/comments/{commentId}` (`[Authorize]`, ownership enforced)
+- `DELETE /api/v1/posts/{postId}/comments/{commentId}` (`[Authorize]`, ownership/admin enforced)
+
+### Reports (`/api/v1/reports`)
+
+- `POST /api/v1/reports` (`[Authorize]`) — submit abuse/content report
+
+### Banners (`/api/v1/banners`)
+
+- `GET /api/v1/banners` — list active hero banners (public)
 
 ### Notifications (`/api/v1/notifications`)
 

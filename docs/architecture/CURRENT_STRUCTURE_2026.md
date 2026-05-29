@@ -71,7 +71,7 @@ final project primary/
   - Integration tests: `apps/api/tests/Integration.Tests/`
   - API contract/smoke scripts: `apps/api/tests/contracts/`
 - **Database assets:**
-  - `apps/api/database/scripts/migrations/` — 59 versioned migration files
+  - `apps/api/database/scripts/migrations/` — 61 versioned migration files
   - `apps/api/database/scripts/bootstrap_overrides/`, `diagnostics/`, `maintenance/`, `seeds/`, `setup/`
   - `apps/api/database/schema/`
   - `apps/api/database/bundles/` — generated consolidated SQL bundles
@@ -88,7 +88,6 @@ final project primary/
 - `docs/setup/` — environment and onboarding guides
 - `docs/reports/` — project and API endpoint reports
 - `docs/checklists/` — quality and launch checklists
-- `docs/troubleshooting/` — active troubleshooting docs
 
 ## Operational Entry Points
 
@@ -101,4 +100,4 @@ final project primary/
 | `make ci-local` | Full local CI mirror |
 | `make sql-bundles` | Regenerate consolidated SQL bundles |
 
-Updated: 2026-05-22
+Updated: 2026-05-30

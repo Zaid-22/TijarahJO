@@ -6,8 +6,4 @@ Active architecture references:
 - `PATH_CONVENTIONS.md`
 - `adr/README.md`
 
-Historical restructure artifacts:
-
-- `archive/PROJECT_RESTRUCTURE_PLAN.md`
-- `archive/PROJECT_STRUCTURE.md`
-- `archive/RESTRUCTURE_SUMMARY.md`
+The original restructure artifacts have been archived. See ADR `0001-repository-structure-and-boundaries.md` for the decision record.

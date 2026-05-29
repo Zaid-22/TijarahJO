@@ -1,34 +1,24 @@
 # 🗂️ TijarahJo - ERD & Relational Schema Helper
 
-> **Version**: 1.0  
-> **Last Updated**: April 2, 2026  
-> **Status**: Historical planning helper, not the canonical runtime schema reference  
+> **Version**: 2.0  
+> **Last Updated**: May 30, 2026  
+> **Status**: Aligned with the live `TijarahJoDB` runtime schema (27 tables)  
 > **Canonical schema docs**: `docs/DATABASE.md` and `apps/api/README.md`
 
----
----
-نقطة مهمة -- بعض ال Attributes قد نقول شو الفايدة منها او ليش بدنا نحطها ، لكن ليس كل شيء يتم عرضه بالفرونت ! هناك بيانات فقط For Admins, Security, Tracking, Data فإضافتها والبزنس لوجيك سهل ولكن الفائدة كبيرة
----
----
-
----
----
-فقط قد نقوم بعمل نظام دفع لنا كليك على حساب الآدمن (اي حد فينا) في حالة اشتراك VIP 
-، سنفكر بنظام التوصيل
- ونظام ال VIP
- ونظام المزايدة (مع اشتراكات وضمانات من يريد أن ينضم يوقع تعهد ويدفع ، فنضمن بذلك بالمزايدة أنه اذا وضع سعر يجب ان يكون  مثلا بالحساب مع توقيع تعهد (شروط بزنس بس))
----
 ---
 
 ## 📋 Table of Contents
 
 1. [Overview & Methodology](#1-overview--methodology)
 2. [Core & Authentication Entities](#2-core--authentication-entities)
-3. [Marketplace Entities](#3-marketplace-entities)
-4. [Transaction & Payment Entities](#4-transaction--payment-entities)
-5. [Communication Entities](#5-communication-entities)
-6. [Relationships Diagram](#6-relationships-diagram)
-7. [Relational Schema (3NF)](#7-relational-schema-3nf)
+3. [RBAC / Permissions Entities](#3-rbac--permissions-entities)
+4. [Lookups & Location Entities](#4-lookups--location-entities)
+5. [Marketplace Entities](#5-marketplace-entities)
+6. [Communication Entities](#6-communication-entities)
+7. [Moderation & System Entities](#7-moderation--system-entities)
+8. [Relationships Diagram](#8-relationships-diagram)
+9. [Relational Schema (3NF)](#9-relational-schema-3nf)
+10. [Future Roadmap (Not Yet Built)](#10-future-roadmap-not-yet-built)
 
 ---
 
@@ -39,8 +29,8 @@
 TijarahJo is a **C2C (Consumer-to-Consumer) marketplace** platform similar to OLX, Dubizzle, or eBay classifieds where:
 - **Sellers = Buyers = Users** (same user can sell AND buy)
 - No centralized inventory (users list their own items)
-- Peer-to-peer transactions
-- Platform mediates trust (reviews, verification, escrow)
+- Peer-to-peer communication via real-time chat
+- Platform mediates trust (reviews, verification, moderation)
 
 ## 1.2 C2C vs B2C - Key Differences
 
@@ -48,11 +38,10 @@ TijarahJo is a **C2C (Consumer-to-Consumer) marketplace** platform similar to OL
 |--------|---------------------|---------------------|
 | **Seller** | Business/Company | Individual User |
 | **Inventory** | Centralized warehouse | Seller's possession |
-| **Product Model** | SKU-based, quantities | Single-item listings |
+| **Product Model** | SKU-based, quantities | Single-item listings (Posts) |
 | **Pricing** | Fixed catalog prices | Negotiable per listing |
-| **Order Flow** | Cart → Checkout → Ship | Inquiry → Negotiate → Transaction : المعاملة → التفاوض →الطلب  |
+| **Order Flow** | Cart → Checkout → Ship | Inquiry → Negotiate → Transaction |
 | **Trust** | Brand reputation | User reviews, verification |
-| **Payment** | Direct to platform | Escrow or platform-mediated - الضمان أو الوسيط عبر المنصة |
 
 ## 1.3 Entity Categories
 
@@ -62,23 +51,25 @@ TijarahJo is a **C2C (Consumer-to-Consumer) marketplace** platform similar to OL
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                      │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐   │
-│  │  👤 CORE/AUTH    │  │  🏪 MARKETPLACE  │  │  💰 TRANSACTION  │   │
+│  │  👤 CORE/AUTH    │  │  🔑 RBAC         │  │  📍 LOOKUPS      │   │
 │  ├──────────────────┤  ├──────────────────┤  ├──────────────────┤   │
-│  │ • Person         │  │ • Category       │  │ • Transaction    │   │
-│  │ • User           │  │ • Listing        │  │ • Payment        │   │
-│  │ • Role           │  │ • ListingImage   │  │ • Escrow-الضمان  │   │
-│  │ • UserRole       │  │ • ListingAttr    │  │ • Commission     │   │
-│  │ • UserClaim      │  │ • Favorite       │  │ • Wallet         │   │
-│  │ • RefreshToken   │  │ • SavedSearch    │  │                  │   │
+│  │ • Users          │  │ • Roles          │  │ • Cities         │   │
+│  │ • UserExternal   │  │ • Permissions    │  │ • Areas          │   │
+│  │   Identities     │  │ • RolePermissions│  │ • Categories     │   │
+│  │ • BlacklistedTok │  │                  │  │ • UserStatusLkp  │   │
+│  │ • Verification   │  │                  │  │ • PostStatusLkp  │   │
+│  │   Challenges     │  │                  │  │                  │   │
 │  └──────────────────┘  └──────────────────┘  └──────────────────┘   │
 │                                                                      │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐   │
-│  │  💬 COMMUNICATE  │  │  📊 ANALYTICS    │  │  🛡️ MODERATION   │   │
+│  │  🏪 MARKETPLACE  │  │  💬 COMMUNICATE  │  │  🛡️ MODERATION   │   │
 │  ├──────────────────┤  ├──────────────────┤  ├──────────────────┤   │
-│  │ • Conversation   │  │ • AuditLog       │  │ • Report         │   │
-│  │ • Message        │  │ • ViewLog        │  │ • Dispute        │   │
-│  │ • Review         │  │ • SearchLog      │  │ • Ban            │   │
-│  │ • Notification   │  │                  │  │ • ContentFlag    │   │
+│  │ • Posts          │  │ • Conversations  │  │ • Reports        │   │
+│  │ • PostImages     │  │ • Messages       │  │ • AuditLog       │   │
+│  │ • PostComments   │  │ • Notifications  │  │ • SystemSettings │   │
+│  │ • Favorites      │  │ • PushSubscript  │  │ • DataHygiene    │   │
+│  │ • Reviews        │  │                  │  │ • HeroBanners    │   │
+│  │                  │  │                  │  │ • SchemaMigrat   │   │
 │  └──────────────────┘  └──────────────────┘  └──────────────────┘   │
 │                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
@@ -92,9 +83,7 @@ TijarahJo is a **C2C (Consumer-to-Consumer) marketplace** platform similar to OL
 | **FK** | Foreign Key |
 | **UK** | Unique Key |
 | **NN** | Not Null |
-| **D** | Derived attribute |
-| **M** | Multivalued attribute |
-| **C** | Composite attribute |
+| **PC** | Persisted Computed Column |
 | `──────` | Identifying relationship |
 | `- - - -` | Non-identifying relationship |
 | `1` | One (cardinality) |
@@ -106,1156 +95,935 @@ TijarahJo is a **C2C (Consumer-to-Consumer) marketplace** platform similar to OL
 
 # 2. Core & Authentication Entities
 
-## 2.1 Entity: Person
+## 2.1 Entity: Users
 
-> **Description**: Real-world person who may or may not have a user account.
+> **Description**: The central entity — every person interacting with the platform. Stores auth credentials, profile info, and status. One user can be both buyer and seller.
 
 ```
-┌────────────────────────────────────────┐
-│              PERSON                     │
-├────────────────────────────────────────┤
-│ PK   Id              INT               │
-├────────────────────────────────────────┤
-│ NN   FirstName       NVARCHAR(100)     │
-│ NN   LastName        NVARCHAR(100)     │
-│      DateOfBirth     DATE              │
-│      Gender          CHAR(1)           │ -- M/F/O
-│      NationalId      NVARCHAR(50)      │ -- For KYC
-│      ProfileImages NVARCHAR(500)     	 │ -- Multi Value => New Table + new attribute of (ImageOrder)
-├────────────────────────────────────────┤
-│ M    Emails          [PersonEmails]    │ -- 1:N -- Multi Value => New Table + new attribute of (EmailOrder)
-│ M    Phones          [PersonPhones]    │ -- 1:N -- Multi Value => New Table + new attribute of (PhonesOrder)
-│ C,M  Addresses       [PersonAddresses] │ -- 1:N, Composite
-├────────────────────────────────────────┤
-│ NN   Status          TINYINT           │ -- 0=Active,1=Inactive,2=Banned
-│ NN   CreatedAt       DATETIME2         │
-│      UpdatedAt       DATETIME2         │
-├────────────────────────────────────────┤
-│ D    FullName        (FirstName+Last)  │ -- Computed
-│ D    Age             (from DOB)        │ -- Computed
-│ D    PrimaryEmail    (first email)     │ -- Computed
-│ D    PrimaryPhone    (first phone)     │ -- Computed
-└────────────────────────────────────────┘
+┌────────────────────────────────────────────┐
+│                   USERS                     │
+├────────────────────────────────────────────┤
+│ PK   UserID              INT IDENTITY      │
+├────────────────────────────────────────────┤
+│ NN   HashedPassword      NVARCHAR(500)     │ -- PBKDF2-SHA256
+│ UK,NN Email              NVARCHAR(255)     │ -- Auth + unique login
+│ NN   FirstName           NVARCHAR(100)     │
+│      LastName            NVARCHAR(100)     │
+│      Phone               NVARCHAR(20)      │
+├────────────────────────────────────────────┤
+│ FK   CityID              INT               │ -- → Cities (optional)
+│ FK   AreaID              INT               │ -- → Areas (optional)
+│      Bio                 NVARCHAR(1000)    │
+│      Avatar              NVARCHAR(1000)    │ -- Profile image URL
+├────────────────────────────────────────────┤
+│ NN   JoinDate            DATETIME2         │
+│ NN   UpdatedAt           DATETIME2         │
+│ FK,NN Status             INT               │ -- → UserStatusLookup
+│ FK,NN RoleID             INT               │ -- → Roles (1:N, NOT M:N)
+│ NN   IsDeleted           BIT               │ -- Soft delete
+├────────────────────────────────────────────┤
+│ NN   TwoFactorEnabled   BIT               │
+│      TwoFactorSecret     NVARCHAR(512)     │
+│      TwoFactorPendingSecret NVARCHAR(512)  │
+│      LastInvalidatedAt   DATETIME2         │ -- Force all JWTs invalid
+│      SuspendedUntil      DATETIME2         │ -- Temporary suspension
+├────────────────────────────────────────────┤
+│ PC   SearchFirstNameNormalized  NVARCHAR(100)  │ -- PERSISTED computed
+│ PC   SearchLastNameNormalized   NVARCHAR(100)  │ -- PERSISTED computed
+│ PC   SearchFullNameNormalized   NVARCHAR(201)  │ -- PERSISTED computed
+└────────────────────────────────────────────┘
 ```
 
-### Multivalued Attribute Tables
+**Key design notes:**
+- **No separate Person table** — profile fields (FirstName, LastName, Phone, etc.) live directly on Users.
+- **1:N with Roles** — each User has exactly one RoleID, not a many-to-many junction table.
+- **Password** — PBKDF2_SHA256 hash with embedded salt (no separate salt column).
+- **Search columns** — `PERSISTED` computed columns for case-insensitive, normalized search.
 
-```sql
--- PersonEmails (1 Person → Many Emails)
-┌─────────────────────────────────────┐
-│          PERSON_EMAILS              │
-├─────────────────────────────────────┤
-│ PK   Id           INT               │
-│ FK   PersonId     INT               │
-│ FK   UserId       INT               │
-│ NN   Email        NVARCHAR(255)     │
-│ NN   IsPrimary    BIT               │
-│ NN   IsVerified   BIT               │
-│ NN   CreatedAt    DATETIME2         │
-└─────────────────────────────────────┘
+---
 
--- PersonPhones (1 Person → Many Phones)
-┌─────────────────────────────────────┐
-│          PERSON_PHONES              │
-├─────────────────────────────────────┤
-│ PK   Id           INT               │
-│ FK   PersonId     INT               │
-│ FK   UserId       INT               │
-│ NN   Phone        NVARCHAR(20)      │
-│      CountryCode  NVARCHAR(5)       │
-│ NN   IsPrimary    BIT               │
-│ NN   IsVerified   BIT               │
-│ NN   CreatedAt    DATETIME2         │
-└─────────────────────────────────────┘
+## 2.2 Entity: UserExternalIdentities
 
--- PersonAddresses (1 Person → Many Addresses) - COMPOSITE
-┌─────────────────────────────────────┐
-│        PERSON_ADDRESSES             │
-├─────────────────────────────────────┤
-│ PK   Id           INT               │
-│ FK   PersonId     INT               │
-│ FK   UserId       INT               │
-│ NN   AddressLine1 NVARCHAR(255)     │
-│ NN   City         NVARCHAR(100)     │
-│      State        NVARCHAR(100)     │
-│      PostalCode   NVARCHAR(20)      │
-│ NN   Country      NVARCHAR(100)     │
-│ NN   AddressType  TINYINT           │ -- 0=Home,1=Work,2=Other
-│ NN   IsPrimary    BIT               │
-│ NN   CreatedAt    DATETIME2         │
-└─────────────────────────────────────┘
+> **Description**: OAuth/social login providers linked to a user account (Google, etc.)
+
+```
+┌────────────────────────────────────────────┐
+│        USER_EXTERNAL_IDENTITIES            │
+├────────────────────────────────────────────┤
+│ PK   UserExternalIdentityID  INT IDENTITY  │
+│ FK   UserID                  INT           │ -- → Users
+├────────────────────────────────────────────┤
+│ NN   Provider                NVARCHAR(50)  │ -- "Google", etc.
+│ NN   ProviderSubject         NVARCHAR(255) │ -- Provider's user ID
+│      ProviderEmail           NVARCHAR(255) │
+├────────────────────────────────────────────┤
+│ NN   CreatedAt               DATETIME2     │
+│ NN   UpdatedAt               DATETIME2     │
+│ NN   IsDeleted               BIT           │
+└────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2.2 Entity: User
+## 2.3 Entity: BlacklistedTokens
 
-> **Description**: Authentication account linked to a Person. One Person = One User.
+> **Description**: Stores revoked JWT `jti` values so logout and forced invalidation can block previously issued cookies. Rows are **hard deleted** after expiry by `DataCleanupBackgroundService`.
 
 ```
-┌────────────────────────────────────────┐
-│                USER                     │
-├────────────────────────────────────────┤
-│ PK   Id                INT             │
-│ FK   PersonId          INT             │ -- 1:1 with Person
-├────────────────────────────────────────┤
-│ UK   Login          NVARCHAR(50)    │
-│ UK   Email             NVARCHAR(255)   │ -- Auth email
-│ NN   PasswordHash      NVARCHAR(255)   │ -- PBKDF2-SHA256
-│      PasswordSalt      NVARCHAR(255)   │ -- If needed
-├────────────────────────────────────────┤
-│ NN   IsActive          BIT             │
-│ NN   IsDeleted         BIT             │ -- Soft delete
-│      DeletedAt         DATETIME2       │
-│ NN   EmailVerified     BIT             │
-│ NN   PhoneVerified     BIT             │
-├────────────────────────────────────────┤
-│      LastLoginAt       DATETIME2       │
-│      LastLoginIp       NVARCHAR(45)    │
-│ NN   FailedLoginCount  INT             │
-│      LockoutEnd        DATETIME2       │ -- Not Needed (I don't know why it is)
-├────────────────────────────────────────┤
-│ NN   TwoFactorEnabled  BIT             │ -- Not Needed
-│      TwoFactorSecret   NVARCHAR(255)   │ -- Not Needed
-├────────────────────────────────────────┤
-│ NN   CreatedAt         DATETIME2       │
-│      UpdatedAt         DATETIME2       │
-└────────────────────────────────────────┘
+┌────────────────────────────────────────────┐
+│          BLACKLISTED_TOKENS                │
+├────────────────────────────────────────────┤
+│ PK   Jti                 NVARCHAR(450)     │ -- JWT unique ID
+│ NN   ExpiresAt           DATETIME2         │ -- Hard-deleted after
+└────────────────────────────────────────────┘
+```
+
+**Note:** There is **no RefreshTokens table**. Session renewal uses JWT cookie rotation plus token blacklisting via this table.
+
+---
+
+## 2.4 Entity: VerificationChallenges
+
+> **Description**: Hashed verification state for login challenges, password reset, 2FA setup, and email verification flows. Rows are **hard deleted** after expiry.
+
+```
+┌────────────────────────────────────────────┐
+│       VERIFICATION_CHALLENGES              │
+├────────────────────────────────────────────┤
+│ PK   ChallengeId         NVARCHAR(128)     │ -- Hashed token
+│ NN   ChallengeType       NVARCHAR(50)      │ -- Purpose of challenge
+│ FK   UserId              INT               │ -- → Users
+│ NN   StateJson           NVARCHAR(MAX)     │ -- JSON state data
+│ NN   ExpiresAt           DATETIME2         │
+│ NN   CreatedAt           DATETIME2         │
+└────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2.3 Entity: Role
+# 3. RBAC / Permissions Entities
 
-> **Description**: Defines what actions a user can perform within the marketplace permission model.
+## 3.1 Entity: Roles
+
+> **Description**: Defines user roles. Currently two roles: `Admin` (RoleID=1) and `User` (RoleID=2). Users have a **1:N** relationship with Roles (one role per user).
 
 ```
-┌────────────────────────────────────────┐
-│                ROLE                     │
-├────────────────────────────────────────┤
-│ PK   Id           INT                  │
-│ UK   Name         NVARCHAR(100)        │
-│      Description  NVARCHAR(500)        │
-│ NN   IsActive     BIT                  │
-│ NN   CreatedAt    DATETIME2            │
-│      UpdatedAt    DATETIME2            │
-└────────────────────────────────────────┘
+┌────────────────────────────────────────────┐
+│                  ROLES                      │
+├────────────────────────────────────────────┤
+│ PK   RoleID              INT IDENTITY      │
+│ UK,NN RoleName           NVARCHAR(50)      │
+│ NN   CreatedAt           DATETIME2         │
+│ NN   IsDeleted           BIT               │
+└────────────────────────────────────────────┘
 
 -- Seed Data:
--- Admin, ProjectManager, Support, Seller, Buyer, DeliveryAgent
+-- RoleID=1: Admin
+-- RoleID=2: User
 ```
 
 ---
 
-## 2.4 Entity: UserRole (Junction)
+## 3.2 Entity: Permissions
 
-> **Description**: Many-to-Many between User and Role
-
-```
-┌────────────────────────────────────────┐
-│             USER_ROLES                  │
-├────────────────────────────────────────┤
-│ PK   Id           INT                  │
-│ FK   UserId       INT                  │
-│ FK   RoleId       INT                  │
-│ NN   AssignedAt   DATETIME2            │
-│ FK   AssignedBy   INT                  │ -- Which admin assigned
-├────────────────────────────────────────┤
-│ UK   (UserId, RoleId)                  │ -- Unique combo
-└────────────────────────────────────────┘
-```
-
----
-
-## 2.5 Entity: UserClaim
-
-> **Description**: Key-value attributes for VIP status, subscriptions, verification flags
-
-```
-┌────────────────────────────────────────┐
-│            USER_CLAIMS                  │
-├────────────────────────────────────────┤
-│ PK   Id           INT                  │
-│ FK   UserId       INT                  │
-│ NN   ClaimType    NVARCHAR(255)        │ -- e.g., "subscription_tier"
-│ NN   ClaimValue   NVARCHAR(1000)       │ -- e.g., "VIP"
-│ NN   CreatedAt    DATETIME2            │
-│      ExpiresAt    DATETIME2            │ -- NULL = never expires
-├────────────────────────────────────────┤
-│ UK   (UserId, ClaimType)               │
-└────────────────────────────────────────┘
-```
-
----
-
-## 2.6 Entity: RefreshToken
-
-> **Status**: Legacy concept only. The current runtime uses a JWT cookie plus `/api/v1/auth/refresh` and token blacklisting; this table is not part of the active schema.
-
-```
-┌────────────────────────────────────────┐
-│          REFRESH_TOKENS                 │
-├────────────────────────────────────────┤
-│ PK   Id                INT             │
-│ FK   UserId            INT             │
-├────────────────────────────────────────┤
-│ UK   Token             NVARCHAR(500)   │
-│ NN   TokenHash         NVARCHAR(128)   │ -- SHA-256
-│ NN   ExpiresAt         DATETIME2       │
-│ NN   CreatedAt         DATETIME2       │
-│      CreatedByIp       NVARCHAR(45)    │
-├────────────────────────────────────────┤
-│      RevokedAt         DATETIME2       │
-│      RevokedByIp       NVARCHAR(45)    │
-│      RevokedReason     NVARCHAR(255)   │
-│ FK   ReplacedByTokenId INT             │ -- Token rotation
-├────────────────────────────────────────┤
-│      DeviceId          NVARCHAR(255)   │
-│      DeviceName        NVARCHAR(255)   │
-│      UserAgent         NVARCHAR(500)   │
-├────────────────────────────────────────┤
-│ D    IsExpired         (computed)      │
-│ D    IsRevoked         (computed)      │
-│ D    IsActive          (computed)      │
-└────────────────────────────────────────┘
-```
-
----
-
-# 3. Marketplace Entities
-
-## 3.1 Entity: Category
-
-> **Description**: Hierarchical product categories (Electronics → Phones → iPhone)
-
-```
-┌────────────────────────────────────────┐
-│              CATEGORY                   │
-├────────────────────────────────────────┤
-│ PK   Id              INT               │
-│ FK   ParentId        INT               │ -- Self-referencing (NULL = root)
-├────────────────────────────────────────┤
-│ NN   Name            NVARCHAR(100)     │
-│ UK   Slug            NVARCHAR(100)     │ -- URL-friendly
-│      Description     NVARCHAR(500)     │
-│      IconUrl         NVARCHAR(500)     │
-│      ImageUrl        NVARCHAR(500)     │
-├────────────────────────────────────────┤
-│ NN   DisplayOrder    INT               │
-│ NN   IsActive        BIT               │
-│ NN   IsFeatured      BIT               │
-├────────────────────────────────────────┤
-│ NN   CreatedAt       DATETIME2         │
-│      UpdatedAt       DATETIME2         │
-├────────────────────────────────────────┤
-│ D    Level           (computed depth)  │
-│ D    FullPath        (Parent > Child)  │
-│ D    ListingCount    (count listings)  │
-└────────────────────────────────────────┘
-```
-
----
-
-## 3.2 Entity: CategoryAttribute (Dynamic Fields)
-
-> **Description**: Defines what attributes each category needs (e.g., Cars need "Mileage", Phones need "Storage")
-
-```
-┌────────────────────────────────────────┐
-│        CATEGORY_ATTRIBUTES              │
-├────────────────────────────────────────┤
-│ PK   Id              INT               │
-│ FK   CategoryId      INT               │
-├────────────────────────────────────────┤
-│ NN   Name            NVARCHAR(100)     │ -- "Mileage", "Storage"
-│ NN   DisplayName     NVARCHAR(100)     │ -- "Mileage (km)"
-│ NN   DataType        NVARCHAR(20)      │ -- TEXT, NUMBER, SELECT, BOOL
-│      Options         NVARCHAR(MAX)     │ -- JSON for SELECT options
-│      Unit            NVARCHAR(20)      │ -- "km", "GB", "JOD"
-├────────────────────────────────────────┤
-│ NN   IsRequired      BIT               │
-│ NN   IsFilterable    BIT               │ -- Show in search filters
-│ NN   IsSearchable    BIT               │
-│ NN   DisplayOrder    INT               │
-├────────────────────────────────────────┤
-│      ValidationRegex NVARCHAR(255)     │
-│      MinValue        DECIMAL           │
-│      MaxValue        DECIMAL           │
-└────────────────────────────────────────┘
-```
-
----
-
-## 3.3 Entity: Listing
-
-> **Description**: The core marketplace item - what users sell. FLEXIBLE model for any item type.
+> **Description**: Granular permission keys organized by category. Checked at the API controller level.
 
 ```
 ┌────────────────────────────────────────────┐
-│                 LISTING                     │
+│              PERMISSIONS                    │
 ├────────────────────────────────────────────┤
-│ PK   Id                  INT               │
-│ FK   SellerId            INT               │ -- User who posted
-│ FK   CategoryId          INT               │
-├────────────────────────────────────────────┤
-│ NN   Title               NVARCHAR(200)     │
-│ NN   Description         NVARCHAR(MAX)     │
-│ UK   Slug                NVARCHAR(250)     │ -- URL-friendly
-├────────────────────────────────────────────┤
-│ NN   Price               DECIMAL(18,2)     │
-│      OriginalPrice       DECIMAL(18,2)     │ -- For "was X now Y"
-│ NN   Currency            CHAR(3)           │ -- JOD, USD, EUR
-│ NN   PriceType           TINYINT           │ -- 0=Fixed,1=Negotiable,2=Free,3=Contact
-├────────────────────────────────────────────┤
-│ NN   Condition           TINYINT           │ -- 0=New,1=LikeNew,2=Good,3=Fair,4=ForParts
-│ NN   ListingType         TINYINT           │ -- 0=ForSale,1=Wanted,2=ForRent,3=Service
-├────────────────────────────────────────────┤
-│ NN   Status              TINYINT           │ -- See status enum below
-│      StatusReason        NVARCHAR(255)     │ -- Why rejected/removed
-├────────────────────────────────────────────┤
-│ FK   LocationId          INT               │ -- Link to address/location
-│      City                NVARCHAR(100)     │ -- Denormalized for search
-│      Area                NVARCHAR(100)     │
-│      Latitude            DECIMAL(10,8)     │
-│      Longitude           DECIMAL(11,8)     │
-├────────────────────────────────────────────┤
-│ NN   ViewCount           INT               │ -- Increment on view
-│ NN   FavoriteCount       INT               │ -- Denormalized
-│ NN   InquiryCount        INT               │ -- Messages received
-├────────────────────────────────────────────┤
-│      ExpiresAt           DATETIME2         │ -- Auto-expire old listings && Give User Notification that Listing will be Expired after (Default 30 Days).
-│ NN   IsPromoted          BIT               │ -- Paid promotion
-│      PromotedUntil       DATETIME2         │
-├────────────────────────────────────────────┤
-│ NN   CreatedAt           DATETIME2         │
-│      UpdatedAt           DATETIME2         │
-│      PublishedAt         DATETIME2         │ -- When approved
-│      SoldAt              DATETIME2         │
-│      DeletedAt           DATETIME2         │ -- Soft delete
-├────────────────────────────────────────────┤
-│ D    DaysSincePosted     (computed)        │
-│ D    IsExpired           (computed)        │
-│ D    PrimaryImage        (first image)     │
+│ PK   PermissionID        INT IDENTITY      │
+│ UK,NN PermissionKey      NVARCHAR(100)     │ -- e.g. "posts.moderate"
+│ NN   Description         NVARCHAR(300)     │
+│ NN   Category            NVARCHAR(50)      │ -- e.g. "Posts", "Users"
 └────────────────────────────────────────────┘
 
--- Status Enum:
--- 0 = Draft
--- 1 = PendingReview
--- 2 = Active
--- 3 = Sold
--- 4 = Expired
--- 5 = Rejected
--- 6 = Removed (by admin)
--- 7 = Deleted (by user)
+-- Seed Data (16 permissions):
+-- Users:      users.view, users.manage
+-- Posts:      posts.view, posts.moderate
+-- Reviews:    reviews.view, reviews.moderate
+-- Reports:    reports.view, reports.resolve
+-- Content:    banners.manage
+-- Locations:  locations.manage
+-- System:     settings.manage, audit.view
+-- Roles:      roles.manage
+-- Categories: categories.manage
+-- Comments:   comments.view, comments.moderate
 ```
 
 ---
 
-## 3.4 Entity: ListingImage
+## 3.3 Entity: RolePermissions (Junction)
 
-> **Description**: Images for a listing (1 Listing → Many Images)
-
-```
-┌────────────────────────────────────────┐
-│          LISTING_IMAGES                 │
-├────────────────────────────────────────┤
-│ PK   Id              INT               │
-│ FK   ListingId       INT               │
-├────────────────────────────────────────┤
-│ NN   ImageUrl        NVARCHAR(500)     │
-│      ThumbnailUrl    NVARCHAR(500)     │
-│ NN   DisplayOrder    INT               │
-│ NN   IsPrimary       BIT               │
-├────────────────────────────────────────┤
-│      AltText         NVARCHAR(255)     │
-│      Width           INT               │
-│      Height          INT               │
-│      FileSize        INT               │ -- bytes
-├────────────────────────────────────────┤
-│ NN   CreatedAt       DATETIME2         │
-└────────────────────────────────────────┘
-```
-
----
-
-## 3.5 Entity: ListingAttribute
-
-> **Description**: Dynamic attribute values for listings (EAV pattern)
-
-```
-┌────────────────────────────────────────┐
-│        LISTING_ATTRIBUTES               │
-├────────────────────────────────────────┤
-│ PK   Id                    INT         │
-│ FK   ListingId             INT         │
-│ FK   CategoryAttributeId   INT         │
-├────────────────────────────────────────┤
-│ NN   Value                 NVARCHAR(500)│
-│      NumericValue          DECIMAL      │ -- For range queries
-├────────────────────────────────────────┤
-│ UK   (ListingId, CategoryAttributeId)  │
-└────────────────────────────────────────┘
-
--- Example: Listing #5 (iPhone), CategoryAttribute "Storage" = "128GB" - بدل ما تعمل Hard Coding ل Fields and Attributes لازم يلتزم فيهم الشخص ، انت ما بتعرف  شو البزنس لكل شي فانت بهاي الطريقة بتعطيه خيار يعمل Customization
-```
-
----
-
-## 3.6 Entity: Favorite
-
-> **Description**: User wishlists/favorites
-
-```
-┌────────────────────────────────────────┐
-│              FAVORITES                  │
-├────────────────────────────────────────┤
-│ PK   Id              INT               │
-│ FK   UserId          INT               │
-│ FK   ListingId       INT               │
-│ NN   CreatedAt       DATETIME2         │
-├────────────────────────────────────────┤
-│ UK   (UserId, ListingId)               │
-└────────────────────────────────────────┘
-```
-
----
-
-## 3.7 Entity: SavedSearch
-
-> **Description**: Users save search queries for notifications
-
-```
-┌────────────────────────────────────────┐
-│           SAVED_SEARCHES                │
-├────────────────────────────────────────┤
-│ PK   Id              INT               │
-│ FK   UserId          INT               │
-├────────────────────────────────────────┤
-│ NN   Name            NVARCHAR(100)     │
-│ NN   SearchQuery     NVARCHAR(MAX)     │ -- JSON: {category, price, location...}
-│ NN   NotifyByEmail   BIT               │
-│      NotifyFrequency TINYINT           │ -- 0=Instant,1=Daily,2=Weekly
-├────────────────────────────────────────┤
-│ NN   IsActive        BIT               │
-│ NN   CreatedAt       DATETIME2         │
-│      LastNotifiedAt  DATETIME2         │
-└────────────────────────────────────────┘
-```
-
----
-
-# 4. Transaction & Payment Entities
-
-## 4.1 Entity: Transaction
-
-> **Description**: Records when a buyer purchases from a seller. NOT like traditional orders.
+> **Description**: Many-to-Many between Roles and Permissions.
 
 ```
 ┌────────────────────────────────────────────┐
-│              TRANSACTION                    │
+│          ROLE_PERMISSIONS                   │
 ├────────────────────────────────────────────┤
-│ PK   Id                  INT               │
-│ UK   TransactionNumber   NVARCHAR(50)      │ -- TRX-20251208-XXXXX
-├────────────────────────────────────────────┤
-│ FK   ListingId           INT               │
-│ FK   BuyerId             INT               │ -- User buying
-│ FK   SellerId            INT               │ -- User selling (denormalized)
-├────────────────────────────────────────────┤
-│ NN   AgreedPrice         DECIMAL(18,2)     │ -- Final negotiated price
-│ NN   Currency            CHAR(3)           │
-│      OriginalListingPrice DECIMAL(18,2)   │ -- For reference
-├────────────────────────────────────────────┤
-│ NN   Status              TINYINT           │ -- See enum below
-│      StatusReason        NVARCHAR(255)     │
-├────────────────────────────────────────────┤
-│ NN   PaymentMethod       TINYINT           │ -- 0=Cash,1=Platform,2=BankTransfer
-│ NN   DeliveryMethod      TINYINT           │ -- 0=Pickup,1=Delivery,2=Shipping
-├────────────────────────────────────────────┤
-│      DeliveryAddress     NVARCHAR(500)     │
-│      DeliveryNotes       NVARCHAR(500)     │
-│      TrackingNumber      NVARCHAR(100)     │
-├────────────────────────────────────────────┤
-│ NN   CreatedAt           DATETIME2         │
-│      AcceptedAt          DATETIME2         │
-│      PaidAt              DATETIME2         │
-│      ShippedAt           DATETIME2         │
-│      DeliveredAt         DATETIME2         │
-│      CompletedAt         DATETIME2         │
-│      CancelledAt         DATETIME2         │
-│      DisputedAt          DATETIME2         │
-├────────────────────────────────────────────┤
-│      BuyerNotes          NVARCHAR(500)     │
-│      SellerNotes         NVARCHAR(500)     │
-└────────────────────────────────────────────┘
-
--- Status Enum:
--- 0 = Initiated (buyer sent offer)
--- 1 = Accepted (seller accepted)
--- 2 = PendingPayment
--- 3 = Paid (awaiting delivery)
--- 4 = Shipped
--- 5 = Delivered
--- 6 = Completed (both confirmed)
--- 7 = Cancelled
--- 8 = Disputed
--- 9 = Refunded
-```
-
----
-
-## 4.2 Entity: Payment
-
-> **Description**: Payment records for transactions
-
-```
-┌────────────────────────────────────────────┐
-│                PAYMENT                      │
-├────────────────────────────────────────────┤
-│ PK   Id                  INT               │
-│ FK   TransactionId       INT               │
-│ UK   PaymentReference    NVARCHAR(100)     │ -- External gateway ref
-├────────────────────────────────────────────┤
-│ NN   Amount              DECIMAL(18,2)     │
-│ NN   Currency            CHAR(3)           │
-│ NN   PaymentMethod       TINYINT           │ -- Card, Wallet, Bank
-├────────────────────────────────────────────┤
-│ NN   Status              TINYINT           │ -- Pending,Success,Failed,Refunded
-│      FailureReason       NVARCHAR(255)     │
-├────────────────────────────────────────────┤
-│      GatewayName         NVARCHAR(50)      │ -- Stripe, PayPal, etc.
-│      GatewayTxnId        NVARCHAR(255)     │
-│      GatewayResponse     NVARCHAR(MAX)     │ -- JSON
-├────────────────────────────────────────────┤
-│ NN   CreatedAt           DATETIME2         │
-│      ProcessedAt         DATETIME2         │
-│      RefundedAt          DATETIME2         │
+│ PK   RolePermissionID    INT IDENTITY      │
+│ FK   RoleID              INT               │ -- → Roles
+│ FK   PermissionID        INT               │ -- → Permissions
 └────────────────────────────────────────────┘
 ```
 
 ---
 
-## 4.3 Entity: Escrow
+# 4. Lookups & Location Entities
 
-> **Description**: Platform holds payment until transaction completes
+## 4.1 Entity: UserStatusLookup
 
-```
-┌────────────────────────────────────────────┐
-│                ESCROW                       │
-├────────────────────────────────────────────┤
-│ PK   Id                  INT               │
-│ FK   TransactionId       INT               │
-│ FK   PaymentId           INT               │
-├────────────────────────────────────────────┤
-│ NN   Amount              DECIMAL(18,2)     │ -- Held amount
-│ NN   Currency            CHAR(3)           │
-├────────────────────────────────────────────┤
-│ NN   Status              TINYINT           │ -- 0=Holding,1=Released,2=Refunded,3=Disputed
-├────────────────────────────────────────────┤
-│ NN   HeldAt              DATETIME2         │
-│      ReleasedAt          DATETIME2         │
-│      RefundedAt          DATETIME2         │
-│      ReleaseReason       NVARCHAR(255)     │
-└────────────────────────────────────────────┘
-```
-
----
-
-## 4.4 Entity: Commission
-
-> **Description**: Platform fees per transaction
+> **Description**: Lookup table for user account statuses. Referenced by `Users.Status` FK.
 
 ```
 ┌────────────────────────────────────────────┐
-│              COMMISSION                     │
+│          USER_STATUS_LOOKUP                 │
 ├────────────────────────────────────────────┤
-│ PK   Id                  INT               │
-│ FK   TransactionId       INT               │
-├────────────────────────────────────────────┤
-│ NN   BaseAmount          DECIMAL(18,2)     │ -- Transaction amount
-│ NN   CommissionRate      DECIMAL(5,4)      │ -- 0.0500 = 5%
-│ NN   CommissionAmount    DECIMAL(18,2)     │ -- Calculated
-│ NN   Currency            CHAR(3)           │
-├────────────────────────────────────────────┤
-│ NN   Status              TINYINT           │ -- Pending, Collected, Waived
-│      WaivedReason        NVARCHAR(255)     │
-├────────────────────────────────────────────┤
-│ NN   CreatedAt           DATETIME2         │
-│      CollectedAt         DATETIME2         │
-└────────────────────────────────────────────┘
-```
-
----
-
-## 4.5 Entity: Wallet (Optional)
-
-> **Description**: User balance for platform payments
-
-```
-┌────────────────────────────────────────────┐
-│                WALLET                       │
-├────────────────────────────────────────────┤
-│ PK   Id                  INT               │
-│ FK   UserId              INT               │ -- 1:1
-├────────────────────────────────────────────┤
-│ NN   Balance             DECIMAL(18,2)     │
-│ NN   Currency            CHAR(3)           │
+│ PK   StatusID            INT               │
+│ UK,NN Code               NVARCHAR(50)      │
+│ UK,NN StatusName         NVARCHAR(50)      │
 │ NN   IsActive            BIT               │
-├────────────────────────────────────────────┤
-│ NN   CreatedAt           DATETIME2         │
-│      UpdatedAt           DATETIME2         │
+│      Description         NVARCHAR(200)     │
 └────────────────────────────────────────────┘
 
--- WalletTransaction (1 Wallet → Many Transactions)
+-- Seed Data:
+-- StatusID=1: ACTIVE
+-- StatusID=2: BANNED
+-- StatusID=3: INACTIVE
+```
+
+---
+
+## 4.2 Entity: PostStatusLookup
+
+> **Description**: Lookup table for post/listing statuses. Referenced by `Posts.Status` FK.
+
+```
 ┌────────────────────────────────────────────┐
-│         WALLET_TRANSACTIONS                 │
+│          POST_STATUS_LOOKUP                 │
 ├────────────────────────────────────────────┤
-│ PK   Id                  INT               │
-│ FK   WalletId            INT               │
+│ PK   StatusID            INT               │
+│ UK,NN Code               NVARCHAR(50)      │
+│ UK,NN StatusName         NVARCHAR(50)      │
+│ NN   IsVisible           BIT               │ -- Whether shown publicly
+│      Description         NVARCHAR(200)     │
+└────────────────────────────────────────────┘
+
+-- Seed Data:
+-- StatusID=0: ACTIVE
+-- StatusID=1: BLOCKED
+-- StatusID=3: SOLD
+```
+
+---
+
+## 4.3 Entity: Cities
+
+> **Description**: Jordanian cities. Bilingual (English + Arabic).
+
+```
+┌────────────────────────────────────────────┐
+│                  CITIES                     │
 ├────────────────────────────────────────────┤
-│ NN   Type                TINYINT           │ -- Credit, Debit, Refund
-│ NN   Amount              DECIMAL(18,2)     │
-│ NN   BalanceAfter        DECIMAL(18,2)     │
-│      Description         NVARCHAR(255)     │
-│ FK   RelatedTransactionId INT              │
-├────────────────────────────────────────────┤
-│ NN   CreatedAt           DATETIME2         │
+│ PK   CityID              INT IDENTITY      │
+│ UK,NN CityName           NVARCHAR(100)     │ -- English name
+│ NN   CityNameAr          NVARCHAR(100)     │ -- Arabic name
 └────────────────────────────────────────────┘
 ```
 
 ---
 
-# 5. Communication Entities
+## 4.4 Entity: Areas
 
-## 5.1 Entity: Conversation
-
-> **Description**: Chat thread between buyer and seller about a listing
+> **Description**: Areas/districts within a city. Bilingual. Multi-column FK ensures area-city consistency.
 
 ```
 ┌────────────────────────────────────────────┐
-│            CONVERSATION                     │
+│                  AREAS                      │
 ├────────────────────────────────────────────┤
-│ PK   Id                  INT               │
-│ FK   ListingId           INT               │
-│ FK   BuyerId             INT               │ -- Who initiated
-│ FK   SellerId            INT               │ -- Listing owner
+│ PK   AreaID              INT IDENTITY      │
+│ FK   CityID              INT               │ -- → Cities
+│ NN   AreaName            NVARCHAR(100)     │ -- English name
+│ NN   AreaNameAr          NVARCHAR(100)     │ -- Arabic name
+└────────────────────────────────────────────┘
+```
+
+---
+
+## 4.5 Entity: Categories
+
+> **Description**: Flat category model (no parent-child hierarchy). Bilingual names with search optimization.
+
+```
+┌────────────────────────────────────────────┐
+│              CATEGORIES                     │
 ├────────────────────────────────────────────┤
-│ NN   Status              TINYINT           │ -- 0=Active,1=Archived,2=Blocked
+│ PK   CategoryID          INT IDENTITY      │
+│ UK,NN CategoryName       NVARCHAR(100)     │ -- English name
+│      NameAr              NVARCHAR(100)     │ -- Arabic name
+│      Image               NVARCHAR(1000)    │ -- Category image URL
+│ NN   CreatedAt           DATETIME2         │
+│ NN   IsDeleted           BIT               │
+├────────────────────────────────────────────┤
+│ PC   SearchCategoryNameNormalized NVARCHAR(100) │ -- PERSISTED computed
+└────────────────────────────────────────────┘
+```
+
+**Note:** The category model is **flat** — there is no `ParentId` self-referencing column or hierarchical nesting.
+
+---
+
+# 5. Marketplace Entities
+
+## 5.1 Entity: Posts
+
+> **Description**: The core marketplace listing — what users sell. Each post belongs to one user and one category.
+
+```
+┌────────────────────────────────────────────┐
+│                  POSTS                      │
+├────────────────────────────────────────────┤
+│ PK   PostID              INT IDENTITY      │
+│ FK   UserID              INT               │ -- → Users (who posted)
+│ FK   CategoryID          INT               │ -- → Categories
+├────────────────────────────────────────────┤
+│ NN   PostTitle           NVARCHAR(200)     │
+│      PostDescription     NVARCHAR(4000)    │
+│      Price               DECIMAL           │
+├────────────────────────────────────────────┤
+│ FK,NN Status             INT               │ -- → PostStatusLookup
+│ NN   CreatedAt           DATETIME2         │
+│ NN   UpdatedAt           DATETIME2         │
+│ NN   IsDeleted           BIT               │ -- Soft delete
+│ NN   Views               BIGINT            │ -- View counter
+├────────────────────────────────────────────┤
+│ FK   CityID              INT               │ -- → Cities (optional)
+│ FK   AreaID              INT               │ -- → Areas (optional)
+├────────────────────────────────────────────┤
+│ PC   SearchTitleNormalized              NVARCHAR(200)  │ -- PERSISTED
+│ PC   SearchDescriptionPrefixNormalized  NVARCHAR(450)  │ -- PERSISTED
+└────────────────────────────────────────────┘
+```
+
+**Naming note:** In this codebase, "Post" = "Listing". The term "Post" is used throughout the database and backend, while user-facing UI may say "listing" or "إعلان".
+
+---
+
+## 5.2 Entity: PostImages
+
+> **Description**: Images for a post (1 Post → Many Images). Soft-deleted when parent post is soft-deleted.
+
+```
+┌────────────────────────────────────────────┐
+│              POST_IMAGES                    │
+├────────────────────────────────────────────┤
+│ PK   PostImageID         INT IDENTITY      │
+│ FK   PostID              INT               │ -- → Posts
+├────────────────────────────────────────────┤
+│ NN   PostImageURL        NVARCHAR(2048)    │ -- Image URL
+│ NN   UploadedAt          DATETIME2         │
+│ NN   IsDeleted           BIT               │
+└────────────────────────────────────────────┘
+```
+
+---
+
+## 5.3 Entity: PostComments
+
+> **Description**: Threaded comments on posts. Self-referencing `ParentCommentID` enables nested replies.
+
+```
+┌────────────────────────────────────────────┐
+│            POST_COMMENTS                    │
+├────────────────────────────────────────────┤
+│ PK   CommentID           INT IDENTITY      │
+│ FK   PostID              INT               │ -- → Posts
+│ FK   UserID              INT               │ -- → Users (author)
+│ FK   ParentCommentID     INT               │ -- → PostComments (self-ref, NULL = root)
+├────────────────────────────────────────────┤
+│ NN   Content             NVARCHAR(2000)    │
+│ NN   CreatedAt           DATETIME2         │
+│ NN   UpdatedAt           DATETIME2         │
+│ NN   IsDeleted           BIT               │
+└────────────────────────────────────────────┘
+```
+
+---
+
+## 5.4 Entity: Favorites
+
+> **Description**: User wishlists/favorites. Soft-deleted when parent post is soft-deleted.
+
+```
+┌────────────────────────────────────────────┐
+│              FAVORITES                      │
+├────────────────────────────────────────────┤
+│ PK   FavoriteID          INT IDENTITY      │
+│ FK   UserID              INT               │ -- → Users
+│ FK   PostID              INT               │ -- → Posts
+│ NN   CreatedAt           DATETIME2         │
+│ NN   IsDeleted           BIT               │
+└────────────────────────────────────────────┘
+```
+
+---
+
+## 5.5 Entity: Reviews
+
+> **Description**: User-to-user reviews (not product reviews). Any user can review any other user after interacting with them.
+
+```
+┌────────────────────────────────────────────┐
+│               REVIEWS                       │
+├────────────────────────────────────────────┤
+│ PK   ReviewID            INT IDENTITY      │
+│ FK   ReviewerID          INT               │ -- → Users (who wrote)
+│ FK   ReviewedUserID      INT               │ -- → Users (who is reviewed)
+├────────────────────────────────────────────┤
+│ NN   Rating              INT               │ -- CHECK 1-5
+│      Comment             NVARCHAR(4000)    │
 ├────────────────────────────────────────────┤
 │ NN   CreatedAt           DATETIME2         │
+│ NN   IsDeleted           BIT               │
+└────────────────────────────────────────────┘
+```
+
+**Note:** Reviews are **user-to-user**, not linked to a Transaction entity. There is no TransactionId FK.
+
+---
+
+# 6. Communication Entities
+
+## 6.1 Entity: Conversations
+
+> **Description**: Chat thread between two users. Uses an ordered-pair constraint (`User1ID < User2ID`) to guarantee exactly one conversation between any two users per context.
+
+```
+┌────────────────────────────────────────────┐
+│            CONVERSATIONS                    │
+├────────────────────────────────────────────┤
+│ PK   ConversationID      INT IDENTITY      │
+│ FK   User1ID             INT               │ -- → Users (lower UserID)
+│ FK   User2ID             INT               │ -- → Users (higher UserID)
+│ FK   PostID              INT               │ -- → Posts (optional context)
+├────────────────────────────────────────────┤
 │      LastMessageAt       DATETIME2         │ -- Denormalized
-│ NN   BuyerUnreadCount    INT               │
-│ NN   SellerUnreadCount   INT               │
-├────────────────────────────────────────────┤
-│ UK   (ListingId, BuyerId)                  │ -- One convo per buyer per listing
+│ NN   IsDeleted           BIT               │
 └────────────────────────────────────────────┘
+
+-- Constraint: User1ID < User2ID (ordered pair)
+-- UK: (User1ID, User2ID, PostID) — one convo per pair per post
 ```
+
+**Design note:** Fields are `User1ID`/`User2ID` (ordered pair), **not** `BuyerId`/`SellerId`. The lower UserID is always `User1ID`.
 
 ---
 
-## 5.2 Entity: Message
+## 6.2 Entity: Messages
 
-> **Description**: Individual messages in a conversation
+> **Description**: Individual messages within a conversation. Includes intentional `ReceiverID` denormalization.
 
 ```
 ┌────────────────────────────────────────────┐
-│               MESSAGE                       │
+│               MESSAGES                      │
 ├────────────────────────────────────────────┤
-│ PK   Id                  INT               │
-│ FK   ConversationId      INT               │
-│ FK   SenderId            INT               │ -- User who sent
+│ PK   MessageID           INT IDENTITY      │
+│ FK   SenderID            INT               │ -- → Users (who sent)
+│ FK   ReceiverID          INT               │ -- → Users (intentional denorm)
+│ FK   ConversationID      INT               │ -- → Conversations
 ├────────────────────────────────────────────┤
-│ NN   Content             NVARCHAR(MAX)     │
-│ NN   MessageType         TINYINT           │ -- 0=Text,1=Image,2=Offer,3=System
-│      AttachmentUrl       NVARCHAR(500)     │
-├────────────────────────────────────────────┤
-│      OfferAmount         DECIMAL(18,2)     │ -- If MessageType=Offer
-│      OfferStatus         TINYINT           │ -- Pending,Accepted,Rejected
-├────────────────────────────────────────────┤
+│ NN   Content             NVARCHAR(4000)    │
+│ NN   CreatedAt           DATETIME2         │
 │ NN   IsRead              BIT               │
-│      ReadAt              DATETIME2         │
-│ NN   IsDeleted           BIT               │ -- Soft delete for sender
-├────────────────────────────────────────────┤
-│ NN   CreatedAt           DATETIME2         │
+│ NN   IsDeleted           BIT               │
 └────────────────────────────────────────────┘
 ```
 
----
-
-## 5.3 Entity: Review
-
-> **Description**: Users review each other after transactions (not products!)
-
-```
-┌────────────────────────────────────────────┐
-│                REVIEW                       │
-├────────────────────────────────────────────┤
-│ PK   Id                  INT               │
-│ FK   TransactionId       INT               │
-│ FK   ReviewerId          INT               │ -- Who wrote review
-│ FK   RevieweeId          INT               │ -- Who is being reviewed
-├────────────────────────────────────────────┤
-│ NN   Rating              TINYINT           │ -- 1-5 stars
-│      Title               NVARCHAR(100)     │
-│      Comment             NVARCHAR(1000)    │
-├────────────────────────────────────────────┤
-│ NN   ReviewType          TINYINT           │ -- 0=BuyerToSeller, 1=SellerToBuyer
-├────────────────────────────────────────────┤
-│ NN   IsVisible           BIT               │ -- Admin can hide
-│      HiddenReason        NVARCHAR(255)     │
-├────────────────────────────────────────────┤
-│ NN   CreatedAt           DATETIME2         │
-│      UpdatedAt           DATETIME2         │
-├────────────────────────────────────────────┤
-│ UK   (TransactionId, ReviewerId)           │ -- One review per user per txn
-└────────────────────────────────────────────┘
-```
+**Why `ReceiverID`?** It's technically derivable from Conversations (`User1ID + User2ID - SenderID`), but kept for:
+- Trigger validation (`TR_Messages_ParticipantValidation`)
+- Direct receiver lookup without JOINing Conversations
+- Notification creation (receiver needed immediately)
 
 ---
 
-## 5.4 Entity: Report
+## 6.3 Entity: Notifications
 
-> **Description**: Users report listings, users, or messages
-
-```
-┌────────────────────────────────────────────┐
-│                REPORT                       │
-├────────────────────────────────────────────┤
-│ PK   Id                  INT               │
-│ FK   ReporterId          INT               │ -- Who reported
-├────────────────────────────────────────────┤
-│ NN   TargetType          TINYINT           │ -- 0=Listing,1=User,2=Message,3=Review
-│ NN   TargetId            INT               │ -- ID of reported item
-├────────────────────────────────────────────┤
-│ NN   ReasonCode          TINYINT           │ -- See enum below
-│      Description         NVARCHAR(1000)    │
-├────────────────────────────────────────────┤
-│ NN   Status              TINYINT           │ -- 0=Pending,1=Reviewed,2=ActionTaken,3=Dismissed
-│      Resolution          NVARCHAR(500)     │
-│ FK   ResolvedBy          INT               │ -- Admin who handled
-│      ResolvedAt          DATETIME2         │
-├────────────────────────────────────────────┤
-│ NN   CreatedAt           DATETIME2         │
-└────────────────────────────────────────────┘
-
--- ReasonCode Enum:
--- 0 = Spam
--- 1 = Fraud/Scam
--- 2 = ProhibitedItem
--- 3 = Harassment
--- 4 = Duplicate
--- 5 = WrongCategory
--- 6 = Inappropriate
--- 7 = Other
-```
-
----
-
-## 5.5 Entity: Notification
-
-> **Description**: In-app notifications
+> **Description**: In-app and push notifications. Links back to conversation/message context for navigation.
 
 ```
 ┌────────────────────────────────────────────┐
-│            NOTIFICATION                     │
+│            NOTIFICATIONS                    │
 ├────────────────────────────────────────────┤
-│ PK   Id                  INT               │
-│ FK   UserId              INT               │
+│ PK   NotificationID      INT IDENTITY      │
+│ FK   UserID              INT               │ -- → Users (recipient)
 ├────────────────────────────────────────────┤
-│ NN   Type                TINYINT           │ -- See enum
+│ NN   NotificationType    NVARCHAR(50)      │ -- "NEW_MESSAGE", etc.
 │ NN   Title               NVARCHAR(200)     │
-│      Body                NVARCHAR(500)     │
-│      ImageUrl            NVARCHAR(500)     │
+│ NN   Body                NVARCHAR(1000)    │
 ├────────────────────────────────────────────┤
-│      TargetType          TINYINT           │ -- What to open
-│      TargetId            INT               │ -- ID to navigate to
-│      ActionUrl           NVARCHAR(500)     │
+│ FK   SenderUserID        INT               │ -- → Users (optional trigger)
+│ FK   ConversationID      INT               │ -- → Conversations (optional)
+│ FK   MessageID           INT               │ -- → Messages (optional)
+│      RouteUrl            NVARCHAR(300)     │ -- Frontend route to open
 ├────────────────────────────────────────────┤
 │ NN   IsRead              BIT               │
-│      ReadAt              DATETIME2         │
-├────────────────────────────────────────────┤
 │ NN   CreatedAt           DATETIME2         │
-│      ExpiresAt           DATETIME2         │
+│      ReadAt              DATETIME2         │
+│      PayloadJson         NVARCHAR(2000)    │ -- Extra JSON data
+│ NN   IsDeleted           BIT               │
 └────────────────────────────────────────────┘
-
--- Type Enum:
--- 0 = NewMessage
--- 1 = NewOffer
--- 2 = OfferAccepted
--- 3 = ListingApproved
--- 4 = ListingRejected
--- 5 = NewReview
--- 6 = TransactionUpdate
--- 7 = SavedSearchMatch
--- 8 = System
 ```
 
 ---
 
-# 6. Relationships Diagram
+## 6.4 Entity: PushSubscriptions
 
-## 6.1 Core/Auth Relationships
+> **Description**: Web Push API subscriptions for browser push notifications. Tracks delivery success/failure.
 
 ```
-┌────────────┐         ┌────────────┐
-│   Person   │ 1─────1 │    User    │
-└────────────┘         └────────────┘
-      │                      │
-      │ 1                    │ 1
-      │                      │
-      ▼ N                    ▼ N
-┌────────────┐         ┌────────────────┐
-│ PersonEmail│         │  RefreshToken  │
-│ PersonPhone│         └────────────────┘
-│ PersonAddr │               │ 1
-└────────────┘               │
-                             ▼ N
-                       ┌────────────┐
-                       │  UserRole  │
-                       └────────────┘
-                             │
-              ┌──────────────┼──────────────┐
-              ▼ N            │              ▼ N
-        ┌──────────┐         │        ┌────────────┐
-        │   Role   │         │        │ UserClaim  │
-        └──────────┘         │        └────────────┘
-                             │
-                             ▼ 1
-                       ┌──────────┐
-                       │   User   │
-                       └──────────┘
+┌────────────────────────────────────────────┐
+│          PUSH_SUBSCRIPTIONS                 │
+├────────────────────────────────────────────┤
+│ PK   PushSubscriptionID  INT IDENTITY      │
+│ FK   UserID              INT               │ -- → Users
+├────────────────────────────────────────────┤
+│ NN   Endpoint            NVARCHAR(1000)    │ -- Push service URL
+│      EndpointHash        BINARY(32)        │ -- SHA-256 for dedup
+│ NN   P256DH              NVARCHAR(255)     │ -- Public key
+│ NN   Auth                NVARCHAR(255)     │ -- Auth secret
+│      UserAgent           NVARCHAR(500)     │
+├────────────────────────────────────────────┤
+│ NN   IsActive            BIT               │
+│ NN   CreatedAt           DATETIME2         │
+│ NN   UpdatedAt           DATETIME2         │
+│      LastSuccessAt       DATETIME2         │
+│      LastFailureAt       DATETIME2         │
+│      LastFailureReason   NVARCHAR(400)     │
+└────────────────────────────────────────────┘
 ```
 
-## 6.2 Marketplace Relationships
+---
+
+# 7. Moderation & System Entities
+
+## 7.1 Entity: Reports
+
+> **Description**: Users report posts, users, reviews, or comments. Polymorphic FK pattern — `TargetID` meaning depends on `ReportType`.
+
+```
+┌────────────────────────────────────────────┐
+│                REPORTS                      │
+├────────────────────────────────────────────┤
+│ PK   ReportID            INT IDENTITY      │
+│ NN   ReportType          NVARCHAR(20)      │ -- "LISTING"|"USER"|"REVIEW"|"COMMENT"
+│ NN   TargetID            INT               │ -- Polymorphic FK (see below)
+├────────────────────────────────────────────┤
+│ NN   Reason              NVARCHAR(50)      │ -- "SPAM","SCAM","OFFENSIVE", etc.
+│      Description         NVARCHAR(2000)    │ -- Optional details
+│ FK   ReporterUserID      INT               │ -- → Users (who reported)
+├────────────────────────────────────────────┤
+│ NN   Status              INT               │ -- 0=Pending,1=InReview,2=Resolved,3=Dismissed
+│ FK   ResolvedByUserID    INT               │ -- → Users (admin who handled)
+│      ResolutionNotes     NVARCHAR(1000)    │
+├────────────────────────────────────────────┤
+│ NN   CreatedAt           DATETIME2         │
+│      ResolvedAt          DATETIME2         │
+└────────────────────────────────────────────┘
+```
+
+**Polymorphic FK mapping:**
+
+| ReportType | TargetID references |
+|------------|---------------------|
+| `LISTING` | `Posts.PostID` |
+| `USER` | `Users.UserID` |
+| `REVIEW` | `Reviews.ReviewID` |
+| `COMMENT` | `PostComments.CommentID` |
+
+Referential integrity for `TargetID` is enforced at the **application level**, not the database.
+
+---
+
+## 7.2 Entity: AuditLog
+
+> **Description**: Tracks all admin and system data modifications for compliance and debugging.
+
+```
+┌────────────────────────────────────────────┐
+│              AUDIT_LOG                      │
+├────────────────────────────────────────────┤
+│ PK   AuditLogID          BIGINT IDENTITY   │
+│ NN   TableName           NVARCHAR(100)     │
+│ NN   RecordID            INT               │
+│ NN   Action              NVARCHAR(10)      │ -- "INSERT"|"UPDATE"|"DELETE"
+│ FK   ChangedByUserID     INT               │ -- → Users (nullable for system)
+│ NN   ChangedAt           DATETIME2         │
+│      OldValues           NVARCHAR(MAX)     │ -- JSON snapshot before
+│      NewValues           NVARCHAR(MAX)     │ -- JSON snapshot after
+└────────────────────────────────────────────┘
+```
+
+---
+
+## 7.3 Entity: SystemSettings
+
+> **Description**: Key-value configuration store for admin-managed system settings.
+
+```
+┌────────────────────────────────────────────┐
+│           SYSTEM_SETTINGS                   │
+├────────────────────────────────────────────┤
+│ PK   SettingID           INT IDENTITY      │
+│ UK,NN SettingKey         NVARCHAR(100)     │ -- "maintenance_mode", etc.
+│ NN   Label               NVARCHAR(200)     │
+│ NN   Value               NVARCHAR(4000)    │
+│ NN   ValueType           NVARCHAR(20)      │ -- "bool"|"int"|"string"|"json"
+│      Description         NVARCHAR(500)     │
+│ NN   UpdatedAt           DATETIME2         │
+└────────────────────────────────────────────┘
+```
+
+---
+
+## 7.4 Entity: HeroBanners
+
+> **Description**: Admin-managed homepage hero carousel banners. Fully bilingual (English + Arabic).
+
+```
+┌────────────────────────────────────────────┐
+│            HERO_BANNERS                     │
+├────────────────────────────────────────────┤
+│ PK   BannerID            INT IDENTITY      │
+├────────────────────────────────────────────┤
+│ NN   Title               NVARCHAR(200)     │
+│ NN   TitleAr             NVARCHAR(200)     │
+│ NN   Subtitle            NVARCHAR(400)     │
+│ NN   SubtitleAr          NVARCHAR(400)     │
+│ NN   ButtonText          NVARCHAR(100)     │
+│ NN   ButtonTextAr        NVARCHAR(100)     │
+├────────────────────────────────────────────┤
+│ NN   ImageUrl            NVARCHAR(2048)    │
+│ NN   BgClass             NVARCHAR(200)     │ -- CSS gradient class
+│ NN   TextClass           NVARCHAR(200)     │ -- CSS text class
+│ NN   AltText             NVARCHAR(200)     │
+│ NN   AltTextAr           NVARCHAR(200)     │
+│      LinkUrl             NVARCHAR(500)     │ -- Optional CTA link
+├────────────────────────────────────────────┤
+│ NN   IsActive            BIT               │
+│ NN   DisplayOrder        INT               │
+│ NN   CreatedAt           DATETIME2         │
+│ NN   UpdatedAt           DATETIME2         │
+└────────────────────────────────────────────┘
+```
+
+---
+
+## 7.5 Entity: DataHygieneLog
+
+> **Description**: Infrastructure table tracking background data cleanup cycle findings and actions.
+
+```
+┌────────────────────────────────────────────┐
+│          DATA_HYGIENE_LOG                   │
+├────────────────────────────────────────────┤
+│ PK   HygieneLogID       BIGINT IDENTITY   │
+│ NN   CycleID            UNIQUEIDENTIFIER  │ -- Groups one cleanup run
+│ NN   TableName          NVARCHAR(128)     │
+│ NN   FindingType        NVARCHAR(50)      │
+│ NN   Classification     NVARCHAR(50)      │
+│ NN   AffectedRowCount   INT               │
+│      SampleData         NVARCHAR(1000)    │
+│ NN   Phase              INT               │
+│ NN   ActionTaken        NVARCHAR(50)      │
+│ NN   DetectedAt         DATETIME2         │
+│      ActionedAt         DATETIME2         │
+│      Notes              NVARCHAR(2000)    │
+└────────────────────────────────────────────┘
+```
+
+---
+
+## 7.6 Entity: SchemaMigrations
+
+> **Description**: Infrastructure-only tracking table. No C# entity — accessed only by SQL migration scripts.
+
+```
+┌────────────────────────────────────────────┐
+│          SCHEMA_MIGRATIONS                  │
+├────────────────────────────────────────────┤
+│ PK   ScriptName          NVARCHAR(255)     │ -- Migration file name
+│ NN   AppliedAt           DATETIME2         │
+│      Notes               NVARCHAR(500)     │
+└────────────────────────────────────────────┘
+```
+
+---
+
+# 8. Relationships Diagram
+
+## 8.1 Core/Auth & RBAC Relationships
+
+```
+┌──────────────────┐          ┌────────────┐
+│ UserStatusLookup │ 1──────N │            │
+└──────────────────┘          │            │
+                              │   Users    │
+┌──────────────────┐          │            │
+│      Roles       │ 1──────N │            │
+└──────────────────┘          └────────────┘
+       │ 1                          │ 1
+       │                            │
+       ▼ N                          ├────────────────────┐
+┌──────────────────┐                ▼ N                  ▼ N
+│ RolePermissions  │         ┌──────────────┐    ┌──────────────────┐
+└──────────────────┘         │  UserExternal │    │  Verification    │
+       │ N                   │  Identities   │    │  Challenges      │
+       │                     └──────────────┘    └──────────────────┘
+       ▼ 1
+┌──────────────────┐
+│   Permissions    │
+└──────────────────┘
+```
+
+## 8.2 Location Relationships
+
+```
+┌────────────┐
+│   Cities   │
+└────────────┘
+       │ 1
+       │
+       ├────────────────────────────┐
+       ▼ N                         │
+┌────────────┐                     │
+│   Areas    │                     │
+└────────────┘                     │
+       │ 1                         │ 1
+       │                           │
+       ├──────────┐                ├──────────┐
+       ▼ N        ▼ N             ▼ N        ▼ N
+  ┌────────┐  ┌────────┐    ┌────────┐  ┌────────┐
+  │ Users  │  │ Posts   │    │ Users  │  │ Posts   │
+  │(AreaID)│  │(AreaID) │    │(CityID)│  │(CityID) │
+  └────────┘  └────────┘    └────────┘  └────────┘
+```
+
+## 8.3 Marketplace Relationships
 
 ```
                            ┌────────────┐
-                           │  Category  │ ◀──┐ (Self-ref: ParentId)
-                           └────────────┘ ───┘
+                           │ Categories │
+                           └────────────┘
                                  │ 1
                                  │
-              ┌──────────────────┼──────────────────┐
-              ▼ N                ▼ N                │
-     ┌─────────────────┐  ┌─────────────────┐       │
-     │ CategoryAttrib  │  │    Listing      │       │
-     └─────────────────┘  └─────────────────┘       │
-              │                   │ 1               │
-              │                   │                 │
-              ▼ N                 ├────────┬────────┼────────┐
-        ┌───────────────┐        ▼ N      ▼ N      ▼ N      ▼ N
-        │ListingAttrib  │  ┌──────────┐ ┌──────┐ ┌────────┐ ┌────────┐
-        └───────────────┘  │ListImage │ │Favor │ │Convers │ │Transact│
-                           └──────────┘ │ite   │ │ation   │ │ion     │
-                                        └──────┘ └────────┘ └────────┘
+                                 ▼ N
+   ┌────────┐   1          ┌────────────┐
+   │ Users  │──────────N──▶│   Posts     │
+   └────────┘              └────────────┘
+                                 │ 1
+                                 │
+                ┌────────┬───────┼────────┐
+                ▼ N      ▼ N    ▼ N      ▼ N
+          ┌──────────┐┌──────┐┌────────┐┌────────────┐
+          │PostImages││Favor ││Post    ││Conversations│
+          └──────────┘│ites  ││Comments││(PostID opt) │
+                      └──────┘└────────┘└────────────┘
+                                  │
+                                  │ (Self-ref: ParentCommentID)
+                                  ▼
+                            ┌────────────┐
+                            │PostComments│ (Threaded replies)
+                            └────────────┘
 ```
 
-## 6.3 Transaction Flow
-
-```
-┌────────┐     ┌─────────────┐     ┌────────────┐
-│ Buyer  │────▶│ Transaction │◀────│  Listing   │
-│ (User) │     └─────────────┘     └────────────┘
-└────────┘           │ 1                  │
-     ▲               │                    │
-     │               ├────────────────────┘
-     │               ▼ N
-     │         ┌───────────┐
-     │         │  Payment  │
-     │         └───────────┘
-     │               │ 1
-     │               ▼ 1
-     │         ┌───────────┐
-     │         │  Escrow   │
-     │         └───────────┘
-     │               │ 1
-     │               ▼ 1
-     │         ┌───────────┐
-     │         │Commission │
-     │         └───────────┘
-     │
-     └─────────────────────── (Seller is also User)
-```
-
-## 6.4 Communication Flow
+## 8.4 Communication Flow
 
 ```
 ┌────────┐               ┌────────────┐               ┌────────┐
-│ Buyer  │──────────────▶│Conversation│◀──────────────│ Seller │
-│ (User) │               └────────────┘               │ (User) │
-└────────┘                     │ 1                    └────────┘
+│ User1  │──────────────▶│Conversation│◀──────────────│ User2  │
+│ (lower │  User1ID      │(ordered    │  User2ID      │(higher │
+│ UserID)│               │   pair)    │               │ UserID)│
+└────────┘               └────────────┘               └────────┘
+     │                         │ 1                         │
      │                         │                           │
      │                         ▼ N                         │
      │                   ┌───────────┐                     │
-     └──────────────────▶│  Message  │◀────────────────────┘
+     └───(SenderID)─────▶│  Message  │◀──(ReceiverID)──────┘
                          └───────────┘
                                │
-                               │ (after Transaction)
+                               │ (triggers)
                                ▼
-                         ┌───────────┐
-                         │  Review   │ (User reviews User)
-                         └───────────┘
+                         ┌──────────────┐
+                         │ Notification │
+                         └──────────────┘
+                               │
+                               │ (optional)
+                               ▼
+                         ┌──────────────────┐
+                         │PushSubscriptions │ (browser push)
+                         └──────────────────┘
+
+     ┌────────┐                              ┌────────┐
+     │ User A │──────────(ReviewerID)───────▶│ Review │
+     └────────┘                              └────────┘
+     ┌────────┐                                  │
+     │ User B │◀────(ReviewedUserID)─────────────┘
+     └────────┘
 ```
 
-## 6.5 Complete Relationship Matrix
+## 8.5 Complete Relationship Matrix
 
-| Entity A | Relationship | Entity B | Cardinality | Type |
-|----------|--------------|----------|-------------|------|
-| Person | has | User | 1:1 | Identifying |
-| Person | has | PersonEmail | 1:N | Identifying |
-| Person | has | PersonPhone | 1:N | Identifying |
-| Person | has | PersonAddress | 1:N | Identifying |
-| User | has | RefreshToken | 1:N | Identifying |
-| User | has | UserRole | 1:N | Identifying |
-| Role | assigned to | UserRole | 1:N | Identifying |
-| User | has | UserClaim | 1:N | Identifying |
-| Category | parent of | Category | 1:N | Self-ref |
-| Category | defines | CategoryAttribute | 1:N | Identifying |
-| Category | contains | Listing | 1:N | Non-identifying |
-| User | creates | Listing | 1:N | Non-identifying |
-| Listing | has | ListingImage | 1:N | Identifying |
-| Listing | has | ListingAttribute | 1:N | Identifying |
-| User | favorites | Listing | N:M | Non-identifying |
-| User | saves | SavedSearch | 1:N | Identifying |
-| Listing | discussed in | Conversation | 1:N | Non-identifying |
-| User (Buyer) | participates | Conversation | 1:N | Non-identifying |
-| Conversation | contains | Message | 1:N | Identifying |
-| Listing | sold via | Transaction | 1:1 | Non-identifying |
-| User (Buyer) | initiates | Transaction | 1:N | Non-identifying |
-| User (Seller) | receives | Transaction | 1:N | Non-identifying |
-| Transaction | paid by | Payment | 1:N | Identifying |
-| Payment | held in | Escrow | 1:1 | Identifying |
-| Transaction | charged | Commission | 1:1 | Identifying |
-| Transaction | reviewed in | Review | 1:2 | Non-identifying |
-| User | writes | Review | 1:N | Non-identifying |
-| User | receives | Review | 1:N | Non-identifying |
-| User | submits | Report | 1:N | Non-identifying |
-| User | receives | Notification | 1:N | Identifying |
-
----
-
-# 7. Relational Schema (3NF)
-
-## 7.1 Summary Table
-
-| Table | Description | Estimated Rows |
-|-------|-------------|----------------|
-| Persons | Real people | 100K+ |
-| PersonEmails | Multiple emails | 150K+ |
-| PersonPhones | Multiple phones | 120K+ |
-| PersonAddresses | Multiple addresses | 80K+ |
-| Users | Auth accounts | 100K+ |
-| Roles | System roles | ~10 |
-| UserRoles | User-Role mapping | 150K+ |
-| UserClaims | User attributes | 50K+ |
-| RefreshTokens | Auth tokens | 500K+ |
-| Categories | Hierarchical | ~500 |
-| CategoryAttributes | Dynamic fields | ~2K |
-| Listings | Items for sale | 500K+ |
-| ListingImages | Item photos | 2M+ |
-| ListingAttributes | Dynamic values | 3M+ |
-| Favorites | Wishlists | 1M+ |
-| SavedSearches | Alert queries | 50K+ |
-| Conversations | Chat threads | 300K+ |
-| Messages | Chat messages | 5M+ |
-| Transactions | Completed sales | 200K+ |
-| Payments | Payment records | 200K+ |
-| Escrows | Held funds | 100K+ |
-| Commissions | Platform fees | 200K+ |
-| Reviews | User reviews | 300K+ |
-| Reports | Abuse reports | 10K+ |
-| Notifications | User alerts | 10M+ |
-
-## 7.2 Index Recommendations
-
-```sql
--- HIGH PRIORITY INDEXES
-
--- Users (Login performance)
-CREATE UNIQUE INDEX IX_Users_Email ON Users(Email);
-CREATE UNIQUE INDEX IX_Users_Username ON Users(Login);
-CREATE INDEX IX_Users_PersonId ON Users(PersonId);
-
--- Listings (Search performance)
-CREATE INDEX IX_Listings_CategoryId ON Listings(CategoryId);
-CREATE INDEX IX_Listings_SellerId ON Listings(SellerId);
-CREATE INDEX IX_Listings_Status ON Listings(Status);
-CREATE INDEX IX_Listings_City ON Listings(City);
-CREATE INDEX IX_Listings_CreatedAt ON Listings(CreatedAt DESC);
-CREATE INDEX IX_Listings_Price ON Listings(Price);
-
--- Composite for search
-CREATE INDEX IX_Listings_Search ON Listings(Status, CategoryId, City, Price);
-
--- Favorites
-CREATE INDEX IX_Favorites_UserId ON Favorites(UserId);
-CREATE INDEX IX_Favorites_ListingId ON Favorites(ListingId);
-
--- Conversations
-CREATE INDEX IX_Conversations_BuyerId ON Conversations(BuyerId);
-CREATE INDEX IX_Conversations_SellerId ON Conversations(SellerId);
-CREATE INDEX IX_Conversations_ListingId ON Conversations(ListingId);
-
--- Messages
-CREATE INDEX IX_Messages_ConversationId ON Messages(ConversationId, CreatedAt);
-
--- Transactions
-CREATE INDEX IX_Transactions_BuyerId ON Transactions(BuyerId);
-CREATE INDEX IX_Transactions_SellerId ON Transactions(SellerId);
-CREATE INDEX IX_Transactions_Status ON Transactions(Status);
-
--- Notifications
-CREATE INDEX IX_Notifications_UserId_IsRead ON Notifications(UserId, IsRead, CreatedAt DESC);
-
--- RefreshTokens
-CREATE INDEX IX_RefreshTokens_UserId ON RefreshTokens(UserId);
-CREATE INDEX IX_RefreshTokens_TokenHash ON RefreshTokens(TokenHash);
-```
+| Entity A | Relationship | Entity B | Cardinality | FK Column |
+|----------|--------------|----------|-------------|-----------|
+| Roles | assigns | Users | 1:N | Users.RoleID |
+| UserStatusLookup | status of | Users | 1:N | Users.Status |
+| Users | logs in via | UserExternalIdentities | 1:N | UserExternalIdentities.UserID |
+| Users | has | VerificationChallenges | 1:N | VerificationChallenges.UserId |
+| Roles | has | RolePermissions | 1:N | RolePermissions.RoleID |
+| Permissions | mapped to | RolePermissions | 1:N | RolePermissions.PermissionID |
+| Cities | contains | Areas | 1:N | Areas.CityID |
+| Cities | location of | Users | 1:N | Users.CityID |
+| Areas | location of | Users | 1:N | Users.AreaID |
+| Cities | location of | Posts | 1:N | Posts.CityID |
+| Areas | location of | Posts | 1:N | Posts.AreaID |
+| Categories | categorizes | Posts | 1:N | Posts.CategoryID |
+| PostStatusLookup | status of | Posts | 1:N | Posts.Status |
+| Users | creates | Posts | 1:N | Posts.UserID |
+| Posts | contains | PostImages | 1:N | PostImages.PostID |
+| Posts | has | PostComments | 1:N | PostComments.PostID |
+| Users | writes | PostComments | 1:N | PostComments.UserID |
+| PostComments | parent of | PostComments | 1:N | PostComments.ParentCommentID |
+| Users | favorites | Posts (via Favorites) | N:M | Favorites.UserID, PostID |
+| Users | authors | Reviews | 1:N | Reviews.ReviewerID |
+| Users | receives | Reviews | 1:N | Reviews.ReviewedUserID |
+| Users | participates | Conversations (User1) | 1:N | Conversations.User1ID |
+| Users | participates | Conversations (User2) | 1:N | Conversations.User2ID |
+| Posts | discussed in | Conversations | 1:N (opt) | Conversations.PostID |
+| Conversations | contains | Messages | 1:N | Messages.ConversationID |
+| Users | sends | Messages | 1:N | Messages.SenderID |
+| Users | receives | Messages | 1:N | Messages.ReceiverID |
+| Users | receives | Notifications | 1:N | Notifications.UserID |
+| Users | triggers | Notifications | 1:N (opt) | Notifications.SenderUserID |
+| Conversations | related to | Notifications | 1:N (opt) | Notifications.ConversationID |
+| Messages | related to | Notifications | 1:N (opt) | Notifications.MessageID |
+| Users | subscribes | PushSubscriptions | 1:N | PushSubscriptions.UserID |
+| Users | submits | Reports | 1:N | Reports.ReporterUserID |
+| Users | resolves | Reports | 1:N (opt) | Reports.ResolvedByUserID |
+| Users | actions | AuditLog | 1:N (opt) | AuditLog.ChangedByUserID |
 
 ---
 
-## 7.3 SQL DDL Template (Core Tables)
+# 9. Relational Schema (3NF)
 
-```sql
--- ============================================================
--- CORE TABLES - COPY AND ADAPT FOR YOUR MIGRATIONS
--- ============================================================
+## 9.1 Summary Table
 
--- Persons
-CREATE TABLE Persons (
-    Id INT IDENTITY(1,1) PRIMARY KEY,
-    FirstName NVARCHAR(100) NOT NULL,
-    LastName NVARCHAR(100) NOT NULL,
-    DateOfBirth DATE NULL,
-    Gender CHAR(1) NULL,
-    NationalId NVARCHAR(50) NULL,
-    ProfileImageUrl NVARCHAR(500) NULL,
-    Status TINYINT NOT NULL DEFAULT 0, -- 0=Active
-    CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-    UpdatedAt DATETIME2 NULL
-);
+| # | Table | Description | Type |
+|---|-------|-------------|------|
+| 1 | Users | User accounts & profiles | Core |
+| 2 | Roles | System roles (Admin, User) | RBAC |
+| 3 | Permissions | Granular permission keys | RBAC |
+| 4 | RolePermissions | Role ↔ Permission mapping | RBAC Junction |
+| 5 | UserExternalIdentities | OAuth/social login | Auth |
+| 6 | BlacklistedTokens | Revoked JWT tracking | Auth |
+| 7 | VerificationChallenges | 2FA/reset verification | Auth |
+| 8 | UserStatusLookup | User status codes | Lookup |
+| 9 | PostStatusLookup | Post status codes | Lookup |
+| 10 | Cities | Jordanian cities (bilingual) | Lookup |
+| 11 | Areas | Districts within cities | Lookup |
+| 12 | Categories | Post categories (bilingual) | Lookup |
+| 13 | Posts | Marketplace listings | Marketplace |
+| 14 | PostImages | Post photos | Marketplace |
+| 15 | PostComments | Threaded post comments | Marketplace |
+| 16 | Favorites | User wishlists | Marketplace |
+| 17 | Reviews | User-to-user reviews | Marketplace |
+| 18 | Conversations | Chat threads | Communication |
+| 19 | Messages | Chat messages | Communication |
+| 20 | Notifications | In-app notifications | Communication |
+| 21 | PushSubscriptions | Browser push subscriptions | Communication |
+| 22 | Reports | Abuse/content reports | Moderation |
+| 23 | AuditLog | Change tracking | System |
+| 24 | SystemSettings | Admin config store | System |
+| 25 | HeroBanners | Homepage carousel | Content |
+| 26 | DataHygieneLog | Cleanup cycle tracking | Infrastructure |
+| 27 | SchemaMigrations | Migration tracking | Infrastructure |
 
--- PersonEmails
-CREATE TABLE PersonEmails (
-    Id INT IDENTITY(1,1) PRIMARY KEY,
-    PersonId INT NOT NULL FOREIGN KEY REFERENCES Persons(Id) ON DELETE CASCADE,
-    Email NVARCHAR(255) NOT NULL,
-    IsPrimary BIT NOT NULL DEFAULT 0,
-    IsVerified BIT NOT NULL DEFAULT 0,
-    CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE()
-);
+## 9.2 Key Design Patterns
 
--- Users
-CREATE TABLE Users (
-    Id INT IDENTITY(1,1) PRIMARY KEY,
-    PersonId INT NOT NULL FOREIGN KEY REFERENCES Persons(Id),
-    Login NVARCHAR(50) NOT NULL,
-    Email NVARCHAR(255) NOT NULL,
-    PasswordHash NVARCHAR(255) NOT NULL,
-    IsActive BIT NOT NULL DEFAULT 1,
-    IsDeleted BIT NOT NULL DEFAULT 0,
-    DeletedAt DATETIME2 NULL,
-    EmailVerified BIT NOT NULL DEFAULT 0,
-    PhoneVerified BIT NOT NULL DEFAULT 0,
-    LastLoginAt DATETIME2 NULL,
-    LastLoginIp NVARCHAR(45) NULL,
-    FailedLoginCount INT NOT NULL DEFAULT 0,
-    LockoutEnd DATETIME2 NULL,
-    TwoFactorEnabled BIT NOT NULL DEFAULT 0,
-    TwoFactorSecret NVARCHAR(255) NULL,
-    CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-    UpdatedAt DATETIME2 NULL,
-    CONSTRAINT UQ_Users_Username UNIQUE (Login),
-    CONSTRAINT UQ_Users_Email UNIQUE (Email)
-);
+### Soft-Delete Strategy
+All user-facing entities use `IsDeleted BIT` for soft deletion. Hard-delete is reserved for transient/security data:
 
--- Categories (Hierarchical)
-CREATE TABLE Categories (
-    Id INT IDENTITY(1,1) PRIMARY KEY,
-    ParentId INT NULL FOREIGN KEY REFERENCES Categories(Id),
-    Name NVARCHAR(100) NOT NULL,
-    Slug NVARCHAR(100) NOT NULL UNIQUE,
-    Description NVARCHAR(500) NULL,
-    IconUrl NVARCHAR(500) NULL,
-    ImageUrl NVARCHAR(500) NULL,
-    DisplayOrder INT NOT NULL DEFAULT 0,
-    IsActive BIT NOT NULL DEFAULT 1,
-    IsFeatured BIT NOT NULL DEFAULT 0,
-    CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-    UpdatedAt DATETIME2 NULL
-);
+| Table | Deletion Type | Rationale |
+|-------|--------------|-----------|
+| `BlacklistedTokens` | **Hard DELETE** | Expired JWTs; purged by background service |
+| `VerificationChallenges` | **Hard DELETE** | Expired codes; purged automatically |
+| Everything else | **Soft DELETE** (`IsDeleted = 1`) | Audit trail, undo, compliance |
 
--- Listings
-CREATE TABLE Listings (
-    Id INT IDENTITY(1,1) PRIMARY KEY,
-    SellerId INT NOT NULL FOREIGN KEY REFERENCES Users(Id),
-    CategoryId INT NOT NULL FOREIGN KEY REFERENCES Categories(Id),
-    Title NVARCHAR(200) NOT NULL,
-    Description NVARCHAR(MAX) NOT NULL,
-    Slug NVARCHAR(250) NOT NULL UNIQUE,
-    Price DECIMAL(18,2) NOT NULL,
-    OriginalPrice DECIMAL(18,2) NULL,
-    Currency CHAR(3) NOT NULL DEFAULT 'JOD',
-    PriceType TINYINT NOT NULL DEFAULT 0, -- 0=Fixed
-    Condition TINYINT NOT NULL DEFAULT 0, -- 0=New
-    ListingType TINYINT NOT NULL DEFAULT 0, -- 0=ForSale
-    Status TINYINT NOT NULL DEFAULT 0, -- 0=Draft
-    StatusReason NVARCHAR(255) NULL,
-    City NVARCHAR(100) NULL,
-    Area NVARCHAR(100) NULL,
-    Latitude DECIMAL(10,8) NULL,
-    Longitude DECIMAL(11,8) NULL,
-    ViewCount INT NOT NULL DEFAULT 0,
-    FavoriteCount INT NOT NULL DEFAULT 0,
-    InquiryCount INT NOT NULL DEFAULT 0,
-    ExpiresAt DATETIME2 NULL,
-    IsPromoted BIT NOT NULL DEFAULT 0,
-    PromotedUntil DATETIME2 NULL,
-    CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-    UpdatedAt DATETIME2 NULL,
-    PublishedAt DATETIME2 NULL,
-    SoldAt DATETIME2 NULL,
-    DeletedAt DATETIME2 NULL
-);
+### Cascade Soft-Delete Rules
 
--- Transactions
-CREATE TABLE Transactions (
-    Id INT IDENTITY(1,1) PRIMARY KEY,
-    TransactionNumber NVARCHAR(50) NOT NULL UNIQUE,
-    ListingId INT NOT NULL FOREIGN KEY REFERENCES Listings(Id),
-    BuyerId INT NOT NULL FOREIGN KEY REFERENCES Users(Id),
-    SellerId INT NOT NULL FOREIGN KEY REFERENCES Users(Id),
-    AgreedPrice DECIMAL(18,2) NOT NULL,
-    Currency CHAR(3) NOT NULL DEFAULT 'JOD',
-    OriginalListingPrice DECIMAL(18,2) NULL,
-    Status TINYINT NOT NULL DEFAULT 0,
-    StatusReason NVARCHAR(255) NULL,
-    PaymentMethod TINYINT NOT NULL DEFAULT 0,
-    DeliveryMethod TINYINT NOT NULL DEFAULT 0,
-    DeliveryAddress NVARCHAR(500) NULL,
-    DeliveryNotes NVARCHAR(500) NULL,
-    TrackingNumber NVARCHAR(100) NULL,
-    CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-    AcceptedAt DATETIME2 NULL,
-    PaidAt DATETIME2 NULL,
-    ShippedAt DATETIME2 NULL,
-    DeliveredAt DATETIME2 NULL,
-    CompletedAt DATETIME2 NULL,
-    CancelledAt DATETIME2 NULL,
-    DisputedAt DATETIME2 NULL,
-    BuyerNotes NVARCHAR(500) NULL,
-    SellerNotes NVARCHAR(500) NULL
-);
-```
+| Parent | Children Cascaded |
+|--------|-------------------|
+| `Posts.IsDeleted → 1` | `PostImages.IsDeleted → 1`, `Favorites.IsDeleted → 1` |
+
+### Polymorphic FK: Reports.TargetID
+`Reports.TargetID` meaning depends on `ReportType`:
+
+| ReportType | TargetID → | Table |
+|------------|-----------|-------|
+| `LISTING` | PostID | Posts |
+| `USER` | UserID | Users |
+| `REVIEW` | ReviewID | Reviews |
+| `COMMENT` | CommentID | PostComments |
+
+### Intentional Denormalization: Messages.ReceiverID
+`ReceiverID` is derivable from Conversations but kept for trigger validation, query convenience, and notification creation.
+
+### Search Optimization: PERSISTED Computed Columns
+Critical search fields use database-level `PERSISTED` computed normalized columns:
+
+| Table | Computed Column |
+|-------|----------------|
+| Users | `SearchFirstNameNormalized`, `SearchLastNameNormalized`, `SearchFullNameNormalized` |
+| Posts | `SearchTitleNormalized`, `SearchDescriptionPrefixNormalized` |
+| Categories | `SearchCategoryNameNormalized` |
+
+### Locational Integrity
+Multi-column FK constraints (`AreaID, CityID` referencing `Areas(AreaID, CityID)`) ensure an Area genuinely belongs to the assigned City for both Users and Posts.
+
+### Column Length Caps
+`NVARCHAR(MAX)` columns are capped to realistic bounded lengths:
+
+| Table.Column | Limit | Rationale |
+|-------------|-------|-----------|
+| `Posts.PostDescription` | 4000 | Listing descriptions |
+| `Messages.Content` | 4000 | Chat messages |
+| `SystemSettings.Value` | 4000 | Config values |
+| `Notifications.PayloadJson` | 2000 | Small JSON envelopes |
+| `HeroBanners.ImageUrl` | 2048 | URL standard max |
+| `PostImages.PostImageURL` | 2048 | URL standard max |
+| `Reviews.Comment` | 4000 | Review text |
+| `AuditLog.OldValues/NewValues` | MAX | JSON blobs vary widely |
 
 ---
 
-## 📝 Next Steps
+# 10. Future Roadmap (Not Yet Built)
 
-1. **Review this document** - Ensure all entities match your business needs
-2. **Create ERD Diagram** - Use draw.io or similar with this as reference
-3. **Generate SQL migrations** - Expand the DDL templates
-4. **Create Domain Models** - C# classes for each entity
-5. **Implement Repositories** - ADO.NET data access layer
+> **Note**: هذه الكيانات مخطط لها للمستقبل ولم يتم تطبيقها بعد في قاعدة البيانات الحالية.
+> The following entities are planned for future phases and do **not** exist in the current database.
+
+### Phase 2 — Transactions & Payments
+- **Transaction** — Records buyer-seller agreements with agreed pricing
+- **Payment** — Payment records linked to transactions (Stripe, PayPal, etc.)
+- **Escrow** — Platform holds payment until transaction completes
+- **Commission** — Platform fees per transaction
+- **Wallet / WalletTransaction** — User balance for platform payments
+
+### Phase 3 — Advanced Marketplace
+- **CategoryAttribute** — Dynamic fields per category (e.g., Cars need "Mileage")
+- **ListingAttribute** — EAV pattern for dynamic attribute values
+- **SavedSearch** — Saved search queries with notification alerts
+- **VIP Subscriptions** — Tiered user plans with premium features
+- **Bidding/Auction System** — مع اشتراكات وضمانات
 
 ---
 
-> **Canonical follow-up**: Use `docs/DATABASE.md` for the active schema and `docs/reports/API_ENDPOINTS_STATUS.md` for runtime API/auth behavior.
+> **Canonical follow-up**: Use `docs/DATABASE.md` for the living ER diagram (Mermaid) and `docs/reports/API_ENDPOINTS_STATUS.md` for runtime API/auth behavior.

@@ -23,7 +23,7 @@ import { parseChatMessageContent } from "../chatMessageContent";
 import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
 import { formatCompactTime } from "../../../shared/lib/dateTime";
 import { APP_CONFIG } from "../../../constants/appConfig";
-import { toast } from "sonner";
+import { ReportPostDialog } from "../../marketplace/components/ReportPostDialog";
 
 interface ChatWindowProps {
   otherUserId: number;
@@ -90,6 +90,7 @@ export function ChatWindow({
 
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
 
   useEffect(() => {
     setAvatarError(false);
@@ -542,27 +543,9 @@ export function ChatWindow({
             <button
               type="button"
               className="group flex items-center gap-2 text-sm font-medium transition-colors hover:text-white/80"
-              onClick={async () => {
-                try {
-                  await api.reports.submitReport({
-                    reportType: "LISTING",
-                    targetId: "",
-                    reason: "OFFENSIVE",
-                    description: `Reported chat image: ${fullscreenImage}`,
-                  });
-                  toast.success(
-                    language === "ar"
-                      ? "تم الإبلاغ عن هذه الصورة بنجاح. سنقوم بمراجعتها."
-                      : "Image reported successfully. We will review it.",
-                  );
-                } catch {
-                  toast.error(
-                    language === "ar"
-                      ? "تعذر إرسال البلاغ حالياً."
-                      : "Could not submit the report right now.",
-                  );
-                }
+              onClick={() => {
                 setFullscreenImage(null);
+                setShowReportDialog(true);
               }}
               title={language === "ar" ? "الإبلاغ عن الصورة" : "Report image"}
             >
@@ -619,6 +602,16 @@ export function ChatWindow({
           />
         </div>
       )}
+
+      {/* Report Dialog for chat images */}
+      <ReportPostDialog
+        open={showReportDialog}
+        onOpenChange={setShowReportDialog}
+        reportType="USER"
+        targetId={otherUserId}
+        targetTitle={otherDisplayName}
+        language={language}
+      />
     </>
   );
 }
