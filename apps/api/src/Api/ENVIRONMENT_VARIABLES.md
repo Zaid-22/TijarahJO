@@ -9,11 +9,11 @@ Set these environment variables in your hosting platform (Azure, AWS, Docker, et
 #### JWT Configuration
 ```bash
 JWT_SIGNING_KEY=your-very-long-random-secret-key-at-least-32-characters
-JWT_ISSUER=https://your-production-domain.com
-JWT_AUDIENCE=https://your-production-domain.com
-FRONTEND_URL=https://your-frontend-domain.com
-CORS_ALLOWED_ORIGINS=https://your-frontend-domain.com,https://www.your-frontend-domain.com
-ALLOWED_HOSTS=your-api-domain.com
+JWT_ISSUER=https://tijarahjo.online
+JWT_AUDIENCE=https://tijarahjo.online
+FRONTEND_URL=https://tijarahjo.online
+CORS_ALLOWED_ORIGINS=https://tijarahjo.online,https://www.tijarahjo.online
+ALLOWED_HOSTS=tijarahjo.online
 # Optional but recommended: separate pepper for password hashing
 PASSWORD_PEPPER=another-long-random-secret-at-least-32-characters
 ```
@@ -23,9 +23,9 @@ PASSWORD_PEPPER=another-long-random-secret-at-least-32-characters
 GOOGLE_AUTH_ENABLED=true
 GOOGLE_AUTH_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
 GOOGLE_AUTH_CLIENT_SECRET=your-google-oauth-client-secret
-GOOGLE_AUTH_REDIRECT_URI=https://your-api-domain.com/api/v1/auth/google/callback
-GOOGLE_AUTH_FRONTEND_SUCCESS_URL=https://your-frontend-domain.com/
-GOOGLE_AUTH_FRONTEND_FAILURE_URL=https://your-frontend-domain.com/login
+GOOGLE_AUTH_REDIRECT_URI=https://tijarahjo.online/api/v1/auth/google/callback
+GOOGLE_AUTH_FRONTEND_SUCCESS_URL=https://tijarahjo.online/
+GOOGLE_AUTH_FRONTEND_FAILURE_URL=https://tijarahjo.online/login
 # Optional overrides:
 # GOOGLE_AUTH_ALLOWED_AUDIENCES=client-id-1.apps.googleusercontent.com,client-id-2.apps.googleusercontent.com
 # GOOGLE_AUTH_ALLOWED_ISSUERS=https://accounts.google.com,accounts.google.com
@@ -43,14 +43,14 @@ PasswordReset__RequestCooldownSeconds=60
 # Resend transport for reset codes
 PasswordResetEmail__Enabled=true
 PasswordResetEmail__ResendApiKey=your-resend-api-key
-PasswordResetEmail__FromAddress=no-reply@your-domain.com
+PasswordResetEmail__FromAddress=no-reply@tijarahjo.online
 PasswordResetEmail__FromName=TijarahJo Security
 PasswordResetEmail__LogCodesWhenEmailDisabled=false
 
 # Resend transport for two-factor codes
 EmailTwoFactor__Enabled=true
 EmailTwoFactor__ResendApiKey=your-resend-api-key
-EmailTwoFactor__FromAddress=no-reply@your-domain.com
+EmailTwoFactor__FromAddress=no-reply@tijarahjo.online
 EmailTwoFactor__FromName=TijarahJo Security
 EmailTwoFactor__LogCodesWhenEmailDisabled=false
 ```
@@ -87,8 +87,8 @@ Provision the runtime app login before starting production API instances. Use th
 
 #### CORS Configuration (Optional - defaults to FrontendUrl)
 ```bash
-CORS__AllowedOrigins=https://your-frontend-domain.com,https://www.your-frontend-domain.com
-FrontendUrl=https://your-frontend-domain.com
+CORS__AllowedOrigins=https://tijarahjo.online,https://www.tijarahjo.online
+FrontendUrl=https://tijarahjo.online
 ```
 
 #### Runtime Feature Flags (Recommended for explicit behavior)
@@ -127,7 +127,7 @@ Gemini__ApiKey=your-gemini-secure-api-key
 YouTube__ApiKey=your-youtube-data-api-key
 # Optional absolute URL used as the outbound Referer header when your YouTube key
 # is restricted by HTTP referrer.
-YouTube__Referer=https://your-frontend-domain.com/
+YouTube__Referer=https://tijarahjo.online/
 ```
 
 #### File Storage (post image uploads)
@@ -151,7 +151,7 @@ FileStorage__ThumbnailWebpQuality=60
 
 #### Frontend Build-Time Configuration
 ```bash
-VITE_API_BASE_URL=https://your-api-domain.com/api/v1
+VITE_API_BASE_URL=https://tijarahjo.online/api/v1
 VITE_GOOGLE_AUTH_ENABLED=true
 VITE_GOOGLE_MAPS_API_KEY=your-google-maps-browser-key
 VITE_GOOGLE_MAPS_MAP_ID=your-google-cloud-map-id

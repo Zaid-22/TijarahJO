@@ -1,0 +1,79 @@
+# =============================================================================
+# Docker build context exclusions
+# Both apps/web/Dockerfile and apps/api/Dockerfile use the repo root as context
+# =============================================================================
+
+# Version control
+.git
+.github
+.gitignore
+.gitattributes
+
+# IDE / editor
+.vscode
+.vs
+.idea
+.cursor
+.editorconfig
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation
+docs/
+README.md
+README-RUN.md
+
+# Environment files with secrets
+.env
+.env.local
+infra/.env
+infra/.env.*
+!infra/.env.example
+
+# Infrastructure config (not needed inside containers)
+infra/docker-compose*.yml
+infra/env/
+Makefile
+
+# Scripts (not runtime)
+scripts/
+
+# Contracts / OpenAPI specs
+contracts/
+
+# Node.js (reinstalled inside container via npm ci)
+apps/web/node_modules/
+apps/web/dist/
+apps/web/dev-dist/
+apps/web/.unit-dist/
+apps/web/test-results/
+apps/web/scratch/
+apps/web/stories/
+apps/web/tests/
+apps/web/tools/
+apps/web/playwright.config.cjs
+
+# .NET (restored inside container via dotnet restore)
+**/bin/
+**/obj/
+apps/api/publish/
+apps/api/tests/
+apps/api/GenAITest/
+apps/api/database/archive/
+apps/api/database/backups/
+
+# Root-level node_modules
+node_modules/
+package-lock.json
+
+# Temporary / debug files
+*.log
+*.pid
+*.tmp
+*.bak
+dev_server.log
+.playwright-mcp/

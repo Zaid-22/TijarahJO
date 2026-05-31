@@ -48,7 +48,7 @@ const footerCopyByLanguage: Record<FooterProps["language"], FooterCopy> = {
     allRightsReserved: "All rights reserved.",
     madeInJordan: "Made in Jordan",
     address: "Amman, Jordan",
-    email: "info@tijarahjo.com",
+    email: "info@tijarahjo.online",
     phone: "+962 7 9123 4567",
   },
   ar: {
@@ -65,7 +65,7 @@ const footerCopyByLanguage: Record<FooterProps["language"], FooterCopy> = {
     allRightsReserved: "جميع الحقوق محفوظة.",
     madeInJordan: "صنع في الأردن",
     address: "عمان، الأردن",
-    email: "info@tijarahjo.com",
+    email: "info@tijarahjo.online",
     phone: "+962 7 9123 4567",
   },
 };

@@ -8,4 +8,4 @@ Disallow: /profile
 Disallow: /settings
 Disallow: /sell
 
-Sitemap: https://tijarahjo.com/sitemap.xml
+Sitemap: https://tijarahjo.online/sitemap.xml

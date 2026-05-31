@@ -49,6 +49,11 @@ Thumbs.db
 .env.*.local
 appsettings.Development.json
 
+# Production secrets (NEVER commit these)
+infra/.env
+infra/.env.*
+!infra/.env.example
+
 # Logs
 logs/
 *.log

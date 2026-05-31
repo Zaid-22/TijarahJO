@@ -79,7 +79,7 @@ export function Header({
   const isRTL = language === "ar";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { categories } = useCatalogCategories({
-    enabled: isMobileMenuOpen,
+    enabled: true,
     useInitialFallback: true,
   });
   const normalizedUnreadMessagesCount = Math.max(

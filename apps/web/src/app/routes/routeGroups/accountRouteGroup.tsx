@@ -64,7 +64,7 @@ export function renderAccountRouteGroup({
       return;
     }
 
-    window.location.href = `mailto:info@tijarahjo.com?subject=${encodeURIComponent(subject)}`;
+    window.location.href = `mailto:info@tijarahjo.online?subject=${encodeURIComponent(subject)}`;
   };
   const currentUserId = appProps.isAuthenticated
     ? routeState.currentUserId

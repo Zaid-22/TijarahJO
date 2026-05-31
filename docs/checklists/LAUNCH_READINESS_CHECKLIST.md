@@ -235,7 +235,7 @@
   - [x] Feature flags: rate limiting, health checks, Redis all enabled for production
 
 - [x] **Frontend Environment Variables**
-  - [x] `.env.production` exists — replace `your-production-domain.com` with the real API/domain before production builds
+  - [x] `.env.production` exists — configured for `tijarahjo.online` (2026-05-31)
   - [x] `.env` files covered by `.gitignore`
   - [x] `VITE_GOOGLE_MAPS_MAP_ID`, `VITE_CSP_CONNECT_SRC_EXTRA`, `VITE_CSP_ALLOW_PROD_CONNECT_SRC_EXTRA`, and debug flags documented in `.env.example`
 
@@ -511,7 +511,7 @@
 3. Database backups
 4. CI/CD deployment pipeline
 5. External monitoring/alerting
-6. Replace placeholder domains and provide production env vars
+6. ~~Replace placeholder domains and provide production env vars~~ — done (tijarahjo.online, 2026-05-31)
 7. Run live backend integration and browser E2E tests against staging/production
 
 ---

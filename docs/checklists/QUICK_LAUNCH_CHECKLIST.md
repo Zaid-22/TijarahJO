@@ -71,7 +71,7 @@ These items from the original checklist are **done and verified** in the codebas
 | 4 | Database backups | Automated schedule |
 | 5 | CI/CD deployment pipeline | Quality-check workflows exist; automated deploy/rollback remains |
 | 6 | External monitoring/alerting | Sentry, Application Insights, etc. |
-| 7 | Replace placeholder domains and production env values | `your-production-domain.com`, `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, `ALLOWED_HOSTS`, `JWT_ISSUER`, `JWT_AUDIENCE` |
+| 7 | ~~Replace placeholder domains and production env values~~ | Done — configured for `tijarahjo.online` on 2026-05-31 |
 | 8 | Run live backend and browser E2E checks against deployed/staging URL | `BASE_URL=...`, Playwright backend-live suite |
 
 ---

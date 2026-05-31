@@ -58,7 +58,7 @@ The web container proxies:
 Build/runtime notes:
 
 - The web Docker build uses `VITE_API_BASE_URL=/api`
-- For standalone frontend builds, set `VITE_API_BASE_URL=https://your-api-domain.com/api/v1`
+- For standalone frontend builds, set `VITE_API_BASE_URL=https://tijarahjo.online/api/v1`
 - The API container listens on `5033`
 - The API container stores uploaded files under `/var/lib/tijarahjo/uploads`
 

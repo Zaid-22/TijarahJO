@@ -103,7 +103,7 @@ export function HelpCenterPage({ language, onBack }: HelpCenterPageProps) {
                 {content.contactDesc}
               </p>
               <a
-                href="mailto:info@tijarahjo.com?subject=TijarahJo%20Support"
+                href="mailto:info@tijarahjo.online?subject=TijarahJo%20Support"
                 className={cn(
                   buttonVariants({ variant: "outline", size: "sm" }),
                   "w-full justify-center border-primary text-primary",
@@ -126,7 +126,7 @@ export function HelpCenterPage({ language, onBack }: HelpCenterPageProps) {
                 {content.reportDesc}
               </p>
               <a
-                href="mailto:info@tijarahjo.com?subject=TijarahJo%20Issue%20Report"
+                href="mailto:info@tijarahjo.online?subject=TijarahJo%20Issue%20Report"
                 className={cn(
                   buttonVariants({ variant: "outline", size: "sm" }),
                   "w-full justify-center border-primary text-primary",

@@ -8,6 +8,23 @@ services:
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD}
     volumes:
       - mssql_data:/var/opt/mssql
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - backend
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$${MSSQL_SA_PASSWORD}" -C -Q "SELECT 1" -b -o /dev/null
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   redis:
     container_name: tijarahjo-redis
@@ -20,6 +37,19 @@ services:
       resources:
         limits:
           memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - backend
+    healthcheck:
+      test: redis-cli -a "$${REDIS_PASSWORD}" ping | grep -q PONG
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
 
   api:
     container_name: tijarahjo-api
@@ -28,8 +58,10 @@ services:
       dockerfile: apps/api/Dockerfile
     restart: unless-stopped
     depends_on:
-      - sqlserver
-      - redis
+      sqlserver:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       FrontendUrl: ${FRONTEND_URL:?Set FRONTEND_URL}
@@ -44,10 +76,34 @@ services:
       FileStorage__PublicBasePath: /uploads
       FeatureFlags__EnableAiComparison: "true"
       FeatureFlags__RequireRedis: "true"
+      GOOGLE_AUTH_ENABLED: "true"
+      GOOGLE_AUTH_CLIENT_ID: ${GOOGLE_AUTH_CLIENT_ID:?Set GOOGLE_AUTH_CLIENT_ID}
+      GOOGLE_AUTH_CLIENT_SECRET: ${GOOGLE_AUTH_CLIENT_SECRET:?Set GOOGLE_AUTH_CLIENT_SECRET}
+      GOOGLE_AUTH_REDIRECT_URI: https://tijarahjo.online/api/v1/auth/google/callback
+      GOOGLE_AUTH_FRONTEND_SUCCESS_URL: https://tijarahjo.online/
+      GOOGLE_AUTH_FRONTEND_FAILURE_URL: https://tijarahjo.online/login
+      Gemini__ApiKey: ${Gemini__ApiKey:?Set Gemini__ApiKey}
+      YouTube__ApiKey: ${YouTube__ApiKey:?Set YouTube__ApiKey}
+      YouTube__Referer: ${YouTube__Referer:?Set YouTube__Referer}
+      TwoFactor__SecretEncryptionKey: ${TwoFactor__SecretEncryptionKey:?Set TwoFactor__SecretEncryptionKey}
+      TwoFactor__ChallengeSigningKey: ${TwoFactor__ChallengeSigningKey:?Set TwoFactor__ChallengeSigningKey}
+      ForwardedHeaders__KnownNetworks__0: "172.16.0.0/12"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - frontend
+      - backend
     volumes:
       - api_uploads:/var/lib/tijarahjo/uploads
-    ports:
-      - "5033:5033"
+    expose:
+      - "5033"
 
   web:
     container_name: tijarahjo-web
@@ -56,13 +112,41 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         VITE_API_BASE_URL: /api
+        VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:?Set VITE_GOOGLE_MAPS_API_KEY}
     restart: unless-stopped
     depends_on:
       - api
     ports:
-      - "8080:80"
+      - "80:80"
+      - "443:443"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - frontend
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+
+  certbot:
+    container_name: tijarahjo-certbot
+    image: certbot/certbot:latest
+    restart: unless-stopped
+    entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
 
 volumes:
   mssql_data:
   redis_data:
   api_uploads:
+  certbot_www:
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge

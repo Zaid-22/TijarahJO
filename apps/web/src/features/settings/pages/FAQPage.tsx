@@ -41,7 +41,7 @@ export function FAQPage({ language, onBack }: FAQPageProps) {
         },
         {
           q: "How do I contact support?",
-          a: "You can contact our support team via the 'Contact Us' link in the footer or by emailing info@tijarahjo.com.",
+          a: "You can contact our support team via the 'Contact Us' link in the footer or by emailing info@tijarahjo.online.",
         },
         {
           q: "Can I edit my post after publishing?",
@@ -71,7 +71,7 @@ export function FAQPage({ language, onBack }: FAQPageProps) {
         },
         {
           q: "كيف يمكنني التواصل مع الدعم؟",
-          a: "يمكنك التواصل مع فريق الدعم لدينا عبر رابط 'اتصل بنا' في أسفل الصفحة أو عن طريق إرسال بريد إلكتروني إلى info@tijarahjo.com.",
+          a: "يمكنك التواصل مع فريق الدعم لدينا عبر رابط 'اتصل بنا' في أسفل الصفحة أو عن طريق إرسال بريد إلكتروني إلى info@tijarahjo.online.",
         },
         {
           q: "هل يمكنني تعديل إعلاني بعد النشر؟",
