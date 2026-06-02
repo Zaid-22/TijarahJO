@@ -56,7 +56,7 @@ export function PostDetailsRouteWrapper({
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { resolvedPost, isLoadingRoutePost, isOwnPost, mutateRoutePost } =
+  const { resolvedPost, isLoadingRoutePost, loadError, isOwnPost, mutateRoutePost } =
     usePostDetailsRouteData({
       id,
       availablePosts,
@@ -68,6 +68,11 @@ export function PostDetailsRouteWrapper({
     loadingPost:
       language === "ar" ? "جارٍ تحميل المنشور..." : "Loading post...",
     postNotFound: language === "ar" ? "المنشور غير موجود." : "Post not found.",
+    loadFailed:
+      language === "ar"
+        ? "تعذر تحميل المنشور"
+        : "Could not load post",
+    tryAgain: language === "ar" ? "حاول مرة أخرى" : "Try again",
     goHome: language === "ar" ? "العودة للرئيسية" : "Go Home",
     sellerProfileUnavailable:
       language === "ar" ? "ملف البائع غير متاح" : "Seller profile unavailable",
@@ -110,6 +115,8 @@ export function PostDetailsRouteWrapper({
   }
 
   if (!resolvedPost) {
+    const isTransientLoadFailure = Boolean(loadError);
+
     return (
       <PageShell>
         <div className="flex h-[70vh] w-full flex-col items-center justify-center px-4">
@@ -118,20 +125,34 @@ export function PostDetailsRouteWrapper({
               <SearchX className="h-10 w-10 text-muted-foreground/60" />
             </div>
             <h2 className="mb-2 text-2xl font-semibold tracking-tight text-foreground">
-              {labels.postNotFound}
+              {isTransientLoadFailure ? labels.loadFailed : labels.postNotFound}
             </h2>
             <p className="mb-8 text-sm text-muted-foreground leading-relaxed">
-              {language === "ar" 
-                ? "عذراً، هذا المنشور غير متوفر. قد يكون تم حذفه أو أنك لا تملك صلاحية للوصول إليه." 
-                : "Sorry, this post is unavailable. It may have been deleted, or you might not have permission to view it."}
+              {isTransientLoadFailure
+                ? loadError
+                : language === "ar"
+                  ? "عذراً، هذا المنشور غير متوفر. قد يكون تم حذفه أو أنك لا تملك صلاحية للوصول إليه."
+                  : "Sorry, this post is unavailable. It may have been deleted, or you might not have permission to view it."}
             </p>
-            <Button
-              size="lg"
-              onClick={onNavigateHome}
-              className="px-8 rounded-full shadow-sm hover:shadow-md transition-all"
-            >
-              {labels.goHome}
-            </Button>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {isTransientLoadFailure ? (
+                <Button
+                  size="lg"
+                  onClick={() => window.location.reload()}
+                  className="px-8 rounded-full shadow-sm hover:shadow-md transition-all"
+                >
+                  {labels.tryAgain}
+                </Button>
+              ) : null}
+              <Button
+                size="lg"
+                variant={isTransientLoadFailure ? "outline" : "default"}
+                onClick={onNavigateHome}
+                className="px-8 rounded-full shadow-sm hover:shadow-md transition-all"
+              >
+                {labels.goHome}
+              </Button>
+            </div>
           </div>
         </div>
       </PageShell>

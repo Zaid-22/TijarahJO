@@ -13,6 +13,24 @@ const BACKEND_TIMEOUT_MESSAGE = "Request timed out. Please try again later.";
 const BACKEND_CONNECTION_MESSAGE = "Unable to connect to the server. Please try again later.";
 export const BACKEND_CONNECTION_SHORT_MESSAGE = "Unable to connect to the server.";
 
+/** Reads ASP.NET ProblemDetails `code` extension when present; otherwise HTTP_<status>. */
+export function extractApiErrorCode(
+  payload: unknown,
+  httpStatus: number,
+): string {
+  if (!payload || typeof payload !== "object") {
+    return `HTTP_${httpStatus}`;
+  }
+
+  const record = payload as Record<string, unknown>;
+  const code = record.code ?? record.Code;
+  if (typeof code === "string" && code.trim().length > 0) {
+    return code.trim();
+  }
+
+  return `HTTP_${httpStatus}`;
+}
+
 export type ApiRequestOptions = RequestInit & {
   timeoutMs?: number;
   throwOnAbort?: boolean;
@@ -456,7 +474,7 @@ export async function apiRequest<T>(
       return {
         success: false,
         error: {
-          code: `HTTP_${response.status}`,
+          code: extractApiErrorCode(data, response.status),
           message: errorMessage,
           details: data,
         },

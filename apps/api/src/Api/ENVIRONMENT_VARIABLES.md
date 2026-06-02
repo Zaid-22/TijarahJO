@@ -13,7 +13,8 @@ JWT_ISSUER=https://tijarahjo.online
 JWT_AUDIENCE=https://tijarahjo.online
 FRONTEND_URL=https://tijarahjo.online
 CORS_ALLOWED_ORIGINS=https://tijarahjo.online,https://www.tijarahjo.online
-ALLOWED_HOSTS=tijarahjo.online
+ALLOWED_HOSTS=tijarahjo.online;www.tijarahjo.online
+# Semicolon-separated — ASP.NET does not accept comma-separated host lists.
 # Optional but recommended: separate pepper for password hashing
 PASSWORD_PEPPER=another-long-random-secret-at-least-32-characters
 ```

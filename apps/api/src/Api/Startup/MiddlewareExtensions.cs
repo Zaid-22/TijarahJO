@@ -51,8 +51,8 @@ public static class MiddlewareExtensions
                     Instance = exceptionFeature?.Path ?? context.Request.Path
                 };
 
-                // Catch Database Connectivity Issues
-                if (exceptionFeature?.Error is Microsoft.Data.SqlClient.SqlException or System.Data.Common.DbException)
+                // Catch database connectivity issues (including EF-wrapped SqlException).
+                if (IsDatabaseConnectivityFailure(exceptionFeature?.Error))
                 {
                     context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
                     problem.Status = StatusCodes.Status503ServiceUnavailable;
@@ -272,6 +272,19 @@ public static class MiddlewareExtensions
     {
         return path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase) ||
                path.StartsWithSegments("/chatHub", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsDatabaseConnectivityFailure(Exception? error)
+    {
+        for (Exception? current = error; current != null; current = current.InnerException)
+        {
+            if (current is Microsoft.Data.SqlClient.SqlException or System.Data.Common.DbException)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool IsMaintenanceBypassRequest(HttpContext context)

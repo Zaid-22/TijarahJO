@@ -18,8 +18,9 @@ export const usePostDetailsRouteData = ({
   isAuthenticated,
   userProfile,
 }: UsePostDetailsRouteDataParams) => {
-  const post = availablePosts.find((item) => item.id === id);
+  const post = availablePosts.find((item) => String(item.id) === String(id));
   const [fallbackPost, setFallbackPost] = useState<Post | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [fallbackState, setFallbackState] = useState<{ id: string; status: "idle" | "loading" | "done" }>({
     id: "",
     status: "idle",
@@ -34,6 +35,7 @@ export const usePostDetailsRouteData = ({
 
     setFallbackState({ id, status: "loading" });
     setFallbackPost(null);
+    setLoadError(null);
 
     (async () => {
       try {
@@ -42,10 +44,16 @@ export const usePostDetailsRouteData = ({
           return;
         }
         setFallbackPost(fetchedPost);
+        setLoadError(null);
         setFallbackState({ id, status: "done" });
-      } catch {
+      } catch (error) {
         if (!isCancelled) {
           setFallbackPost(null);
+          setLoadError(
+            error instanceof Error && error.message
+              ? error.message
+              : "Failed to load post.",
+          );
           setFallbackState({ id, status: "done" });
         }
       }
@@ -85,6 +93,7 @@ export const usePostDetailsRouteData = ({
   return {
     resolvedPost,
     isLoadingRoutePost,
+    loadError,
     isOwnPost,
     mutateRoutePost,
   };
