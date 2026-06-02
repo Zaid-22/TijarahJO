@@ -27,6 +27,7 @@ CONFIGURATION="${CONFIGURATION:-Debug}"
 RESET_VOLUME=1
 RUN_VERIFY=1
 KEEP_BACKEND_RUNNING=0
+SQL_ONLY=0
 ENABLE_ADMIN_BOOTSTRAP=0
 ENABLE_DEV_SEEDS=0
 ENABLE_SAMPLE_POST_SEEDS=0
@@ -39,6 +40,7 @@ Usage: ./scripts/bootstrap_db.sh [options]
 Options:
   --no-volume-reset   Keep Docker volume; still recreates TijarahJoDB database.
   --no-verify         Skip verify_all_apis.sh.
+  --sql-only          Apply SQL bundles only; skip local dotnet backend startup (VPS/Docker deploy).
   --keep-backend      Keep backend process running after completion.
   --with-admin-bootstrap
                      Apply guarded admin bootstrap seed after baseline seeds.
@@ -73,6 +75,11 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --no-verify)
+      RUN_VERIFY=0
+      shift
+      ;;
+    --sql-only)
+      SQL_ONLY=1
       RUN_VERIFY=0
       shift
       ;;
@@ -121,7 +128,7 @@ if [[ -z "${MSSQL_SA_PASSWORD:-}" ]]; then
   exit 1
 fi
 
-if [[ -z "${JWT_SIGNING_KEY:-}" ]]; then
+if [[ "$SQL_ONLY" -eq 0 && -z "${JWT_SIGNING_KEY:-}" ]]; then
   echo "Error: JWT_SIGNING_KEY is not set."
   echo "Set it in your shell or $ROOT_DIR/.env before running scripts/bootstrap_db.sh." >&2
   exit 1
@@ -151,7 +158,13 @@ if [[ "$DB_RUNTIME_PRINCIPAL" == "app" && -z "${DB_APP_PASSWORD:-}" ]]; then
   exit 1
 fi
 
-for required_cmd in docker dotnet curl jq awk sed lsof; do
+if [[ "$SQL_ONLY" -eq 1 ]]; then
+  required_cmds=(docker awk sed)
+else
+  required_cmds=(docker dotnet curl jq awk sed lsof)
+fi
+
+for required_cmd in "${required_cmds[@]}"; do
   if ! command -v "$required_cmd" >/dev/null 2>&1; then
     echo "Error: required command '$required_cmd' was not found in PATH." >&2
     exit 1
@@ -168,7 +181,7 @@ if [[ ! -f "$DOCKER_COMPOSE_FILE" ]]; then
   exit 1
 fi
 
-if [[ ! -f "$VERIFY_SCRIPT" ]]; then
+if [[ "$SQL_ONLY" -eq 0 && ! -f "$VERIFY_SCRIPT" ]]; then
   echo "Error: verify script not found at $VERIFY_SCRIPT" >&2
   exit 1
 fi
@@ -401,6 +414,11 @@ if [[ "$ENABLE_TEST_SEEDS" -eq 1 ]]; then
 fi
 
 configure_runtime_db_principal
+
+if [[ "$SQL_ONLY" -eq 1 ]]; then
+  echo "==> Done. Database bootstrapped (sql-only; no local backend started)."
+  exit 0
+fi
 
 RUNTIME_DB_PASSWORD_ESCAPED="$(printf "%s" "$RUNTIME_DB_PASSWORD" | sed "s/'/''/g")"
 
