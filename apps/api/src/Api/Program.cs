@@ -328,6 +328,7 @@ string uploadsRootPath = LocalPostImageFileStorageService.ResolveAbsoluteUploads
     app.Environment.ContentRootPath, fileStorageOptions);
 Directory.CreateDirectory(uploadsRootPath);
 CopyBundledUploadDirectory(app.Environment.ContentRootPath, uploadsRootPath, "category-images", app.Logger);
+CopyBundledUploadDirectory(app.Environment.ContentRootPath, uploadsRootPath, "post-images", app.Logger);
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(uploadsRootPath),

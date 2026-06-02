@@ -104,6 +104,9 @@ master.sql
 # Documentation build
 docs/_build/
 
+# Local VPS provider runbooks
+docs/setup/NETCUP_VPS_SETUP_GUIDE.md
+
 # TypeScript
 *.tsbuildinfo
 apps/web/.unit-dist/
