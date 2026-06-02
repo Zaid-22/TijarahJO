@@ -53,6 +53,7 @@ appsettings.Development.json
 infra/.env
 infra/.env.*
 !infra/.env.example
+_on_server/.env
 
 # Logs
 logs/
@@ -78,7 +79,6 @@ apps/api/response.txt
 apps/api/scratch.cs
 apps/api/token.txt
 apps/api/publish/
-apps/api/src/Api/uploads/*
 !apps/api/src/Api/uploads/category-images/
 !apps/api/src/Api/uploads/category-images/*.jpg
 apps/api/uploads/
