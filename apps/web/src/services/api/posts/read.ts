@@ -42,24 +42,7 @@ export async function getPostById(id: string): Promise<Post | null> {
     method: "GET",
   });
 
-  if (!response.success) {
-    const errorCode = response.error?.code ?? "";
-    if (
-      errorCode === "DATABASE_UNAVAILABLE" ||
-      errorCode === "HTTP_503" ||
-      errorCode === "HTTP_502" ||
-      errorCode === "HTTP_504"
-    ) {
-      throw new Error(
-        response.error?.message ||
-          "The database is currently unreachable. Please try again later.",
-      );
-    }
-
-    return null;
-  }
-
-  const parsedPost = parseRawPost(response.data);
+  const parsedPost = response.success ? parseRawPost(response.data) : null;
   if (parsedPost) {
     const postImages = await getPostImagesByPostId(id);
 

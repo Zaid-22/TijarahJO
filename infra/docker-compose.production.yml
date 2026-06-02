@@ -1,8 +1,6 @@
 services:
   sqlserver:
     container_name: tijarahjo-db
-    ports:
-      - "127.0.0.1:1433:1433"
     image: mcr.microsoft.com/mssql/server:2022-latest
     restart: unless-stopped
     environment:
@@ -72,7 +70,7 @@ services:
       CORS__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:?Set CORS_ALLOWED_ORIGINS}
       # AllowedHosts must be semicolon-separated (ASP.NET host filtering)
       AllowedHosts: ${ALLOWED_HOSTS:?Set ALLOWED_HOSTS}
-      DATABASE_CONNECTION_STRING: "Server=sqlserver,1433;Database=TijarahJoDB;User Id=${DB_APP_LOGIN:?Set DB_APP_LOGIN};Password=${DB_APP_PASSWORD:?Set DB_APP_PASSWORD};Encrypt=True;TrustServerCertificate=True;Connect Timeout=30;Connect Retry Count=5;Connect Retry Interval=5;"
+      DATABASE_CONNECTION_STRING: "Server=sqlserver,1433;Database=TijarahJoDB;User Id=${DB_APP_LOGIN:?Set DB_APP_LOGIN};Password=${DB_APP_PASSWORD:?Set DB_APP_PASSWORD};Encrypt=True;TrustServerCertificate=True;"
       JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY}
       JWT_ISSUER: ${JWT_ISSUER:?Set JWT_ISSUER}
       JWT_AUDIENCE: ${JWT_AUDIENCE:?Set JWT_AUDIENCE}

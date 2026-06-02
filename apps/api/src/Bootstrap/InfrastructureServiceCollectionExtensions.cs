@@ -69,12 +69,7 @@ public static class InfrastructureServiceCollectionExtensions
         }
 
         services.AddDbContext<TijarahJoDbContext>(options =>
-            options.UseSqlServer(
-                    connectionString,
-                    sqlOptions => sqlOptions.EnableRetryOnFailure(
-                        maxRetryCount: 5,
-                        maxRetryDelay: TimeSpan.FromSeconds(10),
-                        errorNumbersToAdd: null))
+            options.UseSqlServer(connectionString)
                    .AddInterceptors(new UpdatedAtInterceptor()));
 
         // Resolve the TOTP encryption key using the same environment rules as TwoFactorService.
