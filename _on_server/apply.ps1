@@ -9,5 +9,7 @@ if (-not (Test-Path $SourceEnv)) {
 }
 
 Copy-Item -Path $SourceEnv -Destination $TargetEnv -Force
+Copy-Item -Path $TargetEnv -Destination (Join-Path $RootDir "infra\.env") -Force
 Write-Host "Applied: _on_server\.env -> .env"
+Write-Host "Copied: infra\.env (for Docker Compose variable substitution)"
 Write-Host "Repo root: $RootDir"

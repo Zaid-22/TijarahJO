@@ -8,6 +8,8 @@ Keep **production-only** files here, then copy them into the repo root before de
 |-------------|-----------|---------|
 | `.env` | `/.env` (repo root) | Docker Compose + `bootstrap_db.sh` environment |
 
+`apply.sh` also links `infra/.env` → `.env` so Compose loads secrets without extra flags.
+
 Add more rows here if you later stage nginx overrides or other host-specific files.
 
 ## Workflow
@@ -27,7 +29,7 @@ cp .env.example .env   # first time only
 **On Linux / VPS:**
 
 ```bash
-chmod +x _on_server/apply.sh
+chmod +x _on_server/apply.sh scripts/compose-production.sh
 ./_on_server/apply.sh
 ```
 
@@ -40,8 +42,14 @@ chmod +x _on_server/apply.sh
 ### 3. Deploy (from repo root)
 
 ```bash
-set -a && source .env && set +a
 ./scripts/bootstrap_db.sh --sql-only --with-sample-posts   # first time only (no dotnet on VPS)
+./scripts/compose-production.sh up -d --build
+```
+
+Equivalent manual form:
+
+```bash
+set -a && source .env && set +a
 docker compose -f infra/docker-compose.production.yml up -d --build
 ```
 
@@ -53,17 +61,17 @@ See `docs/setup/PRODUCTION_DEPLOYMENT_DOCKER.md` for TLS and full steps.
 cd /opt/tijarahjo   # or /var/www/tijarahjo
 git pull
 ./_on_server/apply.sh
-set -a && source .env && set +a
-docker compose -f infra/docker-compose.production.yml up -d --build
+./scripts/compose-production.sh up -d --build
 ```
 
-Alternatively, copy only `_on_server/.env` with `scp` and rename to `.env` at repo root.
+Alternatively, copy only `_on_server/.env` with `scp` and rename to `.env` at repo root, then run `apply.sh` once to refresh `infra/.env`.
 
 ## Before go-live
 
 - [ ] Strong `MSSQL_SA_PASSWORD`, `DB_APP_PASSWORD`, `REDIS_PASSWORD`
 - [ ] Unique `JWT_SIGNING_KEY` and both `TwoFactor__*` keys (`openssl rand -base64 48`)
 - [ ] Google OAuth redirect URIs include `https://tijarahjo.online/...`
+- [ ] `GCP_VISION_CREDENTIALS_FILE` points to a service account JSON on the host and Cloud Vision API is enabled (chat/post image uploads fail with 503 otherwise)
 - [ ] Resend sender domain verified if using custom `FromAddress`
 - [ ] Quote any `.env` value that contains spaces (e.g. `FromName="TijarahJo Security"`)
 - [ ] `ALLOWED_HOSTS` uses **semicolons** (`tijarahjo.online;www.tijarahjo.online`), not commas — commas cause every API request to return 400 Invalid Hostname
@@ -86,6 +94,12 @@ After certs exist under `/etc/letsencrypt/live/tijarahjo.online/`, start the pro
 
 ## Troubleshooting
 
+### `lstat /opt/apps: no such file or directory`
+
+You used `--project-directory .` with this compose file. Build `context: ..` is then resolved from repo root to `/opt`, not `/opt/tijarahjo`.
+
+**Do not** use `--project-directory`. Use `./scripts/compose-production.sh` or `source .env` + `docker compose -f infra/docker-compose.production.yml`.
+
 ### `tijarahjo-db is unhealthy` — SA password mismatch
 
 Logs show:
@@ -102,14 +116,15 @@ Set `MSSQL_SA_PASSWORD` in `.env` to the password used when you first ran `boots
 
 ```bash
 cd /opt/tijarahjo
-set -a && source .env && set +a
-docker compose -f infra/docker-compose.production.yml up -d
+./_on_server/apply.sh
+./scripts/compose-production.sh up -d
 ```
 
 Test which password works:
 
 ```bash
-docker exec tijarahjo-db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YOUR_PASSWORD' -C -Q "SELECT 1"
+set -a && source .env && set +a
+docker exec tijarahjo-db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -Q "SELECT 1"
 ```
 
 **Option B — reset database (fresh VPS / no data to keep):**
@@ -117,11 +132,11 @@ docker exec tijarahjo-db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YO
 ```bash
 cd /opt/tijarahjo
 nano .env   # set a strong MSSQL_SA_PASSWORD (e.g. TijarahJo_Sa2026!)
-set -a && source .env && set +a
-docker compose -f infra/docker-compose.production.yml down
+./_on_server/apply.sh
+./scripts/compose-production.sh down
 docker volume rm infra_mssql_data
 ./scripts/bootstrap_db.sh --sql-only --with-sample-posts
-docker compose -f infra/docker-compose.production.yml up -d --build
+./scripts/compose-production.sh up -d --build
 ```
 
 ### API requests return 429 Too Many Requests
@@ -135,26 +150,36 @@ FeatureFlags__EnableRateLimiting=false
 ```
 
 ```bash
-set -a && source .env && set +a
-docker compose -f infra/docker-compose.production.yml up -d api
+./_on_server/apply.sh
+./scripts/compose-production.sh up -d api
 ```
 
 **Permanent fix:** pull the latest code (per-client IP resolution + no API caching in the service worker), rebuild, and redeploy:
 
 ```bash
 git pull
-set -a && source .env && set +a
-docker compose -f infra/docker-compose.production.yml up -d --build api web
+./_on_server/apply.sh
+./scripts/compose-production.sh up -d --build api web
 ```
 
 After redeploying the web container, hard-refresh the browser (or unregister the old service worker in DevTools → Application → Service Workers) so the updated SW stops intercepting API calls.
 
 ### Always run compose from repo root
 
-Run from `/opt/tijarahjo`, not `infra/`, and always `source .env` first:
+Run from `/opt/tijarahjo`, not `infra/`. Use the wrapper or `source .env` — **never** `--project-directory .`:
 
 ```bash
 cd /opt/tijarahjo
-set -a && source .env && set +a
-docker compose -f infra/docker-compose.production.yml up -d
+./scripts/compose-production.sh up -d
+./scripts/compose-production.sh logs sqlserver --tail 50
+```
+
+### `GCP_VISION_CREDENTIALS_FILE is missing a value`
+
+Compose reads `.env` from `infra/` by default. Run `./_on_server/apply.sh` to symlink `infra/.env` → `.env`, or `source .env` before compose.
+
+Also ensure the key file exists on the host:
+
+```bash
+ls -la /opt/tijarahjo/secrets/gcp-vision-sa.json
 ```

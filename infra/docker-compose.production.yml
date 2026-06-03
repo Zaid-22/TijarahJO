@@ -1,3 +1,6 @@
+# Run from repo root: ./scripts/compose-production.sh up -d --build
+# Or: set -a && source .env && set +a && docker compose -f infra/docker-compose.production.yml ...
+# Do not pass --project-directory . — build context ".." is resolved from the project dir and breaks (lstat /opt/apps).
 services:
   sqlserver:
     container_name: tijarahjo-db
@@ -100,6 +103,8 @@ services:
       YouTube__Referer: ${YouTube__Referer:?Set YouTube__Referer}
       TwoFactor__SecretEncryptionKey: ${TwoFactor__SecretEncryptionKey:?Set TwoFactor__SecretEncryptionKey}
       TwoFactor__ChallengeSigningKey: ${TwoFactor__ChallengeSigningKey:?Set TwoFactor__ChallengeSigningKey}
+      # Google Cloud Vision (safe-search moderation for chat/post/profile image uploads)
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/gcp-vision.json
       ForwardedHeaders__KnownNetworks__0: "172.16.0.0/12"
     deploy:
       resources:
@@ -115,6 +120,7 @@ services:
       - backend
     volumes:
       - api_uploads:/var/lib/tijarahjo/uploads
+      - ${GCP_VISION_CREDENTIALS_FILE:-/opt/tijarahjo/secrets/gcp-vision-sa.json}:/run/secrets/gcp-vision.json:ro
     expose:
       - "5033"
 

@@ -27,6 +27,7 @@ Set at least:
 
 Set these when the related feature is enabled:
 
+- `GCP_VISION_CREDENTIALS_FILE` — absolute host path to a Google Cloud service account JSON key with Cloud Vision API access (required for image uploads: chat, posts, avatars). The API container receives it as `GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/gcp-vision.json`.
 - `Gemini__ApiKey` when `FeatureFlags__EnableAiComparison=true`
 - `YouTube__ApiKey` for YouTube recommendations
 - `PasswordResetEmail__ResendApiKey` when password reset email is enabled
@@ -36,11 +37,21 @@ Provision the app database login before starting the API container. The normal p
 
 ## 2. Build and Run
 
-From repo root:
+From repo root (after `./_on_server/apply.sh` so `infra/.env` exists):
 
 ```bash
+chmod +x scripts/compose-production.sh
+./scripts/compose-production.sh up -d --build
+```
+
+Manual equivalent:
+
+```bash
+set -a && source .env && set +a
 docker compose -f infra/docker-compose.production.yml up -d --build
 ```
+
+Do **not** pass `--project-directory .` — it breaks build `context: ..` (`lstat /opt/apps`).
 
 Services:
 

@@ -15,5 +15,9 @@ fi
 cp "$SOURCE_ENV" "$TARGET_ENV"
 chmod 600 "$TARGET_ENV" 2>/dev/null || true
 
+# Compose loads .env from the compose file directory (infra/) by default.
+ln -sf "$TARGET_ENV" "$ROOT_DIR/infra/.env"
+
 echo "Applied: _on_server/.env -> .env"
+echo "Linked: infra/.env -> .env"
 echo "Repo root: $ROOT_DIR"
