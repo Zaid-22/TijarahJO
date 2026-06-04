@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -10,28 +11,18 @@ namespace TijarahJo.Api.Startup;
 
 public static class AuthenticationExtensions
 {
-    private static bool HasAdminAccessClaim(System.Security.Claims.ClaimsPrincipal user)
-        => user.HasClaim(PermissionClaimTypes.AdminAccess, "true")
-           || user.IsInRole(AppRoles.Admin);
-
-    private static bool HasPermission(
-        System.Security.Claims.ClaimsPrincipal user,
-        string permissionKey)
-        => user.IsInRole(AppRoles.Admin)
-           || user.HasClaim(PermissionClaimTypes.Permission, permissionKey);
-
     private static Action<AuthorizationPolicyBuilder> RequireAdminAccess()
         => policy =>
         {
             policy.RequireAuthenticatedUser();
-            policy.RequireAssertion(context => HasAdminAccessClaim(context.User));
+            policy.RequireAssertion(context => AuthorizationPrincipalHelpers.HasAdminAccess(context.User));
         };
 
     private static Action<AuthorizationPolicyBuilder> RequirePermission(string permissionKey)
         => policy =>
         {
             policy.RequireAuthenticatedUser();
-            policy.RequireAssertion(context => HasPermission(context.User, permissionKey));
+            policy.RequireAssertion(context => AuthorizationPrincipalHelpers.HasPermission(context.User, permissionKey));
         };
 
     public static IServiceCollection AddTijarahJoAuthentication(
@@ -120,7 +111,9 @@ public static class AuthenticationExtensions
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
 
                 ValidateLifetime = true,
-                ClockSkew = TimeSpan.FromSeconds(30) // Small tolerance for clock drift between servers
+                ClockSkew = TimeSpan.FromSeconds(30), // Small tolerance for clock drift between servers
+                NameClaimType = ClaimTypes.NameIdentifier,
+                RoleClaimType = ClaimTypes.Role,
             };
 
             options.Events = new JwtBearerEvents

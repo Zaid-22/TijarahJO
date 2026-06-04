@@ -87,16 +87,15 @@ export function resolveHasAdminAccessFromPayload(
   );
 }
 
-function mapRole(roleId: unknown, hasAdminAccess: boolean): "admin" | "user" {
-  if (hasAdminAccess) {
+function mapRole(roleName: unknown): "admin" | "user" {
+  if (
+    typeof roleName === "string" &&
+    roleName.trim().toLowerCase() === "admin"
+  ) {
     return "admin";
   }
 
-  if (
-    roleId === 1 ||
-    roleId === "1" ||
-    (typeof roleId === "string" && roleId.toLowerCase() === "admin")
-  ) {
+  if (roleName === 1 || roleName === "1") {
     return "admin";
   }
 
@@ -122,12 +121,12 @@ function toUserFromBackend(
     "";
 
   const hasAdminAccess = resolveHasAdminAccessFromPayload(backendUser);
-  const role = mapRole(undefined, hasAdminAccess);
   const permissions = resolvePermissions(backendUser);
   const roleName =
     backendUser.RoleName ??
     backendUser.roleName ??
     (typeof fallback.role === "string" ? fallback.role : undefined);
+  const role = mapRole(roleName);
 
   return {
     id: String(
