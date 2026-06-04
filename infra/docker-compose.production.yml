@@ -104,6 +104,7 @@ services:
       TwoFactor__SecretEncryptionKey: ${TwoFactor__SecretEncryptionKey:?Set TwoFactor__SecretEncryptionKey}
       TwoFactor__ChallengeSigningKey: ${TwoFactor__ChallengeSigningKey:?Set TwoFactor__ChallengeSigningKey}
       # Google Cloud Vision (safe-search moderation for chat/post/profile image uploads)
+      ImageModeration__Enabled: ${ImageModeration__Enabled:-false}
       GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/gcp-vision.json
       ForwardedHeaders__KnownNetworks__0: "172.16.0.0/12"
     deploy:

@@ -131,20 +131,22 @@ YouTube__ApiKey=your-youtube-data-api-key
 YouTube__Referer=https://tijarahjo.online/
 ```
 
-#### Image moderation (Google Cloud Vision — required in Production)
+#### Image moderation (Google Cloud Vision — optional)
 
-Chat, post, and profile image uploads call the Vision API **Safe Search** detection before storage. In `Development`, uploads are allowed when Vision is not configured; in `Production`, missing or failing Vision returns HTTP 503 (`Image moderation service is unavailable.`).
+Chat, post, and profile image uploads can call Vision **Safe Search** before storage. Set `ImageModeration__Enabled=false` to skip moderation (default in production Docker compose until Vision is configured). When enabled, missing or failing Vision returns HTTP 503 in Production.
 
 ```bash
-# Path to a service account JSON key on the API host (Docker: set GCP_VISION_CREDENTIALS_FILE in .env)
+ImageModeration__Enabled=false
+# When true — path to service account JSON (Docker: GCP_VISION_CREDENTIALS_FILE in .env)
 GOOGLE_APPLICATION_CREDENTIALS=/path/to/gcp-vision-service-account.json
 ```
 
-Setup:
+Setup (when enabling moderation):
 
 1. Enable **Cloud Vision API** in Google Cloud Console.
 2. Create a service account with **Cloud Vision API User** (or equivalent).
 3. Download the JSON key and set `GOOGLE_APPLICATION_CREDENTIALS` to its path (local) or `GCP_VISION_CREDENTIALS_FILE` (production Docker compose).
+4. Set `ImageModeration__Enabled=true` and redeploy the API.
 
 #### File Storage (post image uploads)
 ```bash

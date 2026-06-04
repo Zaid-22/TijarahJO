@@ -45,6 +45,7 @@ builder.Services.Configure<EmailTwoFactorOptions>(builder.Configuration.GetSecti
 builder.Services.Configure<AccountLockoutOptions>(builder.Configuration.GetSection("AccountLockout"));
 builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
 builder.Services.Configure<YouTubeSettings>(builder.Configuration.GetSection("YouTube"));
+builder.Services.Configure<ImageModerationOptions>(builder.Configuration.GetSection("ImageModeration"));
 builder.Services.AddHttpClient<GoogleAuthService>();
 builder.Services.AddHttpClient<IPostCompareService, GeminiPostCompareService>();
 builder.Services.AddHttpClient<ICompareVideoRecommendationService, YouTubeCompareVideoRecommendationService>((serviceProvider, client) =>

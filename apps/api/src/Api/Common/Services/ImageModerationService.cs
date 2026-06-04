@@ -4,6 +4,8 @@ using Google.Cloud.Vision.V1;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using TijarahJo.Api.Common.Configuration;
 
 namespace TijarahJo.Api.Common.Services;
 
@@ -16,14 +18,18 @@ public class ImageModerationService : IImageModerationService
 {
     private readonly ILogger<ImageModerationService> _logger;
     private readonly IWebHostEnvironment _environment;
+    private readonly ImageModerationOptions _options;
     private readonly Lazy<ImageAnnotatorClient> _client;
+    private int _disabledLogged;
 
     public ImageModerationService(
         ILogger<ImageModerationService> logger,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        IOptions<ImageModerationOptions> options)
     {
         _logger = logger;
         _environment = environment;
+        _options = options.Value;
         // The API automatically picks up Application Default Credentials (ADC) from the environment.
         _client = new Lazy<ImageAnnotatorClient>(() =>
         {
@@ -41,6 +47,16 @@ public class ImageModerationService : IImageModerationService
 
     public async Task<ModerationResult> CheckImageAsync(IFormFile file)
     {
+        if (!_options.Enabled)
+        {
+            if (Interlocked.Exchange(ref _disabledLogged, 1) == 0)
+            {
+                _logger.LogWarning("Image moderation is disabled (ImageModeration__Enabled=false). Uploads will not be screened.");
+            }
+
+            return new ModerationResult();
+        }
+
         if (_client.Value == null) 
         {
             _logger.LogWarning("Cloud Vision client not available. {Mode}", _environment.IsDevelopment()

@@ -1,0 +1,16 @@
+running the project locally
+
+- on a bash terminal
+cd C:\Projects\TijarahJO\apps\api\src\Api
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+$env:ASPNETCORE_URLS = "http://localhost:5033"
+$env:JWT_SIGNING_KEY = "SuperSecretSecureDevelopmentKey123!@#"
+$env:DATABASE_CONNECTION_STRING = "Data Source=localhost,1433;Database=TijarahJoDB;User Id=sa;Password=12345678;TrustServerCertificate=True;Encrypt=False;"
+
+
+dotnet run --no-launch-profile
+
+- on a cmd terminal
+cd apps\web
+npm i
+npm run dev
