@@ -129,6 +129,21 @@ public sealed class UserQueryHandlerTests
         Assert.Equal("Not accepted ID 0", result.Message);
     }
 
+    [Fact]
+    public async Task GetAllAsync_PreservesSuspendedUntil()
+    {
+        DateTime suspendedUntil = DateTime.UtcNow.AddHours(24);
+        var source = CreateUserModel(userId: 3) with { SuspendedUntil = suspendedUntil };
+        var users = new FakeUserDataAccess { NextUsers = new[] { source } };
+        var handler = new UserQueryHandler(users);
+
+        UserListQueryResult result = await handler.GetAllAsync();
+
+        Assert.True(result.Success);
+        Assert.Single(result.Users);
+        Assert.Equal(suspendedUntil, result.Users[0].SuspendedUntil);
+    }
+
     private static UserModel CreateUserModel(int userId)
     {
         return new UserModel(
