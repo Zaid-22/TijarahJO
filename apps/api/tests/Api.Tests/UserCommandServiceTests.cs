@@ -302,6 +302,51 @@ public sealed class UserCommandServiceTests
         Assert.NotNull(result.User);
     }
 
+    [Fact]
+    public async Task UpdateAsync_ClearsSuspendedUntil_WhenClearSuspensionRequested()
+    {
+        DateTime suspendedUntil = DateTime.UtcNow.AddHours(24);
+        var suspendedUser = new UserModel(
+            userid: 1,
+            hashedpassword: TijarahJo.Application.Common.PasswordHelper.HashPassword("Test1234!"),
+            email: "user@example.com",
+            firstname: "Test",
+            lastname: "User",
+            phone: null,
+            cityId: null,
+            areaId: null,
+            bio: null,
+            avatar: null,
+            joindate: DateTime.UtcNow,
+            status: 1,
+            roleid: 1,
+            isdeleted: false,
+            suspendedUntil: suspendedUntil
+        );
+
+        var users = new FakeUserDataAccess(suspendedUser);
+        var service = new UserCommandService(
+            users,
+            new FakeRoleService(),
+            new FakeLocationReadService(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<UserCommandService>.Instance);
+
+        UserCommandResult result = await service.UpdateAsync(new UpdateUserCommand
+        {
+            ActorUserId = 2,
+            ActorIsAdmin = true,
+            TargetUserId = 1,
+            Status = 1,
+            ClearSuspension = true
+        });
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.User);
+        Assert.Null(result.User!.SuspendedUntil);
+        Assert.NotNull(users.LastUpdatedUser);
+        Assert.Null(users.LastUpdatedUser!.SuspendedUntil);
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
@@ -341,6 +386,8 @@ public sealed class UserCommandServiceTests
     {
         private readonly UserModel? _account;
 
+        public UserModel? LastUpdatedUser { get; private set; }
+
         public FakeUserDataAccess(UserModel? account) => _account = account;
 
         public Task<UserModel?> GetUserByIDAsync(int? userId, CancellationToken ct = default)
@@ -356,7 +403,10 @@ public sealed class UserCommandServiceTests
             => Task.FromResult(1);
 
         public Task<bool> UpdateUserAsync(UserModel user, int actorUserId, CancellationToken ct = default)
-            => Task.FromResult(true);
+        {
+            LastUpdatedUser = user;
+            return Task.FromResult(true);
+        }
 
         public Task<bool> DeleteUserAsync(int? userId, int actorUserId, CancellationToken ct = default)
             => Task.FromResult(true);

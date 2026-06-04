@@ -86,6 +86,7 @@ public sealed class UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<
         entity.TwoFactorEnabled = user.TwoFactorEnabled;
         entity.TwoFactorSecret = user.TwoFactorSecret;
         entity.TwoFactorPendingSecret = user.TwoFactorPendingSecret;
+        entity.SuspendedUntil = user.SuspendedUntil;
 
         _dbContext.AuditActorUserId = actorUserId;
         try
