@@ -352,8 +352,12 @@ GRANT INSERT, UPDATE ON dbo.PushSubscriptions TO [tijarahjo_app_runtime];
 GRANT INSERT, UPDATE ON dbo.UserExternalIdentities TO [tijarahjo_app_runtime];
 GRANT INSERT, UPDATE, DELETE ON dbo.PostComments TO [tijarahjo_app_runtime];
 
--- Explicitly keep reference/metadata tables read-only for runtime.
-DENY INSERT, UPDATE, DELETE ON dbo.Roles TO [tijarahjo_app_runtime];
+-- Admin RBAC: roles.manage requires DML on Roles and RolePermissions.
+GRANT INSERT, UPDATE, DELETE ON dbo.Roles TO [tijarahjo_app_runtime];
+IF OBJECT_ID(N'dbo.RolePermissions', N'U') IS NOT NULL
+    GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.RolePermissions TO [tijarahjo_app_runtime];
+
+-- Explicitly keep lookup/metadata tables read-only for runtime.
 DENY INSERT, UPDATE, DELETE ON dbo.UserStatusLookup TO [tijarahjo_app_runtime];
 DENY INSERT, UPDATE, DELETE ON dbo.PostStatusLookup TO [tijarahjo_app_runtime];
 DENY INSERT, UPDATE, DELETE ON dbo.Cities TO [tijarahjo_app_runtime];
