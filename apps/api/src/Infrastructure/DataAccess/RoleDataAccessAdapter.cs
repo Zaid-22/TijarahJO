@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using TijarahJo.Domain.Models;
 using TijarahJo.Application.Abstractions.DataAccess;
 using TijarahJo.Application.Common;
@@ -8,9 +8,10 @@ using TijarahJo.Infrastructure.Persistence;
 
 namespace TijarahJo.Infrastructure.DataAccess;
 
-
-public sealed class RoleDataAccessAdapter(TijarahJoDbContext dbContext) : IRoleDataAccess
+public sealed class RoleDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<RoleDataAccessAdapter> logger) : IRoleDataAccess
 {
+    private readonly TijarahJoDbContext _dbContext = dbContext;
+    private readonly ILogger<RoleDataAccessAdapter> _logger = logger;
 
     public RoleModel GetRoleByID(int? roleId)
     {
@@ -19,7 +20,7 @@ public sealed class RoleDataAccessAdapter(TijarahJoDbContext dbContext) : IRoleD
             return null!;
         }
 
-        RoleEntity? entity = dbContext.Roles
+        RoleEntity? entity = _dbContext.Roles
             .AsNoTracking()
             .FirstOrDefault(item => item.RoleID == roleId.Value);
         return entity is null ? null! : ToModel(entity);
@@ -32,7 +33,7 @@ public sealed class RoleDataAccessAdapter(TijarahJoDbContext dbContext) : IRoleD
             return null!;
         }
 
-        RoleEntity? entity = await dbContext.Roles
+        RoleEntity? entity = await _dbContext.Roles
             .AsNoTracking()
             .FirstOrDefaultAsync(item => item.RoleID == roleId.Value, cancellationToken);
         return entity is null ? null! : ToModel(entity);
@@ -47,10 +48,18 @@ public sealed class RoleDataAccessAdapter(TijarahJoDbContext dbContext) : IRoleD
             IsDeleted = role.IsDeleted
         };
 
-        dbContext.Roles.Add(entity);
-        dbContext.AuditActorUserId = null; // system operation
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return entity.RoleID;
+        _dbContext.Roles.Add(entity);
+        _dbContext.AuditActorUserId = null; // system operation
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return entity.RoleID;
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Failed to add role {RoleName}", role.RoleName);
+            return 0;
+        }
     }
 
     public async Task<bool> UpdateRoleAsync(RoleModel role, CancellationToken cancellationToken = default)
@@ -60,7 +69,7 @@ public sealed class RoleDataAccessAdapter(TijarahJoDbContext dbContext) : IRoleD
             return false;
         }
 
-        RoleEntity? entity = await dbContext.Roles
+        RoleEntity? entity = await _dbContext.Roles
             .FirstOrDefaultAsync(item => item.RoleID == role.RoleID.Value, cancellationToken);
         if (entity is null)
         {
@@ -71,9 +80,17 @@ public sealed class RoleDataAccessAdapter(TijarahJoDbContext dbContext) : IRoleD
         entity.CreatedAt = role.CreatedAt == default ? entity.CreatedAt : role.CreatedAt;
         entity.IsDeleted = role.IsDeleted;
 
-        dbContext.AuditActorUserId = null;
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return true;
+        _dbContext.AuditActorUserId = null;
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Failed to update role {RoleId}", role.RoleID);
+            return false;
+        }
     }
 
     public async Task<bool> DeleteRoleAsync(int? roleId, CancellationToken cancellationToken = default)
@@ -83,7 +100,7 @@ public sealed class RoleDataAccessAdapter(TijarahJoDbContext dbContext) : IRoleD
             return false;
         }
 
-        RoleEntity? entity = await dbContext.Roles
+        RoleEntity? entity = await _dbContext.Roles
             .FirstOrDefaultAsync(item => item.RoleID == roleId.Value, cancellationToken);
         if (entity is null)
         {
@@ -96,29 +113,57 @@ public sealed class RoleDataAccessAdapter(TijarahJoDbContext dbContext) : IRoleD
         }
 
         entity.IsDeleted = true;
-        dbContext.AuditActorUserId = null;
-        return await dbContext.SaveChangesAsync(cancellationToken) > 0;
+        _dbContext.AuditActorUserId = null;
+        try
+        {
+            return await _dbContext.SaveChangesAsync(cancellationToken) > 0;
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Failed to delete role {RoleId}", roleId);
+            return false;
+        }
     }
 
     public bool DoesRoleExist(int? roleId)
     {
         return roleId.HasValue
                && roleId.Value > 0
-               && dbContext.Roles.AsNoTracking().Any(item => item.RoleID == roleId.Value);
+               && _dbContext.Roles.AsNoTracking().Any(item => item.RoleID == roleId.Value);
     }
 
     public async Task<bool> DoesRoleExistAsync(int? roleId, CancellationToken cancellationToken = default)
     {
         return roleId.HasValue
                && roleId.Value > 0
-               && await dbContext.Roles
+               && await _dbContext.Roles
                    .AsNoTracking()
                    .AnyAsync(item => item.RoleID == roleId.Value, cancellationToken);
     }
 
+    public async Task<bool> IsRoleNameTakenAsync(
+        string roleName,
+        int? excludeRoleId = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(roleName))
+        {
+            return false;
+        }
+
+        string normalizedRoleName = roleName.Trim();
+        return await _dbContext.Roles
+            .AsNoTracking()
+            .AnyAsync(
+                item => !item.IsDeleted
+                        && item.RoleName == normalizedRoleName
+                        && (!excludeRoleId.HasValue || item.RoleID != excludeRoleId.Value),
+                cancellationToken);
+    }
+
     public IReadOnlyList<RoleModel> GetAllRoles()
     {
-        var roles = dbContext.Roles
+        var roles = _dbContext.Roles
             .AsNoTracking()
             .Where(item => !item.IsDeleted)
             .OrderBy(item => item.RoleID)
@@ -129,7 +174,7 @@ public sealed class RoleDataAccessAdapter(TijarahJoDbContext dbContext) : IRoleD
 
     public async Task<IReadOnlyList<RoleModel>> GetAllRolesAsync(CancellationToken cancellationToken = default)
     {
-        List<RoleEntity> entities = await dbContext.Roles
+        List<RoleEntity> entities = await _dbContext.Roles
             .AsNoTracking()
             .Where(item => !item.IsDeleted)
             .OrderBy(item => item.RoleID)

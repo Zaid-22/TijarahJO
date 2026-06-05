@@ -22,9 +22,17 @@ public sealed class RoleCommandService : IRoleCommandService
             return Failure(RoleCommandFailureReason.InvalidRequest, "Invalid role data.");
         }
 
+        string roleName = command.RoleName.Trim();
+        if (await _roles.IsRoleNameTakenAsync(roleName, cancellationToken: cancellationToken))
+        {
+            return Failure(
+                RoleCommandFailureReason.Conflict,
+                $"A role with the name '{roleName}' already exists.");
+        }
+
         Role role = _roles.Create(new RoleModel(
             null,
-            command.RoleName.Trim(),
+            roleName,
             NormalizeSqlDateTime(DateTime.UtcNow),
             false
         ));
@@ -57,6 +65,13 @@ public sealed class RoleCommandService : IRoleCommandService
 
         role.RoleName = command.RoleName.Trim();
         role.CreatedAt = NormalizeSqlDateTime(role.CreatedAt, DateTime.UtcNow);
+
+        if (await _roles.IsRoleNameTakenAsync(role.RoleName, command.RoleId, cancellationToken))
+        {
+            return Failure(
+                RoleCommandFailureReason.Conflict,
+                $"A role with the name '{role.RoleName}' already exists.");
+        }
 
         bool saved = await _roles.SaveAsync(role, cancellationToken);
         if (!saved)

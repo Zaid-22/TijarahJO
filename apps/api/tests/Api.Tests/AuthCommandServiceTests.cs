@@ -453,6 +453,9 @@ public sealed class AuthCommandServiceTests
 
         public Task<bool> DoesRoleExistAsync(int? roleId, CancellationToken ct = default)
             => Task.FromResult(true);
+
+        public Task<bool> IsRoleNameTakenAsync(string roleName, int? excludeRoleId = null, CancellationToken ct = default)
+            => Task.FromResult(false);
     }
 
     private sealed class FakeLocationReadService : ILocationReadService

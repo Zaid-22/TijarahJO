@@ -33,6 +33,7 @@ public interface IRoleService
     Task<bool> SaveAsync(Role role, CancellationToken cancellationToken = default);
     Task<bool> DeleteRoleAsync(int? roleId, CancellationToken cancellationToken = default);
     Task<bool> DoesRoleExistAsync(int? roleId, CancellationToken cancellationToken = default);
+    Task<bool> IsRoleNameTakenAsync(string roleName, int? excludeRoleId = null, CancellationToken cancellationToken = default);
 }
 
 public interface IPostService

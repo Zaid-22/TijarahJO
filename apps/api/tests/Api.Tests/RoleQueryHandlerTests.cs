@@ -108,5 +108,8 @@ public sealed class RoleQueryHandlerTests
 
         public Task<bool> DoesRoleExistAsync(int? roleId, CancellationToken cancellationToken = default)
             => Task.FromResult(NextExists);
+
+        public Task<bool> IsRoleNameTakenAsync(string roleName, int? excludeRoleId = null, CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
     }
 }

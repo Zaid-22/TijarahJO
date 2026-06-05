@@ -306,6 +306,7 @@ public sealed class TwoFactorDeliveryTests
         public Task<bool> SaveAsync(Role role, CancellationToken cancellationToken = default) => Task.FromResult(false);
         public Task<bool> DeleteRoleAsync(int? roleId, CancellationToken cancellationToken = default) => Task.FromResult(false);
         public Task<bool> DoesRoleExistAsync(int? roleId, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<bool> IsRoleNameTakenAsync(string roleName, int? excludeRoleId = null, CancellationToken cancellationToken = default) => Task.FromResult(false);
     }
 
     private sealed class FakeTokenBlacklistService : ITokenBlacklistService

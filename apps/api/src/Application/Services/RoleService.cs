@@ -48,4 +48,7 @@ public sealed class RoleService : IRoleService
 
     public Task<bool> DoesRoleExistAsync(int? roleId, CancellationToken cancellationToken = default)
         => _roles.DoesRoleExistAsync(roleId, cancellationToken);
+
+    public Task<bool> IsRoleNameTakenAsync(string roleName, int? excludeRoleId = null, CancellationToken cancellationToken = default)
+        => _roles.IsRoleNameTakenAsync(roleName, excludeRoleId, cancellationToken);
 }

@@ -61,4 +61,7 @@ public sealed class CachedRoleService(IRoleService inner, IMemoryCache cache) : 
 
     public Task<bool> DoesRoleExistAsync(int? roleId, CancellationToken cancellationToken = default)
         => inner.DoesRoleExistAsync(roleId, cancellationToken);
+
+    public Task<bool> IsRoleNameTakenAsync(string roleName, int? excludeRoleId = null, CancellationToken cancellationToken = default)
+        => inner.IsRoleNameTakenAsync(roleName, excludeRoleId, cancellationToken);
 }
