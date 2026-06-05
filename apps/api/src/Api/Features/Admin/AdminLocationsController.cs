@@ -1,6 +1,8 @@
+using System.Data.Common;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using TijarahJo.Application.Abstractions.DataAccess;
 using TijarahJo.Api.Common.Authorization;
@@ -36,7 +38,7 @@ public class AdminLocationsController(IAdminLocationDataAccess locationDataAcces
             int cityId = await _adminDataAccess.CreateCityAsync(request.Name, request.NameAr, HttpContext.RequestAborted);
             return Created($"/api/v1/admin/locations/cities/{cityId}", new { CityID = cityId });
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
         {
             return Conflict(new { Message = $"A city with the name '{request.Name}' already exists." });
         }
@@ -57,7 +59,7 @@ public class AdminLocationsController(IAdminLocationDataAccess locationDataAcces
             if (!updated) return NotFound();
             return Ok(new { Message = "City updated." });
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
         {
             return Conflict(new { Message = $"A city with the name '{request.Name}' already exists." });
         }
@@ -75,7 +77,7 @@ public class AdminLocationsController(IAdminLocationDataAccess locationDataAcces
             if (!deleted) return NotFound();
             return Ok(new { Message = "City deleted." });
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (IsReferentialConstraintViolation(ex))
         {
             return Conflict(new { Message = "Cannot delete this city because it is referenced by users or posts. Remove those references first." });
         }
@@ -94,9 +96,13 @@ public class AdminLocationsController(IAdminLocationDataAccess locationDataAcces
             int areaId = await _adminDataAccess.CreateAreaAsync(request.CityID, request.Name, request.NameAr, HttpContext.RequestAborted);
             return Created($"/api/v1/admin/locations/areas/{areaId}", new { AreaID = areaId });
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
         {
-            return Conflict(new { Message = $"An area with the name '{request.Name}' already exists in this city, or the city does not exist." });
+            return Conflict(new { Message = $"An area with the name '{request.Name}' already exists in this city." });
+        }
+        catch (DbUpdateException ex) when (IsReferentialConstraintViolation(ex))
+        {
+            return Conflict(new { Message = "The specified city does not exist." });
         }
     }
 
@@ -115,7 +121,7 @@ public class AdminLocationsController(IAdminLocationDataAccess locationDataAcces
             if (!updated) return NotFound();
             return Ok(new { Message = "Area updated." });
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
         {
             return Conflict(new { Message = $"An area with the name '{request.Name}' already exists in this city." });
         }
@@ -133,10 +139,44 @@ public class AdminLocationsController(IAdminLocationDataAccess locationDataAcces
             if (!deleted) return NotFound();
             return Ok(new { Message = "Area deleted." });
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (IsReferentialConstraintViolation(ex))
         {
             return Conflict(new { Message = "Cannot delete this area because it is referenced by users or posts. Remove those references first." });
         }
+    }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException exception)
+        => TryGetSqlErrorMessage(exception, out string message) &&
+           (message.Contains("2627", StringComparison.Ordinal) ||
+            message.Contains("2601", StringComparison.Ordinal) ||
+            message.Contains("UNIQUE", StringComparison.Ordinal) ||
+            message.Contains("DUPLICATE", StringComparison.Ordinal));
+
+    private static bool IsReferentialConstraintViolation(DbUpdateException exception)
+        => TryGetSqlErrorMessage(exception, out string message) &&
+           (message.Contains("547", StringComparison.Ordinal) ||
+            message.Contains("REFERENCE", StringComparison.Ordinal) ||
+            message.Contains("FOREIGN KEY", StringComparison.Ordinal));
+
+    private static bool TryGetSqlErrorMessage(DbUpdateException exception, out string message)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is SqlException sqlException)
+            {
+                message = sqlException.Message;
+                return true;
+            }
+
+            if (current is DbException dbException)
+            {
+                message = dbException.Message;
+                return true;
+            }
+        }
+
+        message = exception.Message;
+        return !string.IsNullOrWhiteSpace(message);
     }
 }
 
