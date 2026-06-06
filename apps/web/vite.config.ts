@@ -254,6 +254,7 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+          navigateFallbackDenylist: [/^\/api\//, /^\/chatHub/],
           runtimeCaching: [
             {
               urlPattern: /\/uploads\//,
