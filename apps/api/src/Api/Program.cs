@@ -303,16 +303,13 @@ if (!featureFlags.EnableInMemoryCaching)
 
 app.LogRedisStartupStatus(redisResult);
 
-bool shouldUseForwardedHeaders = app.Environment.IsDevelopment() || hasExplicitForwardedHeaderTrust;
-if (shouldUseForwardedHeaders)
-{
-    // Trust X-Forwarded-* headers only when requests come from configured proxies/networks.
-    // In production, configure ForwardedHeaders:KnownProxies / KnownNetworks so Request.IsHttps
-    // reflects the original client protocol as reported by trusted reverse proxies.
-    app.UseForwardedHeaders();
-}
-else
-    app.Logger.LogWarning("Forwarded headers middleware is disabled. Configure ForwardedHeaders:KnownProxies or ForwardedHeaders:KnownNetworks.");
+// Always enable forwarded headers. In production behind a reverse proxy (nginx),
+// X-Forwarded-Proto must be processed so Request.IsHttps is correct for OAuth
+// state cookies, CSRF, and HSTS. The KnownProxies/KnownNetworks options already
+// limit which proxies are trusted; the middleware itself should always be active.
+app.UseForwardedHeaders();
+if (!app.Environment.IsDevelopment() && !hasExplicitForwardedHeaderTrust)
+    app.Logger.LogWarning("Forwarded headers middleware is active but no KnownProxies or KnownNetworks are configured. Configure ForwardedHeaders:KnownProxies or ForwardedHeaders:KnownNetworks for production.");
 
 if (!app.Environment.IsDevelopment())
     app.UseHsts();

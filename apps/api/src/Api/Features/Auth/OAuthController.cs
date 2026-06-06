@@ -70,6 +70,15 @@ public class OAuthController(
         string expectedState = Request.Cookies[GoogleStateCookieName] ?? string.Empty;
         string expectedNonce = Request.Cookies[GoogleNonceCookieName] ?? string.Empty;
 
+        // Diagnostic logging to help debug OAuth cookie issues behind reverse proxies.
+        _logger.LogInformation(
+            "Google OAuth callback: IsHttps={IsHttps}, X-Forwarded-Proto={Proto}, StateCookiePresent={StatePresent}, NonceCookiePresent={NoncePresent}, StateFromQuery={StateParam}",
+            Request.IsHttps,
+            Request.Headers["X-Forwarded-Proto"].ToString(),
+            !string.IsNullOrEmpty(expectedState),
+            !string.IsNullOrEmpty(expectedNonce),
+            !string.IsNullOrWhiteSpace(state));
+
         AuthShared.DeleteCookie(Response, GoogleStateCookieName);
         AuthShared.DeleteCookie(Response, GoogleNonceCookieName);
 
