@@ -49,7 +49,7 @@ const footerCopyByLanguage: Record<FooterProps["language"], FooterCopy> = {
     madeInJordan: "Made in Jordan",
     address: "Amman, Jordan",
     email: "info@tijarahjo.online",
-    phone: "+962 7 9123 4567",
+    phone: "+962788644260",
   },
   ar: {
     aboutText:
@@ -66,7 +66,7 @@ const footerCopyByLanguage: Record<FooterProps["language"], FooterCopy> = {
     madeInJordan: "صنع في الأردن",
     address: "عمان، الأردن",
     email: "info@tijarahjo.online",
-    phone: "+962 7 9123 4567",
+    phone: "+962788644260",
   },
 };
 
@@ -240,7 +240,12 @@ export function Footer({ language }: FooterProps) {
               </li>
               <li className="flex items-start gap-3 rounded-lg border border-white/8 bg-white/5 px-3 py-2.5">
                 <Phone className="mt-0.5 h-4 w-4 shrink-0 text-primary/80" />
-                <span dir="ltr">{content.phone}</span>
+                <a
+                  href={`tel:${content.phone}`}
+                  className="rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                >
+                  <span dir="ltr">{content.phone}</span>
+                </a>
               </li>
             </ul>
           </section>

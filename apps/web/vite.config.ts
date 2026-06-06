@@ -107,6 +107,7 @@ function buildConnectSources(isProduction: boolean): string {
   }
   connectSources.add("https://maps.googleapis.com");
   connectSources.add("https://maps.gstatic.com");
+  connectSources.add("https://routes.googleapis.com");
   if (apiOrigin) {
     connectSources.add(apiOrigin);
     addLoopbackOriginAliases(connectSources, apiOrigin);
