@@ -221,7 +221,14 @@ public class OAuthController(
             result.User,
             result.RoleName,
             permissionSnapshot);
-        return Redirect(_googleAuthService.GetFrontendSuccessUrl());
+
+        // Append ?oauthSuccess=1 so the frontend auth context can detect
+        // the completed OAuth session and probe the backend for the JWT cookie,
+        // even if localStorage session hints were lost during the redirect chain.
+        string successUrl = QueryHelpers.AddQueryString(
+            _googleAuthService.GetFrontendSuccessUrl(),
+            "oauthSuccess", "1");
+        return Redirect(successUrl);
     }
 
     private string BuildGoogleFailureRedirectUri(string message)

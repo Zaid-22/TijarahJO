@@ -116,12 +116,20 @@ public static class MiddlewareExtensions
                 var tokens = antiforgery.GetAndStoreTokens(context);
                 if (!string.IsNullOrWhiteSpace(tokens.RequestToken))
                 {
+                    bool isDevelopment = app.Environment.IsDevelopment();
                     bool isHttpsRequest = context.Request.IsHttps;
+                    // Use the same production-safe logic as AuthShared: force Secure=true
+                    // and SameSite=None in non-development environments, regardless of
+                    // Request.IsHttps which can be unreliable behind a reverse proxy.
+                    bool secure = !isDevelopment || isHttpsRequest;
+                    SameSiteMode sameSite = isDevelopment && !isHttpsRequest
+                        ? SameSiteMode.Lax
+                        : SameSiteMode.None;
                     context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken!, new CookieOptions
                     {
                         HttpOnly = false,
-                        Secure = isHttpsRequest,
-                        SameSite = isHttpsRequest ? SameSiteMode.None : SameSiteMode.Lax,
+                        Secure = secure,
+                        SameSite = sameSite,
                         Path = "/"
                     });
                 }

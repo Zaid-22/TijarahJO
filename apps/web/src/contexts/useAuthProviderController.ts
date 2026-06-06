@@ -264,6 +264,22 @@ export function useAuthProviderController(): AuthContextType {
       setLoading(true);
     }
 
+    // Detect OAuth success redirect from backend (?oauthSuccess=1).
+    // The backend appends this parameter after a successful Google OAuth login.
+    // The full-page redirect chain may have cleared localStorage session hints,
+    // so we restore them here and clear any stale logout flag to ensure the
+    // backend probe always runs and the JWT cookie is picked up.
+    const oauthSuccessParams = new URLSearchParams(window.location.search);
+    if (oauthSuccessParams.get("oauthSuccess") === "1") {
+      localStorage.removeItem(AUTH_LOGOUT_KEY);
+      persistAuthSessionHint();
+      // Strip the param from the URL without triggering a navigation.
+      oauthSuccessParams.delete("oauthSuccess");
+      const cleanSearch = oauthSuccessParams.toString();
+      const cleanUrl = `${window.location.pathname}${cleanSearch ? `?${cleanSearch}` : ""}${window.location.hash}`;
+      window.history.replaceState(window.history.state, "", cleanUrl);
+    }
+
     // If user explicitly logged out, don't auto-restore session.
     if (localStorage.getItem(AUTH_LOGOUT_KEY) === "true") {
       clearAuthStorage();

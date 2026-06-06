@@ -86,8 +86,7 @@ internal static class AuthShared
         var cookieOptions = BuildAuthCookieOptions(
             environment,
             response.HttpContext.Request,
-            DateTime.UtcNow.AddDays(7),
-            jwtCookie: true);
+            DateTime.UtcNow.AddDays(7));
         response.Cookies.Append("jwt", token, cookieOptions);
     }
 
@@ -97,27 +96,32 @@ internal static class AuthShared
         var cookieOptions = BuildAuthCookieOptions(
             environment,
             response.HttpContext.Request,
-            DateTime.UtcNow.Add(lifetime),
-            jwtCookie: false);
+            DateTime.UtcNow.Add(lifetime));
         response.Cookies.Append(name, value, cookieOptions);
     }
 
     private static CookieOptions BuildAuthCookieOptions(
         IHostEnvironment environment,
         HttpRequest request,
-        DateTime expiresUtc,
-        bool jwtCookie)
+        DateTime expiresUtc)
     {
         bool isDevelopment = environment.IsDevelopment();
         bool isHttpsRequest = request.IsHttps;
 
         // Security-sensitive cookie attributes should not rely solely on Request.IsHttps.
         // In non-development environments, force Secure cookies and cross-site compatibility
-        // for JWT cookies even if a proxy misconfiguration causes IsHttps=false.
+        // even if a proxy misconfiguration causes IsHttps=false.
         bool secure = !isDevelopment || isHttpsRequest;
-        SameSiteMode sameSite = jwtCookie
-            ? (isDevelopment && !isHttpsRequest ? SameSiteMode.Lax : SameSiteMode.None)
-            : SameSiteMode.Lax;
+
+        // Both JWT cookies AND OAuth state/nonce cookies require SameSite=None in production.
+        // The Google OAuth callback is a cross-site top-level redirect from accounts.google.com
+        // back to our domain. Browsers drop SameSite=Lax cookies on such cross-site navigations,
+        // which means the state and nonce cookies are empty on arrival, causing all OAuth logins
+        // to fail with a state-mismatch error. SameSite=None;Secure is the correct setting for
+        // any cookie that must survive a cross-site redirect in the OAuth flow.
+        SameSiteMode sameSite = isDevelopment && !isHttpsRequest
+            ? SameSiteMode.Lax
+            : SameSiteMode.None;
 
         return new CookieOptions
         {
