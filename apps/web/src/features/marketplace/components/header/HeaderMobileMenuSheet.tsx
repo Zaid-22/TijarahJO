@@ -1,4 +1,5 @@
 import {
+  Heart,
   LogOut,
   Menu,
   MessageCircle,
@@ -86,7 +87,7 @@ export function HeaderMobileMenuSheet({
   isOpen,
   onOpenChange,
   onShowProfile,
-
+  onShowFavorites,
   onShowMessages,
   onShowSettings,
   onShowAdminDashboard,
@@ -146,6 +147,11 @@ export function HeaderMobileMenuSheet({
                   onClick={() => closeAndRun(onShowProfile)}
                 />
                 <MobileActionRow
+                  icon={Heart}
+                  label={language === "ar" ? "المفضلة" : "Favorites"}
+                  onClick={() => closeAndRun(onShowFavorites)}
+                />
+                <MobileActionRow
                   icon={MessageCircle}
                   label={language === "ar" ? "الرسائل" : "Messages"}
                   onClick={() => closeAndRun(onShowMessages)}
@@ -164,18 +170,6 @@ export function HeaderMobileMenuSheet({
                   />
                 )}
               </div>
-            </div>
-          ) : !authLoading ? (
-            <div className="space-y-2">
-              <Button
-                onClick={() => closeAndRun(onShowProfile)}
-                className="h-auto w-full justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-primary-foreground hover:bg-primary/90"
-              >
-                <User className="w-5 h-5" />
-                <span className="font-medium">
-                  {language === "ar" ? "تسجيل الدخول" : "Sign In"}
-                </span>
-              </Button>
             </div>
           ) : null}
 

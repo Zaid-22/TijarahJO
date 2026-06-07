@@ -125,6 +125,7 @@ export function Header({
                   isOpen={isMobileMenuOpen}
                   onOpenChange={setIsMobileMenuOpen}
                   onShowProfile={onShowProfile}
+                  onShowFavorites={onShowFavorites}
                   onShowMessages={onShowMessages}
                   onShowSettings={onShowSettings}
                   onShowAdminDashboard={onShowAdminDashboard}
@@ -226,7 +227,7 @@ export function Header({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="hidden h-10 rounded-full border border-primary/35 bg-background/85 px-5 font-semibold text-primary shadow-sm hover:border-primary hover:bg-primary hover:text-primary-foreground hover:shadow-md sm:flex"
+                  className="flex h-9 sm:h-10 rounded-full border border-primary/35 bg-background/85 px-3 sm:px-5 font-semibold text-primary shadow-sm hover:border-primary hover:bg-primary hover:text-primary-foreground hover:shadow-md transition-all duration-300 text-xs sm:text-sm"
                   onClick={onShowProfile}
                 >
                   {language === "ar" ? "تسجيل الدخول" : "Sign In"}
