@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AuthState, User } from "../types";
 import { api } from "../services/api";
+import { serverQueryClient } from "../shared/query/queryClient";
 import {
   normalizeAuthRejectionMessage,
   resolveUserFromAuthPayload,
@@ -67,6 +68,19 @@ export function useAuthProviderController(): AuthContextType {
     localStorage.removeItem("tijarahjo_favorites");
     // Clear comparison cache when logging out
     sessionStorage.removeItem("tijarahjo_compare_items");
+    // Clear the in-memory TanStack Query cache for all favorites queries so
+    // stale authenticated favorite IDs are not shown after logout.
+    serverQueryClient.removeQueries({
+      predicate: (query) => {
+        const queryKey = query.queryKey;
+        return (
+          Array.isArray(queryKey) &&
+          queryKey.length >= 2 &&
+          typeof queryKey[1] === "string" &&
+          queryKey[1].startsWith("favorites:")
+        );
+      },
+    });
     // Note: AUTH_LOGOUT_KEY is intentionally NOT cleared here —
     // it is only cleared on explicit login/signup.
   }, []);
@@ -506,6 +520,7 @@ export function useAuthProviderController(): AuthContextType {
     checkAuth,
     isGuest,
     loading,
+    // eslint-disable-next-line max-lines
     authError,
     clearAuthError,
     setSession: persistAuthenticatedSession,
