@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { api } from "../../services/api";
 import { chatService } from "../../services/chatService";
 import { toPositiveIntegerId } from "../../utils/idValidation";
@@ -23,6 +23,8 @@ interface UseChatListResult {
   userAvatarsById: Record<number, string | undefined>;
   setUserDisplayNamesById: React.Dispatch<React.SetStateAction<Record<number, string>>>;
   setUserAvatarsById: React.Dispatch<React.SetStateAction<Record<number, string | undefined>>>;
+  /** IDs that useChatList has already fetched — shared with ChatPage to avoid duplicate requests. */
+  fetchedIdsRef: React.RefObject<Set<number>>;
 }
 
 export function useChatList({
@@ -36,6 +38,10 @@ export function useChatList({
   const [isLoadingChats, setIsLoadingChats] = useState(true);
   const [userDisplayNamesById, setUserDisplayNamesById] = useState<Record<number, string>>({});
   const [userAvatarsById, setUserAvatarsById] = useState<Record<number, string | undefined>>({});
+
+  // Track which user IDs we've already attempted to fetch so we never
+  // re-fetch even if the map is updated from elsewhere (e.g. ChatPage effect).
+  const fetchedIdsRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     async function fetchChats() {
@@ -70,7 +76,9 @@ export function useChatList({
 
           chatsByUser.set(otherUser, {
             userId: otherUser,
-            displayName: `${userPrefix} ${otherUser}`,
+            // Empty string — no placeholder flash. The ChatList component
+            // should handle empty names gracefully (skeleton or hide).
+            displayName: "",
             lastMessage: formatChatPreviewText(message.content, resolvedLanguage),
             timestamp: message.timestamp,
             isRead: message.senderId === currentUserId ? true : Boolean(message.isRead),
@@ -83,6 +91,7 @@ export function useChatList({
 
         await Promise.all(
           otherUserIds.map(async (id) => {
+            fetchedIdsRef.current.add(id);
             const userData = await api.users.getUser(String(id));
             namesById[id] = resolveUserDisplayName(
               userData as Record<string, unknown> | null | undefined,
@@ -92,8 +101,10 @@ export function useChatList({
           }),
         );
 
-        setUserDisplayNamesById(namesById);
-        setUserAvatarsById(avatarsById);
+        // MERGE into existing maps — don't wipe names that ChatPage's effect
+        // may have already resolved for the selected user.
+        setUserDisplayNamesById((prev) => ({ ...prev, ...namesById }));
+        setUserAvatarsById((prev) => ({ ...prev, ...avatarsById }));
         setChats(
           Array.from(chatsByUser.values()).map((chat) => ({
             ...chat,
@@ -104,7 +115,7 @@ export function useChatList({
       } catch (error) {
         logger.warn("Failed to load chats", error);
         setChats([]);
-        setUserDisplayNamesById({});
+        // Don't wipe userDisplayNamesById — keep any names already resolved.
       } finally {
         setIsLoadingChats(false);
       }
@@ -128,7 +139,8 @@ export function useChatList({
         const existing = prevChats.find((c) => c.userId === otherUserId);
         const updated: ChatSummary = {
           userId: otherUserId,
-          displayName: existing?.displayName || `${userPrefix} ${otherUserId}`,
+          // Use existing name, or look up the cache, or leave empty while fetching.
+          displayName: existing?.displayName || userDisplayNamesById[otherUserId] || "",
           avatar: existing?.avatar || userAvatarsById[otherUserId],
           lastMessage: formatChatPreviewText(message.content, resolvedLanguage),
           timestamp: message.timestamp,
@@ -136,8 +148,32 @@ export function useChatList({
         };
         return [updated, ...prevChats.filter((c) => c.userId !== otherUserId)];
       });
+
+      // If this is a brand-new user we haven't fetched yet, fetch their name.
+      if (!fetchedIdsRef.current.has(otherUserId) && !userDisplayNamesById[otherUserId]) {
+        fetchedIdsRef.current.add(otherUserId);
+        (async () => {
+          const userData = await api.users.getUser(String(otherUserId));
+          const resolvedName = resolveUserDisplayName(
+            userData as Record<string, unknown> | null | undefined,
+            otherUserId,
+          );
+          setUserDisplayNamesById((prev) => ({ ...prev, [otherUserId]: resolvedName }));
+          if (userData?.avatar) {
+            setUserAvatarsById((prev) => ({ ...prev, [otherUserId]: userData.avatar }));
+          }
+          // Update the chat entry with the resolved name
+          setChats((prev) =>
+            prev.map((c) =>
+              c.userId === otherUserId
+                ? { ...c, displayName: resolvedName, avatar: userData?.avatar || c.avatar }
+                : c,
+            ),
+          );
+        })();
+      }
     });
-  }, [isAuthenticated, userId, userPrefix, selectedUserId, resolvedLanguage, userAvatarsById]);
+  }, [isAuthenticated, userId, userPrefix, selectedUserId, resolvedLanguage, userAvatarsById, userDisplayNamesById]);
 
   return {
     chats,
@@ -146,5 +182,6 @@ export function useChatList({
     userAvatarsById,
     setUserDisplayNamesById,
     setUserAvatarsById,
+    fetchedIdsRef,
   };
 }

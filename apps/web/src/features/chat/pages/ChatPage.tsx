@@ -113,8 +113,6 @@ export function ChatPage({ language }: ChatPageProps) {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(
     routeSelectedUserId ?? null,
   );
-  const [selectedDisplayName, setSelectedDisplayName] = useState("");
-  const [selectedUserAvatar, setSelectedUserAvatar] = useState<string | undefined>();
   const isMobile = useMediaQuery("(max-width: 767px)");
 
   const {
@@ -124,6 +122,7 @@ export function ChatPage({ language }: ChatPageProps) {
     userAvatarsById,
     setUserDisplayNamesById,
     setUserAvatarsById,
+    fetchedIdsRef,
   } = useChatList({
     isAuthenticated,
     userId: user?.id ? String(user.id) : undefined,
@@ -131,6 +130,15 @@ export function ChatPage({ language }: ChatPageProps) {
     userPrefix: labels.userPrefix,
     selectedUserId,
   });
+
+  // Derived reactively from the shared cache — no intermediate state, no flash.
+  // As soon as useChatList or the fetch effect populates the map, the header updates.
+  const selectedDisplayName = selectedUserId
+    ? (userDisplayNamesById[selectedUserId] ?? "")
+    : "";
+  const selectedUserAvatar = selectedUserId
+    ? userAvatarsById[selectedUserId]
+    : undefined;
 
   // Clear postTitle from history state after first render so it only pre-fills once
   useEffect(() => {
@@ -192,66 +200,37 @@ export function ChatPage({ language }: ChatPageProps) {
     }
   }, [currentPath, locationState, persistedReturnState, routeSelectedUserId, safeBackPath]);
 
+  // Single-responsibility effect: fetch and populate the cache only.
+  // Uses the shared fetchedIdsRef from useChatList to avoid duplicate requests.
   useEffect(() => {
-    if (selectedUserId === null) {
-      setSelectedDisplayName("");
-      return;
-    }
+    if (selectedUserId === null) return;
+    if (fetchedIdsRef.current?.has(selectedUserId)) return; // already fetched by useChatList or us
 
-    const cachedName = userDisplayNamesById[selectedUserId];
-    if (cachedName) {
-      setSelectedDisplayName(cachedName);
-      setSelectedUserAvatar(userAvatarsById[selectedUserId]);
-      return;
-    }
-
-    setSelectedDisplayName(`${labels.userPrefix} ${selectedUserId}`);
-    setSelectedUserAvatar(undefined);
-
+    fetchedIdsRef.current?.add(selectedUserId);
     let isCancelled = false;
     (async () => {
       const userData = await api.users.getUser(String(selectedUserId));
-      if (isCancelled) {
-        return;
-      }
+      if (isCancelled) return;
 
       const resolvedName = resolveUserDisplayName(
         userData as Record<string, unknown> | null | undefined,
         selectedUserId,
       );
-      setSelectedDisplayName(resolvedName);
+      setUserDisplayNamesById((prev) => ({ ...prev, [selectedUserId]: resolvedName }));
       if (userData?.avatar) {
-        setSelectedUserAvatar(userData.avatar);
-      }
-      setUserDisplayNamesById((prev) => ({
-        ...prev,
-        [selectedUserId]: resolvedName,
-      }));
-      if (userData?.avatar) {
-        setUserAvatarsById((prev) => ({
-          ...prev,
-          [selectedUserId]: userData.avatar,
-        }));
+        setUserAvatarsById((prev) => ({ ...prev, [selectedUserId]: userData.avatar }));
       }
     })();
 
-    return () => {
-      isCancelled = true;
-    };
-  }, [labels.userPrefix, selectedUserId, userDisplayNamesById, userAvatarsById, setUserAvatarsById, setUserDisplayNamesById]);
+    return () => { isCancelled = true; };
+  }, [selectedUserId, setUserDisplayNamesById, setUserAvatarsById, fetchedIdsRef]);
 
   const handleSelectUser = (id: number) => {
     const normalizedUserId = toPositiveIntegerId(id);
-    if (!normalizedUserId) {
-      return;
-    }
+    if (!normalizedUserId) return;
 
     setSelectedUserId(normalizedUserId);
-    setSelectedDisplayName(
-      userDisplayNamesById[normalizedUserId] ||
-        `${labels.userPrefix} ${normalizedUserId}`,
-    );
-    setSelectedUserAvatar(userAvatarsById[normalizedUserId]);
+    // No need to set displayName/avatar — both are derived from the shared cache.
     navigate(`/chat/${normalizedUserId}`, {
       state: {
         fromPath: resolvedBackPath,
@@ -310,8 +289,8 @@ export function ChatPage({ language }: ChatPageProps) {
   }
 
   return (
-    <PageShell tone="account" className="h-[100dvh] overflow-hidden">
-      <div className="flex h-[100dvh] min-h-0 flex-col overflow-hidden">
+    <PageShell tone="account" className="h-dvh overflow-hidden">
+      <div className="flex h-dvh min-h-0 flex-col overflow-hidden">
         <SubpageHeader
           onBack={handlePageBack}
           isRTL={isRTL}
@@ -351,10 +330,7 @@ export function ChatPage({ language }: ChatPageProps) {
             {selectedUserId ? (
               <ChatWindow
                 otherUserId={selectedUserId}
-                otherDisplayName={
-                  selectedDisplayName ||
-                  `${labels.userPrefix} ${selectedUserId}`
-                }
+                otherDisplayName={selectedDisplayName}
                 otherUserAvatar={selectedUserAvatar}
                 currentUser={{
                   id: user?.id || "",

@@ -95,8 +95,10 @@ export function ChatList({
                         }))
                       }
                     />
-                  ) : (
+                  ) : chat.displayName ? (
                     getAvatarInitial(chat.displayName)
+                  ) : (
+                    <span className="inline-block h-5 w-5 rounded-full bg-muted-foreground/20 animate-pulse" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -109,7 +111,9 @@ export function ChatList({
                           : "text-muted-foreground",
                       )}
                     >
-                      {chat.displayName}
+                      {chat.displayName || (
+                        <span className="inline-block h-3.5 w-20 rounded bg-muted animate-pulse" />
+                      )}
                     </h4>
                     <span
                       className={cn(

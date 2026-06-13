@@ -266,7 +266,9 @@ export function ChatWindow({
               "flex h-11 w-11 items-center justify-center rounded-full border border-border/60 overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all",
               resolveAvatarSrc(otherUserAvatar) && !avatarError
                 ? "bg-transparent text-foreground" 
-                : "bg-primary/10 text-primary font-medium text-lg",
+                : otherDisplayName
+                  ? "bg-primary/10 text-primary font-medium text-lg"
+                  : "bg-muted animate-pulse",
               "me-3 shrink-0",
             )}
           >
@@ -279,13 +281,17 @@ export function ChatWindow({
                 className="h-full w-full object-cover" 
                 onError={() => setAvatarError(true)}
               />
-            ) : (
+            ) : otherDisplayName ? (
               getAvatarInitial(otherDisplayName)
-            )}
+            ) : null}
           </Link>
           <div>
             <Link to={`/seller/${otherUserId}`} className="font-semibold text-foreground hover:text-primary transition-colors block">
-              {otherDisplayName}
+              {otherDisplayName ? (
+                otherDisplayName
+              ) : (
+                <span className="inline-block h-4 w-28 rounded bg-muted animate-pulse" />
+              )}
             </Link>
             <p
               className={cn(
