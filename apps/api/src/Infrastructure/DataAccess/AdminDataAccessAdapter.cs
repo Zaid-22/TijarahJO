@@ -709,6 +709,7 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
                                     : null,
                     Reason = x.r.Reason,
                     Description = x.r.Description,
+                    ImageUrl = x.r.ImageUrl,
                     ReporterUserID = x.r.ReporterUserID,
                     ReporterName = (x.reporter.FirstName + " " + (x.reporter.LastName ?? "")).Trim(),
                     ReporterEmail = x.reporter.Email,

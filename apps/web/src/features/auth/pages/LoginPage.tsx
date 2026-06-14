@@ -322,6 +322,17 @@ export function LoginPage({
       return;
     }
 
+    // In signup mode the identifier field is email-only. If the user typed a
+    // phone number there (instead of their email), guide them to the phone field.
+    if (!parsedIdentifier.email && parsedIdentifier.phone) {
+      setFieldError("identifier", copy.errors.signUpIdentifierMustBeEmail);
+      dispatch({
+        type: "SET_GENERAL_ERROR",
+        error: copy.errors.signUpIdentifierMustBeEmail,
+      });
+      return;
+    }
+
     if (!normalizedPhone) {
       setFieldError("phone", validationMessages.phoneInvalid);
       dispatch({
@@ -366,12 +377,29 @@ export function LoginPage({
         copy.errors.registrationFailedFallback,
         backendConnectionMessage,
       );
+      const finalMessage = appendDuplicateAccountHint(
+        baseMessage,
+        copy.errors.duplicateHintSuffix,
+      );
+
+      // If the error is specifically about a duplicate phone number, highlight
+      // the phone field so the user immediately knows which field to correct.
+      const lowerMessage = finalMessage.toLowerCase();
+      if (
+        lowerMessage.includes("phone number") &&
+        (lowerMessage.includes("already exists") || lowerMessage.includes("already registered") || lowerMessage.includes("already in use"))
+      ) {
+        setFieldError(
+          "phone",
+          language === "ar"
+            ? "رقم الهاتف مستخدم بالفعل. يرجى استخدام رقم مختلف أو تسجيل الدخول."
+            : "This phone number is already registered. Please use a different number or sign in.",
+        );
+      }
+
       dispatch({
         type: "SET_GENERAL_ERROR",
-        error: appendDuplicateAccountHint(
-          baseMessage,
-          copy.errors.duplicateHintSuffix,
-        ),
+        error: finalMessage,
       });
       return;
     }

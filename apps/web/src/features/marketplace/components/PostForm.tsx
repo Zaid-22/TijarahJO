@@ -267,19 +267,28 @@ export function PostForm({
             name="description"
             placeholder={t.descriptionPlaceholder || (isRTL ? "أخبرنا المزيد عما تنشره" : "Tell us more about what you are posting")}
             rows={4}
+            maxLength={1200}
             value={formData.description}
             onChange={(e) => {
-              setFormData(prev => ({ ...prev, description: e.target.value }));
+              const value = e.target.value.slice(0, 1200);
+              setFormData(prev => ({ ...prev, description: value }));
               if (errors.description) setErrors((prev) => ({ ...prev, description: false }));
             }}
             className={cn("text-start", errors.description ? "border-destructive" : "")}
           />
+          <div className={cn(
+            "text-end text-xs",
+            formData.description.length >= 1100 ? "text-destructive font-medium" : "text-muted-foreground",
+          )}>
+            {formData.description.length} / 1200
+          </div>
           {errors.description && (
             <div className="text-sm text-destructive">
               {isRTL ? "الوصف مطلوب" : "Description is required"}
             </div>
           )}
         </div>
+
 
         <Button
           className="w-full text-base font-bold py-6 mt-4 shadow-lg active:scale-95 transition-transform"

@@ -19,6 +19,8 @@ export interface LoginCopy {
     areaPlaceholder: string;
     identifierLabel: string;
     identifierPlaceholder: string;
+    identifierSignUpLabel: string;
+    identifierSignUpPlaceholder: string;
     passwordLabel: string;
     passwordPlaceholder: string;
     confirmPasswordLabel: string;
@@ -56,6 +58,7 @@ export interface LoginCopy {
     unexpected: string;
     duplicateHintSuffix: string;
     signUpInvalidIdentifierPrompt: string;
+    signUpIdentifierMustBeEmail: string;
     signUpInvalidPhonePrompt: string;
     signUpCityRequiredPrompt: string;
     signUpAreaRequiredPrompt: string;
@@ -89,6 +92,8 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       areaPlaceholder: "Area",
       identifierLabel: "Email or Phone",
       identifierPlaceholder: "Email address or phone number",
+      identifierSignUpLabel: "Email Address",
+      identifierSignUpPlaceholder: "your@email.com",
       passwordLabel: "Password",
       passwordPlaceholder: "Password",
       confirmPasswordLabel: "Confirm Password",
@@ -128,6 +133,8 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
         "Try using different credentials, or switch to sign in if you already have an account.",
       signUpInvalidIdentifierPrompt:
         "Please enter a valid email address or Jordanian phone number.",
+      signUpIdentifierMustBeEmail:
+        "Please enter your email address here. Use the Phone Number field below for your phone.",
       signUpInvalidPhonePrompt:
         "Please enter a valid Jordanian phone number starting with 077, 078, or 079.",
       signUpCityRequiredPrompt: "Please enter your city.",
@@ -179,6 +186,8 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       areaPlaceholder: "المنطقة",
       identifierLabel: "البريد الإلكتروني أو الهاتف",
       identifierPlaceholder: "البريد الإلكتروني أو رقم الهاتف",
+      identifierSignUpLabel: "البريد الإلكتروني",
+      identifierSignUpPlaceholder: "your@email.com",
       passwordLabel: "كلمة المرور",
       passwordPlaceholder: "كلمة المرور",
       confirmPasswordLabel: "تأكيد كلمة المرور",
@@ -219,6 +228,8 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
         "جرّب بيانات اعتماد مختلفة، أو انتقل إلى تسجيل الدخول إذا كان لديك حساب بالفعل.",
       signUpInvalidIdentifierPrompt:
         "يرجى إدخال بريد إلكتروني صالح أو رقم هاتف أردني صالح.",
+      signUpIdentifierMustBeEmail:
+        "يرجى إدخال بريدك الإلكتروني هنا. استخدم حقل رقم الهاتف أدناه لإدخال هاتفك.",
       signUpInvalidPhonePrompt:
         "يرجى إدخال رقم هاتف متوافق يبدأ بـ 77 أو 78 أو 79.",
       signUpCityRequiredPrompt: "يرجى إدخال المدينة.",

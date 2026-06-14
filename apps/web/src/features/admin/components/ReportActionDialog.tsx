@@ -18,6 +18,7 @@ import {
 } from "../../../shared/ui/select";
 import { Textarea } from "../../../shared/ui/textarea";
 import { AdminReportItem } from "../../../services/api/admin";
+import { resolveUploadUrl } from "../../../services/api/utils";
 
 function formatReportTargetLabel(report: AdminReportItem): string {
   const normalizedLabel = report.targetLabel?.trim();
@@ -129,6 +130,29 @@ export function ReportActionDialog({
                 <div className="bg-muted/20 border border-border/50 rounded-lg p-3 text-sm text-foreground leading-relaxed">
                   {report.description}
                 </div>
+              </div>
+            )}
+
+            {report.imageUrl && (
+              <div className="space-y-2">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  Evidence Image
+                </p>
+                <a
+                  href={resolveUploadUrl(report.imageUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open full image in new tab"
+                >
+                  <img
+                    src={resolveUploadUrl(report.imageUrl)}
+                    alt="Reporter evidence"
+                    className="w-full max-h-64 object-contain rounded-lg border border-border hover:opacity-90 transition-opacity bg-muted/10"
+                  />
+                  <p className="mt-1 text-xs text-primary hover:underline flex items-center gap-1">
+                    <ExternalLink className="w-3 h-3" /> Open full size
+                  </p>
+                </a>
               </div>
             )}
 

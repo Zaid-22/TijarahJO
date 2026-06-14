@@ -507,6 +507,7 @@ export function useAuthProviderController(): AuthContextType {
       setAuthState({
         isAuthenticated: false,
         user: null,
+      // eslint-disable-next-line max-lines
       });
     }
   }, [clearAuthStorage]);

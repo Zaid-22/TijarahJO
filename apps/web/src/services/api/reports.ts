@@ -6,6 +6,8 @@ type SubmitReportPayload = {
   targetId: number | string;
   reason: string;
   description?: string;
+  /** Optional evidence image file to attach to the report. */
+  image?: File | null;
 };
 
 type SubmitReportResult = {
@@ -50,14 +52,21 @@ export const reportsApi = {
       };
     }
 
+    // Use FormData so we can include the optional evidence image.
+    const formData = new FormData();
+    formData.append("ReportType", payload.reportType);
+    formData.append("TargetID", String(normalizedTargetId));
+    formData.append("Reason", normalizedReason);
+    if (payload.description?.trim()) {
+      formData.append("Description", payload.description.trim());
+    }
+    if (payload.image) {
+      formData.append("Image", payload.image, payload.image.name);
+    }
+
     const response = await apiRequest<unknown>("/reports", {
       method: "POST",
-      body: JSON.stringify({
-        ReportType: payload.reportType,
-        TargetID: normalizedTargetId,
-        Reason: normalizedReason,
-        Description: payload.description?.trim() || undefined,
-      }),
+      body: formData,
     });
 
     if (response.success) {

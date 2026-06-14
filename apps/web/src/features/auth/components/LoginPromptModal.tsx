@@ -43,12 +43,12 @@ export function LoginPromptModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="sm:max-w-md p-0 overflow-hidden bg-transparent border-0 shadow-none w-[95vw] sm:w-full overflow-y-auto [&>button]:hidden flex flex-col justify-start sm:justify-center items-center"
+        className="sm:max-w-md p-0 bg-transparent border-0 shadow-none w-[95vw] sm:w-full overflow-y-auto [&>button]:hidden flex flex-col justify-start sm:justify-center items-center"
         dir={isRTL ? "rtl" : "ltr"}
         aria-describedby={undefined}
       >
         <DialogTitle className="sr-only">Login Menu</DialogTitle>
-        <div className="w-full max-w-md bg-card rounded-2xl border border-border shadow-xl p-4 sm:p-6 lg:p-8 relative">
+        <div className="w-full max-w-md bg-card rounded-2xl border border-border shadow-xl p-4 sm:p-6 lg:p-8 relative max-h-[85vh] overflow-y-auto">
           {/* Custom close button styled nicely */}
           <button
             type="button"

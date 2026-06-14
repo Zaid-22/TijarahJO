@@ -556,6 +556,7 @@ BEGIN
         TargetID         INT            NOT NULL,
         Reason           NVARCHAR(50)   NOT NULL,
         Description      NVARCHAR(2000) NULL,
+        ImageUrl         NVARCHAR(500)  NULL,
         ReporterUserID   INT            NOT NULL,
         Status           INT            NOT NULL CONSTRAINT DF_Reports_Status DEFAULT 0,
         ResolvedByUserID INT            NULL,

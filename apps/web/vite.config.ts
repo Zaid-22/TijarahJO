@@ -254,7 +254,7 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
-          navigateFallbackDenylist: [/^\/api\//, /^\/chatHub/],
+          navigateFallbackDenylist: [/^\/api\//, /^\/chatHub/, /^\/uploads\//],
           runtimeCaching: [
             {
               urlPattern: /\/uploads\//,
@@ -396,6 +396,18 @@ export default defineConfig(({ mode }) => {
         // /node_modules/.vite/deps and then cascade into lazy import failures.
         "Cache-Control": "no-store",
         "Content-Security-Policy": "frame-ancestors 'none';",
+      },
+      proxy: {
+        // Forward uploaded-file requests to the backend so images
+        // (post, chat, avatar, report evidence) resolve correctly in dev.
+        "/uploads": {
+          target:
+            env.VITE_API_BASE_URL?.trim()
+              ? parseApiOrigin(env.VITE_API_BASE_URL.trim()) ??
+                "http://localhost:5033"
+              : "http://localhost:5033",
+          changeOrigin: true,
+        },
       },
       // open: true, // commented out to prevent dev server from hanging
       hmr: {

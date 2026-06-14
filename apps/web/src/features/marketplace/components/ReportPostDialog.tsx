@@ -70,6 +70,8 @@ export function ReportPostDialog({
 }: ReportPostDialogProps) {
   const [selectedReason, setSelectedReason] = useState<string>("");
   const [description, setDescription] = useState("");
+  const [image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const resolvedTargetId = targetId ?? postId;
@@ -122,6 +124,12 @@ export function ReportPostDialog({
       language === "ar"
         ? "اكتب المزيد من التفاصيل هنا..."
         : "Provide more details here...",
+    attachImage:
+      language === "ar"
+        ? "إرفاق صورة دليل (اختياري)"
+        : "Attach evidence image (optional)",
+    changeImage: language === "ar" ? "تغيير الصورة" : "Change image",
+    removeImage: language === "ar" ? "إزالة" : "Remove",
     cancel: language === "ar" ? "إلغاء" : "Cancel",
     submit: language === "ar" ? "إرسال البلاغ" : "Submit Report",
     submitting: language === "ar" ? "جارٍ الإرسال..." : "Submitting...",
@@ -143,6 +151,26 @@ export function ReportPostDialog({
         : "Could not submit the report right now.",
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    if (!file) return;
+    setImage(file);
+    setImagePreview(URL.createObjectURL(file));
+    e.target.value = "";
+  };
+
+  const handleRemoveImage = () => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImage(null);
+    setImagePreview(null);
+  };
+
+  const resetForm = () => {
+    setSelectedReason("");
+    setDescription("");
+    handleRemoveImage();
+  };
+
   const handleSubmit = async () => {
     if (!selectedReason) {
       toast.error(labels.error);
@@ -156,6 +184,7 @@ export function ReportPostDialog({
         targetId: resolvedTargetId ?? "",
         reason: selectedReason,
         description,
+        image,
       });
 
       if (!result.success) {
@@ -169,8 +198,7 @@ export function ReportPostDialog({
       }
 
       toast.success(labels.success);
-      setSelectedReason("");
-      setDescription("");
+      resetForm();
       onOpenChange(false);
     } finally {
       setIsSubmitting(false);
@@ -178,7 +206,7 @@ export function ReportPostDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -215,12 +243,62 @@ export function ReportPostDialog({
             onChange={(e) => setDescription(e.target.value)}
             className="min-h-20"
           />
+
+          {/* Evidence image upload */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-foreground">
+              {labels.attachImage}
+            </p>
+            {imagePreview ? (
+              <div className="relative rounded-lg overflow-hidden border border-border">
+                <img
+                  src={imagePreview}
+                  alt="Evidence preview"
+                  className="w-full max-h-48 object-cover"
+                />
+                <div className="absolute top-2 right-2 flex gap-1">
+                  <label className="cursor-pointer">
+                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-background/90 border border-border hover:bg-muted transition-colors">
+                      {labels.changeImage}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="sr-only"
+                      onChange={handleImageChange}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-destructive/90 text-destructive-foreground hover:bg-destructive transition-colors"
+                  >
+                    {labels.removeImage}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <label className="cursor-pointer block">
+                <div className="border-2 border-dashed border-border rounded-lg p-4 text-center text-sm text-muted-foreground hover:border-primary/40 hover:bg-muted/30 transition-colors">
+                  {language === "ar"
+                    ? "انقر لاختيار صورة (JPG، PNG، WebP)"
+                    : "Click to choose an image (JPG, PNG, WebP)"}
+                </div>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="sr-only"
+                  onChange={handleImageChange}
+                />
+              </label>
+            )}
+          </div>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={() => { resetForm(); onOpenChange(false); }}
             disabled={isSubmitting}
           >
             {labels.cancel}

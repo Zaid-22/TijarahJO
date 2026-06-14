@@ -11,7 +11,7 @@ interface AuthInputFieldProps {
   value: string;
   error?: string;
   disabled?: boolean;
-  type: "text" | "password";
+  type: "text" | "password" | "email";
   autoComplete?: string;
   icon: LucideIcon;
   focused: boolean;

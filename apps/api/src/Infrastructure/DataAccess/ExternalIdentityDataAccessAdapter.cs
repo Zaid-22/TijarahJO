@@ -151,6 +151,31 @@ public sealed class ExternalIdentityDataAccessAdapter(TijarahJoDbContext dbConte
         }
     }
 
+    public async Task DeleteIdentityLinkBySubjectAsync(
+        string provider,
+        string providerSubject,
+        CancellationToken cancellationToken = default)
+    {
+        string normalizedProvider = NormalizeProvider(provider);
+        string normalizedSubject = providerSubject?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalizedProvider) || string.IsNullOrWhiteSpace(normalizedSubject))
+        {
+            return;
+        }
+
+        UserExternalIdentityEntity? existing = await dbContext.UserExternalIdentities
+            .FirstOrDefaultAsync(
+                item => item.Provider == normalizedProvider && item.ProviderSubject == normalizedSubject,
+                cancellationToken
+            );
+
+        if (existing != null)
+        {
+            dbContext.UserExternalIdentities.Remove(existing);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+    }
+
     private static string NormalizeProvider(string provider)
     {
         return string.IsNullOrWhiteSpace(provider)

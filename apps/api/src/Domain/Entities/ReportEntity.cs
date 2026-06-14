@@ -23,6 +23,9 @@ public sealed class ReportEntity
     /// <summary>Optional additional details from the reporter.</summary>
     public string? Description { get; set; }
 
+    /// <summary>Optional evidence image URL uploaded by the reporter.</summary>
+    public string? ImageUrl { get; set; }
+
     /// <summary>UserID of the person filing the report.</summary>
     public int ReporterUserID { get; set; }
 

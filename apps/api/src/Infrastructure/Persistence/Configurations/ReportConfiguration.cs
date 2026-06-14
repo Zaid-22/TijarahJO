@@ -14,6 +14,7 @@ public class ReportConfiguration : IEntityTypeConfiguration<ReportEntity>
         builder.Property(e => e.ReportType).HasMaxLength(20).IsRequired();
         builder.Property(e => e.Reason).HasMaxLength(50).IsRequired();
         builder.Property(e => e.Description).HasMaxLength(2000);
+        builder.Property(e => e.ImageUrl).HasMaxLength(500);
         builder.Property(e => e.ResolutionNotes).HasMaxLength(1000);
         builder.Property(e => e.CreatedAt).HasColumnType("datetime2");
         builder.Property(e => e.ResolvedAt).HasColumnType("datetime2");

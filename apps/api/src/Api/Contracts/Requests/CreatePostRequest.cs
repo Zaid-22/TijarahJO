@@ -12,7 +12,7 @@ public sealed class CreatePostRequest
     [MaxLength(200)]
     public string PostTitle { get; set; } = string.Empty;
 
-    [MaxLength(10000)]
+    [MaxLength(1200)]
     public string? PostDescription { get; set; }
 
     [Range(typeof(decimal), "0", "79228162514264337593543950335")]

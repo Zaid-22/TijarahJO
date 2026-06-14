@@ -21,6 +21,7 @@ public interface IPostImageFileStorageService
     Task<StoredPostImageFile> SaveAsync(IFormFile file, CancellationToken cancellationToken = default);
     Task<StoredPostImageFile> SaveChatImageAsync(IFormFile file, CancellationToken cancellationToken = default);
     Task<StoredPostImageFile> SaveUserAvatarAsync(IFormFile file, CancellationToken cancellationToken = default);
+    Task<StoredPostImageFile> SaveReportImageAsync(IFormFile file, CancellationToken cancellationToken = default);
     Task DeleteByPublicUrlAsync(string publicUrl, CancellationToken cancellationToken = default);
 }
 
@@ -84,6 +85,19 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
             file,
             ResolveAbsoluteUserAvatarsRootPath(_environment.ContentRootPath, _options),
             fileName => BuildPublicUserAvatarUrl(fileName, _options),
+            generateThumbnail: false,
+            cancellationToken
+        );
+    }
+
+    public async Task<StoredPostImageFile> SaveReportImageAsync(IFormFile file, CancellationToken cancellationToken = default)
+    {
+        ValidateFileOrThrow(file);
+
+        return await SaveValidatedFile(
+            file,
+            ResolveAbsoluteReportImagesRootPath(_environment.ContentRootPath, _options),
+            fileName => BuildPublicReportImageUrl(fileName, _options),
             generateThumbnail: false,
             cancellationToken
         );
@@ -231,6 +245,13 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
         return Path.GetFullPath(Path.Combine(uploadsRoot, userAvatarsSegment));
     }
 
+    public static string ResolveAbsoluteReportImagesRootPath(string contentRootPath, FileStorageOptions options)
+    {
+        string uploadsRoot = ResolveAbsoluteUploadsRootPath(contentRootPath, options);
+        string reportImagesSegment = NormalizePathSegment(options.ReportImagesPath, "report-images");
+        return Path.GetFullPath(Path.Combine(uploadsRoot, reportImagesSegment));
+    }
+
     public static string NormalizeRequestPath(string requestPath)
     {
         string normalized = string.IsNullOrWhiteSpace(requestPath)
@@ -264,6 +285,13 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
         string basePath = NormalizeRequestPath(options.PublicBasePath);
         string userAvatarsSegment = NormalizePathSegment(options.UserAvatarsPath, "user-avatars");
         return $"{basePath}/{userAvatarsSegment}/{fileName}";
+    }
+
+    public static string BuildPublicReportImageUrl(string fileName, FileStorageOptions options)
+    {
+        string basePath = NormalizeRequestPath(options.PublicBasePath);
+        string reportImagesSegment = NormalizePathSegment(options.ReportImagesPath, "report-images");
+        return $"{basePath}/{reportImagesSegment}/{fileName}";
     }
 
     public static string BuildThumbnailFileName(string fileName)

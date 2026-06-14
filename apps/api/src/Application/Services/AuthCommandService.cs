@@ -183,6 +183,32 @@ public sealed class AuthCommandService(
             normalizedEmail = BuildPhoneAliasEmail(normalizedPhone!);
         }
 
+        // --- Pre-insert duplicate checks (no DB unique constraint on Phone) ---
+        if (!string.IsNullOrWhiteSpace(normalizedPhone))
+        {
+            UserModel? existingByPhone = await _users.GetUserByLoginAsync(normalizedPhone, cancellationToken);
+            if (existingByPhone != null && !existingByPhone.IsDeleted)
+            {
+                return Failure(
+                    AuthCommandFailureReason.DuplicateIdentity,
+                    "An account with this phone number already exists. Please use a different phone number or try logging in.");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(normalizedEmail))
+        {
+            UserModel? existingByEmail = await _users.GetUserByLoginAsync(normalizedEmail, cancellationToken);
+            if (existingByEmail != null && !existingByEmail.IsDeleted)
+            {
+                return Failure(
+                    AuthCommandFailureReason.DuplicateIdentity,
+                    isPhoneOnlySignup
+                        ? "An account with this phone number already exists. Please use a different phone number or try logging in."
+                        : "An account with this email address already exists. Please use a different email or try logging in.");
+            }
+        }
+
+
         // Use the shared RoleResolution helper — eliminates the private duplicate method.
         int? defaultRoleId = await RoleResolution.ResolveRoleIdByNameAsync(_roles, _logger, DefaultUserRoleName, cancellationToken);
         if (!defaultRoleId.HasValue)
@@ -229,7 +255,7 @@ public sealed class AuthCommandService(
                 RoleName = roleName
             };
         }
-        catch (Exception ex) when (LooksLikeDuplicateIdentity(ex.Message))
+        catch (Exception ex) when (LooksLikeDuplicateIdentity(GetFullExceptionMessage(ex)))
         {
             if (_logger.IsEnabled(LogLevel.Information))
             {
@@ -238,7 +264,7 @@ public sealed class AuthCommandService(
                     normalizedEmail,
                     normalizedPhone);
             }
-            return Failure(AuthCommandFailureReason.DuplicateIdentity, ResolveDuplicateIdentityMessage(ex.Message, isPhoneOnlySignup));
+            return Failure(AuthCommandFailureReason.DuplicateIdentity, ResolveDuplicateIdentityMessage(GetFullExceptionMessage(ex), isPhoneOnlySignup));
         }
         catch (Exception ex)
         {
@@ -278,19 +304,44 @@ public sealed class AuthCommandService(
             UserModel? linkedUser = await _users.GetUserByIDAsync(linkedUserId.Value, cancellationToken);
             if (linkedUser == null || linkedUser.UserID == null)
             {
+                // Identity link is orphaned — the user row is missing entirely.
+                // Clean up the stale link and let a fresh account be created.
                 _logger.LogWarning(
-                    "Google identity mapping points to missing user. provider={Provider} subject={Subject} userId={UserId}",
+                    "Google identity mapping points to missing user. Removing orphaned link. provider={Provider} subject={Subject} userId={UserId}",
                     GoogleProviderName,
                     normalizedSubject,
                     linkedUserId.Value
                 );
-                return Failure(
-                    AuthCommandFailureReason.PersistenceFailed,
-                    "Google sign-in account mapping is invalid. Please contact support."
+                await _externalIdentities.DeleteIdentityLinkBySubjectAsync(
+                    GoogleProviderName,
+                    normalizedSubject,
+                    cancellationToken
                 );
+                // Fall through to signup flow below.
             }
-
-            return await BuildGoogleSuccessResultAsync(linkedUser, command, cancellationToken);
+            else if (linkedUser.IsDeleted)
+            {
+                // The linked account was soft-deleted — remove the stale identity link so
+                // a fresh signup can claim this Google identity without hitting the
+                // UQ_UserExternalIdentities_Provider_Subject constraint.
+                _logger.LogInformation(
+                    "Google identity mapping points to a deleted user. Removing stale link and creating new account. " +
+                    "provider={Provider} subject={Subject} deletedUserId={UserId}",
+                    GoogleProviderName,
+                    normalizedSubject,
+                    linkedUserId.Value
+                );
+                await _externalIdentities.DeleteIdentityLinkBySubjectAsync(
+                    GoogleProviderName,
+                    normalizedSubject,
+                    cancellationToken
+                );
+                // Fall through to email-match / signup flow below.
+            }
+            else
+            {
+                return await BuildGoogleSuccessResultAsync(linkedUser, command, cancellationToken);
+            }
         }
 
         UserModel? emailMatchedUser = await _users.GetUserByLoginAsync(normalizedEmail, cancellationToken);
@@ -624,6 +675,24 @@ public sealed class AuthCommandService(
         // Password is not user-facing for OAuth-created users; generate strong random bytes.
         string random = Convert.ToBase64String(RandomNumberGenerator.GetBytes(24));
         return $"G!{random}a9";
+    }
+
+    /// <summary>Walks the full exception chain and concatenates all messages for constraint detection.</summary>
+    private static string GetFullExceptionMessage(Exception? ex)
+    {
+        if (ex is null) return string.Empty;
+        var sb = new System.Text.StringBuilder();
+        var current = ex;
+        while (current != null)
+        {
+            if (!string.IsNullOrWhiteSpace(current.Message))
+            {
+                if (sb.Length > 0) sb.Append(' ');
+                sb.Append(current.Message);
+            }
+            current = current.InnerException;
+        }
+        return sb.ToString();
     }
 
     private static bool LooksLikeDuplicateIdentity(string? message)

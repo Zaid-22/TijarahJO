@@ -314,14 +314,14 @@ export function LoginForm({
               <AuthInputField
                 id="authIdentifier"
                 name="authIdentifier"
-                label={copy.form.identifierLabel}
+                label={isSignUp ? copy.form.identifierSignUpLabel : copy.form.identifierLabel}
                 required={isSignUp}
-                placeholder={copy.form.identifierPlaceholder}
+                placeholder={isSignUp ? copy.form.identifierSignUpPlaceholder : copy.form.identifierPlaceholder}
                 value={values.identifier}
                 error={errors.identifier}
                 disabled={isLoading}
-                type="text"
-                autoComplete={isSignUp ? "off" : "username"}
+                type={isSignUp ? "email" : "text"}
+                autoComplete={isSignUp ? "email" : "username"}
                 icon={Mail}
                 focused={focusedField === "identifier"}
                 onChange={(value) => onFieldChange("identifier", value)}

@@ -33,4 +33,11 @@ public interface IExternalIdentityDataAccess
         string? providerEmail,
         CancellationToken cancellationToken = default
     );
+
+    /// <summary>Removes the identity link for a given provider+subject pair. Used when the linked user account has been deleted and a fresh login should create a new account.</summary>
+    Task DeleteIdentityLinkBySubjectAsync(
+        string provider,
+        string providerSubject,
+        CancellationToken cancellationToken = default
+    );
 }

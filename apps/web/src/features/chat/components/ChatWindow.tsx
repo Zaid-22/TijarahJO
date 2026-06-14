@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import { useState, useEffect, useRef, useCallback, type ChangeEvent } from "react";
+import { useState, useEffect, useRef, useCallback, type ChangeEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useChat } from "../hooks/useChat";
 import { Button } from "../../../shared/ui/button";
@@ -24,6 +24,40 @@ import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
 import { formatCompactTime } from "../../../shared/lib/dateTime";
 import { APP_CONFIG } from "../../../constants/appConfig";
 import { ReportPostDialog } from "../../marketplace/components/ReportPostDialog";
+
+/** Splits message text on URLs and renders clickable <a> links for each one. */
+function renderTextWithLinks(text: string, isMe: boolean) {
+  const URL_REGEX = /https?:\/\/[^\s<>"]+(?:[^\s<>".,;:!?)]|\([^\s<>"]*\))*/g;
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = URL_REGEX.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    const url = match[0];
+    parts.push(
+      <a
+        key={match.index}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={isMe ? "underline text-primary-foreground/90 hover:text-primary-foreground" : "underline text-primary hover:text-primary/80"}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {url}
+      </a>,
+    );
+    lastIndex = match.index + url.length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : [text];
+}
 
 interface ChatWindowProps {
   otherUserId: number;
@@ -403,7 +437,7 @@ export function ChatWindow({
                         </div>
                       ) : (
                         <>
-                          <p className="whitespace-pre-wrap wrap-break-word">{parsedContent.text}</p>
+                          <p className="whitespace-pre-wrap wrap-break-word">{renderTextWithLinks(parsedContent.text, isMe)}</p>
                           <span
                             className={cn(
                               "mt-1 flex items-center justify-end gap-1.5 text-xs opacity-75",

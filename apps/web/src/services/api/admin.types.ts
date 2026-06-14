@@ -155,6 +155,7 @@ export type AdminReportItem = {
   targetLabel: string | null;
   reason: string;
   description: string | null;
+  imageUrl: string | null;
   reporterUserID: number;
   reporterName: string;
   reporterEmail: string;

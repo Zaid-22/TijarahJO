@@ -11,6 +11,8 @@ public sealed class FileStorageOptions
 
     public string UserAvatarsPath { get; set; } = "user-avatars";
 
+    public string ReportImagesPath { get; set; } = "report-images";
+
     // Public URL prefix used to serve files via static file middleware.
     public string PublicBasePath { get; set; } = "/uploads";
 

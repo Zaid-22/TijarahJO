@@ -231,6 +231,8 @@ public sealed class ChatControllerDownloadImageTests
             => throw new NotSupportedException();
         public Task<StoredPostImageFile> SaveUserAvatarAsync(IFormFile file, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
+        public Task<StoredPostImageFile> SaveReportImageAsync(IFormFile file, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
         public Task DeleteByPublicUrlAsync(string publicUrl, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
     }

@@ -26,6 +26,7 @@ import {
 } from "../../../shared/ui/select";
 import { api } from "../../../services/api";
 import { AdminReportItem } from "../../../services/api/admin";
+import { resolveUploadUrl } from "../../../services/api/utils";
 import { formatCompactDateTime } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
 import { ReportActionDialog } from "./ReportActionDialog";
@@ -419,6 +420,21 @@ export function ReportsQueue() {
                     <p className="mt-2 text-sm text-muted-foreground border-l-2 border-border pl-3">
                       {report.description}
                     </p>
+                  )}
+                  {report.imageUrl && (
+                    <a
+                      href={resolveUploadUrl(report.imageUrl)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 block w-fit"
+                      title="View evidence image"
+                    >
+                      <img
+                        src={resolveUploadUrl(report.imageUrl)}
+                        alt="Evidence"
+                        className="h-20 w-32 object-cover rounded border border-border hover:opacity-80 transition-opacity"
+                      />
+                    </a>
                   )}
                   <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
                     <span>

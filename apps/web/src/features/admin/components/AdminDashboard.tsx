@@ -135,7 +135,7 @@ export function AdminDashboard() {
     },
     {
       title: "Avg Rating",
-      value: (stats.averageRating ?? 0) > 0 ? `${stats.averageRating} ★` : "N/A",
+      value: `${stats.averageRating ?? 0} ★`,
       icon: Star,
       color: "text-yellow-500",
       bgColor: "bg-yellow-500/15",
