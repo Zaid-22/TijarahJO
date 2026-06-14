@@ -100,6 +100,11 @@ services:
       PasswordResetEmail__FromAddress: ${PasswordResetEmail__FromAddress:-security@tijarahjo.online}
       PasswordResetEmail__FromName: ${PasswordResetEmail__FromName:-TijarahJo Security}
       PasswordResetEmail__LogCodesWhenEmailDisabled: ${PasswordResetEmail__LogCodesWhenEmailDisabled:-false}
+      EmailVerification__Enabled: ${EmailVerification__Enabled:-false}
+      EmailVerification__ResendApiKey: ${EmailVerification__ResendApiKey:-}
+      EmailVerification__FromAddress: ${EmailVerification__FromAddress:-security@tijarahjo.online}
+      EmailVerification__FromName: ${EmailVerification__FromName:-TijarahJo}
+      EmailVerification__LogTokensWhenEmailDisabled: ${EmailVerification__LogTokensWhenEmailDisabled:-false}
       Gemini__ApiKey: ${Gemini__ApiKey:?Set Gemini__ApiKey}
       YouTube__ApiKey: ${YouTube__ApiKey:?Set YouTube__ApiKey}
       YouTube__Referer: ${YouTube__Referer:?Set YouTube__Referer}
