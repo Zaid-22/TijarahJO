@@ -116,3 +116,7 @@ apps/web/login_gap.png
 .playwright-mcp/
 dev_server.log
 apps/web/.env.production
+
+# Desktop and Android directories
+Desktop/
+.android/
