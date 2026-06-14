@@ -45,7 +45,8 @@ public sealed class UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<
             IsDeleted = user.IsDeleted,
             TwoFactorEnabled = user.TwoFactorEnabled,
             TwoFactorSecret = user.TwoFactorSecret,
-            TwoFactorPendingSecret = user.TwoFactorPendingSecret
+            TwoFactorPendingSecret = user.TwoFactorPendingSecret,
+            IsEmailVerified = user.IsEmailVerified
         };
 
         await _dbContext.Users.AddAsync(entity, cancellationToken);
@@ -87,6 +88,7 @@ public sealed class UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<
         entity.TwoFactorSecret = user.TwoFactorSecret;
         entity.TwoFactorPendingSecret = user.TwoFactorPendingSecret;
         entity.SuspendedUntil = user.SuspendedUntil;
+        entity.IsEmailVerified = user.IsEmailVerified;
 
         _dbContext.AuditActorUserId = actorUserId;
         try
@@ -300,7 +302,8 @@ public sealed class UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<
             entity.TwoFactorEnabled,
             entity.TwoFactorSecret,
             entity.TwoFactorPendingSecret,
-            entity.SuspendedUntil
+            entity.SuspendedUntil,
+            entity.IsEmailVerified
         );
     }
 

@@ -6,7 +6,7 @@ import {
   createEmptyLoginErrors,
 } from "./loginValidation";
 
-type LoginStep = "credentials" | "twoFactor";
+type LoginStep = "credentials" | "twoFactor" | "emailVerification";
 type AuthMode = "signIn" | "signUp";
 
 interface LoginState {
@@ -21,6 +21,7 @@ interface LoginState {
   showPassword: boolean;
   showConfirmPassword: boolean;
   focusedField: LoginField | null;
+  emailVerificationEmail: string;
 }
 
 type LoginAction =
@@ -37,6 +38,8 @@ type LoginAction =
   | { type: "TOGGLE_PASSWORD" }
   | { type: "TOGGLE_CONFIRM_PASSWORD" }
   | { type: "SET_FOCUSED_FIELD"; field: LoginField | null }
+  | { type: "ENTER_EMAIL_VERIFICATION"; email: string; message: string }
+  | { type: "CANCEL_EMAIL_VERIFICATION" }
   | { type: "RESET"; initialValues?: Partial<LoginFormValues> };
 
 function loginReducer(state: LoginState, action: LoginAction): LoginState {
@@ -138,6 +141,23 @@ function loginReducer(state: LoginState, action: LoginAction): LoginState {
         focusedField: action.field,
       };
 
+    case "ENTER_EMAIL_VERIFICATION":
+      return {
+        ...state,
+        step: "emailVerification",
+        emailVerificationEmail: action.email,
+        generalError: action.message,
+        isLoading: false,
+      };
+
+    case "CANCEL_EMAIL_VERIFICATION":
+      return {
+        ...state,
+        step: "credentials",
+        emailVerificationEmail: "",
+        generalError: "",
+      };
+
     case "RESET":
       return createInitialLoginState(action.initialValues);
 
@@ -171,6 +191,7 @@ function createInitialLoginState(
     showPassword: false,
     showConfirmPassword: false,
     focusedField: null,
+    emailVerificationEmail: "",
   };
 }
 

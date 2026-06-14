@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  CheckCircle2,
   Loader2,
   Lock,
   Mail,
@@ -61,6 +62,11 @@ interface LoginFormProps {
   avatarPreview?: string;
   onAvatarClick?: () => void;
   isModal?: boolean;
+  isEmailVerificationStep?: boolean;
+  emailVerificationEmail?: string;
+  onCancelEmailVerification?: () => void;
+  onResendVerificationEmail?: () => void;
+  isResendingVerification?: boolean;
 }
 
 export function LoginForm({
@@ -99,6 +105,11 @@ export function LoginForm({
   avatarPreview,
   onAvatarClick,
   isModal,
+  isEmailVerificationStep = false,
+  emailVerificationEmail = "",
+  onCancelEmailVerification,
+  onResendVerificationEmail,
+  isResendingVerification = false,
 }: LoginFormProps) {
   const isRTL = language === "ar";
 
@@ -109,21 +120,27 @@ export function LoginForm({
     ? "bg-primary text-primary-foreground hover:bg-primary/90"
     : "bg-muted text-muted-foreground cursor-not-allowed opacity-70 hover:bg-muted";
 
-  const title = isTwoFactorStep
-    ? copy.form.twoFactorTitle
-    : isSignUp
-      ? copy.form.signUpTitle
-      : copy.form.signInTitle;
+  const title = isEmailVerificationStep
+    ? (language === "ar" ? "تحقق من بريدك الإلكتروني" : "Check your email")
+    : isTwoFactorStep
+      ? copy.form.twoFactorTitle
+      : isSignUp
+        ? copy.form.signUpTitle
+        : copy.form.signInTitle;
 
-  const subtitle = isTwoFactorStep
-    ? copy.form.twoFactorSubtitle
-    : isSignUp
-      ? copy.form.signUpSubtitle
-      : copy.form.signInSubtitle;
+  const subtitle = isEmailVerificationStep
+    ? (language === "ar"
+      ? `أرسلنا رابط التحقق إلى ${emailVerificationEmail || "بريدك الإلكتروني"}`
+      : `We sent a verification link to ${emailVerificationEmail || "your email"}`)
+    : isTwoFactorStep
+      ? copy.form.twoFactorSubtitle
+      : isSignUp
+        ? copy.form.signUpSubtitle
+        : copy.form.signInSubtitle;
 
   const footer = (
     <>
-      {!isTwoFactorStep && (
+      {!isTwoFactorStep && !isEmailVerificationStep && (
         <div className="mt-6 text-center">
           <p className="text-sm text-muted-foreground">
             {isSignUp
@@ -140,7 +157,7 @@ export function LoginForm({
         </div>
       )}
 
-      {!isTwoFactorStep && (
+      {!isTwoFactorStep && !isEmailVerificationStep && (
         <div className="mt-4 text-center">
           <button
             type="button"
@@ -152,6 +169,56 @@ export function LoginForm({
         </div>
       )}
     </>
+  );
+
+  const emailVerificationContent = (
+    <div className="space-y-6">
+      {generalError && (
+        <Alert
+          className="border-primary/30 bg-primary/5 px-3 py-2.5 shadow-none"
+          aria-live="assertive"
+        >
+          <CheckCircle2 className="h-4 w-4 text-primary" />
+          <AlertDescription className="text-sm font-medium text-foreground" dir="auto">
+            {generalError}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="flex flex-col items-center gap-4 py-4">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+          <Mail className="h-8 w-8 text-primary" />
+        </div>
+        <p className="text-sm text-muted-foreground text-center" dir="auto">
+          {language === "ar"
+            ? "انقر على الرابط في البريد الإلكتروني للتحقق من حسابك. تحقق من مجلد الرسائل غير المرغوب فيها إذا لم تجده."
+            : "Click the link in the email to verify your account. Check your spam folder if you don't see it."}
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full h-11"
+          onClick={onResendVerificationEmail}
+          disabled={isResendingVerification}
+        >
+          {isResendingVerification
+            ? (language === "ar" ? "جارٍ الإرسال..." : "Sending...")
+            : (language === "ar" ? "إعادة إرسال رابط التحقق" : "Resend verification link")}
+        </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          className="w-full h-11 text-muted-foreground"
+          onClick={onCancelEmailVerification}
+        >
+          {language === "ar" ? "العودة إلى تسجيل الدخول" : "Back to sign in"}
+        </Button>
+      </div>
+    </div>
   );
 
   const formContent = (
@@ -452,7 +519,7 @@ export function LoginForm({
             </p>
           )}
         </div>
-        {formContent}
+        {isEmailVerificationStep ? emailVerificationContent : formContent}
         {footer}
       </div>
     );
@@ -465,7 +532,7 @@ export function LoginForm({
       subtitle={subtitle}
       footer={footer}
     >
-      {formContent}
+      {isEmailVerificationStep ? emailVerificationContent : formContent}
     </AuthPageLayout>
   );
 }

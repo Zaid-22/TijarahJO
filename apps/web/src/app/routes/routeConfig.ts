@@ -4,6 +4,7 @@ export const APP_ROUTE_PATHS = {
   login: "/login",
   forgotPassword: "/forgot-password",
   completeProfile: "/complete-profile",
+  verifyEmail: "/verify-email",
   settings: "/settings",
   favorites: "/favorites",
   sell: "/sell",

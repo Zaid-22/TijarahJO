@@ -25,6 +25,11 @@ const CompleteProfilePage = lazy(() =>
     default: m.CompleteProfilePage,
   })),
 );
+const VerifyEmailPage = lazy(() =>
+  import("../../../features/auth/pages/VerifyEmailPage").then((m) => ({
+    default: m.VerifyEmailPage,
+  })),
+);
 
 interface AuthRouteGroupParams {
   appProps: BaseAppRouteProps;
@@ -106,6 +111,11 @@ export function renderAuthRouteGroup({
       <Route
         path={APP_ROUTE_PATHS.completeProfile}
         element={<CompleteProfilePage />}
+      />
+
+      <Route
+        path={APP_ROUTE_PATHS.verifyEmail}
+        element={<VerifyEmailPage language={appProps.language} />}
       />
     </>
   );

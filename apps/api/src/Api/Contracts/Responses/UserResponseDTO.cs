@@ -20,4 +20,5 @@ public class UserResponseDTO
     public string RoleName { get; set; } = string.Empty;
     public bool HasAdminAccess { get; set; }
     public IReadOnlyList<string> AdminPermissions { get; set; } = [];
+    public bool IsEmailVerified { get; set; }
 }

@@ -87,7 +87,8 @@ public static class DTOMapper
             RoleID = userModel.RoleID,
             RoleName = roleName,
             HasAdminAccess = hasAdminAccess,
-            AdminPermissions = adminPermissions ?? []
+            AdminPermissions = adminPermissions ?? [],
+            IsEmailVerified = userModel.IsEmailVerified
         };
     }
 

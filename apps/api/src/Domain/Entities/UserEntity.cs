@@ -24,6 +24,7 @@ namespace TijarahJo.Domain.Entities
         public string? TwoFactorPendingSecret { get; set; }
         public DateTime? LastInvalidatedAt { get; set; }
         public DateTime? SuspendedUntil { get; set; }
+        public bool IsEmailVerified { get; set; }
 
         public UserStatusLookupEntity? StatusLookup { get; set; }
         public string? SearchFirstNameNormalized { get; private set; }

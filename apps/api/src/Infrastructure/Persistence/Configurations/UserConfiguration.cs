@@ -26,6 +26,7 @@ public class UserConfiguration : IEntityTypeConfiguration<UserEntity>
         builder.Property(e => e.TwoFactorEnabled).HasDefaultValue(false);
         builder.Property(e => e.TwoFactorSecret).HasMaxLength(512);
         builder.Property(e => e.TwoFactorPendingSecret).HasMaxLength(512);
+        builder.Property(e => e.IsEmailVerified).HasDefaultValue(false);
         builder.Property(e => e.SearchFirstNameNormalized)
             .ValueGeneratedOnAddOrUpdate()
             .HasMaxLength(100)

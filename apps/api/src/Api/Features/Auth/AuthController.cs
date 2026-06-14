@@ -27,6 +27,7 @@ public class AuthController(
     TwoFactorService twoFactorService,
     IEmailTwoFactorSender emailSender,
     ITokenBlacklistService tokenBlacklistService,
+    IEmailVerificationService emailVerificationService,
     ILogger<AuthController> logger) : ControllerBase
 {
     private readonly ITokenService _tokenService = tokenService;
@@ -37,6 +38,7 @@ public class AuthController(
     private readonly TwoFactorService _twoFactorService = twoFactorService;
     private readonly IEmailTwoFactorSender _emailSender = emailSender;
     private readonly ITokenBlacklistService _tokenBlacklistService = tokenBlacklistService;
+    private readonly IEmailVerificationService _emailVerificationService = emailVerificationService;
     private readonly ILogger<AuthController> _logger = logger;
 
     [HttpPost("login")]
@@ -64,6 +66,12 @@ public class AuthController(
                 AuthCommandFailureReason.UserDeleted => Problem(statusCode: StatusCodes.Status401Unauthorized, detail: InvalidLoginMessage),
                 AuthCommandFailureReason.UserInactive => Problem(statusCode: StatusCodes.Status401Unauthorized, detail: result.Message),
                 AuthCommandFailureReason.AccountLocked => Problem(statusCode: StatusCodes.Status429TooManyRequests, detail: result.Message),
+                AuthCommandFailureReason.EmailNotVerified => StatusCode(StatusCodes.Status403Forbidden, new AuthResponse
+                {
+                    Success = false,
+                    RequiresEmailVerification = true,
+                    Message = result.Message
+                }),
                 AuthCommandFailureReason.RoleResolutionFailed => Problem(statusCode: StatusCodes.Status500InternalServerError, detail: result.Message),
                 _ => Problem(statusCode: StatusCodes.Status500InternalServerError, detail: "Authentication failed.")
             };
@@ -155,22 +163,28 @@ public class AuthController(
             };
         }
 
-        string token = _tokenService.GenerateToken(result.User.UserID.Value, result.User.Email, result.RoleName);
-        AuthShared.SetTokenCookie(Response, token);
-
-        UserPermissionSnapshot permissionSnapshot = await _userPermissionService.GetUserPermissionSnapshotAsync(
+        // Send verification email — don't issue JWT until verified
+        EmailVerificationRequestResult verificationResult = await _emailVerificationService.SendVerificationAsync(
             result.User.UserID.Value,
-            cancellationToken);
+            result.User.Email,
+            result.User.FirstName,
+            cancellationToken
+        );
+
+        if (!verificationResult.Success)
+        {
+            _logger.LogWarning(
+                "Email verification send failed during signup for user {UserId}: {Reason}",
+                result.User.UserID.Value,
+                verificationResult.FailureReason
+            );
+        }
 
         return StatusCode(StatusCodes.Status201Created, new AuthResponse
         {
             Success = true,
-            User = DTOMapper.ToUserResponseDTO(
-                result.User,
-                result.RoleName,
-                Request,
-                permissionSnapshot.HasAdminAccess,
-                permissionSnapshot.PermissionKeys)
+            RequiresEmailVerification = true,
+            Message = "Account created successfully. Please check your email to verify your account."
         });
     }
 
@@ -300,6 +314,49 @@ public class AuthController(
         Response.Cookies.Delete("XSRF-TOKEN", csrfDeleteOptions);
 
         return Ok(new ApiMessageResponse { Message = "Logged out successfully" });
+    }
+
+    [HttpPost("verify-email")]
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiMessageResponse>> VerifyEmail(
+        [FromBody] VerifyEmailRequest request, CancellationToken cancellationToken)
+    {
+        EmailVerificationConfirmResult result = await _emailVerificationService.ConfirmVerificationAsync(
+            request?.Token, cancellationToken);
+
+        if (!result.Success)
+        {
+            int statusCode = result.FailureReason switch
+            {
+                EmailVerificationConfirmFailureReason.ExpiredToken => StatusCodes.Status400BadRequest,
+                EmailVerificationConfirmFailureReason.InvalidToken => StatusCodes.Status400BadRequest,
+                EmailVerificationConfirmFailureReason.UserNotFound => StatusCodes.Status404NotFound,
+                EmailVerificationConfirmFailureReason.PersistenceFailed => StatusCodes.Status500InternalServerError,
+                _ => StatusCodes.Status400BadRequest
+            };
+
+            return Problem(statusCode: statusCode, detail: result.Message);
+        }
+
+        return Ok(new ApiMessageResponse { Message = result.Message ?? "Email verified successfully." });
+    }
+
+    [HttpPost("verify-email/resend")]
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiMessageResponse>> ResendVerificationEmail(
+        [FromBody] ResendVerificationEmailRequest request, CancellationToken cancellationToken)
+    {
+        EmailVerificationRequestResult result = await _emailVerificationService.ResendVerificationAsync(
+            request?.Email, cancellationToken);
+
+        // Always return 200 to avoid leaking email existence
+        return Ok(new ApiMessageResponse { Message = result.Message ?? "If an account exists with this email, a verification link has been sent." });
     }
 
 }

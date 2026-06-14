@@ -30,6 +30,7 @@ export type AuthApiResponse = {
   message?: string;
   requiresTwoFactor?: boolean;
   twoFactorToken?: string;
+  requiresEmailVerification?: boolean;
   error?: AuthApiError;
 };
 
@@ -241,6 +242,16 @@ export function handleAuthSuccessPayload(
       message:
         parsedPayload.message ||
         "Two-factor verification is required to complete sign in.",
+    };
+  }
+
+  if (parsedPayload.requiresEmailVerification) {
+    return {
+      success: true,
+      requiresEmailVerification: true,
+      message:
+        parsedPayload.message ||
+        "Please verify your email address.",
     };
   }
 

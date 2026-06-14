@@ -96,6 +96,11 @@ public sealed class AuthCommandService(
             return Failure(AuthCommandFailureReason.UserInactive, "User account is banned or inactive.");
         }
 
+        if (!user.IsEmailVerified)
+        {
+            return Failure(AuthCommandFailureReason.EmailNotVerified, "Please verify your email address before logging in.");
+        }
+
         if (user.SuspendedUntil.HasValue && user.SuspendedUntil.Value > DateTime.UtcNow)
         {
             string until = user.SuspendedUntil.Value.ToString("yyyy-MM-dd HH:mm") + " UTC";
@@ -522,6 +527,21 @@ public sealed class AuthCommandService(
             command.Avatar,
             cancellationToken
         );
+
+        // Google already verified the email — mark as verified if not already
+        if (!user.IsEmailVerified && user.UserID.HasValue)
+        {
+            user = user with { IsEmailVerified = true };
+            try
+            {
+                await _users.UpdateUserAsync(user, user.UserID.Value, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // Don't fail the login over this — log and continue
+                _logger.LogWarning(ex, "Failed to auto-verify email for Google user {UserId}.", user.UserID);
+            }
+        }
 
         string? roleName = await ResolveRoleNameForTokenAsync(user.RoleID, cancellationToken);
         if (string.IsNullOrWhiteSpace(roleName))

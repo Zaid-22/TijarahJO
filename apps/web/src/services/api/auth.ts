@@ -90,19 +90,41 @@ export const authApi = {
       );
     }
 
-    const errorMessage = resolveAuthFailureMessage(
-      response,
-      "Login failed. Please try again.",
-    );
+    if (!response.success) {
+      // Check if this is a 403 "email not verified" response
+      const errorDetails = response.error?.details as Record<string, unknown> | undefined;
+      if (
+        response.error?.code === "HTTP_403" &&
+        errorDetails &&
+        (errorDetails.RequiresEmailVerification === true ||
+          errorDetails.requiresEmailVerification === true)
+      ) {
+        const message =
+          String(errorDetails.Message ?? errorDetails.message ?? "") ||
+          "Please verify your email address before logging in.";
+        return {
+          success: false,
+          requiresEmailVerification: true,
+          message,
+        };
+      }
 
-    debugError(
-      "Login failed - response.success:",
-      response.success,
-      "response:",
-      response,
-    );
+      const errorMessage = resolveAuthFailureMessage(
+        response,
+        "Login failed. Please try again.",
+      );
 
-    return toAuthFailure("LOGIN_FAILED", errorMessage);
+      debugError(
+        "Login failed - response.success:",
+        response.success,
+        "response:",
+        response,
+      );
+
+      return toAuthFailure("LOGIN_FAILED", errorMessage);
+    }
+
+    return toAuthFailure("LOGIN_FAILED", "Login failed. Please try again.");
   },
 
   verifyTwoFactorLogin: async (
@@ -485,6 +507,57 @@ export const authApi = {
    */
   getCurrentUser: async (): Promise<ApiResponse<UnknownRecord>> => {
     return await apiRequest<UnknownRecord>("/auth/me", { method: "GET" });
+  },
+
+  /**
+   * Verify email address with the token from the verification link
+   */
+  verifyEmail: async (token: string): Promise<AuthApiResponse> => {
+    const response = await apiRequest<unknown>("/auth/verify-email", {
+      method: "POST",
+      body: JSON.stringify({ Token: token.trim() }),
+    });
+
+    if (response.success) {
+      return {
+        success: true,
+        message: resolveMessageFromPayload(
+          response.data,
+          "Email verified successfully.",
+        ),
+      };
+    }
+
+    const errorMessage = resolveAuthFailureMessage(
+      response,
+      "Email verification failed. The link may have expired.",
+    );
+    return toAuthFailure("EMAIL_VERIFY_FAILED", errorMessage);
+  },
+
+  /**
+   * Resend verification email
+   */
+  resendVerificationEmail: async (email: string): Promise<AuthApiResponse> => {
+    const response = await apiRequest<unknown>("/auth/verify-email/resend", {
+      method: "POST",
+      body: JSON.stringify({ Email: email.trim().toLowerCase() }),
+    });
+
+    if (response.success) {
+      return {
+        success: true,
+        message: resolveMessageFromPayload(
+          response.data,
+          "If an account exists with this email, a verification link has been sent.",
+        ),
+      };
+    }
+
+    return {
+      success: true,
+      message: "If an account exists with this email, a verification link has been sent.",
+    };
   },
 };
 

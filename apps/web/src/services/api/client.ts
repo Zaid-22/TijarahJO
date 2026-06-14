@@ -169,6 +169,8 @@ const AUTH_ENDPOINTS_NO_RETRY = [
   "/auth/forgot-password/verify",
   "/auth/forgot-password/confirm",
   "/auth/2fa/verify-login",
+  "/auth/verify-email",
+  "/auth/verify-email/resend",
 ];
 
 function shouldAttemptRefresh(
@@ -349,10 +351,14 @@ export async function apiRequest<T>(
 
     // Cookie-authenticated unsafe requests can fail with 403 if the antiforgery
     // token pair is stale or missing. Force-refresh the CSRF token and retry once.
+    // Skip for auth login/signup endpoints where 403 means "email not verified",
+    // not a stale CSRF token.
     if (
       response.status === 403 &&
       isUnsafeMethod(method) &&
-      !hasAuthorizationHeader(requestOptions.headers)
+      !hasAuthorizationHeader(requestOptions.headers) &&
+      !endpoint.startsWith("/auth/login") &&
+      !endpoint.startsWith("/auth/signup")
     ) {
       const freshCsrfToken = await resolveCsrfToken(
         endpoint,

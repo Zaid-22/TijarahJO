@@ -42,6 +42,7 @@ builder.Services.Configure<PasswordResetOptions>(builder.Configuration.GetSectio
 builder.Services.Configure<PasswordResetEmailOptions>(builder.Configuration.GetSection("PasswordResetEmail"));
 builder.Services.Configure<TwoFactorOptions>(builder.Configuration.GetSection("TwoFactor"));
 builder.Services.Configure<EmailTwoFactorOptions>(builder.Configuration.GetSection("EmailTwoFactor"));
+builder.Services.Configure<EmailVerificationOptions>(builder.Configuration.GetSection("EmailVerification"));
 builder.Services.Configure<AccountLockoutOptions>(builder.Configuration.GetSection("AccountLockout"));
 builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
 builder.Services.Configure<YouTubeSettings>(builder.Configuration.GetSection("YouTube"));
@@ -279,6 +280,7 @@ builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
 builder.Services.AddScoped<IPasswordResetEmailSender, PasswordResetEmailSender>();
 builder.Services.AddScoped<IEmailTwoFactorSender, EmailTwoFactorSender>();
 builder.Services.AddScoped<TwoFactorService>();
+builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
 builder.Services.AddScoped<IAccountLockoutService, AccountLockoutService>();
 builder.Services.AddSingleton<IPostImageFileStorageService, LocalPostImageFileStorageService>();
 builder.Services.AddSingleton<IImageModerationService, ImageModerationService>();

@@ -79,6 +79,7 @@ export function LoginPage({
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isResendingTwoFactor, setIsResendingTwoFactor] = useState(false);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const submitInFlightRef = useRef(false);
 
@@ -404,6 +405,18 @@ export function LoginPage({
       return;
     }
 
+    // Signup succeeded but email verification is required — show verification panel
+    if (response.requiresEmailVerification) {
+      dispatch({
+        type: "ENTER_EMAIL_VERIFICATION",
+        email: parsedIdentifier.email || state.values.identifier.trim(),
+        message: response.message || (language === "ar"
+          ? "تم إنشاء حسابك. يرجى التحقق من بريدك الإلكتروني لتفعيل الحساب."
+          : "Account created. Please check your email to verify your account."),
+      });
+      return;
+    }
+
     let user = response.user;
     if (user?.id && avatarFile) {
       try {
@@ -438,6 +451,18 @@ export function LoginPage({
     });
 
     if (!response.success) {
+      // Check if login failed because email is not verified
+      if (response.requiresEmailVerification) {
+        dispatch({
+          type: "ENTER_EMAIL_VERIFICATION",
+          email: state.values.identifier.trim(),
+          message: response.message || (language === "ar"
+            ? "يرجى التحقق من بريدك الإلكتروني قبل تسجيل الدخول."
+            : "Please verify your email address before logging in."),
+        });
+        return;
+      }
+
       const message = extractErrorMessage(
         response,
         copy.errors.loginFailedFallback,
@@ -721,6 +746,40 @@ export function LoginPage({
     dispatch({ type: "CANCEL_TWO_FACTOR" });
   };
 
+  const handleCancelEmailVerification = () => {
+    dispatch({ type: "CANCEL_EMAIL_VERIFICATION" });
+  };
+
+  const handleResendVerification = async () => {
+    if (isResendingVerification || !state.emailVerificationEmail) {
+      return;
+    }
+
+    setIsResendingVerification(true);
+    dispatch({ type: "SET_GENERAL_ERROR", error: "" });
+
+    try {
+      const result = await api.auth.resendVerificationEmail(
+        state.emailVerificationEmail,
+      );
+      dispatch({
+        type: "SET_GENERAL_ERROR",
+        error: result.message || (language === "ar"
+          ? "تم إرسال رابط التحقق إلى بريدك الإلكتروني."
+          : "A verification link has been sent to your email."),
+      });
+    } catch {
+      dispatch({
+        type: "SET_GENERAL_ERROR",
+        error: language === "ar"
+          ? "تعذر إرسال بريد التحقق. حاول مرة أخرى."
+          : "Failed to resend verification email. Please try again.",
+      });
+    } finally {
+      setIsResendingVerification(false);
+    }
+  };
+
   const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -813,6 +872,11 @@ export function LoginPage({
       avatarPreview={avatarPreview}
       onAvatarClick={() => fileInputRef.current?.click()}
       isModal={isModal}
+      isEmailVerificationStep={state.step === "emailVerification"}
+      emailVerificationEmail={state.emailVerificationEmail}
+      onCancelEmailVerification={handleCancelEmailVerification}
+      onResendVerificationEmail={handleResendVerification}
+      isResendingVerification={isResendingVerification}
     />
     </>
   );

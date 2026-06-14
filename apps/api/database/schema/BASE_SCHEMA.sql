@@ -127,6 +127,7 @@ BEGIN
         TwoFactorEnabled       BIT           NOT NULL CONSTRAINT DF_Users_TwoFactorEnabled DEFAULT 0,
         TwoFactorSecret        NVARCHAR(512) NULL,
         TwoFactorPendingSecret NVARCHAR(512) NULL,
+        IsEmailVerified        BIT           NOT NULL CONSTRAINT DF_Users_IsEmailVerified DEFAULT 0,
         LastInvalidatedAt      DATETIME2     NULL,
         SearchFirstNameNormalized AS CONVERT(NVARCHAR(100), UPPER(LTRIM(RTRIM(ISNULL(FirstName, N''))))) PERSISTED,
         SearchLastNameNormalized  AS CONVERT(NVARCHAR(100), UPPER(LTRIM(RTRIM(ISNULL(LastName, N''))))) PERSISTED,
@@ -154,6 +155,19 @@ BEGIN
     CREATE UNIQUE NONCLUSTERED INDEX UQ_Users_Email
     ON dbo.Users(Email)
     WHERE IsDeleted = 0;
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.Users')
+      AND name = N'UQ_Users_Phone'
+)
+BEGIN
+    CREATE UNIQUE NONCLUSTERED INDEX UQ_Users_Phone
+    ON dbo.Users(Phone)
+    WHERE IsDeleted = 0 AND Phone IS NOT NULL;
 END
 GO
 

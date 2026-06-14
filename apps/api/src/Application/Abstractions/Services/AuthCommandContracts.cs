@@ -41,7 +41,8 @@ public enum AuthCommandFailureReason
     RoleResolutionFailed,
     DuplicateIdentity,
     PersistenceFailed,
-    AccountLocked
+    AccountLocked,
+    EmailNotVerified
 }
 
 public sealed class AuthCommandResult
