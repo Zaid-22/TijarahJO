@@ -314,19 +314,8 @@ export function LoginPage({
     const normalizedCity = state.values.city.trim();
     const normalizedArea = state.values.area.trim();
 
-    if (!parsedIdentifier.email && !parsedIdentifier.phone) {
-      setFieldError("identifier", validationMessages.identifierInvalid);
-      dispatch({
-        type: "SET_GENERAL_ERROR",
-        error: copy.errors.signUpInvalidIdentifierPrompt,
-      });
-      return;
-    }
-
-    // In signup mode the identifier field is email-only. If the user typed a
-    // phone number there (instead of their email), guide them to the phone field.
-    if (!parsedIdentifier.email && parsedIdentifier.phone) {
-      setFieldError("identifier", copy.errors.signUpIdentifierMustBeEmail);
+    if (!parsedIdentifier.email) {
+      setFieldError("identifier", validationMessages.emailInvalid);
       dispatch({
         type: "SET_GENERAL_ERROR",
         error: copy.errors.signUpIdentifierMustBeEmail,

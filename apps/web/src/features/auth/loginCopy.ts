@@ -151,6 +151,8 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
     validation: {
       identifierRequired: "Email or phone is required",
       identifierInvalid: "Enter a valid email or Jordanian phone number",
+      emailRequired: "Email address is required",
+      emailInvalid: "Enter a valid email address",
       passwordRequired: "Password is required",
       passwordMinLength: "Password must be at least 8 characters",
       passwordUppercase: "Password must contain at least one uppercase letter",
@@ -249,6 +251,8 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       identifierRequired: "البريد الإلكتروني أو الهاتف مطلوب",
       identifierInvalid:
         "أدخل بريدًا إلكترونيًا صالحًا أو رقم هاتف أردني صالحًا",
+      emailRequired: "البريد الإلكتروني مطلوب",
+      emailInvalid: "أدخل بريدًا إلكترونيًا صالحًا",
       passwordRequired: "كلمة المرور مطلوبة",
       passwordMinLength: "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل",
       passwordUppercase: "يجب أن تحتوي كلمة المرور على حرف كبير واحد على الأقل",
