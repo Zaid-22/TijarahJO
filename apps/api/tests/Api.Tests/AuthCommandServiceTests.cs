@@ -325,7 +325,8 @@ public sealed class AuthCommandServiceTests
             joindate: DateTime.UtcNow,
             status: status,
             roleid: 1,
-            isdeleted: isDeleted
+            isdeleted: isDeleted,
+            isEmailVerified: true
         );
     }
 
@@ -371,13 +372,17 @@ public sealed class AuthCommandServiceTests
         public UserModel? UpdatedUser { get; private set; }
 
         public Task<UserModel?> GetUserByIDAsync(int? userId, CancellationToken ct = default)
-            => Task.FromResult<UserModel?>(_account);
+            => Task.FromResult<UserModel?>(userId == _account.UserID ? _account : null);
 
         public Task<UserModel?> GetUserByLoginAsync(string login, CancellationToken ct = default)
-            => Task.FromResult<UserModel?>(
-                _account.IsDeleted
-                    ? null
-                    : _account);
+        {
+            if (_account.IsDeleted) return Task.FromResult<UserModel?>(null);
+
+            bool matches = string.Equals(login, _account.Email, StringComparison.OrdinalIgnoreCase) ||
+                           (!string.IsNullOrWhiteSpace(_account.Phone) && string.Equals(login, _account.Phone, StringComparison.OrdinalIgnoreCase));
+
+            return Task.FromResult<UserModel?>(matches ? _account : null);
+        }
 
         public async Task<UserModel?> GetUserByLoginCandidatesAsync(IReadOnlyList<string> candidates, CancellationToken ct = default)
         {
@@ -430,6 +435,14 @@ public sealed class AuthCommandServiceTests
                 Status = ExternalIdentityLinkStatus.Linked,
                 LinkedUserId = userId
             });
+        }
+
+        public Task DeleteIdentityLinkBySubjectAsync(
+            string provider,
+            string providerSubject,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
         }
     }
 

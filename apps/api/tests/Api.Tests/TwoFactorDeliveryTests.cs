@@ -37,6 +37,7 @@ public sealed class TwoFactorDeliveryTests
             CreateTwoFactorService(),
             new FakeEmailTwoFactorSender(new EmailTwoFactorSendResult(false, "SMTP unavailable.")),
             new FakeTokenBlacklistService(),
+            new FakeEmailVerificationService(),
             NullLogger<AuthController>.Instance
         )
         {
@@ -77,6 +78,7 @@ public sealed class TwoFactorDeliveryTests
             CreateTwoFactorService(),
             new FakeEmailTwoFactorSender(new EmailTwoFactorSendResult(true)),
             new FakeTokenBlacklistService(),
+            new FakeEmailVerificationService(),
             NullLogger<AuthController>.Instance
         )
         {
@@ -382,6 +384,28 @@ public sealed class TwoFactorDeliveryTests
         {
              _challenges.Remove((userId, challengeType));
              return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeEmailVerificationService : IEmailVerificationService
+    {
+        public Task<EmailVerificationRequestResult> SendVerificationAsync(
+            int userId, string email, string? firstName,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(EmailVerificationRequestResult.Ok());
+        }
+
+        public Task<EmailVerificationConfirmResult> ConfirmVerificationAsync(
+            string? token, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(EmailVerificationConfirmResult.Ok());
+        }
+
+        public Task<EmailVerificationRequestResult> ResendVerificationAsync(
+            string? email, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(EmailVerificationRequestResult.Ok());
         }
     }
 }
