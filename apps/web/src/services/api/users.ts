@@ -8,6 +8,7 @@ import {
   type AdminUserRecord,
   type MutableUserFields,
   type RawUser,
+  type UserProfileRecord,
   normalizeAdminUser,
   normalizeUserProfile,
   resolveMutableUserFields,
@@ -55,6 +56,9 @@ async function updateUserWithAdminPatch(
   }
 }
 
+// In-flight deduplication — prevents concurrent duplicate requests to the user profile endpoint
+const _userInflight: Map<number, Promise<UserProfileRecord | null>> = new Map();
+
 export const usersApi = {
   /**
    * Get user profile by ID
@@ -65,41 +69,53 @@ export const usersApi = {
       return null;
     }
 
-    const response = await apiRequest<RawUser>(`/users/${normalizedUserId}`, {
-      method: "GET",
-    });
-
-    if (response.success && response.data) {
-      const rawUser = response.data;
-      
-      // Resolve City and Area IDs to names if they are present but names are missing
-      const cityId = rawUser.CityId ?? rawUser.cityId;
-      const areaId = rawUser.AreaId ?? rawUser.areaId;
-      
-      if (typeof cityId === 'number' && typeof rawUser.City !== 'string') {
-        try {
-          const cities = await locationsApi.getCities();
-          const city = cities.find((c) => c.cityId === cityId);
-          if (city) {
-            rawUser.City = city.cityName;
-            
-            if (typeof areaId === 'number' && typeof rawUser.Area !== 'string') {
-              const areas = await locationsApi.getAreasByCity(cityId);
-              const area = areas.find((a) => a.areaId === areaId);
-              if (area) {
-                rawUser.Area = area.areaName;
-              }
-            }
-          }
-        } catch (err) {
-          debugError("[getUser] Failed to resolve location names:", err);
-        }
-      }
-
-      return normalizeUserProfile(rawUser, String(normalizedUserId));
+    let inflight = _userInflight.get(normalizedUserId);
+    if (inflight) {
+      return inflight;
     }
 
-    return null;
+    inflight = (async () => {
+      const response = await apiRequest<RawUser>(`/users/${normalizedUserId}`, {
+        method: "GET",
+      });
+
+      if (response.success && response.data) {
+        const rawUser = response.data;
+        
+        // Resolve City and Area IDs to names if they are present but names are missing
+        const cityId = rawUser.CityId ?? rawUser.cityId;
+        const areaId = rawUser.AreaId ?? rawUser.areaId;
+        
+        if (typeof cityId === 'number' && typeof rawUser.City !== 'string') {
+          try {
+            const cities = await locationsApi.getCities();
+            const city = cities.find((c) => c.cityId === cityId);
+            if (city) {
+              rawUser.City = city.cityName;
+              
+              if (typeof areaId === 'number' && typeof rawUser.Area !== 'string') {
+                const areas = await locationsApi.getAreasByCity(cityId);
+                const area = areas.find((a) => a.areaId === areaId);
+                if (area) {
+                  rawUser.Area = area.areaName;
+                }
+              }
+            }
+          } catch (err) {
+            debugError("[getUser] Failed to resolve location names:", err);
+          }
+        }
+
+        return normalizeUserProfile(rawUser, String(normalizedUserId));
+      }
+
+      return null;
+    })().finally(() => {
+      _userInflight.delete(normalizedUserId);
+    });
+
+    _userInflight.set(normalizedUserId, inflight);
+    return inflight;
   },
 
   /**

@@ -9,25 +9,37 @@ import {
   normalizeCategory,
 } from "./schemas/categorySchema";
 
+// In-flight deduplication — prevents duplicate GET /categories requests when
+// Header, feed page, and other components all mount before the first response.
+let _categoriesGetAllInflight: Promise<CategoriesResponse> | null = null;
+
 export const categoriesApi = {
   getCategories: async (): Promise<CategoriesResponse> => {
-    const response = await apiRequest<unknown>("/categories", {
-      method: "GET",
-    });
-
-    if (response.success) {
-      const rawCategories = parseCategoryCollectionPayload(response.data);
-      const categories = rawCategories.map((cat, index) =>
-        normalizeCategory(cat, index),
-      );
-
-      return {
-        success: true,
-        categories,
-      };
+    // Deduplicate: if another caller is already fetching all categories, share the promise.
+    if (_categoriesGetAllInflight) {
+      return _categoriesGetAllInflight;
     }
 
-    return { success: false, categories: [] };
+    const promise = (async () => {
+      const response = await apiRequest<unknown>("/categories", {
+        method: "GET",
+      });
+
+      if (response.success) {
+        const rawCategories = parseCategoryCollectionPayload(response.data);
+        const categories = rawCategories.map((cat, index) =>
+          normalizeCategory(cat, index),
+        );
+        return { success: true, categories };
+      }
+
+      return { success: false, categories: [] };
+    })().finally(() => {
+      _categoriesGetAllInflight = null;
+    });
+
+    _categoriesGetAllInflight = promise;
+    return promise;
   },
 
   getCategory: async (id: string): Promise<Category | null> => {
