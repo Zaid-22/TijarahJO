@@ -67,6 +67,7 @@ interface LoginFormProps {
   onCancelEmailVerification?: () => void;
   onResendVerificationEmail?: () => void;
   isResendingVerification?: boolean;
+  resendCooldown?: number;
 }
 
 export function LoginForm({
@@ -110,6 +111,7 @@ export function LoginForm({
   onCancelEmailVerification,
   onResendVerificationEmail,
   isResendingVerification = false,
+  resendCooldown = 0,
 }: LoginFormProps) {
   const isRTL = language === "ar";
 
@@ -200,13 +202,27 @@ export function LoginForm({
         <Button
           type="button"
           variant="outline"
-          className="w-full h-11"
+          className="w-full h-11 transition-all duration-300"
           onClick={onResendVerificationEmail}
-          disabled={isResendingVerification}
+          disabled={isResendingVerification || resendCooldown > 0}
         >
-          {isResendingVerification
-            ? (language === "ar" ? "جارٍ الإرسال..." : "Sending...")
-            : (language === "ar" ? "إعادة إرسال رابط التحقق" : "Resend verification link")}
+          {isResendingVerification ? (
+            <span>{language === "ar" ? "جارٍ الإرسال..." : "Sending..."}</span>
+          ) : resendCooldown > 0 ? (
+            <span className="flex items-center gap-2">
+              <span
+                className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold"
+                style={{
+                  background: `conic-gradient(hsl(var(--primary)) ${((60 - resendCooldown) / 60) * 360}deg, hsl(var(--muted)) 0deg)`,
+                }}
+              />
+              {language === "ar"
+                ? `إعادة الإرسال خلال ${resendCooldown}ث`
+                : `Resend in ${resendCooldown}s`}
+            </span>
+          ) : (
+            <span>{language === "ar" ? "إعادة إرسال رابط التحقق" : "Resend verification link"}</span>
+          )}
         </Button>
 
         <Button

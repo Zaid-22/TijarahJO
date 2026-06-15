@@ -34,7 +34,7 @@ import {
   persistAuthSessionHint,
   SESSION_EXPIRED_MESSAGE,
 } from "./authContextUtils";
-import { performAuthLogin, performAuthRegister } from "./authActions";
+import { performAuthLogin, performAuthRegister, PerformAuthLoginResult } from "./authActions";
 import { useAuthEventSync } from "./useAuthEventSync";
 import { AuthContextType } from "./authContextTypes";
 
@@ -440,7 +440,7 @@ export function useAuthProviderController(): AuthContextType {
 
   const login = useCallback(
     async (email: string, password: string): Promise<boolean> => {
-      return performAuthLogin({
+      const result: PerformAuthLoginResult = await performAuthLogin({
         email,
         password,
         resolveAuthUser,
@@ -449,6 +449,13 @@ export function useAuthProviderController(): AuthContextType {
         setAuthError,
         getErrorMessage,
       });
+      if (result.status === "requires_email_verification") {
+        // Surface a clear message; the LoginPage's own handleSignIn handles
+        // showing the verification panel, so this covers modal / other callers.
+        setAuthError(result.message);
+        return false;
+      }
+      return result.status === "success";
     },
     [hydrateAuthenticatedUser, persistAuthenticatedSession, resolveAuthUser],
   );

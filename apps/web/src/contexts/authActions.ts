@@ -26,6 +26,12 @@ interface PerformAuthLoginParams {
   getErrorMessage: (value: unknown) => string;
 }
 
+export type PerformAuthLoginResult =
+  | { status: "success" }
+  | { status: "failed"; message: string }
+  | { status: "requires_email_verification"; email: string; message: string }
+  | { status: "requires_two_factor" };
+
 export async function performAuthLogin({
   email,
   password,
@@ -34,7 +40,7 @@ export async function performAuthLogin({
   persistAuthenticatedSession,
   setAuthError,
   getErrorMessage,
-}: PerformAuthLoginParams): Promise<boolean> {
+}: PerformAuthLoginParams): Promise<PerformAuthLoginResult> {
   try {
     setAuthError("");
     debugAuthLog("[AuthContext] Attempting login with:", email);
@@ -51,17 +57,25 @@ export async function performAuthLogin({
     });
 
     if (!response.success) {
-      setAuthError(
-        normalizeMessage(
-          response.message,
-          "Login failed. Please check your credentials and try again.",
-        ),
+      // Surface the email-not-verified state so the caller can show the
+      // verification panel instead of a generic error.
+      if (response.requiresEmailVerification) {
+        const message =
+          response.message ||
+          "Please verify your email address before logging in.";
+        return { status: "requires_email_verification", email, message };
+      }
+
+      const message = normalizeMessage(
+        response.message,
+        "Login failed. Please check your credentials and try again.",
       );
+      setAuthError(message);
       debugAuthError(
         "[AuthContext] Login failed:",
         response.message || "Unknown error",
       );
-      return false;
+      return { status: "failed", message };
     }
 
     if (response.requiresTwoFactor) {
@@ -71,7 +85,7 @@ export async function performAuthLogin({
           "Two-factor verification is required. Please sign in from the login page.",
         ),
       );
-      return false;
+      return { status: "requires_two_factor" };
     }
 
     let user = resolveAuthUser(response.user, {
@@ -81,19 +95,21 @@ export async function performAuthLogin({
     });
     const hydrationResult = await hydrateAuthenticatedUser(user, email, "login");
     if (hydrationResult.shouldAbort) {
-      return false;
+      return { status: "failed", message: "Session hydration failed." };
     }
     user = hydrationResult.user;
 
     persistAuthenticatedSession(user);
     debugAuthLog("[AuthContext] Login successful, user set:", user);
-    return true;
+    return { status: "success" };
   } catch (error) {
     debugAuthError("[AuthContext] Login error:", error);
-    setAuthError(
-      normalizeMessage(getErrorMessage(error), "Login failed. Please try again."),
+    const message = normalizeMessage(
+      getErrorMessage(error),
+      "Login failed. Please try again.",
     );
-    return false;
+    setAuthError(message);
+    return { status: "failed", message };
   }
 }
 

@@ -80,6 +80,8 @@ export function LoginPage({
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isResendingTwoFactor, setIsResendingTwoFactor] = useState(false);
   const [isResendingVerification, setIsResendingVerification] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const submitInFlightRef = useRef(false);
 
@@ -151,6 +153,43 @@ export function LoginPage({
   const setFieldValue = (field: LoginField, value: string) => {
     dispatch({ type: "SET_FIELD", field, value });
   };
+
+  // ─── Resend cooldown timer ────────────────────────────────────────────────
+  const startResendCooldown = (seconds = 60) => {
+    if (cooldownTimerRef.current) {
+      clearInterval(cooldownTimerRef.current);
+    }
+    setResendCooldown(seconds);
+    cooldownTimerRef.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(cooldownTimerRef.current!);
+          cooldownTimerRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  useEffect(() => {
+    if (state.step === "emailVerification") {
+      startResendCooldown(60);
+    } else {
+      if (cooldownTimerRef.current) {
+        clearInterval(cooldownTimerRef.current);
+        cooldownTimerRef.current = null;
+      }
+      setResendCooldown(0);
+    }
+    return () => {
+      if (cooldownTimerRef.current) {
+        clearInterval(cooldownTimerRef.current);
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.step]);
+  // ─────────────────────────────────────────────────────────────────────────
 
   const handleFieldValueChange = (field: LoginField, value: string) => {
     setFieldValue(field, value);
@@ -740,7 +779,7 @@ export function LoginPage({
   };
 
   const handleResendVerification = async () => {
-    if (isResendingVerification || !state.emailVerificationEmail) {
+    if (isResendingVerification || resendCooldown > 0 || !state.emailVerificationEmail) {
       return;
     }
 
@@ -757,6 +796,8 @@ export function LoginPage({
           ? "تم إرسال رابط التحقق إلى بريدك الإلكتروني."
           : "A verification link has been sent to your email."),
       });
+      // Restart the 60-second cooldown after a successful resend
+      startResendCooldown(60);
     } catch {
       dispatch({
         type: "SET_GENERAL_ERROR",
@@ -866,6 +907,7 @@ export function LoginPage({
       onCancelEmailVerification={handleCancelEmailVerification}
       onResendVerificationEmail={handleResendVerification}
       isResendingVerification={isResendingVerification}
+      resendCooldown={resendCooldown}
     />
     </>
   );
