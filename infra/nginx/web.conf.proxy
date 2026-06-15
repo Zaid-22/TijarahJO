@@ -46,7 +46,11 @@ server {
 
     location /api/ {
         client_max_body_size 15M;
-        limit_req zone=api_general burst=60 nodelay;
+        # burst=120: allow up to 120 queued requests above the 30r/s rate.
+        # delay=30: process the first 30 excess requests immediately;
+        # the remainder are delayed (not rejected) until capacity frees up.
+        # This handles legitimate page-load bursts without 429-ing real users.
+        limit_req zone=api_general burst=120 delay=30;
 
         proxy_pass http://api:5033/api/;
         proxy_http_version 1.1;

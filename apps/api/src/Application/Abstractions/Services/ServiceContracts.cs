@@ -198,6 +198,10 @@ public interface IReviewService
     Task<bool> CanReviewAsync(int reviewerId, int reviewedUserId, CancellationToken cancellationToken = default);
     Review Create(ReviewModel model);
     Task<bool> SaveAsync(Review review, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Returns aggregated rating stats (average, count) per user ID in a single DB round-trip.
+    /// </summary>
+    Task<IReadOnlyDictionary<int, (double AverageRating, int ReviewCount)>> GetRatingsByUserIdsAsync(IReadOnlyList<int> userIds, CancellationToken cancellationToken = default);
 }
 
 public enum ReviewSubmissionFailureReason

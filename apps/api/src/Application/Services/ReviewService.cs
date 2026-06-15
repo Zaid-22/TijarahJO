@@ -29,6 +29,13 @@ public sealed class ReviewService : IReviewService
         return !await _reviews.HasReviewedAsync(reviewerId, reviewedUserId, cancellationToken);
     }
 
+    public async Task<IReadOnlyDictionary<int, (double AverageRating, int ReviewCount)>> GetRatingsByUserIdsAsync(
+        IReadOnlyList<int> userIds,
+        CancellationToken cancellationToken = default)
+    {
+        return await _reviews.GetRatingsByUserIdsAsync(userIds, cancellationToken);
+    }
+
     public Review Create(ReviewModel model) => new(model);
 
     public async Task<bool> SaveAsync(Review review, CancellationToken cancellationToken = default)

@@ -23,6 +23,44 @@ namespace TijarahJo.Api.Features.Reviews
             return Ok(reviewList.Select(r => DTOMapper.ToReviewResponseDTO(r, Request)).ToList());
         }
 
+        /// <summary>
+        /// Returns aggregated rating stats (average rating + review count) for a batch of seller user IDs.
+        /// Accepts a comma-separated list via query parameter, e.g. GET /reviews/ratings?userIds=1,2,3
+        /// Maximum 100 IDs per request.
+        /// </summary>
+        [HttpGet("ratings")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<Dictionary<int, SellerRatingDTO>>> GetBatchRatings([FromQuery] string? userIds)
+        {
+            if (string.IsNullOrWhiteSpace(userIds))
+                return Ok(new Dictionary<int, SellerRatingDTO>());
+
+            var parsedIds = userIds
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(s => int.TryParse(s, out int id) && id > 0 ? (int?)id : null)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .Distinct()
+                .Take(100)
+                .ToList();
+
+            if (parsedIds.Count == 0)
+                return Ok(new Dictionary<int, SellerRatingDTO>());
+
+            var stats = await reviews.GetRatingsByUserIdsAsync(parsedIds, HttpContext.RequestAborted);
+
+            var result = stats.ToDictionary(
+                kvp => kvp.Key,
+                kvp => new SellerRatingDTO
+                {
+                    AverageRating = kvp.Value.AverageRating,
+                    ReviewCount = kvp.Value.ReviewCount
+                });
+
+            return Ok(result);
+        }
+
         [Authorize]
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]

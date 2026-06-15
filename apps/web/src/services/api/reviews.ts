@@ -53,6 +53,38 @@ export const reviewsApi = {
     return [];
   },
 
+  /**
+   * Fetch aggregated rating stats for a single seller using the batch endpoint.
+   * More efficient than getUserReviews — one DB round-trip, no raw review transfer.
+   */
+  getSellerRating: async (
+    userId: string,
+  ): Promise<{ averageRating: number; reviewCount: number }> => {
+    const normalizedUserId = toPositiveIntegerId(userId);
+    if (!normalizedUserId) {
+      return { averageRating: 0, reviewCount: 0 };
+    }
+
+    const response = await apiRequest<Record<string, { AverageRating: number; ReviewCount: number }>>(
+      `/reviews/ratings?userIds=${encodeURIComponent(String(normalizedUserId))}`,
+      { method: "GET" },
+    );
+
+    if (response.success && response.data && typeof response.data === "object") {
+      const stat = response.data[String(normalizedUserId)];
+      if (stat) {
+        const avg = Number(stat.AverageRating ?? 0);
+        const count = Number(stat.ReviewCount ?? 0);
+        return {
+          averageRating: Number.isFinite(avg) ? Math.min(5, Math.max(0, avg)) : 0,
+          reviewCount: Number.isFinite(count) && count > 0 ? count : 0,
+        };
+      }
+    }
+
+    return { averageRating: 0, reviewCount: 0 };
+  },
+
   addReview: async (payload: {
     reviewedUserId: number;
     rating: number;

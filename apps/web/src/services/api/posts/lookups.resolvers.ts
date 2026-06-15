@@ -4,7 +4,6 @@ import {
   hasLikelyAuthenticatedSession,
 } from "../client";
 import { locationsApi } from "../locations";
-import { parseRawReviewsCollection } from "../schemas/reviewSchema";
 import { toPositiveIntegerId } from "../../../utils/idValidation";
 import { getUserDisplayName, getUserIdentifier } from "./mappers";
 import { RawCategory, RawPost, RawUserLookup } from "./types";
@@ -31,6 +30,20 @@ const areasCacheByCityId: Record<
 const USERS_ENDPOINT = "/users";
 const LOOKUP_CACHE_TTL_MS = 60_000;
 
+// ---------------------------------------------------------------------------
+// In-flight deduplication — when multiple callers race to fetch the same
+// resource before the first response arrives, they all share one Promise
+// instead of each firing a separate HTTP request (which causes 429 bursts).
+// ---------------------------------------------------------------------------
+let _categoriesInflight: Promise<Record<string, string>> | null = null;
+let _citiesInflight: Promise<Record<string, { en: string; ar: string }>> | null = null;
+// Ratings inflight key: sorted comma-separated user IDs (cache key for the batch)
+const _ratingsInflight: Map<string, Promise<void>> = new Map();
+// Areas inflight key: cityId string — shared across concurrent callers for the same city.
+const _areasInflight: Map<string, Promise<Record<string, { en: string; ar: string }>>> = new Map();
+// Individual user profile fetches — deduplicates the non-admin per-user fallback.
+const _usersIndividualInflight: Map<string, Promise<void>> = new Map();
+
 function isCacheFresh(updatedAt: number): boolean {
   return updatedAt > 0 && Date.now() - updatedAt < LOOKUP_CACHE_TTL_MS;
 }
@@ -53,32 +66,41 @@ async function ensureSellerRatingsCache(
   });
 
   if (staleOrMissingUserIds.length > 0) {
-    await Promise.all(
-      staleOrMissingUserIds.map(async (userId) => {
-        const response = await apiRequest<unknown>(`/reviews/user/${userId}`, {
-          method: "GET",
-        });
+    // Deduplicate: use a sorted key so two callers with the same set of IDs
+    // share a single in-flight request.
+    const inflightKey = [...staleOrMissingUserIds].sort().join(",");
+    let inflight = _ratingsInflight.get(inflightKey);
+    if (!inflight) {
+      inflight = (async () => {
+        const qs = staleOrMissingUserIds.join(",");
+        const response = await apiRequest<Record<string, { AverageRating: number; ReviewCount: number }>>(
+          `/reviews/ratings?userIds=${encodeURIComponent(qs)}`,
+          { method: "GET" },
+        );
 
-        const reviews = response.success
-          ? parseRawReviewsCollection(response.data)
-          : [];
-        const validRatings = reviews
-          .map((review) => Number(review.Rating ?? review.rating ?? 0))
-          .filter((rating) => Number.isFinite(rating) && rating > 0)
-          .map((rating) => Math.min(5, Math.max(1, rating)));
-        const reviewCount = validRatings.length;
-        const averageRating =
-          reviewCount > 0
-            ? validRatings.reduce((sum, rating) => sum + rating, 0) / reviewCount
-            : 0;
+        const now = Date.now();
+        if (response.success && response.data && typeof response.data === "object") {
+          for (const [userId, stat] of Object.entries(response.data)) {
+            const avg = Number(stat?.AverageRating ?? 0);
+            const count = Number(stat?.ReviewCount ?? 0);
+            sellerRatingsCache[userId] = {
+              averageRating: Number.isFinite(avg) ? Math.min(5, Math.max(0, avg)) : 0,
+              reviewCount: Number.isFinite(count) && count > 0 ? count : 0,
+              updatedAt: now,
+            };
+          }
+        }
 
-        sellerRatingsCache[userId] = {
-          averageRating,
-          reviewCount,
-          updatedAt: Date.now(),
-        };
-      }),
-    );
+        // Users with no reviews won't appear in the response — mark them cached with zero
+        for (const userId of staleOrMissingUserIds) {
+          if (!sellerRatingsCache[userId] || sellerRatingsCache[userId].updatedAt !== now) {
+            sellerRatingsCache[userId] = { averageRating: 0, reviewCount: 0, updatedAt: now };
+          }
+        }
+      })().finally(() => _ratingsInflight.delete(inflightKey));
+      _ratingsInflight.set(inflightKey, inflight);
+    }
+    await inflight;
   }
 
   return Object.fromEntries(
@@ -103,39 +125,47 @@ async function ensureCategoriesCache(
     return categoriesCache;
   }
 
-  const categoriesResponse = await apiRequest<RawCategory[]>("/categories", {
-    method: "GET",
-  });
-
-  if (categoriesResponse.success && Array.isArray(categoriesResponse.data)) {
-    const nextCategoriesCache: Record<string, string> = {};
-    const nextCategoryIdByNameCache: Record<string, number> = {};
-
-    categoriesResponse.data.forEach((category) => {
-      const categoryId = toPositiveIntegerId(
-        category?.CategoryID ?? category?.categoryID ?? category?.id,
-      );
-      const rawCategoryName =
-        category?.CategoryName ?? category?.categoryName ?? category?.name;
-      const categoryName =
-        typeof rawCategoryName === "string" ? rawCategoryName.trim() : "";
-
-      if (categoryId && categoryName.length > 0) {
-        nextCategoriesCache[String(categoryId)] = categoryName;
-        nextCategoryIdByNameCache[normalizeCategoryNameKey(categoryName)] =
-          categoryId;
-      }
-    });
-
-    categoriesCache = nextCategoriesCache;
-    categoryIdByNameCache = nextCategoryIdByNameCache;
-    categoriesCacheUpdatedAt = Date.now();
-    return categoriesCache;
+  // Deduplicate: if another caller is already fetching, return the same promise.
+  if (!forceRefresh && _categoriesInflight) {
+    return _categoriesInflight;
   }
 
-  categoriesCache ||= {};
-  categoryIdByNameCache ||= {};
-  return categoriesCache;
+  _categoriesInflight = (async () => {
+    const categoriesResponse = await apiRequest<RawCategory[]>("/categories", {
+      method: "GET",
+    });
+
+    if (categoriesResponse.success && Array.isArray(categoriesResponse.data)) {
+      const nextCategoriesCache: Record<string, string> = {};
+      const nextCategoryIdByNameCache: Record<string, number> = {};
+
+      categoriesResponse.data.forEach((category) => {
+        const categoryId = toPositiveIntegerId(
+          category?.CategoryID ?? category?.categoryID ?? category?.id,
+        );
+        const rawCategoryName =
+          category?.CategoryName ?? category?.categoryName ?? category?.name;
+        const categoryName =
+          typeof rawCategoryName === "string" ? rawCategoryName.trim() : "";
+
+        if (categoryId && categoryName.length > 0) {
+          nextCategoriesCache[String(categoryId)] = categoryName;
+          nextCategoryIdByNameCache[normalizeCategoryNameKey(categoryName)] =
+            categoryId;
+        }
+      });
+
+      categoriesCache = nextCategoriesCache;
+      categoryIdByNameCache = nextCategoryIdByNameCache;
+      categoriesCacheUpdatedAt = Date.now();
+    } else {
+      categoriesCache ||= {};
+      categoryIdByNameCache ||= {};
+    }
+    return categoriesCache!;
+  })().finally(() => { _categoriesInflight = null; });
+
+  return _categoriesInflight;
 }
 
 async function ensureUsersCache(
@@ -202,30 +232,38 @@ async function ensureUsersCache(
 
     await Promise.all(
       missingUserIds.map(async (userId) => {
-        const userResponse = await apiRequest<RawUserLookup>(`/users/${userId}`, {
-          method: "GET",
-        });
+        // Deduplicate: if another caller is already fetching this user profile, share the promise.
+        let inflight = _usersIndividualInflight.get(userId);
+        if (!inflight) {
+          inflight = (async () => {
+            const userResponse = await apiRequest<RawUserLookup>(`/users/${userId}`, {
+              method: "GET",
+            });
 
-        if (userResponse.success && userResponse.data) {
-          const resolvedUserId = getUserIdentifier(userResponse.data) || userId;
-          const displayName = getUserDisplayName(
-            userResponse.data,
-            resolvedUserId,
-          );
+            if (userResponse.success && userResponse.data) {
+              const resolvedUserId = getUserIdentifier(userResponse.data) || userId;
+              const displayName = getUserDisplayName(
+                userResponse.data,
+                resolvedUserId,
+              );
 
-          usersCache![resolvedUserId] = displayName;
-          usersCache![userId] = displayName;
-          return;
+              usersCache![resolvedUserId] = displayName;
+              usersCache![userId] = displayName;
+              return;
+            }
+
+            if (!userResponse.success) {
+              const errorCode = userResponse.error?.code || "";
+              if (errorCode === "HTTP_401" || errorCode === "HTTP_403") {
+                canQueryUserProfiles = false;
+              }
+            }
+
+            usersCache![userId] = `User ${userId}`;
+          })().finally(() => _usersIndividualInflight.delete(userId));
+          _usersIndividualInflight.set(userId, inflight);
         }
-
-        if (!userResponse.success) {
-          const errorCode = userResponse.error?.code || "";
-          if (errorCode === "HTTP_401" || errorCode === "HTTP_403") {
-            canQueryUserProfiles = false;
-          }
-        }
-
-        usersCache![userId] = `User ${userId}`;
+        await inflight;
       }),
     );
     usersCacheUpdatedAt = Date.now();
@@ -241,15 +279,24 @@ async function ensureCitiesCache(
     return citiesCache;
   }
 
-  const cities = await locationsApi.getCities();
-  const nextCache: Record<string, { en: string; ar: string }> = {};
-  cities.forEach((city) => {
-    nextCache[String(city.cityId)] = { en: city.cityName, ar: city.cityNameAr };
-  });
+  // Deduplicate: if another caller is already fetching, return the same promise.
+  if (!forceRefresh && _citiesInflight) {
+    return _citiesInflight;
+  }
 
-  citiesCache = nextCache;
-  citiesCacheUpdatedAt = Date.now();
-  return citiesCache;
+  _citiesInflight = (async () => {
+    const cities = await locationsApi.getCities();
+    const nextCache: Record<string, { en: string; ar: string }> = {};
+    cities.forEach((city) => {
+      nextCache[String(city.cityId)] = { en: city.cityName, ar: city.cityNameAr };
+    });
+
+    citiesCache = nextCache;
+    citiesCacheUpdatedAt = Date.now();
+    return citiesCache;
+  })().finally(() => { _citiesInflight = null; });
+
+  return _citiesInflight;
 }
 
 async function ensureAreasCache(
@@ -261,14 +308,24 @@ async function ensureAreasCache(
     return areasCacheByCityId[cityKey];
   }
 
-  const areas = await locationsApi.getAreasByCity(cityId);
-  const nextCache: Record<string, { en: string; ar: string }> = {};
-  areas.forEach((area) => {
-    nextCache[String(area.areaId)] = { en: area.areaName, ar: area.areaNameAr };
-  });
+  // Deduplicate: if another caller is already fetching areas for this city, share the promise.
+  let inflight = _areasInflight.get(cityKey);
+  if (!forceRefresh && inflight) {
+    return inflight;
+  }
 
-  areasCacheByCityId[cityKey] = nextCache;
-  return areasCacheByCityId[cityKey];
+  inflight = (async () => {
+    const areas = await locationsApi.getAreasByCity(cityId);
+    const nextCache: Record<string, { en: string; ar: string }> = {};
+    areas.forEach((area) => {
+      nextCache[String(area.areaId)] = { en: area.areaName, ar: area.areaNameAr };
+    });
+    areasCacheByCityId[cityKey] = nextCache;
+    return areasCacheByCityId[cityKey];
+  })().finally(() => { _areasInflight.delete(cityKey); });
+  _areasInflight.set(cityKey, inflight);
+
+  return inflight;
 }
 
 function resolveLookupIdByName(

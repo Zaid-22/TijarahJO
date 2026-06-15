@@ -60,4 +60,29 @@ public sealed class ReviewDataAccessAdapter(TijarahJoDbContext dbContext) : IRev
             .AsNoTracking()
             .AnyAsync(item => item.ReviewerID == reviewerId && item.ReviewedUserID == reviewedUserId, cancellationToken);
     }
+
+    public async Task<IReadOnlyDictionary<int, (double AverageRating, int ReviewCount)>> GetRatingsByUserIdsAsync(
+        IReadOnlyList<int> userIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (userIds == null || userIds.Count == 0)
+            return new Dictionary<int, (double, int)>();
+
+        // EF Core translates Contains() to SQL IN (...), giving us a single round-trip.
+        var stats = await dbContext.Reviews
+            .AsNoTracking()
+            .Where(r => userIds.Contains(r.ReviewedUserID))
+            .GroupBy(r => r.ReviewedUserID)
+            .Select(g => new
+            {
+                UserId = g.Key,
+                Average = g.Average(r => (double)r.Rating),
+                Count = g.Count()
+            })
+            .ToListAsync(cancellationToken);
+
+        return stats.ToDictionary(
+            s => s.UserId,
+            s => (s.Average, s.Count));
+    }
 }

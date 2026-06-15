@@ -84,6 +84,11 @@ public interface IReviewDataAccess
     Task<int> AddReviewAsync(ReviewModel review, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ReviewModel>> GetReviewsByUserIdAsync(int userId, CancellationToken cancellationToken = default);
     Task<bool> HasReviewedAsync(int reviewerId, int reviewedUserId, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Returns aggregated rating stats for each requested user ID in a single DB round-trip.
+    /// Users with no reviews are omitted from the result.
+    /// </summary>
+    Task<IReadOnlyDictionary<int, (double AverageRating, int ReviewCount)>> GetRatingsByUserIdsAsync(IReadOnlyList<int> userIds, CancellationToken cancellationToken = default);
 }
 
 public interface IRoleDataAccess

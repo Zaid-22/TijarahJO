@@ -184,19 +184,11 @@ export function PostDetailsPage({
         }
 
         try {
-          const reviewList = await api.reviews.getUserReviews(String(post.sellerId));
-          if (!cancelled) {
-            const validRatings = reviewList
-              .map((review) => Number(review.Rating ?? review.rating ?? 0))
-              .filter((rating) => Number.isFinite(rating) && rating > 0);
-
-            if (validRatings.length > 0) {
-              const averageRating =
-                validRatings.reduce((sum, rating) => sum + rating, 0) /
-                validRatings.length;
-              setSellerAverageRating(averageRating);
-              setSellerReviewCount(validRatings.length);
-            }
+          // Use the aggregated batch endpoint — single DB round-trip, no raw review array.
+          const { averageRating, reviewCount } = await api.reviews.getSellerRating(String(post.sellerId));
+          if (!cancelled && reviewCount > 0) {
+            setSellerAverageRating(averageRating);
+            setSellerReviewCount(reviewCount);
           }
         } catch {
           // Rating is supplementary seller metadata; ignore if the reviews call fails.

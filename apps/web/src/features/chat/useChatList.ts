@@ -8,6 +8,10 @@ import { formatChatPreviewText } from "./chatMessageContent";
 import type { ChatSummary } from "./chatSessionUtils";
 import type { Language } from "../../types";
 
+// Module-level deduplication — prevents duplicate /users/{id} fetches when
+// multiple components (chat list + chat page) resolve the same user simultaneously.
+const _chatUserInflight: Map<number, ReturnType<typeof api.users.getUser>> = new Map();
+
 interface UseChatListOptions {
   isAuthenticated: boolean;
   userId: string | undefined;
@@ -92,7 +96,14 @@ export function useChatList({
         await Promise.all(
           otherUserIds.map(async (id) => {
             fetchedIdsRef.current.add(id);
-            const userData = await api.users.getUser(String(id));
+            // Deduplicate: share inflight request if ChatPage or another effect is
+            // already fetching this same user, to avoid parallel /users/{id} bursts.
+            let inflight = _chatUserInflight.get(id);
+            if (!inflight) {
+              inflight = api.users.getUser(String(id)).finally(() => _chatUserInflight.delete(id));
+              _chatUserInflight.set(id, inflight);
+            }
+            const userData = await inflight;
             namesById[id] = resolveUserDisplayName(
               userData as Record<string, unknown> | null | undefined,
               id,
