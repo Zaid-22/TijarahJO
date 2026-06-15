@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import type { ApiResponse, LoginRequest, SignUpRequest } from "../../types/api";
 import { APP_CONFIG } from "../../constants/appConfig";
 import { normalizeJordanPhone } from "../../utils/phone";

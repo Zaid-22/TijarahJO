@@ -85,6 +85,9 @@ function normalizeNotification(payload: RawNotification | null | undefined): App
   };
 }
 
+// In-flight deduplication — prevents concurrent duplicate requests to the unread count endpoint
+let _unreadCountInflight: Promise<UnreadCountResult> | null = null;
+
 export const notificationsApi = {
   getNotifications: async (params?: {
     take?: number;
@@ -109,28 +112,40 @@ export const notificationsApi = {
   },
 
   getUnreadCountResult: async (): Promise<UnreadCountResult> => {
-    const response = await apiRequest<UnreadCountPayload>("/notifications/unread-count", {
-      method: "GET",
-    });
-
-    if (!response.success || !response.data) {
-      const serviceUnavailable =
-        !response.success &&
-        "error" in response &&
-        response.error.code === "HTTP_503";
-
-      return {
-        unreadCount: 0,
-        serviceUnavailable,
-      };
+    // Deduplicate: if another caller is already fetching the unread count, share the promise.
+    if (_unreadCountInflight) {
+      return _unreadCountInflight;
     }
 
-    const unreadCount = Number(response.data.UnreadCount ?? response.data.unreadCount ?? 0);
-    return {
-      unreadCount:
-        Number.isFinite(unreadCount) && unreadCount > 0 ? Math.floor(unreadCount) : 0,
-      serviceUnavailable: false,
-    };
+    const promise = (async () => {
+      const response = await apiRequest<UnreadCountPayload>("/notifications/unread-count", {
+        method: "GET",
+      });
+
+      if (!response.success || !response.data) {
+        const serviceUnavailable =
+          !response.success &&
+          "error" in response &&
+          response.error.code === "HTTP_503";
+
+        return {
+          unreadCount: 0,
+          serviceUnavailable,
+        };
+      }
+
+      const unreadCount = Number(response.data.UnreadCount ?? response.data.unreadCount ?? 0);
+      return {
+        unreadCount:
+          Number.isFinite(unreadCount) && unreadCount > 0 ? Math.floor(unreadCount) : 0,
+        serviceUnavailable: false,
+      };
+    })().finally(() => {
+      _unreadCountInflight = null;
+    });
+
+    _unreadCountInflight = promise;
+    return promise;
   },
 
   getUnreadCount: async (): Promise<number> => {

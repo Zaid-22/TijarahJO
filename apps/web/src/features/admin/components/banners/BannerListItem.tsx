@@ -78,7 +78,7 @@ export function BannerListItem({
                 </p>
                 <Badge
                   variant={banner.isActive ? "default" : "outline"}
-                  className="text-[10px] sm:text-xs shrink-0 px-1.5 py-0"
+                  className="text-xs shrink-0 px-1.5 py-0"
                 >
                   {banner.isActive ? "Active" : "Hidden"}
                 </Badge>

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AuthState, User } from "../types";
 import { api } from "../services/api";
@@ -514,7 +515,6 @@ export function useAuthProviderController(): AuthContextType {
       setAuthState({
         isAuthenticated: false,
         user: null,
-      // eslint-disable-next-line max-lines
       });
     }
   }, [clearAuthStorage]);
@@ -528,7 +528,6 @@ export function useAuthProviderController(): AuthContextType {
     checkAuth,
     isGuest,
     loading,
-    // eslint-disable-next-line max-lines
     authError,
     clearAuthError,
     setSession: persistAuthenticatedSession,

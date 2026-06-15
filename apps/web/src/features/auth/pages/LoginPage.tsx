@@ -187,7 +187,6 @@ export function LoginPage({
         clearInterval(cooldownTimerRef.current);
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.step]);
   // ─────────────────────────────────────────────────────────────────────────
 

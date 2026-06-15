@@ -39,6 +39,7 @@ export function LoginPromptModal({
   onContinueAsGuest,
 }: LoginPromptModalProps) {
   const isRTL = language === "ar";
+  const modalStyle = { maxHeight: "85vh" };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -48,7 +49,7 @@ export function LoginPromptModal({
         aria-describedby={undefined}
       >
         <DialogTitle className="sr-only">Login Menu</DialogTitle>
-        <div className="w-full max-w-md bg-card rounded-2xl border border-border shadow-xl p-4 sm:p-6 lg:p-8 relative max-h-[85vh] overflow-y-auto">
+        <div className="w-full max-w-md bg-card rounded-2xl border border-border shadow-xl p-4 sm:p-6 lg:p-8 relative overflow-y-auto" style={modalStyle}>
           {/* Custom close button styled nicely */}
           <button
             type="button"

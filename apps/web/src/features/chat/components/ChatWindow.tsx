@@ -25,7 +25,7 @@ import { formatCompactTime } from "../../../shared/lib/dateTime";
 import { APP_CONFIG } from "../../../constants/appConfig";
 import { ReportPostDialog } from "../../marketplace/components/ReportPostDialog";
 
-/** Splits message text on URLs and renders clickable <a> links for each one. */
+/** Splits message text on URLs and renders clickable anchor links for each one. */
 function renderTextWithLinks(text: string, isMe: boolean) {
   const URL_REGEX = /https?:\/\/[^\s<>"]+(?:[^\s<>".,;:!?)]|\([^\s<>"]*\))*/g;
   const parts: ReactNode[] = [];

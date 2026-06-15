@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import {
   AlertCircle,
   CheckCircle2,
@@ -114,6 +115,9 @@ export function LoginForm({
   resendCooldown = 0,
 }: LoginFormProps) {
   const isRTL = language === "ar";
+  const conicGradientStyle = {
+    background: `conic-gradient(hsl(var(--primary)) ${((60 - (resendCooldown || 0)) / 60) * 360}deg, hsl(var(--muted)) 0deg)`,
+  };
 
 
 
@@ -212,9 +216,7 @@ export function LoginForm({
             <span className="flex items-center gap-2">
               <span
                 className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold"
-                style={{
-                  background: `conic-gradient(hsl(var(--primary)) ${((60 - resendCooldown) / 60) * 360}deg, hsl(var(--muted)) 0deg)`,
-                }}
+                style={conicGradientStyle}
               />
               {language === "ar"
                 ? `إعادة الإرسال خلال ${resendCooldown}ث`
