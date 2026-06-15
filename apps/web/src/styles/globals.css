@@ -404,62 +404,64 @@ textarea {
   scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
 }
 
-/* Remove spinner arrows from number inputs */
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-input[type="number"] {
-  -moz-appearance: textfield;
-  appearance: textfield;
-}
-
-/* Ensure no horizontal scrolling */
-html,
-body {
-  overflow-x: hidden;
-  max-width: 100vw;
-}
-
-/* Better mobile touch targets - minimum 44x44px */
-@media (max-width: 640px) {
-  button:not([role="switch"]):not(.compare-remove-btn),
-  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
-  select,
-  textarea {
-    min-height: 44px;
+@layer base {
+  /* Remove spinner arrows from number inputs */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
   }
 
-  /* Ensure clickable elements are large enough */
-  button:not(.p-0):not([role="switch"]):not(.compare-remove-btn) {
-    min-width: 44px;
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
   }
-}
 
-/* Prevent text overflow */
-* {
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-}
+  /* Ensure no horizontal scrolling */
+  html,
+  body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
 
-/* Better responsive images */
-img {
-  max-width: 100%;
-  height: auto;
-}
+  /* Better mobile touch targets - minimum 44x44px */
+  @media (max-width: 640px) {
+    button:not([role="switch"]):not(.compare-remove-btn),
+    input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+    select,
+    textarea {
+      min-height: 44px;
+    }
 
-/* Prevent layout shift from scrollbar */
-html {
-  scrollbar-gutter: stable;
-}
+    /* Ensure clickable elements are large enough */
+    button:not(.p-0):not([role="switch"]):not(.compare-remove-btn) {
+      min-width: 44px;
+    }
+  }
 
-/* Better mobile spacing */
-@media (max-width: 640px) {
-  .container {
-    padding-left: 1rem;
-    padding-right: 1rem;
+  /* Prevent text overflow */
+  * {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Better responsive images */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Prevent layout shift from scrollbar */
+  html {
+    scrollbar-gutter: stable;
+  }
+
+  /* Better mobile spacing */
+  @media (max-width: 640px) {
+    .container {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
   }
 }
 
