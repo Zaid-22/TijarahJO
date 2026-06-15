@@ -54,9 +54,10 @@ BEGIN
                 WHERE RoleName = N'Admin'
                 ORDER BY RoleID
             ),
-            IsDeleted = 0
+            IsDeleted = 0,
+            IsEmailVerified = 1
     WHEN NOT MATCHED BY TARGET THEN
-        INSERT (HashedPassword, Email, FirstName, LastName, JoinDate, Status, RoleID, IsDeleted)
+        INSERT (HashedPassword, Email, FirstName, LastName, JoinDate, Status, RoleID, IsDeleted, IsEmailVerified)
         VALUES (
             source.HashedPassword,
             source.Email,
@@ -70,7 +71,8 @@ BEGIN
                 WHERE RoleName = N'Admin'
                 ORDER BY RoleID
             ),
-            0
+            0,
+            1
         );
 
     PRINT 'Guarded admin bootstrap completed.';

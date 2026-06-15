@@ -19,7 +19,7 @@ WHEN MATCHED THEN
         FirstName = source.FirstName,
         LastName  = source.LastName
 WHEN NOT MATCHED BY TARGET THEN
-    INSERT (HashedPassword, Email, FirstName, LastName, JoinDate, Status, RoleID, IsDeleted)
+    INSERT (HashedPassword, Email, FirstName, LastName, JoinDate, Status, RoleID, IsDeleted, IsEmailVerified)
     VALUES (
         source.HashedPassword,
         source.Email,
@@ -28,7 +28,8 @@ WHEN NOT MATCHED BY TARGET THEN
         source.JoinDate,
         1,
         (SELECT TOP (1) RoleID FROM dbo.Roles WHERE RoleName = N'User' ORDER BY RoleID),
-        0
+        0,
+        1
     );
 GO
 

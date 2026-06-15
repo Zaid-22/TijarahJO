@@ -749,12 +749,13 @@ WHEN MATCHED THEN
         target.Status = 1,
         target.RoleID = @UserRoleID,
         target.IsDeleted = 0,
+        target.IsEmailVerified = 1,
         target.UpdatedAt = SYSUTCDATETIME()
 WHEN NOT MATCHED BY TARGET THEN
     INSERT
-        (HashedPassword, Email, FirstName, LastName, Phone, CityID, AreaID, JoinDate, UpdatedAt, Status, RoleID, IsDeleted)
+        (HashedPassword, Email, FirstName, LastName, Phone, CityID, AreaID, JoinDate, UpdatedAt, Status, RoleID, IsDeleted, IsEmailVerified)
     VALUES
-        (N'DISABLED_FAKE_SAMPLE_USER', source.UserEmail, source.FirstName, source.LastName, source.Phone, source.CityID, source.AreaID, SYSUTCDATETIME(), SYSUTCDATETIME(), 1, @UserRoleID, 0);
+        (N'DISABLED_FAKE_SAMPLE_USER', source.UserEmail, source.FirstName, source.LastName, source.Phone, source.CityID, source.AreaID, SYSUTCDATETIME(), SYSUTCDATETIME(), 1, @UserRoleID, 0, 1);
 
 MERGE dbo.Posts AS target
 USING
