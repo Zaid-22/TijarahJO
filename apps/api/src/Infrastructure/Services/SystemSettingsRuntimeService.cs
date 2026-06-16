@@ -41,6 +41,14 @@ public sealed class SystemSettingsRuntimeService(
         return status;
     }
 
+    public async Task<bool> IsRegistrationEnabledAsync(CancellationToken cancellationToken = default)
+    {
+        // Delegate to GetPublicStatusAsync so there is a single cache entry and
+        // no risk of the backend gate and the public status response going out of sync.
+        PublicSystemStatus status = await GetPublicStatusAsync(cancellationToken);
+        return status.RegistrationEnabled;
+    }
+
     private async Task<PublicSystemStatus> GetPublicStatusCoreAsync(CancellationToken cancellationToken)
     {
         try
@@ -50,7 +58,8 @@ public sealed class SystemSettingsRuntimeService(
                 .Where(setting =>
                     setting.SettingKey == "MaintenanceMode" ||
                     setting.SettingKey == "MaintenanceReason" ||
-                    setting.SettingKey == "MaintenanceExpectedReturn")
+                    setting.SettingKey == "MaintenanceExpectedReturn" ||
+                    setting.SettingKey == "RegistrationEnabled")
                 .Select(setting => new
                 {
                     setting.SettingKey,
@@ -62,12 +71,14 @@ public sealed class SystemSettingsRuntimeService(
             var maintenanceSetting = settings.FirstOrDefault(setting => setting.SettingKey == "MaintenanceMode");
             var maintenanceReasonSetting = settings.FirstOrDefault(setting => setting.SettingKey == "MaintenanceReason");
             var maintenanceExpectedReturnSetting = settings.FirstOrDefault(setting => setting.SettingKey == "MaintenanceExpectedReturn");
+            var registrationEnabledSetting = settings.FirstOrDefault(setting => setting.SettingKey == "RegistrationEnabled");
 
             if (maintenanceSetting is null)
             {
                 return new PublicSystemStatus
                 {
-                    MaintenanceMode = false
+                    MaintenanceMode = false,
+                    RegistrationEnabled = registrationEnabledSetting == null || ParseBooleanSetting(registrationEnabledSetting.Value)
                 };
             }
 
@@ -76,14 +87,16 @@ public sealed class SystemSettingsRuntimeService(
                 MaintenanceMode = ParseBooleanSetting(maintenanceSetting.Value),
                 MaintenanceModeUpdatedAt = maintenanceSetting.UpdatedAt,
                 MaintenanceReason = NormalizeTextSetting(maintenanceReasonSetting?.Value),
-                MaintenanceExpectedReturn = NormalizeTextSetting(maintenanceExpectedReturnSetting?.Value)
+                MaintenanceExpectedReturn = NormalizeTextSetting(maintenanceExpectedReturnSetting?.Value),
+                RegistrationEnabled = registrationEnabledSetting == null || ParseBooleanSetting(registrationEnabledSetting.Value)
             };
         }
         catch
         {
             return new PublicSystemStatus
             {
-                MaintenanceMode = false
+                MaintenanceMode = false,
+                RegistrationEnabled = true // Fail open on DB errors
             };
         }
     }

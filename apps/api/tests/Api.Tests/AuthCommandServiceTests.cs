@@ -233,6 +233,22 @@ public sealed class AuthCommandServiceTests
         Assert.Equal("User", result.RoleName);
     }
 
+    [Fact]
+    public async Task SignupAsync_ReturnsRegistrationDisabled_WhenRegistrationIsDisabled()
+    {
+        var service = BuildService(registrationEnabled: false);
+
+        AuthCommandResult result = await service.SignupAsync(new SignupCommand
+        {
+            Password = "Test1234!",
+            FirstName = "Test",
+            Email = "newuser@example.com"
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal(AuthCommandFailureReason.RegistrationDisabled, result.FailureReason);
+    }
+
     // -------------------------------------------------------------------------
     // GoogleAuthAsync
     // -------------------------------------------------------------------------
@@ -334,7 +350,8 @@ public sealed class AuthCommandServiceTests
         UserModel? nextFindUser = null,
         string? hashedPassword = null,
         bool isDeleted = false,
-        int status = 1 /* Active */)
+        int status = 1 /* Active */,
+        bool registrationEnabled = true)
     {
         var model = CreateDefaultUser(
             hashedPassword: hashedPassword,
@@ -343,19 +360,22 @@ public sealed class AuthCommandServiceTests
 
         var account = nextFindUser ?? model;
 
-        return BuildServiceWithAccount(account).Service;
+        return BuildServiceWithAccount(account, registrationEnabled: registrationEnabled).Service;
     }
 
-    private static (AuthCommandService Service, FakeUserDataAccess Users) BuildServiceWithAccount(UserModel account)
+    private static (AuthCommandService Service, FakeUserDataAccess Users) BuildServiceWithAccount(
+        UserModel account,
+        bool registrationEnabled = true)
     {
         var users = new FakeUserDataAccess(account);
         var externalIdentities = new FakeExternalIdentityDataAccess();
         var roles = new FakeRoleService();
         var locations = new FakeLocationReadService();
         var lockout = new FakeAccountLockoutService();
+        var systemSettings = new FakeSystemSettingsRuntimeService(registrationEnabled);
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<AuthCommandService>.Instance;
 
-        return (new AuthCommandService(users, externalIdentities, roles, locations, lockout, logger), users);
+        return (new AuthCommandService(users, externalIdentities, roles, locations, lockout, systemSettings, logger), users);
     }
 
     // -------------------------------------------------------------------------
@@ -502,5 +522,24 @@ public sealed class AuthCommandServiceTests
 
         public Task ClearLockoutAsync(int userId, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
+    }
+
+    private sealed class FakeSystemSettingsRuntimeService : ISystemSettingsRuntimeService
+    {
+        private readonly bool _registrationEnabled;
+
+        public FakeSystemSettingsRuntimeService(bool registrationEnabled = true)
+        {
+            _registrationEnabled = registrationEnabled;
+        }
+
+        public Task<bool> IsMaintenanceModeEnabledAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
+
+        public Task<PublicSystemStatus> GetPublicStatusAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(new PublicSystemStatus { MaintenanceMode = false, RegistrationEnabled = _registrationEnabled });
+
+        public Task<bool> IsRegistrationEnabledAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(_registrationEnabled);
     }
 }

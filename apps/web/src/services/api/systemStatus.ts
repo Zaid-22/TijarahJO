@@ -5,6 +5,7 @@ type PublicSystemStatusDto = {
   MaintenanceModeUpdatedAt?: string | null;
   MaintenanceReason?: string | null;
   MaintenanceExpectedReturn?: string | null;
+  RegistrationEnabled?: boolean;
 };
 
 export type PublicSystemStatus = {
@@ -13,6 +14,7 @@ export type PublicSystemStatus = {
   maintenanceModeUpdatedAt?: string | null;
   maintenanceReason?: string | null;
   maintenanceExpectedReturn?: string | null;
+  registrationEnabled: boolean;
 };
 
 type ProblemDetailsLike = {
@@ -43,6 +45,7 @@ export function normalizePublicSystemStatusResponse(
           typeof response.error.details.detail === "string"
             ? response.error.details.detail
             : null,
+        registrationEnabled: true, // Unknown during error — default to open
       };
     }
 
@@ -54,12 +57,14 @@ export function normalizePublicSystemStatusResponse(
           typeof response.error?.message === "string"
             ? response.error.message
             : null,
+        registrationEnabled: true,
       };
     }
 
     return {
       maintenanceMode: false,
       serviceUnavailable: false,
+      registrationEnabled: true,
     };
   }
 
@@ -68,7 +73,7 @@ export function normalizePublicSystemStatusResponse(
     serviceUnavailable: false,
     maintenanceModeUpdatedAt: response.data?.MaintenanceModeUpdatedAt ?? null,
     maintenanceReason: response.data?.MaintenanceReason ?? null,
-    maintenanceExpectedReturn:
-      response.data?.MaintenanceExpectedReturn ?? null,
+    maintenanceExpectedReturn: response.data?.MaintenanceExpectedReturn ?? null,
+    registrationEnabled: response.data?.RegistrationEnabled !== false,
   };
 }

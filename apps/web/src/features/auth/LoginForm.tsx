@@ -69,6 +69,7 @@ interface LoginFormProps {
   onResendVerificationEmail?: () => void;
   isResendingVerification?: boolean;
   resendCooldown?: number;
+  allowSignup?: boolean;
 }
 
 export function LoginForm({
@@ -113,6 +114,7 @@ export function LoginForm({
   onResendVerificationEmail,
   isResendingVerification = false,
   resendCooldown = 0,
+  allowSignup = true,
 }: LoginFormProps) {
   const isRTL = language === "ar";
   const conicGradientStyle = {
@@ -151,14 +153,26 @@ export function LoginForm({
           <p className="text-sm text-muted-foreground">
             {isSignUp
               ? copy.form.alreadyHaveAccount
-              : copy.form.dontHaveAccount}{" "}
-            <button
-              type="button"
-              onClick={onToggleAuthMode}
-              className="font-medium text-primary hover:underline"
-            >
-              {isSignUp ? copy.form.signInLink : copy.form.signUpLink}
-            </button>
+              : allowSignup
+                ? copy.form.dontHaveAccount
+                : null}{" "}
+            {isSignUp ? (
+              <button
+                type="button"
+                onClick={onToggleAuthMode}
+                className="font-medium text-primary hover:underline"
+              >
+                {copy.form.signInLink}
+              </button>
+            ) : allowSignup ? (
+              <button
+                type="button"
+                onClick={onToggleAuthMode}
+                className="font-medium text-primary hover:underline"
+              >
+                {copy.form.signUpLink}
+              </button>
+            ) : null}
           </p>
         </div>
       )}

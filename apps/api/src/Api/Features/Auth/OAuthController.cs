@@ -131,14 +131,16 @@ public class OAuthController(
 
         if (!result.Success || result.User == null || result.User.UserID == null || string.IsNullOrWhiteSpace(result.RoleName))
         {
+            string errorMessage = result.FailureReason == AuthCommandFailureReason.RegistrationDisabled
+                ? (result.Message ?? "New user registrations are currently disabled.")
+                : (result.Message ?? "Unable to sign in with Google.");
+
             _logger.LogWarning(
                 "Google auth command failed. reason={Reason} message={Message}",
                 result.FailureReason,
                 result.Message
             );
-            return Redirect(BuildGoogleFailureRedirectUri(
-                result.Message ?? "Unable to sign in with Google."
-            ));
+            return Redirect(BuildGoogleFailureRedirectUri(errorMessage));
         }
 
         if (result.User.TwoFactorEnabled)

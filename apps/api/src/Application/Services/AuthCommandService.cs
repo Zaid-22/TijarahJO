@@ -13,6 +13,7 @@ public sealed class AuthCommandService(
     IRoleService roles,
     ILocationReadService locations,
     IAccountLockoutService accountLockout,
+    ISystemSettingsRuntimeService systemSettings,
     ILogger<AuthCommandService> logger) : IAuthCommandService
 {
     private const string DefaultUserRoleName = "User";
@@ -27,6 +28,7 @@ public sealed class AuthCommandService(
     private readonly IRoleService _roles = roles;
     private readonly ILocationReadService _locations = locations;
     private readonly IAccountLockoutService _accountLockout = accountLockout;
+    private readonly ISystemSettingsRuntimeService _systemSettings = systemSettings;
     private readonly ILogger<AuthCommandService> _logger = logger;
 
     public async Task<AuthCommandResult> LoginAsync(LoginCommand command, CancellationToken cancellationToken = default)
@@ -140,6 +142,15 @@ public sealed class AuthCommandService(
 
     public async Task<AuthCommandResult> SignupAsync(SignupCommand command, CancellationToken cancellationToken = default)
     {
+        // Check registration gate first — before any DB work
+        bool registrationEnabled = await _systemSettings.IsRegistrationEnabledAsync(cancellationToken);
+        if (!registrationEnabled)
+        {
+            return Failure(
+                AuthCommandFailureReason.RegistrationDisabled,
+                "New user registrations are currently disabled. Please try again later.");
+        }
+
         if (string.IsNullOrWhiteSpace(command.Password) || string.IsNullOrWhiteSpace(command.FirstName))
         {
             return Failure(AuthCommandFailureReason.InvalidRequest, "Invalid signup data. Password and first name are required.");

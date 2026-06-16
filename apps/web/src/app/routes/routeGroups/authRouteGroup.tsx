@@ -99,6 +99,7 @@ export function renderAuthRouteGroup({
               });
             }}
             language={appProps.language}
+            allowSignup={appProps.registrationEnabled}
           />
         }
       />

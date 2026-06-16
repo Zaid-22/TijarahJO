@@ -41,7 +41,7 @@ function HomeRouteLoadingFallback() {
   );
 }
 
-export function AppRoutes() {
+export function AppRoutes({ registrationEnabled = true }: { registrationEnabled?: boolean }) {
   const navigate = useNavigate();
   const location = useLocation();
   const normalizedPathname = normalizePathname(location.pathname);
@@ -148,6 +148,7 @@ export function AppRoutes() {
           loginAsGuest,
           setUserProfile,
           currentUserDisplayName,
+          registrationEnabled,
           routeState,
           postActions,
           saveProfile,
@@ -161,6 +162,7 @@ export function AppRoutes() {
         isOpen={showAuthModal} 
         onClose={() => setShowAuthModal(false)} 
         language={language}
+        allowSignup={registrationEnabled}
         onLogin={(userData) => {
           const nextProfile = applyLoginUserDataToProfile(userProfile, userData);
           setUserProfile(nextProfile);

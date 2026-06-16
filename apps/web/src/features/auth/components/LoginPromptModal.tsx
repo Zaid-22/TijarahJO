@@ -12,6 +12,7 @@ interface LoginPromptModalProps {
   isOpen: boolean;
   onClose: () => void;
   language: Language;
+  allowSignup?: boolean;
   onLogin: (userData: {
     id?: string;
     firstName: string;
@@ -35,6 +36,7 @@ export function LoginPromptModal({
   isOpen,
   onClose,
   language,
+  allowSignup = true,
   onLogin,
   onContinueAsGuest,
 }: LoginPromptModalProps) {
@@ -67,6 +69,7 @@ export function LoginPromptModal({
           >
             <LoginPage
               isModal
+              allowSignup={allowSignup}
               language={language}
               onLogin={onLogin}
               onContinueAsGuest={onContinueAsGuest}

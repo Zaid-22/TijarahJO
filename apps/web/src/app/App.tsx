@@ -361,11 +361,19 @@ function AppContent() {
       {globalHeader}
 
       <main id="main-content" className="flex-1">
-        <AppRoutes />
+        <AppRoutes registrationEnabled={maintenanceStatus?.registrationEnabled ?? true} />
       </main>
 
       {shouldShowFooter ? (
-        <Suspense fallback={null}>
+        <Suspense
+          fallback={
+            <div
+              aria-hidden="true"
+              className="bg-slate-950 border-t border-white/10"
+              style={{ minHeight: "420px" }}
+            />
+          }
+        >
           <Footer language={language} />
         </Suspense>
       ) : null}

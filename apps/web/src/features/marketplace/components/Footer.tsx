@@ -111,7 +111,7 @@ export function Footer({ language }: FooterProps) {
     <footer
       data-app-global-footer="true"
       dir={isRTL ? "rtl" : "ltr"}
-      className="relative border-t border-white/10 bg-slate-950 text-slate-100 [content-visibility:auto] [contain-intrinsic-size:720px]"
+      className="relative border-t border-white/10 bg-slate-950 text-slate-100"
     >
       <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-primary/60 via-55% to-secondary/40" />
 

@@ -155,6 +155,7 @@ public class AuthController(
         {
             return result.FailureReason switch
             {
+                AuthCommandFailureReason.RegistrationDisabled => Problem(statusCode: StatusCodes.Status403Forbidden, detail: result.Message),
                 AuthCommandFailureReason.InvalidRequest => Problem(statusCode: StatusCodes.Status400BadRequest, detail: result.Message),
                 AuthCommandFailureReason.DuplicateIdentity => Problem(statusCode: StatusCodes.Status400BadRequest, detail: result.Message),
                 AuthCommandFailureReason.RoleResolutionFailed => Problem(statusCode: StatusCodes.Status500InternalServerError, detail: result.Message),

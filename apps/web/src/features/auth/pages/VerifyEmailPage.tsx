@@ -76,9 +76,29 @@ export function VerifyEmailPage({ language }: VerifyEmailPageProps) {
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isResending, setIsResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendEmail, setResendEmail] = useState(() => searchParams.get("email") || "");
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const verifiedRef = useRef(false);
 
   const token = searchParams.get("token") || "";
+
+  const startCooldown = (seconds = 60) => {
+    if (cooldownRef.current) clearInterval(cooldownRef.current);
+    setResendCooldown(seconds);
+    cooldownRef.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(cooldownRef.current!);
+          cooldownRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  useEffect(() => () => { if (cooldownRef.current) clearInterval(cooldownRef.current); }, []);
 
   useEffect(() => {
     if (verifiedRef.current) {
@@ -112,7 +132,17 @@ export function VerifyEmailPage({ language }: VerifyEmailPageProps) {
   }, [token, copy.noTokenError, copy.successBody, copy.errorBody]);
 
   const handleResend = async () => {
-    if (isResending) {
+    if (isResending || resendCooldown > 0) {
+      return;
+    }
+
+    const emailToSend = resendEmail.trim().toLowerCase();
+    if (!emailToSend) {
+      setErrorMessage(
+        language === "ar"
+          ? "يرجى إدخال عنوان بريدك الإلكتروني لإعادة الإرسال."
+          : "Please enter your email address to resend the verification link.",
+      );
       return;
     }
 
@@ -120,14 +150,16 @@ export function VerifyEmailPage({ language }: VerifyEmailPageProps) {
     setErrorMessage("");
 
     try {
-      const result = await api.auth.resendVerificationEmail("");
+      const result = await api.auth.resendVerificationEmail(emailToSend);
       setMessage(result.message || copy.resendSuccess);
+      startCooldown(60);
     } catch {
       setErrorMessage(copy.errorBody);
     } finally {
       setIsResending(false);
     }
   };
+
 
   return (
     <PageShell tone="account">
@@ -233,14 +265,29 @@ export function VerifyEmailPage({ language }: VerifyEmailPageProps) {
                 {copy.goToLogin}
               </Button>
 
+              {!resendEmail && (
+                <input
+                  type="email"
+                  dir="ltr"
+                  placeholder={language === "ar" ? "أدخل بريدك الإلكتروني" : "Enter your email address"}
+                  value={resendEmail}
+                  onChange={(e) => setResendEmail(e.target.value)}
+                  className="w-full h-11 rounded-md border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              )}
+
               <Button
                 type="button"
                 variant="outline"
                 className="w-full h-11"
                 onClick={handleResend}
-                disabled={isResending}
+                disabled={isResending || resendCooldown > 0}
               >
-                {isResending ? copy.resending : copy.resendVerification}
+                {isResending
+                  ? copy.resending
+                  : resendCooldown > 0
+                    ? (language === "ar" ? `إعادة الإرسال خلال ${resendCooldown}ث` : `Resend in ${resendCooldown}s`)
+                    : copy.resendVerification}
               </Button>
             </div>
           </div>

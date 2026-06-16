@@ -16,6 +16,7 @@ export interface BaseAppRouteProps {
   loginAsGuest: () => Promise<void>;
   setUserProfile: (profile: UserProfile) => void;
   currentUserDisplayName: string;
+  registrationEnabled: boolean;
 }
 
 export interface MarketplaceRouteState {
@@ -56,6 +57,7 @@ export interface AppRouteElementsParams {
   loginAsGuest: () => Promise<void>;
   setUserProfile: (profile: UserProfile) => void;
   currentUserDisplayName: string;
+  registrationEnabled: boolean;
   routeState: MarketplaceRouteState;
   postActions: PostActions;
   saveProfile: (profile: EditProfileFormProfile) => Promise<void> | void;

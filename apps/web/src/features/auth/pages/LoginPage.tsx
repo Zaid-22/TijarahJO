@@ -58,6 +58,7 @@ interface LoginPageProps {
   language: Language;
   isModal?: boolean;
   onSuccess?: () => void;
+  allowSignup?: boolean;
 }
 
 export function LoginPage({
@@ -66,6 +67,7 @@ export function LoginPage({
   language,
   isModal,
   onSuccess,
+  allowSignup = true,
 }: LoginPageProps) {
   const navigate = useNavigate();
   const { setSession } = useAuth();
@@ -750,6 +752,9 @@ export function LoginPage({
   };
 
   const toggleAuthMode = () => {
+    if (!allowSignup && state.mode === "signIn") {
+      return;
+    }
     dispatch({
       type: "SET_MODE",
       mode: state.mode === "signUp" ? "signIn" : "signUp",
@@ -907,6 +912,7 @@ export function LoginPage({
       onResendVerificationEmail={handleResendVerification}
       isResendingVerification={isResendingVerification}
       resendCooldown={resendCooldown}
+      allowSignup={allowSignup}
     />
     </>
   );
