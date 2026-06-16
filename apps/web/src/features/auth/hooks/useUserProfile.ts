@@ -4,6 +4,13 @@ import { useAuth } from "../../../contexts/AuthContext";
 import { api } from "../../../services/api";
 import { logger } from "../../../shared/lib/logger";
 
+// How many consecutive null/error responses to retry before giving up and
+// unblocking the UI. Kept outside the component so it's never re-declared.
+const MAX_FETCH_RETRIES = 3;
+
+// Exponential back-off delays (ms) for each retry attempt: 300ms, 600ms, 1200ms.
+const RETRY_DELAY_MS = (attempt: number) => 300 * Math.pow(2, attempt - 1);
+
 function formatJoinedDate(value: unknown, fallback: string): string {
   if (value !== null && value !== undefined && value !== "") {
     const parsed = new Date(value as string | number | Date);
@@ -41,7 +48,13 @@ export function useUserProfile() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const fetchedForUserRef = useRef<string>("");
+  // Tracks consecutive null/error responses for retry/give-up logic.
+  const fetchRetryCountRef = useRef<number>(0);
+  // Holds the active retry timer so it can be cancelled on unmount/user change.
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Sync basic identity fields from auth state (name, email, avatar) immediately
+  // when auth resolves. phone/city/area come exclusively from the profile fetch.
   useEffect(() => {
     if (user && isAuthenticated) {
       const fullName =
@@ -63,24 +76,69 @@ export function useUserProfile() {
 
   const fetchProfileData = useCallback(async () => {
     const userId = String(user?.id || "").trim();
+
+    // Cancel any pending retry timer for a previous attempt.
+    if (retryTimerRef.current !== null) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+
     if (!isAuthenticated || !userId) {
       fetchedForUserRef.current = "";
+      fetchRetryCountRef.current = 0;
       setIsLoading(false);
       return;
     }
 
-    // Skip re-fetch if we already fetched for this user.
+    // Skip re-fetch if we already have good data for this user.
     // refreshProfile() callers bypass this by resetting the ref first.
     if (fetchedForUserRef.current === userId) {
       setIsLoading(false);
       return;
     }
 
+    // Helper: advance the "already fetched" guard and reset retry state.
+    const markAsFetched = () => {
+      fetchRetryCountRef.current = 0;
+      fetchedForUserRef.current = userId;
+    };
+
+    // Helper: schedule an active retry after a back-off delay.
+    // This is the fix for the passive-retry issue — without this, a failed
+    // fetch would leave the hook stuck in loading because the useCallback
+    // deps (isAuthenticated, user?.id) haven't changed, so the effect that
+    // calls fetchProfileData never re-fires.
+    const scheduleRetry = () => {
+      const attempt = fetchRetryCountRef.current;
+      if (attempt >= MAX_FETCH_RETRIES) {
+        // Exhausted all retries — unblock the UI. isProfileComplete will be
+        // false only if the backend is genuinely unavailable, not a transient glitch.
+        markAsFetched();
+        setIsLoading(false);
+        return;
+      }
+      const delay = RETRY_DELAY_MS(attempt);
+      logger.warn(
+        `[useUserProfile] Profile fetch failed (attempt ${attempt}/${MAX_FETCH_RETRIES}), retrying in ${delay}ms`,
+      );
+      // Keep isLoading = true during the back-off so the UI stays in loading state.
+      retryTimerRef.current = setTimeout(() => {
+        retryTimerRef.current = null;
+        void fetchProfileData();
+      }, delay);
+    };
+
     setIsLoading(true);
+    let fetchSucceeded = false;
     try {
       const backendUser = await api.users.getUser(userId);
+
       if (!backendUser) {
-        setIsLoading(false);
+        // Backend returned null — transient error or race during rapid reloads.
+        // Increment the counter and schedule an active retry with back-off so
+        // we don't depend on React re-triggering the effect.
+        fetchRetryCountRef.current += 1;
+        scheduleRetry();
         return;
       }
 
@@ -115,11 +173,20 @@ export function useUserProfile() {
           prev.joinedDate,
         ),
       }));
+      fetchSucceeded = true;
     } catch (error) {
       logger.warn("[useUserProfile] Failed to fetch extended profile:", error);
+      // Treat thrown errors the same as null — schedule an active retry.
+      fetchRetryCountRef.current += 1;
+      scheduleRetry();
     } finally {
-      fetchedForUserRef.current = userId;
-      setIsLoading(false);
+      // Advance the guard only on success. On failure, scheduleRetry() above
+      // will call fetchProfileData() again after the back-off delay, keeping
+      // isLoading = true during the wait.
+      if (fetchSucceeded) {
+        markAsFetched();
+        setIsLoading(false);
+      }
     }
   // Only re-create when auth state or user identity changes, NOT on every
   // user field update (firstName, email, etc.), which caused infinite loops
@@ -127,8 +194,16 @@ export function useUserProfile() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, user?.id]);
 
+  // Trigger fetch whenever auth state or user identity changes.
   useEffect(() => {
     fetchProfileData();
+    // Clean up any pending retry timer when the effect re-runs or unmounts.
+    return () => {
+      if (retryTimerRef.current !== null) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
   }, [fetchProfileData]);
 
   const isProfileComplete = Boolean(
@@ -151,8 +226,10 @@ export function useUserProfile() {
     isAuthenticated && !!CURRENT_USER_ID && fetchedForUserRef.current !== CURRENT_USER_ID;
 
   const refreshProfile = useCallback(() => {
-    // Reset the ref so fetchProfileData will actually re-fetch.
+    // Reset both the fetched guard and retry counter so fetchProfileData
+    // re-fetches from scratch (ignoring the skip-if-already-fetched guard).
     fetchedForUserRef.current = "";
+    fetchRetryCountRef.current = 0;
     return fetchProfileData();
   }, [fetchProfileData]);
 
