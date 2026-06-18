@@ -114,10 +114,10 @@ export function CategoryPage({
     let results = [...filteredPosts];
 
     if (appliedSearchFilters.city) {
+      const cityFilter = appliedSearchFilters.city.toLowerCase();
       results = results.filter((p) =>
-        p.location?.toLowerCase().includes(
-          appliedSearchFilters.city?.toLowerCase() ?? "",
-        ),
+        p.location?.toLowerCase().includes(cityFilter) ||
+        p.locationAr?.toLowerCase().includes(cityFilter)
       );
     }
     if (appliedSearchFilters.minPrice != null) {
