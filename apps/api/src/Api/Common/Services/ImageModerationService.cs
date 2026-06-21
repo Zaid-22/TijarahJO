@@ -72,19 +72,40 @@ public class ImageModerationService : IImageModerationService
             
             var response = await _client.Value.DetectSafeSearchAsync(image);
 
+            // Only block on explicit adult or graphic violence content at VeryLikely confidence.
+            //
+            // Threshold rationale for a general marketplace (electronics, clothing, phones, etc.):
+            //   - Adult/Violence: VeryLikely only. "Likely" is too aggressive — normal product
+            //     photos (skin, hands, faces) frequently score "Likely" on Adult or Medical.
+            //   - Medical: NOT used for blocking. Medical likelihood fires on any photo showing
+            //     skin, hands, or faces, which are common in legitimate product listings.
+            //   - Spoof: NOT used for blocking. Screenshots and edited marketing images of
+            //     products legitimately score high on Spoof. Blocking them harms real sellers.
             var result = new ModerationResult
             {
-                IsAdult = response.Adult >= Likelihood.Likely,
-                IsViolent = response.Violence >= Likelihood.Likely,
-                IsMedical = response.Medical >= Likelihood.Likely,
-                IsSpoof = response.Spoof >= Likelihood.Likely,
-                RawAdult = response.Adult.ToString(),
+                IsAdult   = response.Adult    >= Likelihood.VeryLikely,
+                IsViolent = response.Violence >= Likelihood.VeryLikely,
+                // Kept for logging/diagnostics only — never used to block uploads:
+                IsMedical = response.Medical  >= Likelihood.VeryLikely,
+                IsSpoof   = response.Spoof    >= Likelihood.VeryLikely,
+                RawAdult    = response.Adult.ToString(),
                 RawViolence = response.Violence.ToString(),
+                RawMedical  = response.Medical.ToString(),
+                RawSpoof    = response.Spoof.ToString(),
             };
 
             if (result.IsFlagged)
             {
-                _logger.LogWarning("Image moderation flagged. Adult: {Adult}, Violence: {Violence}", result.RawAdult, result.RawViolence);
+                _logger.LogWarning(
+                    "Image moderation flagged upload. Adult={Adult}, Violence={Violence}, Medical={Medical}, Spoof={Spoof}",
+                    result.RawAdult, result.RawViolence, result.RawMedical, result.RawSpoof);
+            }
+            else if (result.IsMedical || result.IsSpoof)
+            {
+                // Log for diagnostics but do NOT block — these are expected on marketplace listings.
+                _logger.LogInformation(
+                    "Image passed moderation (Medical/Spoof flagged but not blocking). Medical={Medical}, Spoof={Spoof}",
+                    result.RawMedical, result.RawSpoof);
             }
 
             return result;
@@ -102,10 +123,10 @@ public class ImageModerationService : IImageModerationService
 
         return new ModerationResult
         {
-            IsAdult = false,
-            IsViolent = false,
-            IsMedical = false,
-            IsSpoof = false,
+            IsAdult     = false,
+            IsViolent   = false,
+            IsMedical   = false,
+            IsSpoof     = false,
             IsUnavailable = !isDevelopment,
             FailureReason = isDevelopment
                 ? null
@@ -116,13 +137,20 @@ public class ImageModerationService : IImageModerationService
 
 public class ModerationResult
 {
-    public bool IsAdult { get; set; }
-    public bool IsViolent { get; set; }
-    public bool IsMedical { get; set; }
-    public bool IsSpoof { get; set; }
-    public string RawAdult { get; set; } = "";
+    public bool IsAdult    { get; set; }
+    public bool IsViolent  { get; set; }
+    /// <summary>Logged for diagnostics only. Never used to block marketplace uploads.</summary>
+    public bool IsMedical  { get; set; }
+    /// <summary>Logged for diagnostics only. Never used to block marketplace uploads.</summary>
+    public bool IsSpoof    { get; set; }
+    public string RawAdult    { get; set; } = "";
     public string RawViolence { get; set; } = "";
+    public string RawMedical  { get; set; } = "";
+    public string RawSpoof    { get; set; } = "";
     public bool IsUnavailable { get; set; }
     public string? FailureReason { get; set; }
-    public bool IsFlagged => IsAdult || IsViolent || IsMedical;
+
+    // Only Adult and Violence block uploads — Medical and Spoof are diagnostic only.
+    public bool IsFlagged => IsAdult || IsViolent;
 }
+
