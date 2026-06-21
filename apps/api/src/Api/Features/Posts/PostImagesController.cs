@@ -131,6 +131,45 @@ public class PostImagesController(
     }
 
     [Authorize]
+    [HttpPost("validate")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<ActionResult> ValidatePostImage([FromForm] IFormFile file)
+    {
+        if (file == null)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Image file is required.");
+        }
+
+        try
+        {
+            postImageStorage.ValidateFileOrThrow(file);
+        }
+        catch (ArgumentException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: ex.Message);
+        }
+
+        ModerationResult moderationResult = await imageModeration.CheckImageAsync(file);
+        if (moderationResult.IsUnavailable)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                detail: moderationResult.FailureReason ?? "Image moderation service is unavailable."
+            );
+        }
+
+        if (moderationResult.IsFlagged)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Image rejected by moderation filters (inappropriate content detected).");
+        }
+
+        return Ok(new { Safe = true });
+    }
+
+    [Authorize]
     [HttpPost("upload")]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(StatusCodes.Status201Created)]

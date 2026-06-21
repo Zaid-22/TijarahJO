@@ -50,9 +50,11 @@ public sealed class EmailVerificationConfirmResult
     public bool Success { get; init; }
     public EmailVerificationConfirmFailureReason? FailureReason { get; init; }
     public string? Message { get; init; }
+    /// <summary>The verified user, present only on a successful confirmation.</summary>
+    public UserModel? User { get; init; }
 
-    public static EmailVerificationConfirmResult Ok() =>
-        new() { Success = true, Message = "Email verified successfully." };
+    public static EmailVerificationConfirmResult Ok(UserModel? user = null) =>
+        new() { Success = true, Message = "Email verified successfully.", User = user };
 
     public static EmailVerificationConfirmResult Failed(
         EmailVerificationConfirmFailureReason reason, string message) =>
@@ -234,7 +236,7 @@ public sealed class EmailVerificationService(
         {
             // Clean up any lingering challenge
             await _challenges.DeleteChallengeStateAsync(userId, ChallengeType, cancellationToken);
-            return EmailVerificationConfirmResult.Ok();
+            return EmailVerificationConfirmResult.Ok(user);
         }
 
         // Load challenge state
@@ -301,7 +303,7 @@ public sealed class EmailVerificationService(
         await _challenges.DeleteChallengeStateAsync(userId, ChallengeType, cancellationToken);
 
         _logger.LogInformation("Email verified successfully for user {UserId}.", userId);
-        return EmailVerificationConfirmResult.Ok();
+        return EmailVerificationConfirmResult.Ok(verifiedUser);
     }
 
     // =====================================================================

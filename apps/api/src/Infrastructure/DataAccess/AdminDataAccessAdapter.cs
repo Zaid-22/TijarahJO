@@ -733,6 +733,26 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
                                     : x.r.ReportType == "COMMENT" && x.commentAuthor != null
                                         ? (x.commentAuthor.FirstName + " " + (x.commentAuthor.LastName ?? "")).Trim()
                                     : null,
+                    TargetUserStatus =
+                        x.r.ReportType == "USER" && x.targetUser != null
+                            ? (int?)x.targetUser.Status
+                            : x.r.ReportType == "LISTING" && x.postOwner != null
+                                ? (int?)x.postOwner.Status
+                                : x.r.ReportType == "REVIEW" && x.reviewAuthor != null
+                                    ? (int?)x.reviewAuthor.Status
+                                    : x.r.ReportType == "COMMENT" && x.commentAuthor != null
+                                        ? (int?)x.commentAuthor.Status
+                                    : null,
+                    TargetUserSuspendedUntil =
+                        x.r.ReportType == "USER" && x.targetUser != null
+                            ? x.targetUser.SuspendedUntil
+                            : x.r.ReportType == "LISTING" && x.postOwner != null
+                                ? x.postOwner.SuspendedUntil
+                                : x.r.ReportType == "REVIEW" && x.reviewAuthor != null
+                                    ? x.reviewAuthor.SuspendedUntil
+                                    : x.r.ReportType == "COMMENT" && x.commentAuthor != null
+                                        ? x.commentAuthor.SuspendedUntil
+                                    : null,
                     Status = x.r.Status,
                     StatusLabel = x.r.Status >= 0 && x.r.Status < _reportStatusLabels.Length ? _reportStatusLabels[x.r.Status] : "Unknown",
                     ResolvedByUserID = x.r.ResolvedByUserID,

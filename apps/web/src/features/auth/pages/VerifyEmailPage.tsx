@@ -8,18 +8,38 @@ import { Alert, AlertDescription } from "../../../shared/ui/alert";
 import { Button } from "../../../shared/ui/button";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { AuthPageLayout } from "../components/AuthPageLayout";
+import { useAuth } from "../../../contexts/AuthContext";
+import { resolveHasAdminAccessFromPayload } from "../../../contexts/authUtils";
+import {
+  resolveLoginRole,
+  readAuthPermissions,
+} from "./loginAuthHelpers";
 
 interface VerifyEmailPageProps {
   language: Language;
+  onLogin?: (userData: {
+    id?: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    city?: string;
+    area?: string;
+    avatar?: string;
+    role?: "user" | "admin";
+    hasAdminAccess?: boolean;
+    permissions?: string[];
+  }) => void;
 }
 
-type VerifyStep = "verifying" | "success" | "error";
+type VerifyStep = "verifying" | "success" | "autologin" | "error";
 
 type VerifyEmailCopy = {
   verifyingTitle: string;
   verifyingSubtitle: string;
   successTitle: string;
   successBody: string;
+  successBodyAutoLogin: string;
   errorTitle: string;
   errorBody: string;
   goToLogin: string;
@@ -36,6 +56,7 @@ const verifyEmailCopyByLanguage: Record<Language, VerifyEmailCopy> = {
     successTitle: "Email verified!",
     successBody:
       "Your email address has been verified. You can now sign in to your account.",
+    successBodyAutoLogin: "Your email has been verified. Taking you to your account...",
     errorTitle: "Verification failed",
     errorBody:
       "The verification link may have expired or is invalid. Please try requesting a new one.",
@@ -53,6 +74,7 @@ const verifyEmailCopyByLanguage: Record<Language, VerifyEmailCopy> = {
     successTitle: "تم التحقق من البريد الإلكتروني!",
     successBody:
       "تم التحقق من عنوان بريدك الإلكتروني. يمكنك الآن تسجيل الدخول إلى حسابك.",
+    successBodyAutoLogin: "تم التحقق من بريدك الإلكتروني. جارٍ تحويلك إلى حسابك...",
     errorTitle: "فشل التحقق",
     errorBody:
       "قد يكون رابط التحقق منتهي الصلاحية أو غير صالح. يرجى طلب رابط جديد.",
@@ -66,11 +88,12 @@ const verifyEmailCopyByLanguage: Record<Language, VerifyEmailCopy> = {
   },
 };
 
-export function VerifyEmailPage({ language }: VerifyEmailPageProps) {
+export function VerifyEmailPage({ language, onLogin }: VerifyEmailPageProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const copy = verifyEmailCopyByLanguage[language];
   const isRTL = language === "ar";
+  const { setSession } = useAuth();
 
   const [step, setStep] = useState<VerifyStep>("verifying");
   const [message, setMessage] = useState("");
@@ -80,6 +103,7 @@ export function VerifyEmailPage({ language }: VerifyEmailPageProps) {
   const [resendEmail, setResendEmail] = useState(() => searchParams.get("email") || "");
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const verifiedRef = useRef(false);
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const token = searchParams.get("token") || "";
 
@@ -99,6 +123,7 @@ export function VerifyEmailPage({ language }: VerifyEmailPageProps) {
   };
 
   useEffect(() => () => { if (cooldownRef.current) clearInterval(cooldownRef.current); }, []);
+  useEffect(() => () => { if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current); }, []);
 
   useEffect(() => {
     if (verifiedRef.current) {
@@ -116,8 +141,46 @@ export function VerifyEmailPage({ language }: VerifyEmailPageProps) {
       try {
         const result = await api.auth.verifyEmail(token);
         if (result.success) {
-          setStep("success");
-          setMessage(result.message || copy.successBody);
+          // Backend returned user data + JWT cookie — log them in immediately.
+          if (result.user?.id || result.user?.email) {
+            const userData = {
+              id: result.user.id,
+              firstName: result.user.firstName || "",
+              lastName: result.user.lastName || "",
+              email: result.user.email || "",
+              phone: result.user.phone,
+              city: result.user.city,
+              area: result.user.area,
+              avatar: result.user.avatar,
+              role: resolveLoginRole(result.user),
+              hasAdminAccess: resolveHasAdminAccessFromPayload(result.user),
+              permissions: readAuthPermissions(result.user),
+            };
+
+            setSession({
+              id: userData.id || "",
+              email: userData.email,
+              name: `${userData.firstName} ${userData.lastName}`.trim() || userData.email,
+              firstName: userData.firstName,
+              lastName: userData.lastName,
+              avatar: userData.avatar,
+              role: userData.role || "user",
+              hasAdminAccess: userData.hasAdminAccess,
+              permissions: userData.permissions,
+            });
+
+            onLogin?.(userData);
+
+            setStep("autologin");
+            setMessage(copy.successBodyAutoLogin);
+
+            // Navigate to home after a short pause so the success state is visible.
+            redirectTimerRef.current = setTimeout(() => navigate("/", { replace: true }), 1200);
+          } else {
+            // Fallback: verified but no JWT (e.g. role resolution failed on backend).
+            setStep("success");
+            setMessage(result.message || copy.successBody);
+          }
         } else {
           setStep("error");
           setErrorMessage(result.message || copy.errorBody);
@@ -129,7 +192,7 @@ export function VerifyEmailPage({ language }: VerifyEmailPageProps) {
     };
 
     void verify();
-  }, [token, copy.noTokenError, copy.successBody, copy.errorBody]);
+  }, [token, copy.noTokenError, copy.successBody, copy.successBodyAutoLogin, copy.errorBody, navigate, onLogin, setSession]);
 
   const handleResend = async () => {
     if (isResending || resendCooldown > 0) {
@@ -168,21 +231,23 @@ export function VerifyEmailPage({ language }: VerifyEmailPageProps) {
         title={
           step === "verifying"
             ? copy.verifyingTitle
-            : step === "success"
+            : step === "success" || step === "autologin"
               ? copy.successTitle
               : copy.errorTitle
         }
         subtitle={step === "verifying" ? copy.verifyingSubtitle : undefined}
         footer={
-          <div className="text-center mt-4">
-            <button
-              type="button"
-              onClick={() => navigate("/login")}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {copy.goToLogin}
-            </button>
-          </div>
+          step !== "autologin" ? (
+            <div className="text-center mt-4">
+              <button
+                type="button"
+                onClick={() => navigate("/login")}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {copy.goToLogin}
+              </button>
+            </div>
+          ) : undefined
         }
       >
         {step === "verifying" && (
@@ -191,7 +256,7 @@ export function VerifyEmailPage({ language }: VerifyEmailPageProps) {
           </div>
         )}
 
-        {step === "success" && (
+        {(step === "success" || step === "autologin") && (
           <div className="space-y-6">
             {message && (
               <Alert className="border-green-500/30 bg-green-500/5 px-3 py-2.5 shadow-none">
@@ -207,17 +272,23 @@ export function VerifyEmailPage({ language }: VerifyEmailPageProps) {
 
             <div className="flex flex-col items-center gap-4 py-4">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
-                <CheckCircle2 className="h-8 w-8 text-green-600" />
+                {step === "autologin" ? (
+                  <Loader2 className="h-8 w-8 text-green-600 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-8 w-8 text-green-600" />
+                )}
               </div>
             </div>
 
-            <Button
-              type="button"
-              className="w-full h-11"
-              onClick={() => navigate("/login")}
-            >
-              {copy.goToLogin}
-            </Button>
+            {step === "success" && (
+              <Button
+                type="button"
+                className="w-full h-11"
+                onClick={() => navigate("/login")}
+              >
+                {copy.goToLogin}
+              </Button>
+            )}
           </div>
         )}
 

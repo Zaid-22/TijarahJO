@@ -116,7 +116,15 @@ export function renderAuthRouteGroup({
 
       <Route
         path={APP_ROUTE_PATHS.verifyEmail}
-        element={<VerifyEmailPage language={appProps.language} />}
+        element={
+          <VerifyEmailPage
+            language={appProps.language}
+            onLogin={(userData) => {
+              const nextProfile = applyLoginUserDataToProfile(appProps.userProfile, userData);
+              appProps.setUserProfile(nextProfile);
+            }}
+          />
+        }
       />
     </>
   );

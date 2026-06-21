@@ -207,12 +207,15 @@ export function renderAccountRouteGroup({
             onBack={() => navigate(APP_ROUTE_PATHS.home)}
             onSubmit={async (post) => {
               try {
-                await postActions.createPost(post);
+                const result = await postActions.createPost(post) as Record<string, unknown> | undefined;
                 deferredToast.success(
                   appProps.language === "ar"
                     ? "تم نشر المنشور!"
                     : "Post created!",
                 );
+                if (result && typeof result.message === "string" && result.message.trim().length > 0) {
+                  deferredToast.error(result.message);
+                }
                 navigate(APP_ROUTE_PATHS.home);
               } catch (error) {
                 deferredToast.error(
@@ -248,16 +251,22 @@ export function renderAccountRouteGroup({
             }}
             onUpdatePost={async (updatedPost) => {
               try {
-                await postActions.updatePost(updatedPost);
+                const result = await postActions.updatePost(updatedPost) as Record<string, unknown> | undefined;
                 deferredToast.success("Post updated");
+                if (result && typeof result.message === "string" && result.message.trim().length > 0) {
+                  deferredToast.error(result.message);
+                }
               } catch {
                 deferredToast.error("Error updating post");
               }
             }}
             onAddPost={async (post) => {
               try {
-                await postActions.createPost(post);
+                const result = await postActions.createPost(post) as Record<string, unknown> | undefined;
                 deferredToast.success("Post created");
+                if (result && typeof result.message === "string" && result.message.trim().length > 0) {
+                  deferredToast.error(result.message);
+                }
               } catch (error) {
                 deferredToast.error(
                   error instanceof Error ? error.message : "Error creating post",

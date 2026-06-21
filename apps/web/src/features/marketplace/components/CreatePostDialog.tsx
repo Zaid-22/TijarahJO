@@ -8,6 +8,7 @@ import { useLocationOptions } from "../../../shared/hooks/useLocationOptions";
 import { CreatePostInput } from "../../../app/routes/appRoutesUtils";
 import { MarketplaceProgressBar } from "./MarketplaceProgressBar";
 import { PostForm } from "./PostForm";
+import { apiRequest } from "../../../services/api/client";
 
 const MAX_IMAGES = 5;
 
@@ -15,6 +16,8 @@ type SelectedImage = {
   id: string;
   previewUrl: string;
   file: File;
+  isValidating?: boolean;
+  error?: string;
 };
 
 interface CreatePostDialogProps {
@@ -31,6 +34,7 @@ export function CreatePostDialogContent({
   userProfile,
 }: CreatePostDialogProps) {
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
+  const [imageValidationError, setImageValidationError] = useState<string | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
@@ -164,23 +168,90 @@ export function CreatePostDialogContent({
     });
   }, [userProfile.area, userProfile.city]);
 
+  const getLocalizedImageError = (rawError: string, lang: Language) => {
+    const errorLower = rawError.toLowerCase();
+    if (errorLower.includes("moderation") || errorLower.includes("inappropriate") || errorLower.includes("flagged")) {
+      return lang === "ar"
+        ? "تم رفض الصورة بسبب فلاتر الأمان (تم اكتشاف محتوى غير لائق)."
+        : "Image rejected by moderation filters (inappropriate content detected).";
+    }
+    if (errorLower.includes("exceeds size") || errorLower.includes("size limit") || errorLower.includes("too large")) {
+      return lang === "ar"
+        ? "حجم الصورة يتجاوز الحد المسموح به."
+        : "Image size exceeds the allowed limit.";
+    }
+    if (errorLower.includes("extension") || errorLower.includes("unsupported") || errorLower.includes("content type") || errorLower.includes("type")) {
+      return lang === "ar"
+        ? "صيغة الصورة غير مدعومة."
+        : "Unsupported image file format.";
+    }
+    if (errorLower.includes("empty") || errorLower.includes("required")) {
+      return lang === "ar"
+        ? "ملف الصورة فارغ أو مطلوب."
+        : "Image file is empty or required.";
+    }
+    return lang === "ar" ? "فشل التحقق من صحة الصورة." : rawError;
+  };
+
+  const validateImageAsync = async (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append("File", file);
+
+    try {
+      const response = await apiRequest<{ safe: boolean }>("/post-images/validate", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.success) {
+        setSelectedImages((prev) =>
+          prev.map((img) =>
+            img.id === id ? { ...img, isValidating: false, error: undefined } : img
+          )
+        );
+      } else {
+        const errorMsg = response.error?.message || "Failed to validate image";
+        setSelectedImages((prev) =>
+          prev.map((img) =>
+            img.id === id ? { ...img, isValidating: false, error: getLocalizedImageError(errorMsg, language) } : img
+          )
+        );
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "Validation failed";
+      setSelectedImages((prev) =>
+        prev.map((img) =>
+          img.id === id ? { ...img, isValidating: false, error: getLocalizedImageError(errorMsg, language) } : img
+        )
+      );
+    }
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
+    setImageValidationError(undefined);
 
+    const filesArray = Array.from(files);
     setSelectedImages((prev) => {
       const remainingSlots = Math.max(0, MAX_IMAGES - prev.length);
       if (remainingSlots === 0) return prev;
 
-      const nextItems = Array.from(files)
+      const nextItems = filesArray
         .slice(0, remainingSlots)
         .map((file, index) => {
           const previewUrl = URL.createObjectURL(file);
           objectUrlsRef.current.add(previewUrl);
+          const itemId = `${file.name}-${file.size}-${file.lastModified}-${index}-${Date.now()}`;
+          
+          // Trigger validation asynchronously
+          void validateImageAsync(itemId, file);
+
           return {
-            id: `${file.name}-${file.size}-${file.lastModified}-${index}`,
+            id: itemId,
             previewUrl,
             file,
+            isValidating: true,
           };
         });
 
@@ -190,6 +261,7 @@ export function CreatePostDialogContent({
   };
 
   const removeImage = (index: number) => {
+    setImageValidationError(undefined);
     setSelectedImages((prev) => {
       const target = prev[index];
       if (target && objectUrlsRef.current.delete(target.previewUrl)) {
@@ -202,6 +274,26 @@ export function CreatePostDialogContent({
   const handleSubmit = async () => {
     if (isSubmitting) return;
 
+    const hasValidating = selectedImages.some(img => img.isValidating);
+    if (hasValidating) {
+      setImageValidationError(
+        language === "ar"
+          ? "يرجى الانتظار حتى ينتهي التحقق من الصور"
+          : "Please wait for image verification to complete"
+      );
+      return;
+    }
+
+    const hasErrors = selectedImages.some(img => img.error);
+    if (hasErrors) {
+      setImageValidationError(
+        language === "ar"
+          ? "فشل التحقق من أمان صورة واحدة أو أكثر. يرجى إزالة أو استبدال الصور المرفوضة قبل النشر"
+          : "One or more images failed safety verification. Please remove or replace the flagged images before publishing"
+      );
+      return;
+    }
+
     const newErrors = {
       title: !formData.title,
       price: !formData.price || parseFloat(formData.price) < 0.01,
@@ -213,8 +305,19 @@ export function CreatePostDialogContent({
     };
 
     setErrors(newErrors);
+
+    if (newErrors.images) {
+      setImageValidationError(t.imagesRequired || (language === "ar" ? "يجب إضافة صورة واحدة على الأقل" : "At least one image is required"));
+    } else {
+      setImageValidationError(undefined);
+    }
+
     if (Object.values(newErrors).some((error) => error)) {
-      toast.error(language === "ar" ? "يرجى ملء جميع الحقول المطلوبة" : "Please fill in all required fields");
+      const otherErrors = { ...newErrors, images: false };
+      const hasOtherErrors = Object.values(otherErrors).some(e => e);
+      if (hasOtherErrors) {
+        toast.error(language === "ar" ? "يرجى ملء جميع الحقول المطلوبة" : "Please fill in all required fields");
+      }
       return;
     }
 
@@ -274,6 +377,7 @@ export function CreatePostDialogContent({
         isSubmitting={isSubmitting}
         onSubmit={handleSubmit}
         submitLabel={language === "ar" ? "نشر المنشور" : "Publish Post"}
+        imageValidationError={imageValidationError}
       />
     </div>
   );

@@ -41,7 +41,7 @@ export interface MarketplaceRouteState {
 
 export interface PostActions {
   createPost: (post: CreatePostInput) => Promise<unknown>;
-  updatePost: (post: UpdatePostInput) => Promise<void>;
+  updatePost: (post: UpdatePostInput) => Promise<unknown>;
   updatePostStatus: (statusData: UpdatePostStatusInput) => Promise<void>;
   deletePost: (postId: string) => Promise<void>;
 }

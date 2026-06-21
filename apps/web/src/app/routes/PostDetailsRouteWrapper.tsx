@@ -29,7 +29,7 @@ interface PostDetailsRouteWrapperProps {
   onNavigateSeller: (sellerId: string, fromPath?: string) => void;
   onNavigateChat: (sellerId: string, fromPath?: string, postTitle?: string) => void;
   onRequireAuth?: () => void;
-  onUpdatePost: (updatedPost: UpdatePostInput) => Promise<void>;
+  onUpdatePost: (updatedPost: UpdatePostInput) => Promise<unknown>;
   onUpdatePostStatus: (statusData: UpdatePostStatusInput) => Promise<void>;
   onDeletePost: (postId: string) => Promise<void>;
 }
@@ -185,7 +185,7 @@ export function PostDetailsRouteWrapper({
       isOwnPost={isOwnPost}
       onUpdatePost={async (updatedPost) => {
         try {
-          await onUpdatePost(updatedPost);
+          const result = await onUpdatePost(updatedPost) as Record<string, unknown> | undefined;
           mutateRoutePost({
             name: updatedPost.name,
             description: updatedPost.description,
@@ -197,6 +197,9 @@ export function PostDetailsRouteWrapper({
             images: updatedPost.images?.filter((img): img is string => typeof img === "string"),
           });
           deferredToast.success(labels.postUpdated);
+          if (result && typeof result.message === "string" && result.message.trim().length > 0) {
+            deferredToast.error(result.message);
+          }
         } catch {
           deferredToast.error(labels.updateError);
         }

@@ -2,6 +2,12 @@ import { APP_CONFIG } from "../../constants/appConfig";
 import { ApiResponse } from "../../types/api";
 import { logger } from "../../shared/lib/logger";
 import { shouldPrimeCsrfForEndpoint } from "./csrfPolicy";
+import {
+  AUTH_LOGOUT_KEY,
+  AUTH_SESSION_HINT_KEY,
+  AUTH_ADMIN_ACCESS_HINT_KEY,
+  AUTH_LEGACY_KEYS,
+} from "../../shared/constants/authStorageKeys";
 
 // Vite uses import.meta.env instead of process.env
 const API_BASE_URL = APP_CONFIG.apiBaseUrl;
@@ -18,14 +24,7 @@ export type ApiRequestOptions = RequestInit & {
   throwOnAbort?: boolean;
 };
 
-const AUTH_LOGOUT_KEY = "tijarahjo_logged_out";
-const AUTH_SESSION_HINT_KEY = "tijarahjo_has_authenticated";
-const AUTH_ADMIN_ACCESS_HINT_KEY = "tijarahjo_has_admin_access";
-const AUTH_LEGACY_KEYS = [
-  "tijarahjo_token",
-  "tijarahjo_auth",
-  "tijarahjo_user",
-];
+
 
 function getCookieValue(name: string): string | null {
   if (typeof document === "undefined") {
@@ -206,7 +205,21 @@ async function attemptTokenRefresh(): Promise<boolean> {
         credentials: "include",
         headers,
       });
-      return response.ok;
+
+      if (response.ok) {
+        return true;
+      }
+
+      // Refresh failed (401/403) — the session cookie is invalid or expired.
+      // Clear the localStorage hint immediately so shouldAttemptRefresh() returns
+      // false for all subsequent requests, breaking the infinite 401-retry loop.
+      try {
+        localStorage.removeItem(AUTH_SESSION_HINT_KEY);
+        localStorage.removeItem(AUTH_ADMIN_ACCESS_HINT_KEY);
+      } catch {
+        // localStorage may be unavailable (private mode, storage quota, etc.) — ignore.
+      }
+      return false;
     } catch {
       return false;
     } finally {
@@ -525,5 +538,6 @@ export async function apiRequest<T>(
     if (callerSignal) {
       callerSignal.removeEventListener("abort", syncAbortFromCaller);
     }
+  // eslint-disable-next-line max-lines
   }
 }

@@ -1,5 +1,21 @@
 import { User } from "../types";
 import { logger } from "../shared/lib/logger";
+import {
+  AUTH_GUEST_KEY,
+  AUTH_LOGOUT_KEY,
+  AUTH_SESSION_HINT_KEY,
+  AUTH_ADMIN_ACCESS_HINT_KEY,
+  AUTH_LEGACY_KEYS,
+} from "../shared/constants/authStorageKeys";
+
+// Re-export so existing callers of authContextUtils keep working unchanged.
+export {
+  AUTH_GUEST_KEY,
+  AUTH_LOGOUT_KEY,
+  AUTH_SESSION_HINT_KEY,
+  AUTH_ADMIN_ACCESS_HINT_KEY,
+  AUTH_LEGACY_KEYS,
+};
 
 const DEBUG_AUTH =
   Boolean(import.meta.env.DEV) && import.meta.env.VITE_DEBUG_AUTH === "true";
@@ -22,15 +38,6 @@ export const debugAuthError = (...args: unknown[]) => {
   }
 };
 
-export const AUTH_GUEST_KEY = "guestMode";
-export const AUTH_LOGOUT_KEY = "tijarahjo_logged_out";
-export const AUTH_SESSION_HINT_KEY = "tijarahjo_has_authenticated";
-export const AUTH_ADMIN_ACCESS_HINT_KEY = "tijarahjo_has_admin_access";
-export const AUTH_LEGACY_KEYS = [
-  "tijarahjo_token",
-  "tijarahjo_auth",
-  "tijarahjo_user",
-];
 
 export const SESSION_EXPIRED_MESSAGE =
   "Your session has expired. Please sign in again.";

@@ -511,7 +511,9 @@ export const authApi = {
   },
 
   /**
-   * Verify email address with the token from the verification link
+   * Verify email address with the token from the verification link.
+   * On success the backend sets a JWT cookie and returns a full AuthResponse,
+   * so the frontend can log the user in immediately.
    */
   verifyEmail: async (token: string): Promise<AuthApiResponse> => {
     const response = await apiRequest<unknown>("/auth/verify-email", {
@@ -519,14 +521,13 @@ export const authApi = {
       body: JSON.stringify({ Token: token.trim() }),
     });
 
-    if (response.success) {
-      return {
-        success: true,
-        message: resolveMessageFromPayload(
-          response.data,
-          "Email verified successfully.",
-        ),
-      };
+    if (response.success && response.data) {
+      return handleAuthSuccessPayload(
+        response.data,
+        "EMAIL_VERIFY_FAILED",
+        "Email verification failed. The link may have expired.",
+        "Email verified successfully.",
+      );
     }
 
     const errorMessage = resolveAuthFailureMessage(
@@ -535,6 +536,7 @@ export const authApi = {
     );
     return toAuthFailure("EMAIL_VERIFY_FAILED", errorMessage);
   },
+
 
   /**
    * Resend verification email

@@ -149,10 +149,13 @@ function SellerMarketplaceRouteScreen() {
       }}
       onUpdatePost={async (updatedPost) => {
         try {
-          await postActions.updatePost(updatedPost);
+          const result = await postActions.updatePost(updatedPost) as Record<string, unknown> | undefined;
           deferredToast.success(
             appProps.language === "ar" ? "تم تحديث المنشور" : "Post updated",
           );
+          if (result && typeof result.message === "string" && result.message.trim().length > 0) {
+            deferredToast.error(result.message);
+          }
         } catch {
           deferredToast.error(
             appProps.language === "ar" ? "حدث خطأ أثناء التحديث" : "Error updating post",

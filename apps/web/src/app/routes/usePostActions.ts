@@ -149,6 +149,7 @@ export function usePostActions({
         cancelInFlight: true,
       });
       await fetchPostsFromBackend();
+      return response;
     },
     [fetchPostsFromBackend, mergePostIntoFeedCache, userProfile],
   );

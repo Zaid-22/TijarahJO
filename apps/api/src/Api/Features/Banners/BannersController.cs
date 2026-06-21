@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +15,7 @@ public sealed class BannersController(IHeroBannerService heroBannerService) : Co
     private readonly IHeroBannerService _heroBannerService = heroBannerService;
 
     [HttpGet]
+    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<HeroBannerListResult>> GetActiveBanners(CancellationToken cancellationToken)
     {

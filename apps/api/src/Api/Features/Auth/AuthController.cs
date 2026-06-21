@@ -322,7 +322,7 @@ public class AuthController(
     [EnableRateLimiting("auth")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<ApiMessageResponse>> VerifyEmail(
+    public async Task<ActionResult<AuthResponse>> VerifyEmail(
         [FromBody] VerifyEmailRequest request, CancellationToken cancellationToken)
     {
         EmailVerificationConfirmResult result = await _emailVerificationService.ConfirmVerificationAsync(
@@ -342,8 +342,35 @@ public class AuthController(
             return Problem(statusCode: statusCode, detail: result.Message);
         }
 
-        return Ok(new ApiMessageResponse { Message = result.Message ?? "Email verified successfully." });
+        // If we have the verified user, issue a JWT and log them in immediately.
+        if (result.User?.UserID != null)
+        {
+            string? roleName = await AuthShared.ResolveRoleNameForTokenAsync(
+                _roles, result.User.RoleID, cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(roleName))
+            {
+                UserPermissionSnapshot permissionSnapshot = await _userPermissionService
+                    .GetUserPermissionSnapshotAsync(result.User.UserID.Value, cancellationToken);
+
+                return Ok(AuthShared.CreateAuthenticatedResponse(
+                    _tokenService,
+                    Response,
+                    result.User,
+                    roleName,
+                    permissionSnapshot));
+            }
+        }
+
+        // Fallback: verification succeeded but we couldn't resolve the role — tell the
+        // frontend to redirect to /login (original behaviour preserved as a safety net).
+        return Ok(new AuthResponse
+        {
+            Success = true,
+            Message = result.Message ?? "Email verified successfully. Please sign in."
+        });
     }
+
 
     [HttpPost("verify-email/resend")]
     [AllowAnonymous]

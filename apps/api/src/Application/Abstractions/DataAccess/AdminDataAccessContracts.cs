@@ -226,6 +226,8 @@ public sealed class AdminReportItem
     public string ReporterEmail { get; init; } = string.Empty;
     public int? TargetUserID { get; init; }
     public string? TargetUserName { get; init; }
+    public int? TargetUserStatus { get; init; }
+    public System.DateTime? TargetUserSuspendedUntil { get; init; }
     public int Status { get; init; }
     public string StatusLabel { get; init; } = string.Empty;
     public int? ResolvedByUserID { get; init; }

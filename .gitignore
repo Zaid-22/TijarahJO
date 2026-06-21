@@ -120,3 +120,7 @@ apps/web/.env.production
 # Desktop and Android directories
 Desktop/
 .android/
+
+# Google Cloud credentials key file
+gcp-vision-service-account.json
+

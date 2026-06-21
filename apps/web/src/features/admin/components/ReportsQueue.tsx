@@ -80,6 +80,40 @@ function formatReportTargetLabel(report: AdminReportItem): string {
   }
 }
 
+function renderTargetUserStatus(
+  status: number | null | undefined,
+  suspendedUntil: string | null | undefined
+) {
+  if (status === undefined || status === null) return null;
+
+  const isTimedSuspended =
+    status === 1 &&
+    suspendedUntil &&
+    new Date(suspendedUntil).getTime() > Date.now();
+
+  let label = "Active";
+  let badgeClass =
+    "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border border-emerald-500/20";
+
+  if (status !== 1) {
+    label = "Banned";
+    badgeClass =
+      "bg-destructive/10 text-destructive border border-destructive/20";
+  } else if (isTimedSuspended) {
+    label = "Suspended";
+    badgeClass =
+      "bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20";
+  }
+
+  return (
+    <span
+      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ml-1.5 shadow-sm ${badgeClass}`}
+    >
+      User: {label}
+    </span>
+  );
+}
+
 export function ReportsQueue() {
   const [reports, setReports] = useState<AdminReportItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -411,6 +445,7 @@ export function ReportsQueue() {
                       <span className="font-medium">
                         {formatReportTargetLabel(report)}
                       </span>
+                      {renderTargetUserStatus(report.targetUserStatus, report.targetUserSuspendedUntil)}
                     </div>
                     <div>
                       <span className="text-muted-foreground">Reporter:</span>{" "}

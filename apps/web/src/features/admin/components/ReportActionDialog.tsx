@@ -32,6 +32,40 @@ function formatReportTargetLabel(report: AdminReportItem): string {
   }
 }
 
+function renderUserStatusBadge(
+  status: number | null | undefined,
+  suspendedUntil: string | null | undefined
+) {
+  if (status === undefined || status === null) return null;
+
+  const isTimedSuspended =
+    status === 1 &&
+    suspendedUntil &&
+    new Date(suspendedUntil).getTime() > Date.now();
+
+  let label = "Active";
+  let badgeClass =
+    "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border border-emerald-500/20";
+
+  if (status !== 1) {
+    label = "Banned";
+    badgeClass =
+      "bg-destructive/10 text-destructive border border-destructive/20";
+  } else if (isTimedSuspended) {
+    label = "Suspended";
+    badgeClass =
+      "bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20";
+  }
+
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${badgeClass}`}
+    >
+      {label}
+    </span>
+  );
+}
+
 const SUSPENSION_OPTIONS: { label: string; hours: number | null }[] = [
   { label: "1 Hour", hours: 1 },
   { label: "24 Hours", hours: 24 },
@@ -120,6 +154,17 @@ export function ReportActionDialog({
                   )}
                 </div>
               </div>
+              {report.targetUserID && (
+                <div className="col-span-2 sm:col-span-1">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                    Target User
+                  </p>
+                  <div className="text-sm font-medium text-foreground flex items-center flex-wrap gap-1.5">
+                    <span>{report.targetUserName || `User #${report.targetUserID}`}</span>
+                    {renderUserStatusBadge(report.targetUserStatus, report.targetUserSuspendedUntil)}
+                  </div>
+                </div>
+              )}
             </div>
 
             {report.description && (
@@ -163,50 +208,85 @@ export function ReportActionDialog({
                   Moderation Actions
                 </h4>
 
-                {report.targetUserID && (
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-destructive/20 bg-destructive/5 p-4 transition-colors hover:border-destructive/30">
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <ShieldBan className="w-4 h-4 text-destructive" />
-                        <span className="text-sm font-semibold text-destructive">
-                          Suspend User
-                        </span>
+                {report.targetUserID && (() => {
+                  const isTimedSuspended =
+                    report.targetUserStatus === 1 &&
+                    report.targetUserSuspendedUntil &&
+                    new Date(report.targetUserSuspendedUntil).getTime() > Date.now();
+
+                  const isPermanentlyBanned =
+                    report.targetUserStatus !== undefined &&
+                    report.targetUserStatus !== null &&
+                    report.targetUserStatus !== 1;
+
+                  if (isPermanentlyBanned) {
+                    return (
+                      <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 shadow-sm">
+                        <div className="flex items-center gap-3 text-destructive">
+                          <ShieldBan className="w-5 h-5 shrink-0" />
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold">User Already Banned</p>
+                            <p className="text-xs text-destructive/80 leading-relaxed">
+                              {report.targetUserName || "This user"} is permanently banned. No further suspension actions can be applied.
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-xs text-destructive/80 max-w-[280px] leading-relaxed">
-                        {report.targetUserName
-                          ? `Invalidates ${report.targetUserName}'s active sessions. Auto-resolves report.`
-                          : "Invalidates active sessions. Auto-resolves report."}
-                      </p>
+                    );
+                  }
+
+                  return (
+                    <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 transition-colors hover:border-destructive/30 space-y-3 shadow-sm">
+                      {isTimedSuspended && (
+                        <div className="px-3 py-2 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs border border-amber-500/20 leading-relaxed">
+                          This user is currently suspended until {new Date(report.targetUserSuspendedUntil!).toLocaleString()}.
+                        </div>
+                      )}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <ShieldBan className="w-4 h-4 text-destructive" />
+                            <span className="text-sm font-semibold text-destructive">
+                              Suspend User
+                            </span>
+                          </div>
+                          <p className="text-xs text-destructive/80 max-w-[280px] leading-relaxed">
+                            {report.targetUserName
+                              ? `Invalidates ${report.targetUserName}'s active sessions. Auto-resolves report.`
+                              : "Invalidates active sessions. Auto-resolves report."}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                          <Select value={selectedSuspensionHours} onValueChange={onSuspensionHoursChange}>
+                            <SelectTrigger className="w-[130px] h-9 text-xs" aria-label="Select suspension duration">
+                              <SelectValue placeholder="Duration" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {SUSPENSION_OPTIONS.map((opt) => (
+                                <SelectItem key={String(opt.hours)} value={String(opt.hours)} className="text-xs">
+                                  {opt.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={onBlockUser}
+                            disabled={isSuspending}
+                            className="h-9 px-4 shrink-0 shadow-sm"
+                          >
+                            {isSuspending ? (
+                              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                            ) : (
+                              "Apply"
+                            )}
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                      <Select value={selectedSuspensionHours} onValueChange={onSuspensionHoursChange}>
-                        <SelectTrigger className="w-[130px] h-9 text-xs" aria-label="Select suspension duration">
-                          <SelectValue placeholder="Duration" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {SUSPENSION_OPTIONS.map((opt) => (
-                            <SelectItem key={String(opt.hours)} value={String(opt.hours)} className="text-xs">
-                              {opt.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={onBlockUser}
-                        disabled={isSuspending}
-                        className="h-9 px-4 shrink-0 shadow-sm"
-                      >
-                        {isSuspending ? (
-                          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                        ) : (
-                          "Apply"
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {report.reportType === "LISTING" && (
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">

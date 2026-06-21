@@ -34,6 +34,8 @@ export interface PostFormErrors {
 interface SelectedImage {
   id: string;
   previewUrl: string;
+  isValidating?: boolean;
+  error?: string;
 }
 
 interface PostFormProps {
@@ -56,6 +58,7 @@ interface PostFormProps {
   isSubmitting: boolean;
   onSubmit: () => void;
   submitLabel?: string;
+  imageValidationError?: string;
 }
 
 export function PostForm({
@@ -78,6 +81,7 @@ export function PostForm({
   isSubmitting,
   onSubmit,
   submitLabel,
+  imageValidationError,
 }: PostFormProps) {
   const isRTL = language === "ar";
 
@@ -256,6 +260,7 @@ export function PostForm({
           imagesHint={t.imagesHint || "Add up to 5 images. First image will be the cover photo."}
           imagesRequiredLabel={t.imagesRequired || "Images are required"}
           hasError={errors.images}
+          errorMessage={imageValidationError}
           onUpload={handleImageUpload}
           onRemove={removeImage}
         />

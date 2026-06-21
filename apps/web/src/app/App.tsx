@@ -369,8 +369,7 @@ function AppContent() {
           fallback={
             <div
               aria-hidden="true"
-              className="bg-slate-950 border-t border-white/10"
-              style={{ minHeight: "420px" }}
+              className="bg-slate-950 border-t border-white/10 min-h-[420px]"
             />
           }
         >

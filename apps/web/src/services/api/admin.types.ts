@@ -161,6 +161,8 @@ export type AdminReportItem = {
   reporterEmail: string;
   targetUserID: number | null;
   targetUserName: string | null;
+  targetUserStatus: number | null;
+  targetUserSuspendedUntil: string | null;
   status: number;
   statusLabel: string;
   resolvedByUserID: number | null;

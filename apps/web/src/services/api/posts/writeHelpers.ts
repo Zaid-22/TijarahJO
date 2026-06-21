@@ -145,10 +145,15 @@ async function createPostImageFromUrl(
   return imageResponse.success;
 }
 
+interface UploadImageResult {
+  url?: string;
+  error?: string;
+}
+
 async function uploadPostImageFile(
   postId: number,
   imageFile: File,
-): Promise<string | null> {
+): Promise<UploadImageResult> {
   const formData = new FormData();
   formData.append("PostID", String(postId));
   formData.append("File", imageFile, imageFile.name);
@@ -158,61 +163,78 @@ async function uploadPostImageFile(
     body: formData,
   });
   if (!uploadResponse.success) {
-    debugError(
-      "[post-images.upload] failed:",
-      uploadResponse.error?.message || "Unknown error",
-    );
-    return null;
+    const errorMsg = uploadResponse.error?.message || "Unknown error";
+    debugError("[post-images.upload] failed:", errorMsg);
+    return { error: errorMsg };
   }
 
-  return extractUploadedImageUrl(uploadResponse.data);
+  const url = extractUploadedImageUrl(uploadResponse.data);
+  if (!url) {
+    return { error: "Failed to extract image URL from response" };
+  }
+  return { url };
+}
+
+export interface ImageUploadBatchResult {
+  savedUrls: string[];
+  errors: string[];
 }
 
 export async function createPostImages(
   postId: number,
   imageInputs: readonly PostImageInput[],
-): Promise<string[]> {
+): Promise<ImageUploadBatchResult> {
   if (imageInputs.length === 0) {
-    return [];
+    return { savedUrls: [], errors: [] };
   }
 
-  const savedImageUrls: string[] = [];
+  const savedUrls: string[] = [];
+  const errors: string[] = [];
+
   for (const imageInput of imageInputs) {
     if (typeof imageInput === "string") {
       try {
         const persisted = await createPostImageFromUrl(postId, imageInput);
         if (persisted) {
-          savedImageUrls.push(imageInput);
+          savedUrls.push(imageInput);
         } else {
+          const errorMsg = "Failed to persist image URL";
           debugError("[createPost] Failed to persist image URL:", imageInput);
+          errors.push(`${imageInput}: ${errorMsg}`);
         }
       } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : "Error persisting image URL";
         debugError("[createPost] Error persisting image URL:", error);
+        errors.push(`${imageInput}: ${errorMsg}`);
       }
       continue;
     }
 
     try {
-      const uploadedUrl = await uploadPostImageFile(postId, imageInput);
-      if (uploadedUrl) {
-        savedImageUrls.push(uploadedUrl);
+      const uploadResult = await uploadPostImageFile(postId, imageInput);
+      if (uploadResult.url) {
+        savedUrls.push(uploadResult.url);
+      } else if (uploadResult.error) {
+        errors.push(`${imageInput.name}: ${uploadResult.error}`);
       }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "Error uploading image file";
       debugError("[createPost] Error uploading image file:", error);
+      errors.push(`${imageInput.name}: ${errorMsg}`);
     }
   }
 
-  if (savedImageUrls.length > 0) {
+  if (savedUrls.length > 0) {
     invalidatePostImagesCache();
   }
 
-  return savedImageUrls;
+  return { savedUrls, errors };
 }
 
 export async function replacePostImages(
   postId: number,
   imageInputs: readonly PostImageInput[],
-): Promise<string[]> {
+): Promise<ImageUploadBatchResult> {
   const existingImages = await getPostImageRowsByPostId(String(postId), true);
   const existingImageIds = Array.from(
     new Set(
@@ -245,7 +267,7 @@ export async function replacePostImages(
     if (existingImageIds.length > 0) {
       invalidatePostImagesCache();
     }
-    return [];
+    return { savedUrls: [], errors: [] };
   }
 
   return createPostImages(postId, imageInputs);
