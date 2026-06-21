@@ -137,6 +137,21 @@ export const adminBannersApi = {
 
   uploadBannerImage: async (file: File): Promise<BannerImageUploadResult> => {
     try {
+      // Validate client-side before uploading to prevent silent Nginx 413 rejections.
+      const MAX_BANNER_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
+      if (file.size > MAX_BANNER_IMAGE_BYTES) {
+        return {
+          success: false,
+          message: `Banner image is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Maximum allowed size is 5 MB.`,
+        };
+      }
+      if (!file.type.startsWith("image/")) {
+        return {
+          success: false,
+          message: "Only image files are allowed (JPG, PNG, WebP, GIF).",
+        };
+      }
+
       const formData = new FormData();
       formData.append("File", file, file.name);
 

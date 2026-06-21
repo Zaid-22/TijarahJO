@@ -154,6 +154,17 @@ async function uploadPostImageFile(
   postId: number,
   imageFile: File,
 ): Promise<UploadImageResult> {
+  // Validate client-side to catch oversized files before the upload starts.
+  const MAX_POST_IMAGE_BYTES = 20 * 1024 * 1024; // 20 MB — matches Nginx limit
+  if (imageFile.size > MAX_POST_IMAGE_BYTES) {
+    return {
+      error: `"${imageFile.name}" is too large (${(imageFile.size / (1024 * 1024)).toFixed(1)} MB). Maximum allowed size is 20 MB.`,
+    };
+  }
+  if (!imageFile.type.startsWith("image/")) {
+    return { error: `"${imageFile.name}" is not a supported image file.` };
+  }
+
   const formData = new FormData();
   formData.append("PostID", String(postId));
   formData.append("File", imageFile, imageFile.name);

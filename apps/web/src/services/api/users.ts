@@ -162,6 +162,17 @@ export const usersApi = {
       throw new Error("Invalid user ID");
     }
 
+    // Validate client-side before uploading to avoid a silent Nginx 413 rejection.
+    const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5 MB
+    if (file.size > MAX_AVATAR_BYTES) {
+      throw new Error(
+        `Avatar image is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Maximum allowed size is 5 MB.`,
+      );
+    }
+    if (!file.type.startsWith("image/")) {
+      throw new Error("Only image files are allowed (JPG, PNG, WebP, GIF).");
+    }
+
     const formData = new FormData();
     formData.append("File", file);
 

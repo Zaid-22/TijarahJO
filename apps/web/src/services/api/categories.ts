@@ -216,6 +216,23 @@ export const categoriesApi = {
   },
 
   uploadImage: async (file: File): Promise<{ success: boolean; url?: string; message?: string }> => {
+    // Validate file size client-side before uploading — catches oversized files immediately
+    // without waiting for Nginx to reject the upload mid-transfer.
+    const MAX_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB — matches Nginx client_max_body_size
+    if (file.size > MAX_SIZE_BYTES) {
+      return {
+        success: false,
+        message: `Image is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Maximum allowed size is 20 MB. Please compress or resize the image and try again.`,
+      };
+    }
+
+    if (!file.type.startsWith("image/")) {
+      return {
+        success: false,
+        message: "Only image files are allowed (JPG, PNG, WebP, GIF).",
+      };
+    }
+
     const formData = new FormData();
     formData.append("file", file);
 

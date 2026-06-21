@@ -61,6 +61,20 @@ export const reportsApi = {
       formData.append("Description", payload.description.trim());
     }
     if (payload.image) {
+      // Validate evidence image client-side before upload.
+      const MAX_REPORT_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
+      if (payload.image.size > MAX_REPORT_IMAGE_BYTES) {
+        return {
+          success: false,
+          message: `Evidence image is too large (${(payload.image.size / (1024 * 1024)).toFixed(1)} MB). Maximum allowed size is 10 MB.`,
+        };
+      }
+      if (!payload.image.type.startsWith("image/")) {
+        return {
+          success: false,
+          message: "Only image files are allowed as evidence (JPG, PNG, WebP, GIF).",
+        };
+      }
       formData.append("Image", payload.image, payload.image.name);
     }
 
