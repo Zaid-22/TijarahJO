@@ -215,6 +215,17 @@ public static class MiddlewareExtensions
                 return;
             }
 
+            // Public (anonymous) endpoints are always allowed through — users should
+            // still be able to browse the marketplace feed, categories, cities, seller
+            // profiles, etc. even during maintenance. Only protected operations
+            // (posting, chatting, comparing, etc.) need to be blocked.
+            Endpoint? endpoint = context.GetEndpoint();
+            if (endpoint?.Metadata.GetMetadata<IAllowAnonymous>() != null)
+            {
+                await next();
+                return;
+            }
+
             var runtimeSettings = context.RequestServices.GetRequiredService<ISystemSettingsRuntimeService>();
             bool maintenanceModeEnabled =
                 await runtimeSettings.IsMaintenanceModeEnabledAsync(context.RequestAborted);
