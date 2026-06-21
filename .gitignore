@@ -124,3 +124,10 @@ Desktop/
 # Google Cloud credentials key file
 gcp-vision-service-account.json
 
+# User-generated runtime uploads — never commit these to git.
+# They live on the server's filesystem and are served via the /uploads/ route.
+# category-images/ is intentionally kept: it holds seed images for fresh deployments.
+apps/api/src/Api/uploads/post-images/
+apps/api/src/Api/uploads/user-avatars/
+apps/api/src/Api/uploads/chat-images/
+apps/api/src/Api/uploads/report-images/
