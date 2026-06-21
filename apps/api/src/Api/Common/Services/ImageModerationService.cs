@@ -35,14 +35,31 @@ public class ImageModerationService : IImageModerationService
         {
             try 
             {
-                return ImageAnnotatorClient.Create();
+                var client = ImageAnnotatorClient.Create();
+                _logger.LogInformation("Google Cloud Vision client initialized successfully.");
+                return client;
             } 
             catch (Exception ex) 
             {
-                _logger.LogWarning(ex, "Failed to initialize Cloud Vision client. Check your Application Default Credentials.");
+                // Log at Error level with full exception so the root cause is visible in the
+                // container logs (e.g. missing credentials file, invalid JSON, missing IAM role).
+                _logger.LogError(
+                    ex,
+                    "Failed to initialize Google Cloud Vision client. " +
+                    "GOOGLE_APPLICATION_CREDENTIALS={CredentialsPath}. " +
+                    "Error: {ErrorMessage}",
+                    Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS") ?? "(not set)",
+                    ex.Message);
                 return null!;
             }
         });
+
+        // Eagerly touch the Lazy so any credential/IAM errors appear at startup
+        // rather than silently on the first image upload attempt.
+        if (_options.Enabled)
+        {
+            _ = _client.Value;
+        }
     }
 
     public async Task<ModerationResult> CheckImageAsync(IFormFile file)
