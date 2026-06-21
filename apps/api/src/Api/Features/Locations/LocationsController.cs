@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Api.Contracts.Responses;
@@ -13,6 +14,7 @@ public sealed class LocationsController(ILocationReadService locations) : Contro
     private readonly ILocationReadService _locations = locations;
 
     [HttpGet("cities")]
+    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<List<CityResponseDTO>>> GetCities(CancellationToken cancellationToken)
     {
@@ -26,6 +28,7 @@ public sealed class LocationsController(ILocationReadService locations) : Contro
     }
 
     [HttpGet("cities/{cityId:int}/areas")]
+    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<List<AreaResponseDTO>>> GetAreasByCity(int cityId, CancellationToken cancellationToken)

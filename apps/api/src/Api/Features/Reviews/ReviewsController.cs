@@ -15,6 +15,7 @@ namespace TijarahJo.Api.Features.Reviews
     public class ReviewsController(IReviewService reviews, IReviewSubmissionService reviewSubmissions) : ControllerBase
     {
         [HttpGet("user/{userId}")]
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<ReviewResponseDTO>>> GetUserReviews(int userId)
         {
@@ -29,6 +30,7 @@ namespace TijarahJo.Api.Features.Reviews
         /// Maximum 100 IDs per request.
         /// </summary>
         [HttpGet("ratings")]
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<Dictionary<int, SellerRatingDTO>>> GetBatchRatings([FromQuery] string? userIds)

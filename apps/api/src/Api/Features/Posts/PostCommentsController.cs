@@ -25,6 +25,7 @@ namespace TijarahJo.Api.Features.Posts
 
         // GET /api/v1/posts/{postId}/comments?page=1&limit=20
         [HttpGet]
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<PostCommentListResponseDTO>> GetComments(
@@ -51,6 +52,7 @@ namespace TijarahJo.Api.Features.Posts
 
         // GET /api/v1/posts/{postId}/comments/{commentId}/replies?page=1&limit=20
         [HttpGet("{commentId:int}/replies")]
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<PostCommentListResponseDTO>> GetReplies(
