@@ -147,6 +147,26 @@ public sealed class PasswordResetServiceTests
         );
     }
 
+    [Fact]
+    public async Task RequestResetAsync_ReturnsFalse_WhenEmailTransportNotConfigured()
+    {
+        var user = CreateUser("transport-off@example.com");
+        var users = new FakeUserDataAccess(user);
+        var sender = new DisabledTransportEmailSender();
+        var service = BuildService(users, sender, new PasswordResetOptions
+        {
+            Enabled = true,
+            CodeLength = 6,
+            CodeLifetimeMinutes = 15,
+            MaxAttempts = 3,
+            RequestCooldownSeconds = 0
+        });
+
+        bool result = await service.RequestResetAsync(user.Email);
+
+        Assert.False(result);
+    }
+
     private static PasswordResetService BuildService(
         IUserDataAccess users,
         IPasswordResetEmailSender sender,
@@ -212,6 +232,23 @@ public sealed class PasswordResetServiceTests
             LastCode = code;
             return Task.CompletedTask;
         }
+
+        // Mock always reports the transport as ready so existing tests are unaffected.
+        public bool IsTransportConfigured() => true;
+    }
+
+    private sealed class DisabledTransportEmailSender : IPasswordResetEmailSender
+    {
+        public Task SendPasswordResetCodeAsync(
+            string recipientEmail,
+            string? recipientFirstName,
+            string code,
+            TimeSpan ttl,
+            CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        // Simulates email transport not being configured (no API key, disabled, etc.)
+        public bool IsTransportConfigured() => false;
     }
 
     private sealed class FakeUserDataAccess(UserModel storedUser) : IUserDataAccess

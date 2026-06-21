@@ -22,13 +22,23 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
     IOptions<YouTubeSettings> settings,
     ILogger<YouTubeCompareVideoRecommendationService> logger) : ICompareVideoRecommendationService
 {
-    private const string CacheVersion = "v5";
+    private const string CacheVersion = "v6";
     private const int MaxSearchResults = 8;
     private static readonly TimeSpan s_shortVideoDuration = TimeSpan.FromMinutes(4);
     private static readonly TimeSpan s_preferredVideoDuration = TimeSpan.FromMinutes(8);
     private static readonly TimeSpan s_inDepthVideoDuration = TimeSpan.FromMinutes(12);
     private static readonly TimeSpan s_veryLongVideoDuration = TimeSpan.FromMinutes(60);
     private static readonly TimeSpan s_cacheDuration = TimeSpan.FromHours(6);
+
+    // ── Scoring weights (centralised for tuning) ──
+    private const double PenaltyShorts = 10.0;
+    private const double BoostFullReview = 5.0;
+    private const double BoostReview = 3.0;
+    private const double PenaltyPerMissingCriticalToken = 8.0;
+    private const double BoostAllCriticalTokensMatched = 4.0;
+    private const double BoostPerSearchTokenMatch = 2.0;
+    private const double BoostArabicTitle = 3.0;
+    private const double BoostEnglishTitle = 2.0;
 
     [GeneratedRegex(@"\s+")]
     private static partial Regex WhitespaceRegex();
@@ -80,6 +90,13 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
         " hindi ",
         " urdu "
     ];
+
+    private static readonly HashSet<string> s_tierIdentifiers =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "pro", "max", "ultra", "plus", "mini", "lite", "se", "air",
+            "note", "fold", "flip", "fe", "neo", "edge"
+        };
 
     private readonly HttpClient _httpClient = httpClient;
     private readonly IPostReadService _postReads = postReads;
@@ -199,8 +216,7 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
             {
                 PostId = postId,
                 Name = result.Post.PostTitle,
-                Category = categoryName,
-                Description = result.Post.PostDescription
+                Category = categoryName
             });
         }
 
@@ -265,9 +281,11 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
             detailsUrl,
             cancellationToken);
 
+        HashSet<string> criticalTokens = ExtractCriticalTokens(post.Name);
+
         return detailsResponse?.Items?
             .Where(item => item.Id != null && item.Snippet != null)
-            .Select(item => ToCandidate(post, query, language, item))
+            .Select(item => ToCandidate(post, query, language, item, criticalTokens))
             .Where(candidate => candidate != null)
             .Cast<VideoCandidate>()
             .OrderByDescending(candidate => candidate.Score)
@@ -279,7 +297,8 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
         CompareVideoPostInput post,
         string query,
         string language,
-        YouTubeVideoDetailsItem item)
+        YouTubeVideoDetailsItem item,
+        HashSet<string> criticalTokens)
     {
         string title = item.Snippet?.Title?.Trim() ?? string.Empty;
         string channelTitle = item.Snippet?.ChannelTitle?.Trim() ?? string.Empty;
@@ -298,7 +317,7 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
             || haystack.Contains("#short", StringComparison.OrdinalIgnoreCase)
             || title.StartsWith('#'))
         {
-            score -= 10.0;
+            score -= PenaltyShorts;
         }
 
         if (duration.HasValue)
@@ -310,18 +329,35 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
         string titleLower = title.ToLowerInvariant();
         if (titleLower.Contains("full review") || titleLower.Contains("مراجعة كاملة"))
         {
-            score += 5.0;
+            score += BoostFullReview;
         }
         else if (titleLower.Contains("review") || titleLower.Contains("مراجعة") || titleLower.Contains("تقييم"))
         {
-            score += 3.0;
+            score += BoostReview;
+        }
+
+        // ── Critical-token gate: penalize videos about the wrong product ──
+        if (criticalTokens.Count > 0)
+        {
+            int matched = criticalTokens.Count(t =>
+                titleLower.Contains(t, StringComparison.OrdinalIgnoreCase));
+            int missing = criticalTokens.Count - matched;
+
+            if (missing > 0)
+            {
+                score -= missing * PenaltyPerMissingCriticalToken;
+            }
+            else
+            {
+                score += BoostAllCriticalTokensMatched;
+            }
         }
 
         foreach (string token in ExtractSearchTokens(post.Name, post.Category))
         {
             if (haystack.Contains(token, StringComparison.OrdinalIgnoreCase))
             {
-                score += 2.0;
+                score += BoostPerSearchTokenMatch;
             }
         }
 
@@ -332,11 +368,11 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
 
         if (language == "ar" && ContainsArabic(title))
         {
-            score += 3.0;
+            score += BoostArabicTitle;
         }
         else if (language == "en" && !ContainsArabic(title))
         {
-            score += 2.0;
+            score += BoostEnglishTitle;
         }
 
         return new VideoCandidate(
@@ -393,14 +429,17 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
             ? "مراجعة كاملة تقييم"
             : "full review";
 
-        // Extract a few keywords from the description to improve relevance
-        string descriptionKeywords = ExtractDescriptionKeywords(post.Description, 4);
+        // Only include category when the product name is short/generic (< 3 words).
+        // Specific names like "iPhone 17 Pro Max" don't need "Smartphones" appended.
+        int nameWordCount = WhitespaceRegex().Split(post.Name.Trim())
+            .Count(w => w.Length > 0);
+        string? categoryPart = nameWordCount < 3 ? post.Category : null;
 
         string baseQuery = string.Join(
             " ",
-            new[] { post.Name, post.Category, suffix, descriptionKeywords }
+            new[] { post.Name, categoryPart, suffix }
                 .Where(value => !string.IsNullOrWhiteSpace(value))
-                .Select(CleanSearchText));
+                .Select(value => CleanSearchText(value!)));
 
         return WhitespaceRegex().Replace(baseQuery, " ").Trim();
     }
@@ -410,31 +449,19 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
         string suffix = language == "ar"
             ? "مراجعة"
             : "review";
+
+        // Include category in fallback for short/generic product names
+        int nameWordCount = WhitespaceRegex().Split(post.Name.Trim())
+            .Count(w => w.Length > 0);
+        string? categoryPart = nameWordCount < 3 ? post.Category : null;
+
         string baseQuery = string.Join(
             " ",
-            new[] { post.Name, suffix }
+            new[] { post.Name, categoryPart, suffix }
                 .Where(value => !string.IsNullOrWhiteSpace(value))
-                .Select(CleanSearchText));
+                .Select(value => CleanSearchText(value!)));
 
         return WhitespaceRegex().Replace(baseQuery, " ").Trim();
-    }
-
-    private static string ExtractDescriptionKeywords(string? description, int maxKeywords)
-    {
-        if (string.IsNullOrWhiteSpace(description))
-        {
-            return string.Empty;
-        }
-
-        // Take the first ~200 chars, split into words, pick longer unique words
-        string prefix = description.Length > 200 ? description[..200] : description;
-        var keywords = WhitespaceRegex()
-            .Split(CleanSearchText(prefix).ToLowerInvariant())
-            .Where(word => word.Length >= 4)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Take(maxKeywords);
-
-        return string.Join(" ", keywords);
     }
 
     private static string CleanSearchText(string value)
@@ -561,6 +588,44 @@ public sealed partial class YouTubeCompareVideoRecommendationService(
             .Where(token => token.Length >= 3)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Take(8);
+    }
+
+    /// <summary>
+    /// Extracts tokens critical for product identity — model numbers and tier
+    /// identifiers (Pro, Max, Ultra, etc.).  A video missing any of these is very
+    /// likely about a different product variant or generation.
+    /// </summary>
+    private static HashSet<string> ExtractCriticalTokens(string productName)
+    {
+        if (string.IsNullOrWhiteSpace(productName))
+        {
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        string[] words = WhitespaceRegex().Split(
+            CleanSearchText(productName).Trim().ToLowerInvariant());
+
+        var critical = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (string word in words)
+        {
+            if (word.Length == 0)
+            {
+                continue;
+            }
+
+            // Any token containing a digit is a model number (e.g. "17", "a15", "s24")
+            if (word.Any(char.IsDigit))
+            {
+                critical.Add(word);
+            }
+            // Known product tier identifiers
+            else if (s_tierIdentifiers.Contains(word))
+            {
+                critical.Add(word);
+            }
+        }
+
+        return critical;
     }
 
     private static long ParseLong(string? rawValue)

@@ -84,6 +84,18 @@ public sealed class PasswordResetService(
             return false;
         }
 
+        // Guard: if the email transport is not configured, don't store a challenge
+        // that can never be delivered — that leads to a confusing 500 when the user
+        // tries to verify a code they never received.
+        if (!_emailSender.IsTransportConfigured())
+        {
+            _logger.LogWarning(
+                "Password reset requested for {Email} but the email transport is not configured. " +
+                "Set PasswordResetEmail.Enabled=true and provide a ResendApiKey.",
+                normalizedEmail);
+            return false;
+        }
+
         string? stateStr = await _challenges.GetChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
         if (!string.IsNullOrEmpty(stateStr))
         {
