@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { AlertCircle, CheckCircle2, Loader2, Mail } from "lucide-react";
 
 import { api } from "../../../services/api";
+import { debugError } from "../../../services/api/client";
 import type { Language } from "../../../types";
 import { Alert, AlertDescription } from "../../../shared/ui/alert";
 import { Button } from "../../../shared/ui/button";
@@ -143,6 +144,29 @@ export function VerifyEmailPage({ language, onLogin }: VerifyEmailPageProps) {
         if (result.success) {
           // Backend returned user data + JWT cookie — log them in immediately.
           if (result.user?.id || result.user?.email) {
+            let resolvedAvatar = result.user.avatar;
+
+            // If the user selected an avatar during signup but was sent through
+            // email verification (so the upload was deferred), retrieve it from
+            // sessionStorage and upload it now that we have an authenticated session.
+            const pendingAvatarDataUrl = sessionStorage.getItem("pending_signup_avatar");
+            if (pendingAvatarDataUrl && result.user.id) {
+              try {
+                // Convert the data URL back to a File so we can POST it.
+                const res = await fetch(pendingAvatarDataUrl);
+                const blob = await res.blob();
+                const ext = blob.type.split("/")[1] || "jpg";
+                const avatarFile = new File([blob], `avatar.${ext}`, { type: blob.type });
+                const uploadRes = await api.users.uploadAvatar(result.user.id, avatarFile);
+                resolvedAvatar = uploadRes.avatarUrl;
+              } catch (uploadErr) {
+                debugError("[VerifyEmailPage] Failed to upload pending avatar:", uploadErr);
+                // Non-fatal — user can upload their avatar from profile settings.
+              } finally {
+                sessionStorage.removeItem("pending_signup_avatar");
+              }
+            }
+
             const userData = {
               id: result.user.id,
               firstName: result.user.firstName || "",
@@ -151,7 +175,7 @@ export function VerifyEmailPage({ language, onLogin }: VerifyEmailPageProps) {
               phone: result.user.phone,
               city: result.user.city,
               area: result.user.area,
-              avatar: result.user.avatar,
+              avatar: resolvedAvatar,
               role: resolveLoginRole(result.user),
               hasAdminAccess: resolveHasAdminAccessFromPayload(result.user),
               permissions: readAuthPermissions(result.user),

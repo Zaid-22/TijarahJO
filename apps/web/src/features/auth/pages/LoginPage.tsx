@@ -434,8 +434,21 @@ export function LoginPage({
       return;
     }
 
-    // Signup succeeded but email verification is required — show verification panel
+    // Signup succeeded but email verification is required — show verification panel.
+    // Persist the selected avatar (as a data URL) to sessionStorage so that
+    // VerifyEmailPage can upload it after the user clicks the verification link
+    // and is auto-logged in. Without this the avatar is lost when the user
+    // navigates away to check their email.
     if (response.requiresEmailVerification) {
+      if (avatarFile && avatarPreview && avatarPreview.startsWith("data:")) {
+        try {
+          sessionStorage.setItem("pending_signup_avatar", avatarPreview);
+        } catch {
+          // sessionStorage may be full or unavailable — silently ignore.
+        }
+      } else {
+        sessionStorage.removeItem("pending_signup_avatar");
+      }
       dispatch({
         type: "ENTER_EMAIL_VERIFICATION",
         email: parsedIdentifier.email || state.values.identifier.trim(),
