@@ -202,7 +202,7 @@ export const usersApi = {
     success: boolean;
     users: AdminUserRecord[];
   }> => {
-    const response = await apiRequest<RawUser[]>("/users", {
+    const response = await apiRequest<RawUser[]>("/users?page=1&pageSize=1000", {
       method: "GET",
     });
 

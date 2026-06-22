@@ -191,7 +191,7 @@ public sealed class UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<
     public async Task<IReadOnlyList<UserModel>> GetAllUsersAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
     {
         int safePage = Math.Max(1, pageNumber);
-        int safeSize = Math.Clamp(pageSize, 1, 200);
+        int safeSize = Math.Clamp(pageSize, 1, 1000);
 
         List<UserEntity> entities = await _dbContext.Users
             .AsNoTracking()

@@ -79,7 +79,8 @@ public sealed class UserCommandService(IUserDataAccess users, IRoleService roles
             command.JoinDate.HasValue && command.JoinDate.Value != default ? command.JoinDate.Value : DateTime.UtcNow,
             status,
             roleId.Value,
-            command.IsDeleted ?? false
+            command.IsDeleted ?? false,
+            isEmailVerified: true  // Admin-created accounts are trusted — no email verification needed
         );
 
         int newUserId = await _users.AddUserAsync(user, cancellationToken);

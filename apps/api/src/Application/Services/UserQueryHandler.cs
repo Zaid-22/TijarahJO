@@ -128,7 +128,8 @@ public sealed class UserQueryHandler : IUserQueryHandler
             source.TwoFactorEnabled,
             source.TwoFactorSecret,
             source.TwoFactorPendingSecret,
-            source.SuspendedUntil
+            source.SuspendedUntil,
+            source.IsEmailVerified
         );
     }
 }
