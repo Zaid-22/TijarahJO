@@ -69,8 +69,12 @@ if (shouldWarmInitialHomeRoute) {
   void import("../features/home/components/HomeDeferredSections");
 }
 
+// Use the real sonner Toaster so all `import { toast } from "sonner"` calls
+// throughout the codebase are wired to the mounted Toaster instance.
+// Previously the app mounted a custom Toaster clone while all feature code used
+// the real sonner API — the two were disconnected, causing toasts to flash and vanish.
 const Toaster = lazy(() =>
-  import("../shared/ui/sonner").then((m) => ({ default: m.Toaster })),
+  import("sonner").then((m) => ({ default: m.Toaster })),
 );
 
 const rootElement = document.getElementById("root");
