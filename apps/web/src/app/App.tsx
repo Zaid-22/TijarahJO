@@ -86,6 +86,13 @@ const AUTH_ROUTE_SEGMENTS = new Set([
   "complete-profile",
   "register",
 ]);
+// Routes that must remain accessible even when maintenance mode is active.
+// Intentionally narrower than AUTH_ROUTE_SEGMENTS — complete-profile and
+// register should NOT be reachable while the site is under maintenance.
+const MAINTENANCE_EXEMPT_ROUTE_SEGMENTS = new Set([
+  "login",
+  "forgot-password",
+]);
 const AUTH_TOAST_COOLDOWN_MS = 12_000;
 const MAINTENANCE_STATUS_CACHE_KEY = "tijarahjo_public_system_status_v1";
 const MAINTENANCE_STATUS_TTL_MS = 60_000;
@@ -327,7 +334,7 @@ function AppContent() {
 
   if (
     maintenanceStatus?.maintenanceMode &&
-    !isAuthRoute &&
+    !MAINTENANCE_EXEMPT_ROUTE_SEGMENTS.has(primarySegment) &&
     primarySegment !== "admin" &&
     !userHasAdminAccess(user)
   ) {
