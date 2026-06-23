@@ -1,55 +1,30 @@
 import { lazy, Suspense } from "react";
 import { useMarketplaceRouteContext } from "./marketplaceRouteContext";
 import { type MarketplaceRouteDefinition } from "./marketplaceRouteDefinitions";
+import { lazyImportWithRetry } from "../../../shared/lib/lazyImportWithRetry";
 import { useSearch } from "../../../contexts/SearchContext";
 import { APP_ROUTE_PATHS } from "../routeConfig";
 import { LoadingState } from "../../../shared/ui/loading-state";
 
-function lazyImportWithRetry<TModule>(
-  load: () => Promise<TModule>,
-  retryKey: string,
-) {
-  return async () => {
-    try {
-      const module = await load();
-      if (typeof window !== "undefined") {
-        window.sessionStorage.removeItem(retryKey);
-      }
-      return module;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const isRecoverableImportError =
-        /Failed to fetch dynamically imported module|Importing a module script failed/i.test(
-          message,
-        );
-
-      if (
-        typeof window !== "undefined" &&
-        isRecoverableImportError &&
-        !window.sessionStorage.getItem(retryKey)
-      ) {
-        window.sessionStorage.setItem(retryKey, "1");
-        window.location.reload();
-
-        return new Promise<never>(() => {
-          // Keep React.lazy pending while the page reload is in flight.
-        });
-      }
-
-      throw error;
-    }
-  };
-}
-
-const AllPostsPage = lazy(() =>
-  import("../../../features/marketplace/pages/AllPostsPage").then((m) => ({
-    default: m.AllPostsPage,
-  })),
+const AllPostsPage = lazy(
+  lazyImportWithRetry(
+    () =>
+      import("../../../features/marketplace/pages/AllPostsPage").then((m) => ({
+        default: m.AllPostsPage,
+      })),
+    "lazy-import-retry:all-posts-page",
+  ),
 );
-const SearchResultsPage = lazy(() =>
-  import("../../../features/marketplace/pages/SearchResultsPage").then((m) => ({
-    default: m.SearchResultsPage,
-  })),
+const SearchResultsPage = lazy(
+  lazyImportWithRetry(
+    () =>
+      import("../../../features/marketplace/pages/SearchResultsPage").then(
+        (m) => ({
+          default: m.SearchResultsPage,
+        }),
+      ),
+    "lazy-import-retry:search-results-page",
+  ),
 );
 const CategoryRouteWrapper = lazy(
   lazyImportWithRetry(
