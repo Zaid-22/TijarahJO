@@ -122,7 +122,7 @@ Desktop/
 .android/
 
 # Google Cloud credentials key file
-gcp-vision-service-account.json
+gcp-vision-sa.json
 
 # User-generated runtime uploads — never commit these to git.
 # They live on the server's filesystem and are served via the /uploads/ route.

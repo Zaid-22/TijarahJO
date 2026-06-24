@@ -133,18 +133,33 @@ YouTube__Referer=https://tijarahjo.online/
 
 #### Image moderation (Google Cloud Vision — optional)
 
-Chat, post, and profile image uploads can call Vision **Safe Search** before storage. Set `ImageModeration__Enabled=false` to skip moderation (default in production Docker compose until Vision is configured). When enabled, missing or failing Vision returns HTTP 503 in Production.
+Chat, post, and profile image uploads call Vision **Safe Search** before storage. Set `ImageModeration__Enabled=false` to skip moderation. When enabled in Production, a missing or failing Vision client returns HTTP 503.
 
 ```bash
-ImageModeration__Enabled=false
-# When true — path to service account JSON (Docker: GCP_VISION_CREDENTIALS_FILE in .env)
-GOOGLE_APPLICATION_CREDENTIALS=/path/to/gcp-vision-service-account.json
+ImageModeration__Enabled=true
+# Path to service account JSON (Docker: use GCP_VISION_CREDENTIALS_FILE in .env instead)
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/gcp-vision-sa.json
+
+# Blocking thresholds — tune without redeployment.
+# Valid values: VeryUnlikely | Unlikely | Possible | Likely | VeryLikely
+# Lower value = stricter (more images blocked). Higher value = more permissive.
+ImageModeration__AdultThreshold=Likely        # default: Likely
+ImageModeration__ViolenceThreshold=Likely     # default: Likely
+ImageModeration__RacyThreshold=VeryLikely     # default: VeryLikely (stricter to avoid
+                                              # false positives on clothing/fitness photos)
 ```
+
+**Threshold cheat-sheet:**
+| Setting | Blocks on | Passes on |
+|---|---|---|
+| `Likely` (default Adult/Violence) | Explicit adult, blood, gore | Kitchen knives, fitness, medical diagrams |
+| `VeryLikely` (default Racy) | Only extremely racy content | Swimwear, lingerie product shots |
+| `Possible` (stricter) | Even borderline content | May block some legitimate products |
 
 Setup (when enabling moderation):
 
 1. Enable **Cloud Vision API** in Google Cloud Console.
-2. Create a service account with **Cloud Vision API User** (or equivalent).
+2. Create a service account with **Cloud Vision API User** role.
 3. Download the JSON key and set `GOOGLE_APPLICATION_CREDENTIALS` to its path (local) or `GCP_VISION_CREDENTIALS_FILE` (production Docker compose).
 4. Set `ImageModeration__Enabled=true` and redeploy the API.
 

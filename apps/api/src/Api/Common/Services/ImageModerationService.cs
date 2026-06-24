@@ -89,24 +89,29 @@ public class ImageModerationService : IImageModerationService
             
             var response = await _client.Value.DetectSafeSearchAsync(image);
 
-            // Only block on explicit adult or graphic violence content at VeryLikely confidence.
+            // Thresholds are driven by ImageModerationOptions (appsettings) so they can be
+            // tuned per-environment without a redeployment.
             //
-            // Threshold rationale for a general marketplace (electronics, clothing, phones, etc.):
-            //   - Adult/Violence: VeryLikely only. "Likely" is too aggressive — normal product
-            //     photos (skin, hands, faces) frequently score "Likely" on Adult or Medical.
-            //   - Medical: NOT used for blocking. Medical likelihood fires on any photo showing
-            //     skin, hands, or faces, which are common in legitimate product listings.
-            //   - Spoof: NOT used for blocking. Screenshots and edited marketing images of
-            //     products legitimately score high on Spoof. Blocking them harms real sellers.
+            // Category rationale for a general marketplace (electronics, clothing, phones, etc.):
+            //   - Adult:    Blocks at configured threshold (default: Likely).
+            //   - Violence: Blocks at configured threshold (default: Likely).
+            //   - Racy:     Blocks at configured threshold (default: VeryLikely — stricter to
+            //               avoid false positives on clothing, fitness or beauty product photos).
+            //   - Medical:  NOT used for blocking. Fires on any photo showing skin, hands, or
+            //               faces, which are common in legitimate product listings.
+            //   - Spoof:    NOT used for blocking. Screenshots and edited marketing images
+            //               legitimately score high on Spoof. Blocking them harms real sellers.
             var result = new ModerationResult
             {
-                IsAdult   = response.Adult    >= Likelihood.VeryLikely,
-                IsViolent = response.Violence >= Likelihood.VeryLikely,
+                IsAdult   = response.Adult    >= _options.AdultThreshold,
+                IsViolent = response.Violence >= _options.ViolenceThreshold,
+                IsRacy    = response.Racy     >= _options.RacyThreshold,
                 // Kept for logging/diagnostics only — never used to block uploads:
                 IsMedical = response.Medical  >= Likelihood.VeryLikely,
                 IsSpoof   = response.Spoof    >= Likelihood.VeryLikely,
                 RawAdult    = response.Adult.ToString(),
                 RawViolence = response.Violence.ToString(),
+                RawRacy     = response.Racy.ToString(),
                 RawMedical  = response.Medical.ToString(),
                 RawSpoof    = response.Spoof.ToString(),
             };
@@ -114,8 +119,13 @@ public class ImageModerationService : IImageModerationService
             if (result.IsFlagged)
             {
                 _logger.LogWarning(
-                    "Image moderation flagged upload. Adult={Adult}, Violence={Violence}, Medical={Medical}, Spoof={Spoof}",
-                    result.RawAdult, result.RawViolence, result.RawMedical, result.RawSpoof);
+                    "Image moderation flagged upload. Adult={Adult} (threshold={AdultThreshold}), " +
+                    "Violence={Violence} (threshold={ViolenceThreshold}), Racy={Racy} (threshold={RacyThreshold}), " +
+                    "Medical={Medical}, Spoof={Spoof}",
+                    result.RawAdult, _options.AdultThreshold,
+                    result.RawViolence, _options.ViolenceThreshold,
+                    result.RawRacy, _options.RacyThreshold,
+                    result.RawMedical, result.RawSpoof);
             }
             else if (result.IsMedical || result.IsSpoof)
             {
@@ -156,18 +166,22 @@ public class ModerationResult
 {
     public bool IsAdult    { get; set; }
     public bool IsViolent  { get; set; }
+    /// <summary>Blocks at RacyThreshold (default: VeryLikely). Stricter than Adult/Violence to avoid
+    /// false positives on clothing, fitness or beauty product photos.</summary>
+    public bool IsRacy     { get; set; }
     /// <summary>Logged for diagnostics only. Never used to block marketplace uploads.</summary>
     public bool IsMedical  { get; set; }
     /// <summary>Logged for diagnostics only. Never used to block marketplace uploads.</summary>
     public bool IsSpoof    { get; set; }
     public string RawAdult    { get; set; } = "";
     public string RawViolence { get; set; } = "";
+    public string RawRacy     { get; set; } = "";
     public string RawMedical  { get; set; } = "";
     public string RawSpoof    { get; set; } = "";
     public bool IsUnavailable { get; set; }
     public string? FailureReason { get; set; }
 
-    // Only Adult and Violence block uploads — Medical and Spoof are diagnostic only.
-    public bool IsFlagged => IsAdult || IsViolent;
+    // Adult, Violence, and Racy block uploads — Medical and Spoof are diagnostic only.
+    public bool IsFlagged => IsAdult || IsViolent || IsRacy;
 }
 

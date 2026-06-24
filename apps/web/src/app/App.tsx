@@ -87,11 +87,14 @@ const AUTH_ROUTE_SEGMENTS = new Set([
   "register",
 ]);
 // Routes that must remain accessible even when maintenance mode is active.
-// Intentionally narrower than AUTH_ROUTE_SEGMENTS — complete-profile and
-// register should NOT be reachable while the site is under maintenance.
+// "complete-profile" is included because an admin who logs in during maintenance
+// may still have an incomplete profile and must be able to complete it to gain
+// access — without this they would be trapped in a maintenance ↔ login loop.
+// "register" is intentionally excluded — new user sign-ups are blocked.
 const MAINTENANCE_EXEMPT_ROUTE_SEGMENTS = new Set([
   "login",
   "forgot-password",
+  "complete-profile",
 ]);
 const AUTH_TOAST_COOLDOWN_MS = 12_000;
 const MAINTENANCE_STATUS_CACHE_KEY = "tijarahjo_public_system_status_v1";
@@ -368,7 +371,16 @@ function AppContent() {
       {globalHeader}
 
       <main id="main-content" className="flex-1">
-        <AppRoutes registrationEnabled={maintenanceStatus?.registrationEnabled ?? true} />
+        <AppRoutes
+          registrationEnabled={
+            // During maintenance mode, always disable registration regardless
+            // of the registrationEnabled setting — the site is locked down and
+            // new users should not be able to sign up via the login page toggle.
+            (maintenanceStatus?.maintenanceMode ?? false)
+              ? false
+              : (maintenanceStatus?.registrationEnabled ?? true)
+          }
+        />
       </main>
 
       {shouldShowFooter ? (
