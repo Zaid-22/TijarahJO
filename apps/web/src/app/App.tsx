@@ -384,15 +384,10 @@ function AppContent() {
       </main>
 
       {shouldShowFooter ? (
-        <Suspense
-          fallback={
-            <div
-              aria-hidden="true"
-              className="bg-slate-950 border-t border-white/10 min-h-[420px]"
-            />
-          }
-        >
-          <Footer language={language} />
+        <Suspense fallback={<div aria-hidden="true" className="h-0" />}>
+          <div className="animate-in fade-in duration-300">
+            <Footer language={language} />
+          </div>
         </Suspense>
       ) : null}
       <ScrollToTop avoidBottomOverlay={isComparePanelVisible} />
