@@ -241,6 +241,7 @@ export function ReportPostDialog({
                 key={reason.code}
                 type="button"
                 onClick={() => setSelectedReason(reason.code)}
+                aria-pressed={selectedReason === reason.code}
                 className={`w-full text-left px-4 py-2.5 rounded-lg border text-sm transition-all ${
                   selectedReason === reason.code
                     ? "border-primary bg-primary/10 text-primary font-medium"
@@ -296,8 +297,8 @@ export function ReportPostDialog({
               <label className="cursor-pointer block">
                 <div className="border-2 border-dashed border-border rounded-lg p-4 text-center text-sm text-muted-foreground hover:border-primary/40 hover:bg-muted/30 transition-colors">
                   {language === "ar"
-                    ? "انقر لاختيار صورة (JPG، PNG، WebP)"
-                    : "Click to choose an image (JPG, PNG, WebP)"}
+                    ? "انقر لاختيار صورة (JPG، PNG، WebP، GIF)"
+                    : "Click to choose an image (JPG, PNG, WebP, GIF)"}
                 </div>
                 <input
                   type="file"

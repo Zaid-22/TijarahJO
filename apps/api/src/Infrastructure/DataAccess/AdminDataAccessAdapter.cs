@@ -250,6 +250,13 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
 
     public async Task<int> BulkUpdateUserStatusAsync(System.Collections.Generic.IReadOnlyList<int> userIds, int newStatusId, CancellationToken cancellationToken = default)
     {
+        const int maxBulkUsers = 500;
+        if (userIds.Count > maxBulkUsers)
+        {
+            _logger.LogWarning("BulkUpdateUserStatus called with {Count} user IDs which exceeds the safety limit of {Max}. Operation rejected.", userIds.Count, maxBulkUsers);
+            throw new System.InvalidOperationException($"Bulk status update is limited to {maxBulkUsers} users per call.");
+        }
+
         var users = await _dbContext.Users
             .Where(u => userIds.Contains(u.UserID) && !u.IsDeleted)
             .ToListAsync(cancellationToken);
@@ -431,7 +438,9 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
         var entity = await _dbContext.Posts
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(p => p.PostID == postId, cancellationToken);
-        if (entity == null || entity.IsDeleted) return false;
+        if (entity == null) return false;
+        // Idempotent: already deleted is still a success
+        if (entity.IsDeleted) return true;
 
         entity.IsDeleted = true;
         _dbContext.AuditActorUserId = adminUserId;
@@ -681,114 +690,187 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
             if (!string.IsNullOrWhiteSpace(reportType))
                 query = query.Where(r => r.ReportType == reportType);
 
-            // Build joined query for search + target label resolution (LEFT JOINs)
-            var joined = from r in query
-                         join reporter in _dbContext.Users.AsNoTracking() on r.ReporterUserID equals reporter.UserID
-                         join resolver in _dbContext.Users.AsNoTracking() on r.ResolvedByUserID equals resolver.UserID into rg
-                         from resolver in rg.DefaultIfEmpty()
-                         join targetPost in _dbContext.Posts.AsNoTracking() on r.TargetID equals targetPost.PostID into tpg
-                         from targetPost in tpg.DefaultIfEmpty()
-                         join targetUser in _dbContext.Users.AsNoTracking() on r.TargetID equals targetUser.UserID into tug
-                         from targetUser in tug.DefaultIfEmpty()
-                         join targetReview in _dbContext.Reviews.AsNoTracking() on r.TargetID equals targetReview.ReviewID into trg
-                         from targetReview in trg.DefaultIfEmpty()
-                         join targetComment in _dbContext.PostComments.AsNoTracking() on r.TargetID equals targetComment.CommentID into tcg
-                         from targetComment in tcg.DefaultIfEmpty()
-                         join postOwner in _dbContext.Users.AsNoTracking() on (targetPost == null ? 0 : targetPost.UserID) equals postOwner.UserID into pog
-                         from postOwner in pog.DefaultIfEmpty()
-                         join reviewAuthor in _dbContext.Users.AsNoTracking() on (targetReview == null ? 0 : targetReview.ReviewerID) equals reviewAuthor.UserID into rag
-                         from reviewAuthor in rag.DefaultIfEmpty()
-                         join commentAuthor in _dbContext.Users.AsNoTracking() on (targetComment == null ? 0 : targetComment.UserID) equals commentAuthor.UserID into cag
-                         from commentAuthor in cag.DefaultIfEmpty()
-                         select new { r, reporter, resolver, targetPost, targetUser, targetReview, targetComment, postOwner, reviewAuthor, commentAuthor };
+            // Step 1: join reporter + optional resolver only (no polymorphic target joins)
+            var baseJoined = from r in query
+                             join reporter in _dbContext.Users.AsNoTracking() on r.ReporterUserID equals reporter.UserID
+                             join resolver in _dbContext.Users.AsNoTracking() on r.ResolvedByUserID equals resolver.UserID into rg
+                             from resolver in rg.DefaultIfEmpty()
+                             select new { r, reporter, resolver };
 
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var term = search.Trim();
-                joined = joined.Where(x =>
+                baseJoined = baseJoined.Where(x =>
                     (x.reporter.FirstName + " " + (x.reporter.LastName ?? "")).Contains(term) ||
                     x.reporter.Email.Contains(term) ||
                     (x.reporter.Phone != null && x.reporter.Phone.Contains(term)));
             }
-            int totalCount = await joined.CountAsync(cancellationToken);
+
+            int totalCount = await baseJoined.CountAsync(cancellationToken);
 
             int safePage = System.Math.Max(1, pageNumber);
             int safeSize = System.Math.Clamp(pageSize, 1, 200);
 
-            var items = await joined
+            // Step 2: fetch the paged report rows
+            var pageRows = await baseJoined
                 .OrderByDescending(x => x.r.CreatedAt)
                 .Skip((safePage - 1) * safeSize)
                 .Take(safeSize)
-                .Select(x => new AdminReportItem
+                .Select(x => new
                 {
-                    ReportID = x.r.ReportID,
-                    ReportType = x.r.ReportType,
-                    TargetID = x.r.TargetID,
-                    TargetLabel =
-                        x.r.ReportType == "LISTING" && x.targetPost != null
-                            ? x.targetPost.PostTitle
-                            : x.r.ReportType == "USER" && x.targetUser != null
-                                ? (x.targetUser.FirstName + " " + (x.targetUser.LastName ?? "")).Trim()
-                                : x.r.ReportType == "REVIEW" && x.targetReview != null
-                                    ? x.targetReview.Comment
-                                    : x.r.ReportType == "COMMENT" && x.targetComment != null
-                                        ? x.targetComment.Content
-                                    : null,
-                    Reason = x.r.Reason,
-                    Description = x.r.Description,
-                    ImageUrl = x.r.ImageUrl,
-                    ReporterUserID = x.r.ReporterUserID,
-                    ReporterName = (x.reporter.FirstName + " " + (x.reporter.LastName ?? "")).Trim(),
+                    x.r.ReportID,
+                    x.r.ReportType,
+                    x.r.TargetID,
+                    x.r.Reason,
+                    x.r.Description,
+                    x.r.ImageUrl,
+                    x.r.ReporterUserID,
+                    x.r.Status,
+                    x.r.ResolvedByUserID,
+                    x.r.ResolutionNotes,
+                    x.r.CreatedAt,
+                    x.r.ResolvedAt,
+                    ReporterFirstName = x.reporter.FirstName,
+                    ReporterLastName = x.reporter.LastName,
                     ReporterEmail = x.reporter.Email,
-                    TargetUserID =
-                        x.r.ReportType == "USER" && x.targetUser != null
-                            ? x.targetUser.UserID
-                            : x.r.ReportType == "LISTING" && x.targetPost != null
-                                ? x.targetPost.UserID
-                                : x.r.ReportType == "REVIEW" && x.targetReview != null
-                                    ? x.targetReview.ReviewerID
-                                    : x.r.ReportType == "COMMENT" && x.targetComment != null
-                                        ? x.targetComment.UserID
-                                    : null,
-                    TargetUserName =
-                        x.r.ReportType == "USER" && x.targetUser != null
-                            ? (x.targetUser.FirstName + " " + (x.targetUser.LastName ?? "")).Trim()
-                            : x.r.ReportType == "LISTING" && x.postOwner != null
-                                ? (x.postOwner.FirstName + " " + (x.postOwner.LastName ?? "")).Trim()
-                                : x.r.ReportType == "REVIEW" && x.reviewAuthor != null
-                                    ? (x.reviewAuthor.FirstName + " " + (x.reviewAuthor.LastName ?? "")).Trim()
-                                    : x.r.ReportType == "COMMENT" && x.commentAuthor != null
-                                        ? (x.commentAuthor.FirstName + " " + (x.commentAuthor.LastName ?? "")).Trim()
-                                    : null,
-                    TargetUserStatus =
-                        x.r.ReportType == "USER" && x.targetUser != null
-                            ? (int?)x.targetUser.Status
-                            : x.r.ReportType == "LISTING" && x.postOwner != null
-                                ? (int?)x.postOwner.Status
-                                : x.r.ReportType == "REVIEW" && x.reviewAuthor != null
-                                    ? (int?)x.reviewAuthor.Status
-                                    : x.r.ReportType == "COMMENT" && x.commentAuthor != null
-                                        ? (int?)x.commentAuthor.Status
-                                    : null,
-                    TargetUserSuspendedUntil =
-                        x.r.ReportType == "USER" && x.targetUser != null
-                            ? x.targetUser.SuspendedUntil
-                            : x.r.ReportType == "LISTING" && x.postOwner != null
-                                ? x.postOwner.SuspendedUntil
-                                : x.r.ReportType == "REVIEW" && x.reviewAuthor != null
-                                    ? x.reviewAuthor.SuspendedUntil
-                                    : x.r.ReportType == "COMMENT" && x.commentAuthor != null
-                                        ? x.commentAuthor.SuspendedUntil
-                                    : null,
-                    Status = x.r.Status,
-                    StatusLabel = x.r.Status >= 0 && x.r.Status < _reportStatusLabels.Length ? _reportStatusLabels[x.r.Status] : "Unknown",
-                    ResolvedByUserID = x.r.ResolvedByUserID,
-                    ResolvedByName = x.resolver != null ? (x.resolver.FirstName + " " + (x.resolver.LastName ?? "")).Trim() : null,
-                    ResolutionNotes = x.r.ResolutionNotes,
-                    CreatedAt = x.r.CreatedAt,
-                    ResolvedAt = x.r.ResolvedAt
+                    ResolverFirstName = x.resolver != null ? x.resolver.FirstName : null,
+                    ResolverLastName = x.resolver != null ? x.resolver.LastName : null,
                 })
                 .ToListAsync(cancellationToken);
+
+            // Step 3: batch-fetch each target type using only the relevant IDs
+            var listingIds  = pageRows.Where(r => r.ReportType == "LISTING").Select(r => r.TargetID).Distinct().ToList();
+            var userIds     = pageRows.Where(r => r.ReportType == "USER").Select(r => r.TargetID).Distinct().ToList();
+            var reviewIds   = pageRows.Where(r => r.ReportType == "REVIEW").Select(r => r.TargetID).Distinct().ToList();
+            var commentIds  = pageRows.Where(r => r.ReportType == "COMMENT").Select(r => r.TargetID).Distinct().ToList();
+
+            // Posts + their owner
+            var posts = listingIds.Count == 0 ? [] : await _dbContext.Posts
+                .AsNoTracking().IgnoreQueryFilters()
+                .Where(p => listingIds.Contains(p.PostID))
+                .Select(p => new { p.PostID, p.PostTitle, p.UserID })
+                .ToListAsync(cancellationToken);
+
+            var postOwnerIds = posts.Select(p => p.UserID).Distinct().ToList();
+
+            // Target users (USER reports) + post owners + review authors + comment authors
+            var allUserIds = userIds
+                .Concat(postOwnerIds)
+                .Concat(reviewIds.Count == 0 ? [] : await _dbContext.Reviews
+                    .AsNoTracking().IgnoreQueryFilters()
+                    .Where(r => reviewIds.Contains(r.ReviewID))
+                    .Select(r => r.ReviewerID)
+                    .ToListAsync(cancellationToken))
+                .Concat(commentIds.Count == 0 ? [] : await _dbContext.PostComments
+                    .AsNoTracking().IgnoreQueryFilters()
+                    .Where(c => commentIds.Contains(c.CommentID))
+                    .Select(c => c.UserID)
+                    .ToListAsync(cancellationToken))
+                .Distinct().ToList();
+
+            var usersMap = allUserIds.Count == 0 ? [] : await _dbContext.Users
+                .AsNoTracking().IgnoreQueryFilters()
+                .Where(u => allUserIds.Contains(u.UserID))
+                .Select(u => new { u.UserID, u.FirstName, u.LastName, u.Status, u.SuspendedUntil })
+                .ToDictionaryAsync(u => u.UserID, cancellationToken);
+
+            var reviewsMap = reviewIds.Count == 0 ? [] : await _dbContext.Reviews
+                .AsNoTracking().IgnoreQueryFilters()
+                .Where(r => reviewIds.Contains(r.ReviewID))
+                .Select(r => new { r.ReviewID, r.ReviewerID, r.Comment })
+                .ToDictionaryAsync(r => r.ReviewID, cancellationToken);
+
+            var commentsMap = commentIds.Count == 0 ? [] : await _dbContext.PostComments
+                .AsNoTracking().IgnoreQueryFilters()
+                .Where(c => commentIds.Contains(c.CommentID))
+                .Select(c => new { c.CommentID, c.UserID, c.Content })
+                .ToDictionaryAsync(c => c.CommentID, cancellationToken);
+
+            var postsMap = posts.ToDictionary(p => p.PostID);
+
+            static string? FullName(dynamic? u) =>
+                u == null ? null : ((string)(u.FirstName + " " + (u.LastName ?? ""))).Trim();
+
+            // Step 4: assemble result set in memory
+            var items = pageRows.Select(row =>
+            {
+                string? targetLabel = null;
+                int? targetUserId = null;
+                string? targetUserName = null;
+                int? targetUserStatus = null;
+                System.DateTime? targetUserSuspendedUntil = null;
+
+                if (row.ReportType == "LISTING" && postsMap.TryGetValue(row.TargetID, out var post))
+                {
+                    targetLabel = post.PostTitle;
+                    targetUserId = post.UserID;
+                    if (usersMap.TryGetValue(post.UserID, out var owner))
+                    {
+                        targetUserName = FullName(owner);
+                        targetUserStatus = owner.Status;
+                        targetUserSuspendedUntil = owner.SuspendedUntil;
+                    }
+                }
+                else if (row.ReportType == "USER" && usersMap.TryGetValue(row.TargetID, out var targetUser))
+                {
+                    targetLabel = FullName(targetUser);
+                    targetUserId = targetUser.UserID;
+                    targetUserName = FullName(targetUser);
+                    targetUserStatus = targetUser.Status;
+                    targetUserSuspendedUntil = targetUser.SuspendedUntil;
+                }
+                else if (row.ReportType == "REVIEW" && reviewsMap.TryGetValue(row.TargetID, out var review))
+                {
+                    targetLabel = review.Comment;
+                    targetUserId = review.ReviewerID;
+                    if (usersMap.TryGetValue(review.ReviewerID, out var author))
+                    {
+                        targetUserName = FullName(author);
+                        targetUserStatus = author.Status;
+                        targetUserSuspendedUntil = author.SuspendedUntil;
+                    }
+                }
+                else if (row.ReportType == "COMMENT" && commentsMap.TryGetValue(row.TargetID, out var comment))
+                {
+                    targetLabel = comment.Content;
+                    targetUserId = comment.UserID;
+                    if (usersMap.TryGetValue(comment.UserID, out var author))
+                    {
+                        targetUserName = FullName(author);
+                        targetUserStatus = author.Status;
+                        targetUserSuspendedUntil = author.SuspendedUntil;
+                    }
+                }
+
+                string? resolverName = row.ResolverFirstName == null
+                    ? null
+                    : ((string)(row.ResolverFirstName + " " + (row.ResolverLastName ?? ""))).Trim();
+
+                return new AdminReportItem
+                {
+                    ReportID = row.ReportID,
+                    ReportType = row.ReportType,
+                    TargetID = row.TargetID,
+                    TargetLabel = targetLabel,
+                    Reason = row.Reason,
+                    Description = row.Description,
+                    ImageUrl = row.ImageUrl,
+                    ReporterUserID = row.ReporterUserID,
+                    ReporterName = ((string)(row.ReporterFirstName + " " + (row.ReporterLastName ?? ""))).Trim(),
+                    ReporterEmail = row.ReporterEmail,
+                    TargetUserID = targetUserId,
+                    TargetUserName = targetUserName,
+                    TargetUserStatus = targetUserStatus,
+                    TargetUserSuspendedUntil = targetUserSuspendedUntil,
+                    Status = row.Status,
+                    StatusLabel = row.Status >= 0 && row.Status < _reportStatusLabels.Length ? _reportStatusLabels[row.Status] : "Unknown",
+                    ResolvedByUserID = row.ResolvedByUserID,
+                    ResolvedByName = resolverName,
+                    ResolutionNotes = row.ResolutionNotes,
+                    CreatedAt = row.CreatedAt,
+                    ResolvedAt = row.ResolvedAt
+                };
+            }).ToList();
 
             return new AdminReportListResult { Reports = items, TotalCount = totalCount };
         }
