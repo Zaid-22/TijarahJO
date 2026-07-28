@@ -177,7 +177,7 @@ export function ReviewsModeration() {
                     </td>
                     <td className="px-6 py-4">{renderStars(review.rating)}</td>
                     <td
-                      className="px-6 py-4 max-w-[250px] truncate"
+                      className="px-6 py-4 max-w-62.5 truncate"
                       title={review.comment}
                     >
                       {review.comment || "No comment"}

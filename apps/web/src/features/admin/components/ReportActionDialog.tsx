@@ -250,7 +250,7 @@ export function ReportActionDialog({
                               Suspend User
                             </span>
                           </div>
-                          <p className="text-xs text-destructive/80 max-w-[280px] leading-relaxed">
+                          <p className="text-xs text-destructive/80 max-w-70 leading-relaxed">
                             {report.targetUserName
                               ? `Invalidates ${report.targetUserName}'s active sessions. Auto-resolves report.`
                               : "Invalidates active sessions. Auto-resolves report."}
@@ -258,7 +258,7 @@ export function ReportActionDialog({
                         </div>
                         <div className="flex items-center gap-2 w-full sm:w-auto">
                           <Select value={selectedSuspensionHours} onValueChange={onSuspensionHoursChange}>
-                            <SelectTrigger className="w-[130px] h-9 text-xs" aria-label="Select suspension duration">
+                            <SelectTrigger className="w-32.5 h-9 text-xs" aria-label="Select suspension duration">
                               <SelectValue placeholder="Duration" />
                             </SelectTrigger>
                             <SelectContent>
@@ -304,7 +304,7 @@ export function ReportActionDialog({
                           View <ExternalLink className="w-3 h-3" />
                         </Link>
                       </div>
-                      <p className="text-xs text-muted-foreground max-w-[280px] leading-relaxed">
+                      <p className="text-xs text-muted-foreground max-w-70 leading-relaxed">
                         Hides the post from the marketplace and auto-resolves this report.
                       </p>
                     </div>
@@ -340,7 +340,7 @@ export function ReportActionDialog({
                         <Trash2 className="w-4 h-4 text-foreground/80" />
                         <span className="text-sm font-semibold text-foreground">Delete Comment</span>
                       </div>
-                      <p className="text-xs text-muted-foreground max-w-[280px] leading-relaxed">
+                      <p className="text-xs text-muted-foreground max-w-70 leading-relaxed">
                         Permanently hides the comment and auto-resolves this report.
                       </p>
                     </div>
