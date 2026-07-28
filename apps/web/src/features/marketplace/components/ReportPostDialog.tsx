@@ -154,6 +154,21 @@ export function ReportPostDialog({
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     if (!file) return;
+
+    const maxSizeBytes = 5 * 1024 * 1024; // 5 MB
+    if (file.size > maxSizeBytes) {
+      toast.error(
+        language === "ar"
+          ? "حجم الصورة يتجاوز الحد المسموح به (5 ميغابايت)"
+          : "Image exceeds the maximum allowed size (5 MB)"
+      );
+      e.target.value = "";
+      return;
+    }
+
+    // Revoke the previous object URL before creating a new one to avoid memory leaks
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+
     setImage(file);
     setImagePreview(URL.createObjectURL(file));
     e.target.value = "";

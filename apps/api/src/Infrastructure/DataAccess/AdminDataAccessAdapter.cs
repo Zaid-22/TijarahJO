@@ -358,6 +358,24 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
         int safePage = System.Math.Max(1, pageNumber);
         int safeSize = System.Math.Clamp(pageSize, 1, 200);
 
+        // Batch reply counts in a single grouped subquery to avoid N+1 correlated queries.
+        // We project the page of comment IDs first, then JOIN to a grouped reply count.
+        var pagedCommentIds = await query
+            .OrderByDescending(x => x.comment.CreatedAt)
+            .ThenByDescending(x => x.comment.CommentID)
+            .Skip((safePage - 1) * safeSize)
+            .Take(safeSize)
+            .Select(x => x.comment.CommentID)
+            .ToListAsync(cancellationToken);
+
+        // Single grouped COUNT for all reply counts
+        var replyCounts = await _dbContext.PostComments
+            .AsNoTracking()
+            .Where(reply => !reply.IsDeleted && reply.ParentCommentID.HasValue && pagedCommentIds.Contains(reply.ParentCommentID!.Value))
+            .GroupBy(reply => reply.ParentCommentID!.Value)
+            .Select(g => new { ParentId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.ParentId, g => g.Count, cancellationToken);
+
         var items = await query
             .OrderByDescending(x => x.comment.CreatedAt)
             .ThenByDescending(x => x.comment.CommentID)
@@ -373,12 +391,18 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
                     ? ((x.user.FirstName ?? string.Empty) + " " + (x.user.LastName ?? string.Empty)).Trim()
                     : "Unknown user",
                 ParentCommentID = x.comment.ParentCommentID,
-                ReplyCount = _dbContext.PostComments.Count(reply => !reply.IsDeleted && reply.ParentCommentID.HasValue && reply.ParentCommentID.Value == x.comment.CommentID),
+                ReplyCount = 0, // Populated below from batched reply counts
                 Content = x.comment.Content,
                 CreatedAt = x.comment.CreatedAt,
                 UpdatedAt = x.comment.UpdatedAt
             })
             .ToListAsync(cancellationToken);
+
+        // Apply batched reply counts
+        foreach (var item in items)
+        {
+            item.ReplyCount = replyCounts.TryGetValue(item.CommentID, out int count) ? count : 0;
+        }
 
         return new AdminPostCommentListResult
         {
@@ -688,10 +712,13 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
             }
             int totalCount = await joined.CountAsync(cancellationToken);
 
+            int safePage = System.Math.Max(1, pageNumber);
+            int safeSize = System.Math.Clamp(pageSize, 1, 200);
+
             var items = await joined
                 .OrderByDescending(x => x.r.CreatedAt)
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
+                .Skip((safePage - 1) * safeSize)
+                .Take(safeSize)
                 .Select(x => new AdminReportItem
                 {
                     ReportID = x.r.ReportID,
@@ -778,7 +805,7 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
         if (entity == null) return false;
 
         entity.Status = newStatus;
-        if (newStatus == 2 || newStatus == 3) // Resolved or Dismissed
+        if (newStatus == (int)ReportStatus.Resolved || newStatus == (int)ReportStatus.Dismissed)
         {
             entity.ResolvedByUserID = adminUserId;
             entity.ResolvedAt = System.DateTime.UtcNow;

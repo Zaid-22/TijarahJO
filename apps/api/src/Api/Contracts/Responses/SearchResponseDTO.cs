@@ -50,7 +50,7 @@ public sealed class SearchPostResponseDTO
     public required string CategoryId { get; init; }
 
     [JsonPropertyName("image")]
-    public required string Image { get; set; }
+    public required string Image { get; init; }
 
     [JsonPropertyName("thumbnailImage")]
     public string ThumbnailImage { get; init; } = string.Empty;

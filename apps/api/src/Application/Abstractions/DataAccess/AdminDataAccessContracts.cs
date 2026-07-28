@@ -107,7 +107,7 @@ public sealed class AdminPostCommentItem
     public int UserID { get; init; }
     public string AuthorName { get; init; } = string.Empty;
     public int? ParentCommentID { get; init; }
-    public int ReplyCount { get; init; }
+    public int ReplyCount { get; set; }
     public string Content { get; init; } = string.Empty;
     public System.DateTime CreatedAt { get; init; }
     public System.DateTime UpdatedAt { get; init; }
