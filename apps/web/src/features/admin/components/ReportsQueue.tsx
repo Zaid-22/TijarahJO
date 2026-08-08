@@ -107,7 +107,7 @@ function renderTargetUserStatus(
 
   return (
     <span
-      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ml-1.5 shadow-sm ${badgeClass}`}
+      className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold ml-1.5 shadow-sm ${badgeClass}`}
     >
       User: {label}
     </span>

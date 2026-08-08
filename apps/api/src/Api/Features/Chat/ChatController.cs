@@ -354,14 +354,20 @@ public class ChatController(
 
             candidatePath = NormalizeChatImageRequestPath(candidatePath);
 
+            string normalizedPrivateBasePath = LocalPostImageFileStorageService.NormalizeRequestPath(_fileStorageOptions.PrivateBasePath);
             string normalizedPublicBasePath = LocalPostImageFileStorageService.NormalizeRequestPath(_fileStorageOptions.PublicBasePath);
             string normalizedChatSegment = string.IsNullOrWhiteSpace(_fileStorageOptions.ChatImagesPath)
                 ? "chat-images"
                 : _fileStorageOptions.ChatImagesPath.Trim().Replace("\\", "/", StringComparison.Ordinal).Trim('/');
-            string normalizedChatPrefix = $"{normalizedPublicBasePath}/{normalizedChatSegment}";
-            bool isUnderChatPrefix =
-                candidatePath.Equals(normalizedChatPrefix, StringComparison.OrdinalIgnoreCase) ||
-                candidatePath.StartsWith($"{normalizedChatPrefix}/", StringComparison.OrdinalIgnoreCase);
+            string privateChatPrefix = $"{normalizedPrivateBasePath}/{normalizedChatSegment}";
+            string legacyChatPrefix = $"{normalizedPublicBasePath}/{normalizedChatSegment}";
+            bool isPrivateChatPath =
+                candidatePath.Equals(privateChatPrefix, StringComparison.OrdinalIgnoreCase) ||
+                candidatePath.StartsWith($"{privateChatPrefix}/", StringComparison.OrdinalIgnoreCase);
+            bool isLegacyChatPath =
+                candidatePath.Equals(legacyChatPrefix, StringComparison.OrdinalIgnoreCase) ||
+                candidatePath.StartsWith($"{legacyChatPrefix}/", StringComparison.OrdinalIgnoreCase);
+            bool isUnderChatPrefix = isPrivateChatPath || isLegacyChatPath;
             if (!isUnderChatPrefix)
             {
                 return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Unsupported image URL.");
@@ -372,16 +378,28 @@ public class ChatController(
                 return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid image signature.");
             }
 
-            string uploadsRoot = LocalPostImageFileStorageService.ResolveAbsoluteUploadsRootPath(
-                _environment.ContentRootPath,
-                _fileStorageOptions);
-            string relativePath = candidatePath[normalizedPublicBasePath.Length..]
-                .TrimStart('/')
-                .Replace("/", Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal);
-            string absoluteFilePath = Path.GetFullPath(Path.Combine(uploadsRoot, relativePath));
-            string chatRoot = LocalPostImageFileStorageService.ResolveAbsoluteChatImagesRootPath(
-                _environment.ContentRootPath,
-                _fileStorageOptions);
+            bool filePathResolved = isPrivateChatPath
+                ? LocalPostImageFileStorageService.TryResolveAbsolutePrivateStoredFilePath(
+                    candidatePath,
+                    _environment.ContentRootPath,
+                    _fileStorageOptions,
+                    out string absoluteFilePath)
+                : LocalPostImageFileStorageService.TryResolveAbsoluteStoredFilePath(
+                    candidatePath,
+                    _environment.ContentRootPath,
+                    _fileStorageOptions,
+                    out absoluteFilePath);
+            if (!filePathResolved)
+            {
+                return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Unsupported image URL.");
+            }
+            string chatRoot = isPrivateChatPath
+                ? LocalPostImageFileStorageService.ResolveAbsolutePrivateChatImagesRootPath(
+                    _environment.ContentRootPath,
+                    _fileStorageOptions)
+                : LocalPostImageFileStorageService.ResolveAbsoluteChatImagesRootPath(
+                    _environment.ContentRootPath,
+                    _fileStorageOptions);
             string relativeToChatRoot = Path.GetRelativePath(chatRoot, absoluteFilePath);
             if (Path.IsPathRooted(relativeToChatRoot) ||
                 relativeToChatRoot.StartsWith("..", OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))

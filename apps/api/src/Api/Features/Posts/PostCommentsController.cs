@@ -62,11 +62,10 @@ namespace TijarahJo.Api.Features.Posts
             [FromQuery] int limit = 20,
             CancellationToken cancellationToken = default)
         {
-            _ = postId; // Bound from route template
             if (commentId < 1)
                 return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid comment ID.");
 
-            var result = await commentService.GetRepliesAsync(commentId, page, limit, cancellationToken);
+            var result = await commentService.GetRepliesAsync(postId, commentId, page, limit, cancellationToken);
             if (!result.Success)
                 return ToCommentProblem(result.FailureReason, result.Message);
 
@@ -123,14 +122,13 @@ namespace TijarahJo.Api.Features.Posts
             [FromBody] UpdatePostCommentRequest? request,
             CancellationToken cancellationToken = default)
         {
-            _ = postId; // Bound from route template
             if (!ApiControllerHelpers.TryGetCurrentUserId(User, out int currentUserId))
                 return Problem(statusCode: StatusCodes.Status401Unauthorized, detail: "Invalid authentication token.");
 
             if (request == null)
                 return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Update payload is required.");
 
-            var result = await commentService.UpdateCommentAsync(commentId, currentUserId, request.Content, cancellationToken);
+            var result = await commentService.UpdateCommentAsync(postId, commentId, currentUserId, request.Content, cancellationToken);
 
             if (!result.Success || result.Comment == null)
                 return ToCommentProblem(result.FailureReason, result.Message);
@@ -164,7 +162,7 @@ namespace TijarahJo.Api.Features.Posts
             bool actorIsAdmin = ApiControllerHelpers.IsAdminUser(User);
 
             var result = await commentService.DeleteCommentAsync(
-                commentId, currentUserId, actorIsAdmin, postOwnerId, cancellationToken);
+                postId, commentId, currentUserId, actorIsAdmin, postOwnerId, cancellationToken);
 
             if (!result.Success)
                 return ToCommentProblem(result.FailureReason, result.Message);

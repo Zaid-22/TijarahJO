@@ -168,15 +168,26 @@ public sealed class PostCommentService(
     }
 
     public async Task<PostCommentListResult> GetRepliesAsync(
-        int parentCommentId, int pageNumber = 1, int pageSize = 20, CancellationToken cancellationToken = default)
+        int postId, int parentCommentId, int pageNumber = 1, int pageSize = 20, CancellationToken cancellationToken = default)
     {
-        if (parentCommentId < 1)
+        if (postId < 1 || parentCommentId < 1)
         {
             return new PostCommentListResult
             {
                 Success = false,
                 FailureReason = PostCommentFailureReason.InvalidRequest,
                 Message = "Invalid parent comment ID."
+            };
+        }
+
+        var parentComment = await _commentDataAccess.GetCommentByIdAsync(parentCommentId, cancellationToken);
+        if (parentComment == null || parentComment.PostID != postId)
+        {
+            return new PostCommentListResult
+            {
+                Success = false,
+                FailureReason = PostCommentFailureReason.CommentNotFound,
+                Message = "Parent comment not found."
             };
         }
 
@@ -194,7 +205,7 @@ public sealed class PostCommentService(
     }
 
     public async Task<PostCommentResult> UpdateCommentAsync(
-        int commentId, int actorUserId, string? content, CancellationToken cancellationToken = default)
+        int postId, int commentId, int actorUserId, string? content, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(content))
         {
@@ -219,6 +230,16 @@ public sealed class PostCommentService(
 
         var existing = await _commentDataAccess.GetCommentByIdAsync(commentId, cancellationToken);
         if (existing == null)
+        {
+            return new PostCommentResult
+            {
+                Success = false,
+                FailureReason = PostCommentFailureReason.CommentNotFound,
+                Message = "Comment not found."
+            };
+        }
+
+        if (existing.PostID != postId)
         {
             return new PostCommentResult
             {
@@ -255,10 +276,20 @@ public sealed class PostCommentService(
     }
 
     public async Task<PostCommentResult> DeleteCommentAsync(
-        int commentId, int actorUserId, bool actorIsAdmin, int? postOwnerId = null, CancellationToken cancellationToken = default)
+        int postId, int commentId, int actorUserId, bool actorIsAdmin, int? postOwnerId = null, CancellationToken cancellationToken = default)
     {
         var existing = await _commentDataAccess.GetCommentByIdAsync(commentId, cancellationToken);
         if (existing == null)
+        {
+            return new PostCommentResult
+            {
+                Success = false,
+                FailureReason = PostCommentFailureReason.CommentNotFound,
+                Message = "Comment not found."
+            };
+        }
+
+        if (existing.PostID != postId)
         {
             return new PostCommentResult
             {

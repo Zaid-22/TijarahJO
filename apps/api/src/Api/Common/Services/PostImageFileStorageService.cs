@@ -70,8 +70,8 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
 
         return await SaveValidatedFile(
             file,
-            ResolveAbsoluteChatImagesRootPath(_environment.ContentRootPath, _options),
-            fileName => BuildPublicChatImagePath(fileName, _options),
+            ResolveAbsolutePrivateChatImagesRootPath(_environment.ContentRootPath, _options),
+            fileName => BuildPrivateChatImagePath(fileName, _options),
             generateThumbnail: false,
             cancellationToken
         );
@@ -96,8 +96,8 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
 
         return await SaveValidatedFile(
             file,
-            ResolveAbsoluteReportImagesRootPath(_environment.ContentRootPath, _options),
-            fileName => BuildPublicReportImageUrl(fileName, _options),
+            ResolveAbsolutePrivateReportImagesRootPath(_environment.ContentRootPath, _options),
+            fileName => BuildPrivateReportImagePath(fileName, _options),
             generateThumbnail: false,
             cancellationToken
         );
@@ -111,20 +111,32 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
         }
 
         string normalizedPublicBasePath = NormalizeRequestPath(_options.PublicBasePath);
-        if (!publicUrl.StartsWith(normalizedPublicBasePath, StringComparison.OrdinalIgnoreCase))
+        string normalizedPrivateBasePath = NormalizeRequestPath(_options.PrivateBasePath);
+        string storageBasePath;
+        string storageRoot;
+        if (publicUrl.StartsWith(normalizedPublicBasePath, StringComparison.OrdinalIgnoreCase))
+        {
+            storageBasePath = normalizedPublicBasePath;
+            storageRoot = ResolveAbsoluteUploadsRootPath(_environment.ContentRootPath, _options);
+        }
+        else if (publicUrl.StartsWith(normalizedPrivateBasePath, StringComparison.OrdinalIgnoreCase))
+        {
+            storageBasePath = normalizedPrivateBasePath;
+            storageRoot = ResolveAbsolutePrivateRootPath(_environment.ContentRootPath, _options);
+        }
+        else
         {
             return Task.CompletedTask;
         }
 
-        string relativePath = publicUrl[normalizedPublicBasePath.Length..].TrimStart('/');
+        string relativePath = publicUrl[storageBasePath.Length..].TrimStart('/');
         if (string.IsNullOrWhiteSpace(relativePath))
         {
             return Task.CompletedTask;
         }
 
-        string uploadsRoot = ResolveAbsoluteUploadsRootPath(_environment.ContentRootPath, _options);
-        string targetPath = Path.GetFullPath(Path.Combine(uploadsRoot, relativePath));
-        if (!IsUnderRoot(targetPath, uploadsRoot))
+        string targetPath = Path.GetFullPath(Path.Combine(storageRoot, relativePath));
+        if (!IsUnderRoot(targetPath, storageRoot))
         {
             _logger.LogWarning("Skipped deleting post image outside uploads root: {Path}", targetPath);
             return Task.CompletedTask;
@@ -224,6 +236,19 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
         return Path.GetFullPath(absoluteRoot);
     }
 
+    public static string ResolveAbsolutePrivateRootPath(string contentRootPath, FileStorageOptions options)
+    {
+        string configuredRoot = string.IsNullOrWhiteSpace(options.PrivateRootPath)
+            ? "private-uploads"
+            : options.PrivateRootPath.Trim();
+
+        string absoluteRoot = Path.IsPathRooted(configuredRoot)
+            ? configuredRoot
+            : Path.Combine(contentRootPath, configuredRoot);
+
+        return Path.GetFullPath(absoluteRoot);
+    }
+
     public static string ResolveAbsolutePostImagesRootPath(string contentRootPath, FileStorageOptions options)
     {
         string uploadsRoot = ResolveAbsoluteUploadsRootPath(contentRootPath, options);
@@ -238,6 +263,13 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
         return Path.GetFullPath(Path.Combine(uploadsRoot, chatImagesSegment));
     }
 
+    public static string ResolveAbsolutePrivateChatImagesRootPath(string contentRootPath, FileStorageOptions options)
+    {
+        string privateRoot = ResolveAbsolutePrivateRootPath(contentRootPath, options);
+        string chatImagesSegment = NormalizePathSegment(options.ChatImagesPath, "chat-images");
+        return Path.GetFullPath(Path.Combine(privateRoot, chatImagesSegment));
+    }
+
     public static string ResolveAbsoluteUserAvatarsRootPath(string contentRootPath, FileStorageOptions options)
     {
         string uploadsRoot = ResolveAbsoluteUploadsRootPath(contentRootPath, options);
@@ -250,6 +282,13 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
         string uploadsRoot = ResolveAbsoluteUploadsRootPath(contentRootPath, options);
         string reportImagesSegment = NormalizePathSegment(options.ReportImagesPath, "report-images");
         return Path.GetFullPath(Path.Combine(uploadsRoot, reportImagesSegment));
+    }
+
+    public static string ResolveAbsolutePrivateReportImagesRootPath(string contentRootPath, FileStorageOptions options)
+    {
+        string privateRoot = ResolveAbsolutePrivateRootPath(contentRootPath, options);
+        string reportImagesSegment = NormalizePathSegment(options.ReportImagesPath, "report-images");
+        return Path.GetFullPath(Path.Combine(privateRoot, reportImagesSegment));
     }
 
     public static string NormalizeRequestPath(string requestPath)
@@ -280,6 +319,13 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
         return $"{basePath}/{chatImagesSegment}/{fileName}";
     }
 
+    public static string BuildPrivateChatImagePath(string fileName, FileStorageOptions options)
+    {
+        string basePath = NormalizeRequestPath(options.PrivateBasePath);
+        string chatImagesSegment = NormalizePathSegment(options.ChatImagesPath, "chat-images");
+        return $"{basePath}/{chatImagesSegment}/{fileName}";
+    }
+
     public static string BuildPublicUserAvatarUrl(string fileName, FileStorageOptions options)
     {
         string basePath = NormalizeRequestPath(options.PublicBasePath);
@@ -292,6 +338,42 @@ public sealed class LocalPostImageFileStorageService : IPostImageFileStorageServ
         string basePath = NormalizeRequestPath(options.PublicBasePath);
         string reportImagesSegment = NormalizePathSegment(options.ReportImagesPath, "report-images");
         return $"{basePath}/{reportImagesSegment}/{fileName}";
+    }
+
+    public static string BuildPrivateReportImagePath(string fileName, FileStorageOptions options)
+    {
+        string basePath = NormalizeRequestPath(options.PrivateBasePath);
+        string reportImagesSegment = NormalizePathSegment(options.ReportImagesPath, "report-images");
+        return $"{basePath}/{reportImagesSegment}/{fileName}";
+    }
+
+    public static bool TryResolveAbsolutePrivateStoredFilePath(
+        string privateUrl,
+        string contentRootPath,
+        FileStorageOptions options,
+        out string absoluteFilePath)
+    {
+        absoluteFilePath = string.Empty;
+        if (string.IsNullOrWhiteSpace(privateUrl)) return false;
+
+        string candidatePath = privateUrl.Trim();
+        if (Uri.TryCreate(candidatePath, UriKind.Absolute, out Uri? absoluteUri))
+        {
+            candidatePath = absoluteUri.AbsolutePath;
+        }
+
+        string normalizedPrivateBasePath = NormalizeRequestPath(options.PrivateBasePath);
+        if (!candidatePath.StartsWith(normalizedPrivateBasePath, StringComparison.OrdinalIgnoreCase)) return false;
+
+        string relativePath = candidatePath[normalizedPrivateBasePath.Length..].TrimStart('/');
+        if (string.IsNullOrWhiteSpace(relativePath)) return false;
+
+        string privateRoot = ResolveAbsolutePrivateRootPath(contentRootPath, options);
+        string targetPath = Path.GetFullPath(Path.Combine(privateRoot, relativePath));
+        if (!IsUnderRoot(targetPath, privateRoot)) return false;
+
+        absoluteFilePath = targetPath;
+        return true;
     }
 
     public static string BuildThumbnailFileName(string fileName)

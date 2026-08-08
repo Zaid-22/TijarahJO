@@ -93,6 +93,44 @@ public sealed class PostImageFileStorageServiceTests
         Assert.Equal(originalBytes.Length, stored.SizeBytes);
     }
 
+    [Fact]
+    public async Task PrivateUploads_AreStoredOutsideThePublicStaticRoot()
+    {
+        using var harness = new StorageHarness(new FileStorageOptions
+        {
+            RootPath = "uploads",
+            PrivateRootPath = "private-uploads",
+            ChatImagesPath = "chat-images",
+            ReportImagesPath = "report-images",
+            PublicBasePath = "/uploads",
+            PrivateBasePath = "/private-uploads",
+            MaxPostImageBytes = 10 * 1024 * 1024,
+            OptimizeImages = true,
+            ConvertImagesToWebp = true,
+        });
+
+        byte[] imageBytes = CreateLargeJpegBytes(width: 80, height: 80);
+        StoredPostImageFile chatImage = await harness.Service.SaveChatImageAsync(
+            CreateFormFile(imageBytes, "chat.jpg", "image/jpeg"));
+        StoredPostImageFile reportImage = await harness.Service.SaveReportImageAsync(
+            CreateFormFile(imageBytes, "report.jpg", "image/jpeg"));
+
+        Assert.StartsWith("/private-uploads/chat-images/", chatImage.PublicUrl, StringComparison.Ordinal);
+        Assert.StartsWith("/private-uploads/report-images/", reportImage.PublicUrl, StringComparison.Ordinal);
+        Assert.True(LocalPostImageFileStorageService.TryResolveAbsolutePrivateStoredFilePath(
+            chatImage.PublicUrl,
+            harness.Environment.ContentRootPath,
+            harness.Options,
+            out string chatPath));
+        Assert.True(LocalPostImageFileStorageService.TryResolveAbsolutePrivateStoredFilePath(
+            reportImage.PublicUrl,
+            harness.Environment.ContentRootPath,
+            harness.Options,
+            out string reportPath));
+        Assert.True(File.Exists(chatPath));
+        Assert.True(File.Exists(reportPath));
+    }
+
     private static IFormFile CreateFormFile(byte[] bytes, string fileName, string contentType)
     {
         var stream = new MemoryStream(bytes);

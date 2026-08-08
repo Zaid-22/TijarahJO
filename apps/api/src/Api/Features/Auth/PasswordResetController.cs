@@ -22,16 +22,11 @@ public class PasswordResetController(IPasswordResetService passwordResetService)
         [FromBody] ForgotPasswordRequest request,
         CancellationToken cancellationToken)
     {
-        bool success = await _passwordResetService.RequestResetAsync(request?.Email, cancellationToken);
-        
-        if (!success)
-        {
-            return BadRequest(new ApiMessageResponse { Message = "Account does not exist or is unavailable." });
-        }
+        _ = await _passwordResetService.RequestResetAsync(request?.Email, cancellationToken);
 
         return Ok(new ApiMessageResponse
         {
-            Message = "A verification code has been sent to your email."
+            Message = "If an eligible account exists, a verification code has been sent to its email address."
         });
     }
 

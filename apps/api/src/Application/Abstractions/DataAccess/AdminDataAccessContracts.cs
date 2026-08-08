@@ -220,7 +220,7 @@ public sealed class AdminReportItem
     public string? TargetLabel { get; init; }
     public string Reason { get; init; } = string.Empty;
     public string? Description { get; init; }
-    public string? ImageUrl { get; init; }
+    public string? ImageUrl { get; set; }
     public int ReporterUserID { get; init; }
     public string ReporterName { get; init; } = string.Empty;
     public string ReporterEmail { get; init; } = string.Empty;

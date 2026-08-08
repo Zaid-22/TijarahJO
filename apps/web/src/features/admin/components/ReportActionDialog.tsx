@@ -59,7 +59,7 @@ function renderUserStatusBadge(
 
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${badgeClass}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${badgeClass}`}
     >
       {label}
     </span>

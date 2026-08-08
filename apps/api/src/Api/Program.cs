@@ -336,6 +336,21 @@ await BundledUploadInitializer.EnsureMissingThumbnailsAsync(
 
 string uploadsRequestPath = LocalPostImageFileStorageService.NormalizeRequestPath(fileStorageOptions.PublicBasePath);
 app.UseUploadThumbnailFallback(uploadsRootPath, uploadsRequestPath);
+app.Use(async (context, next) =>
+{
+    // Chat attachments and report evidence used to share the public uploads root.
+    // Deny those legacy locations before static files so historical media is protected too.
+    string chatPath = $"{uploadsRequestPath}/{fileStorageOptions.ChatImagesPath.Trim().Trim('/')}";
+    string reportPath = $"{uploadsRequestPath}/{fileStorageOptions.ReportImagesPath.Trim().Trim('/')}";
+    if (context.Request.Path.StartsWithSegments(chatPath, StringComparison.OrdinalIgnoreCase) ||
+        context.Request.Path.StartsWithSegments(reportPath, StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    await next();
+});
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(uploadsRootPath),

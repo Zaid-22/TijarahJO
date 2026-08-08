@@ -316,10 +316,9 @@ public interface IPostCommentService
     Task<PostCommentListResult> GetTopLevelCommentsAsync(
         int postId, int pageNumber = 1, int pageSize = 20, CancellationToken cancellationToken = default);
     Task<PostCommentListResult> GetRepliesAsync(
-        int parentCommentId, int pageNumber = 1, int pageSize = 20, CancellationToken cancellationToken = default);
+        int postId, int parentCommentId, int pageNumber = 1, int pageSize = 20, CancellationToken cancellationToken = default);
     Task<PostCommentResult> UpdateCommentAsync(
-        int commentId, int actorUserId, string? content, CancellationToken cancellationToken = default);
+        int postId, int commentId, int actorUserId, string? content, CancellationToken cancellationToken = default);
     Task<PostCommentResult> DeleteCommentAsync(
-        int commentId, int actorUserId, bool actorIsAdmin, int? postOwnerId = null, CancellationToken cancellationToken = default);
+        int postId, int commentId, int actorUserId, bool actorIsAdmin, int? postOwnerId = null, CancellationToken cancellationToken = default);
 }
-
