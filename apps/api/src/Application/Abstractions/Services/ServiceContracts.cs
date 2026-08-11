@@ -186,6 +186,11 @@ public interface IMessageService
         int pageSize = 50,
         CancellationToken cancellationToken = default)
         => Task.FromResult(new List<MessageModel>());
+    Task<IReadOnlyList<int>> GetConversationIdsBetweenUsersAsync(
+        int userA,
+        int userB,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<int>>([]);
     Task<List<MessageModel>> GetRecentChatsAsync(int userId, CancellationToken cancellationToken = default);
     Task<bool> MarkAsReadAsync(int conversationId, int receiverId, CancellationToken cancellationToken = default);
     Task<bool> MarkAsReadBetweenUsersAsync(

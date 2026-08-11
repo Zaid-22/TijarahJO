@@ -68,6 +68,12 @@ public sealed class MessageService : IMessageService
         => new(await _messages.GetChatHistoryBetweenUsersAsync(
             userA, userB, pageNumber, pageSize, cancellationToken));
 
+    public Task<IReadOnlyList<int>> GetConversationIdsBetweenUsersAsync(
+        int userA,
+        int userB,
+        CancellationToken cancellationToken = default)
+        => _messages.GetConversationIdsBetweenUsersAsync(userA, userB, cancellationToken);
+
     public async Task<List<MessageModel>> GetRecentChatsAsync(int userId, CancellationToken cancellationToken = default)
         => new(await _messages.GetRecentChatsAsync(userId, cancellationToken));
 

@@ -197,6 +197,65 @@ public sealed class ChatControllerDownloadImageTests
         Assert.Equal(1, realtime.Deliveries);
     }
 
+    [Fact]
+    public async Task SendImage_ReturnsPersistedMessage_WhenRealtimeDeliveryFails()
+    {
+        using var harness = new DownloadImageHarness();
+        var chat = new FakeChatOrchestrationService
+        {
+            SendResultFactory = command =>
+            {
+                var message = new MessageModel(
+                    messageId: 654,
+                    senderId: command.SenderUserId,
+                    conversationId: command.ConversationId!.Value,
+                    content: command.Content!,
+                    timestamp: DateTime.UtcNow,
+                    isRead: false,
+                    receiverId: command.ReceiverId,
+                    postId: command.PostId);
+                return new ChatServiceResult<SendChatMessageOutcome>
+                {
+                    Success = true,
+                    Value = new SendChatMessageOutcome
+                    {
+                        ConversationId = command.ConversationId.Value,
+                        ReceiverId = command.ReceiverId!.Value,
+                        PostId = command.PostId,
+                        Message = new ChatMessageEnvelope
+                        {
+                            Message = message,
+                            ReceiverId = command.ReceiverId.Value,
+                            PostId = command.PostId
+                        }
+                    }
+                };
+            }
+        };
+        var storage = new TrackingPostImageStorageService();
+        var realtime = new TrackingRealtimeDeliveryService
+        {
+            DeliveryException = new InvalidOperationException("SignalR unavailable")
+        };
+        ChatController controller = harness.CreateSendImageController(chat, storage, realtime);
+        using var imageStream = new MemoryStream([1, 2, 3]);
+
+        ActionResult<MessageResponseDTO> result = await controller.SendImage(
+            new UploadChatImageRequest
+            {
+                File = new FormFile(imageStream, 0, imageStream.Length, "File", "sample.png"),
+                ReceiverId = 9,
+                PostId = 3
+            },
+            CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<MessageResponseDTO>(ok.Value);
+        Assert.Equal(654, response.MessageId);
+        Assert.Empty(storage.DeletedUrls);
+        Assert.Equal(1, realtime.Deliveries);
+    }
+
     private static string SignChatImagePath(string storedPath, int conversationId)
     {
         byte[] signingKey = SHA256.HashData(
@@ -354,10 +413,16 @@ public sealed class ChatControllerDownloadImageTests
     private sealed class TrackingRealtimeDeliveryService : IChatRealtimeDeliveryService
     {
         public int Deliveries { get; private set; }
+        public Exception? DeliveryException { get; init; }
 
         public Task DeliverToReceiverAsync(int receiverUserId, MessageResponseDTO messagePayload, NotificationResponseDTO? notificationPayload, CancellationToken cancellationToken = default)
         {
             Deliveries++;
+            if (DeliveryException != null)
+            {
+                return Task.FromException(DeliveryException);
+            }
+
             return Task.CompletedTask;
         }
 

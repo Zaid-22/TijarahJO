@@ -29,11 +29,13 @@ public sealed class ChatOrchestrationService(
             return Failure<IReadOnlyList<ChatMessageEnvelope>>(ChatFailureReason.InvalidRequest, "Invalid chat user ID.");
         }
 
+        IReadOnlyList<int> conversationIds = await _messages.GetConversationIdsBetweenUsersAsync(
+            currentUserId, otherUserId, cancellationToken);
         await _messages.MarkAsReadBetweenUsersAsync(currentUserId, otherUserId, cancellationToken);
         IReadOnlyList<MessageModel> messages = await _messages.GetChatHistoryBetweenUsersAsync(
             currentUserId, otherUserId, cancellationToken: cancellationToken);
 
-        foreach (int conversationId in messages.Select(message => message.ConversationId).Distinct())
+        foreach (int conversationId in conversationIds)
         {
             await _notifications.MarkConversationAsReadAsync(
                 currentUserId, conversationId, cancellationToken);

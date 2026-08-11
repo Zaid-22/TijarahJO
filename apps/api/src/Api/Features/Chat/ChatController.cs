@@ -338,11 +338,22 @@ public class ChatController(
                 ? null
                 : DTOMapper.ToNotificationResponseDTO(outcome.Notification);
 
-            await _realtimeDelivery.DeliverToReceiverAsync(
-                outcome.ReceiverId,
-                dto,
-                notificationPayload,
-                cancellationToken);
+            try
+            {
+                await _realtimeDelivery.DeliverToReceiverAsync(
+                    outcome.ReceiverId,
+                    dto,
+                    notificationPayload,
+                    cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Chat image message {MessageId} was persisted but realtime delivery to user {ReceiverId} failed.",
+                    dto.MessageId,
+                    outcome.ReceiverId);
+            }
 
             return Ok(dto);
         }

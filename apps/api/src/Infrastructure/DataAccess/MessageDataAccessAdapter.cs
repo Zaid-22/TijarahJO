@@ -99,6 +99,24 @@ public sealed class MessageDataAccessAdapter(TijarahJoDbContext dbContext) : IMe
         return [.. rows.Select(row => ToModel(row.Message, row.PostID))];
     }
 
+    public async Task<IReadOnlyList<int>> GetConversationIdsBetweenUsersAsync(
+        int userA,
+        int userB,
+        CancellationToken cancellationToken = default)
+    {
+        int user1Id = Math.Min(userA, userB);
+        int user2Id = Math.Max(userA, userB);
+
+        return await dbContext.Conversations
+            .AsNoTracking()
+            .Where(conversation =>
+                conversation.User1ID == user1Id &&
+                conversation.User2ID == user2Id)
+            .OrderBy(conversation => conversation.ConversationID)
+            .Select(conversation => conversation.ConversationID)
+            .ToListAsync(cancellationToken);
+    }
+
     /// <summary>
     /// Returns the most recent message per conversation for a given user.
     /// Uses a window function (ROW_NUMBER) over the Conversations table.
