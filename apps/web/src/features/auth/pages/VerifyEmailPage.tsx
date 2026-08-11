@@ -35,6 +35,31 @@ interface VerifyEmailPageProps {
 
 type VerifyStep = "verifying" | "success" | "autologin" | "error";
 
+const verificationRequests = new Map<
+  string,
+  ReturnType<typeof api.auth.verifyEmail>
+>();
+const completedVerificationTokens = new Set<string>();
+
+function verifyEmailOnce(token: string) {
+  const existingRequest = verificationRequests.get(token);
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  const request = api.auth.verifyEmail(token);
+  verificationRequests.set(token, request);
+  void request.then(
+    (result) => {
+      if (!result.success) {
+        verificationRequests.delete(token);
+      }
+    },
+    () => verificationRequests.delete(token),
+  );
+  return request;
+}
+
 type VerifyEmailCopy = {
   verifyingTitle: string;
   verifyingSubtitle: string;
@@ -138,10 +163,17 @@ export function VerifyEmailPage({ language, onLogin }: VerifyEmailPageProps) {
       return;
     }
 
+    if (completedVerificationTokens.has(token)) {
+      navigate("/", { replace: true });
+      return;
+    }
+
     const verify = async () => {
       try {
-        const result = await api.auth.verifyEmail(token);
+        const result = await verifyEmailOnce(token);
         if (result.success) {
+          completedVerificationTokens.add(token);
+          verificationRequests.delete(token);
           // Backend returned user data + JWT cookie — log them in immediately.
           if (result.user?.id || result.user?.email) {
             let resolvedAvatar = result.user.avatar;
