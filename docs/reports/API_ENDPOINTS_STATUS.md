@@ -105,7 +105,7 @@
 - `GET /api/v1/chat/history/{otherUserId}` (`[Authorize]`)
 - `GET /api/v1/chat/presence/{otherUserId}` (`[Authorize]`)
 - `POST /api/v1/chat/send` (`[Authorize]`)
-- `POST /api/v1/chat/upload-image` (`[Authorize]`, multipart file upload)
+- `POST /api/v1/chat/send-image` (`[Authorize]`, atomic multipart upload and message send)
 - Realtime hub: `/chatHub`
 
 ### Search (`/api/v1/search`)

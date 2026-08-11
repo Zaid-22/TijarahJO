@@ -81,6 +81,7 @@ services:
       JWT_AUDIENCE: ${JWT_AUDIENCE:?Set JWT_AUDIENCE}
       ConnectionStrings__Redis: redis:6379,password=${REDIS_PASSWORD:?Set REDIS_PASSWORD}
       FileStorage__RootPath: /var/lib/tijarahjo/uploads
+      FileStorage__PrivateRootPath: /var/lib/tijarahjo/private-uploads
       FileStorage__PublicBasePath: /uploads
       FeatureFlags__EnableAiComparison: "true"
       FeatureFlags__RequireRedis: "true"
@@ -129,6 +130,7 @@ services:
       - backend
     volumes:
       - api_uploads:/var/lib/tijarahjo/uploads
+      - api_private_uploads:/var/lib/tijarahjo/private-uploads
       - ${GCP_VISION_CREDENTIALS_FILE:-/opt/tijarahjo/secrets/gcp-vision-sa.json}:/run/secrets/gcp-vision.json:ro
     expose:
       - "5033"
@@ -164,6 +166,7 @@ volumes:
   mssql_data:
   redis_data:
   api_uploads:
+  api_private_uploads:
 
 networks:
   frontend:

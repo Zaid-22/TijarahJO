@@ -29,25 +29,17 @@ public sealed class ChatOrchestrationService(
             return Failure<IReadOnlyList<ChatMessageEnvelope>>(ChatFailureReason.InvalidRequest, "Invalid chat user ID.");
         }
 
-        int? conversationId = await ResolveConversationIdForHistoryAsync(currentUserId, otherUserId, cancellationToken);
-        if (!conversationId.HasValue)
+        await _messages.MarkAsReadBetweenUsersAsync(currentUserId, otherUserId, cancellationToken);
+        IReadOnlyList<MessageModel> messages = await _messages.GetChatHistoryBetweenUsersAsync(
+            currentUserId, otherUserId, cancellationToken: cancellationToken);
+
+        foreach (int conversationId in messages.Select(message => message.ConversationId).Distinct())
         {
-            return new ChatServiceResult<IReadOnlyList<ChatMessageEnvelope>>
-            {
-                Success = true,
-                Value = []
-            };
+            await _notifications.MarkConversationAsReadAsync(
+                currentUserId, conversationId, cancellationToken);
         }
 
-        if (!await _messages.CanAccessConversationAsync(currentUserId, conversationId.Value, cancellationToken))
-        {
-            return Failure<IReadOnlyList<ChatMessageEnvelope>>(ChatFailureReason.Forbidden, "You do not have access to this conversation.");
-        }
-
-        await _messages.MarkAsReadAsync(conversationId.Value, currentUserId, cancellationToken);
-        await _notifications.MarkConversationAsReadAsync(currentUserId, conversationId.Value, cancellationToken);
-
-        IReadOnlyList<ChatMessageEnvelope> history = [.. (await _messages.GetChatHistoryAsync(conversationId.Value, cancellationToken: cancellationToken))
+        IReadOnlyList<ChatMessageEnvelope> history = [.. messages
             .Select(message => new ChatMessageEnvelope
             {
                 Message = message,
@@ -370,14 +362,6 @@ public sealed class ChatOrchestrationService(
             },
             cancellationToken
         );
-    }
-
-    private async Task<int?> ResolveConversationIdForHistoryAsync(
-        int currentUserId,
-        int otherUserId,
-        CancellationToken cancellationToken)
-    {
-        return await _messages.GetOrCreateConversationIdAsync(currentUserId, otherUserId, null, cancellationToken);
     }
 
     private async Task<(bool Resolved, int ReceiverId, int? PostId)> TryResolveReceiverAndPostAsync(

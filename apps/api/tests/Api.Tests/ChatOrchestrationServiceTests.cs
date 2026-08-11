@@ -61,15 +61,14 @@ public sealed class ChatOrchestrationServiceTests
     }
 
     [Fact]
-    public async Task GetHistoryAsync_ResolvesConversationAndReturnsHistory()
+    public async Task GetHistoryAsync_ReturnsMessagesAcrossAllPostScopedConversations()
     {
         var now = DateTime.UtcNow;
         var messages = new FakeMessageService
         {
-            CanAccessConversationResult = true,
-            NextConversationId = 55
+            CanAccessConversationResult = true
         };
-        messages.HistoryByConversationId[55] =
+        messages.HistoryBetweenUsersResult.AddRange(
         [
             new(
                 messageId: 2,
@@ -79,34 +78,43 @@ public sealed class ChatOrchestrationServiceTests
                 timestamp: now,
                 isRead: false,
                 receiverId: 10,
-                postId: 3)
-        ];
-        var service = CreateService(messages, new FakeNotificationService(), new FakePresenceLookup());
+                postId: 3),
+            new(
+                messageId: 3,
+                senderId: 10,
+                conversationId: 77,
+                content: "second listing",
+                timestamp: now.AddSeconds(1),
+                isRead: true,
+                receiverId: 22,
+                postId: 9)
+        ]);
+        var notifications = new FakeNotificationService();
+        var service = CreateService(messages, notifications, new FakePresenceLookup());
 
         ChatServiceResult<IReadOnlyList<ChatMessageEnvelope>> result = await service.GetHistoryAsync(10, 22);
 
         Assert.True(result.Success);
         Assert.NotNull(result.Value);
-        Assert.Single(result.Value!);
-        Assert.Equal(55, messages.LastGetChatHistoryConversationId);
-        Assert.Equal(55, messages.LastMarkAsReadConversationId);
-        Assert.Equal(1, messages.GetOrCreateConversationIdCalls);
+        Assert.Equal([55, 77], result.Value!.Select(item => item.Message.ConversationId));
+        Assert.Equal((10, 22), messages.LastHistoryBetweenUsersPair);
+        Assert.Equal((10, 22), messages.LastMarkAsReadBetweenUsersPair);
+        Assert.Equal([55, 77], notifications.MarkedConversationIds);
+        Assert.Equal(0, messages.GetOrCreateConversationIdCalls);
     }
 
     [Fact]
-    public async Task GetHistoryAsync_ReturnsEmptyWhenConversationCannotBeResolved()
+    public async Task GetHistoryAsync_ReturnsEmptyWithoutCreatingConversation()
     {
-        var messages = new FakeMessageService
-        {
-            NextConversationId = null
-        };
+        var messages = new FakeMessageService();
         var service = CreateService(messages, new FakeNotificationService(), new FakePresenceLookup());
 
         ChatServiceResult<IReadOnlyList<ChatMessageEnvelope>> result = await service.GetHistoryAsync(10, 22);
 
         Assert.True(result.Success);
         Assert.Empty(result.Value!);
-        Assert.Null(messages.LastGetChatHistoryConversationId);
+        Assert.Equal((10, 22), messages.LastHistoryBetweenUsersPair);
+        Assert.Equal(0, messages.GetOrCreateConversationIdCalls);
     }
 
     [Fact]
@@ -199,8 +207,11 @@ public sealed class ChatOrchestrationServiceTests
         public int SaveAsyncCalls { get; private set; }
         public int? LastGetChatHistoryConversationId { get; private set; }
         public int? LastMarkAsReadConversationId { get; private set; }
+        public (int CurrentUserId, int OtherUserId)? LastHistoryBetweenUsersPair { get; private set; }
+        public (int CurrentUserId, int OtherUserId)? LastMarkAsReadBetweenUsersPair { get; private set; }
         public List<MessageModel> RecentChatsResult { get; } = [];
         public Dictionary<int, List<MessageModel>> HistoryByConversationId { get; } = [];
+        public List<MessageModel> HistoryBetweenUsersResult { get; } = [];
 
         public Task<int?> GetOrCreateConversationIdAsync(int userA, int userB, int? postId = null, CancellationToken cancellationToken = default)
         {
@@ -231,9 +242,29 @@ public sealed class ChatOrchestrationServiceTests
             return Task.FromResult(new List<MessageModel>(RecentChatsResult));
         }
 
+        public Task<List<MessageModel>> GetChatHistoryBetweenUsersAsync(
+            int currentUserId,
+            int otherUserId,
+            int pageNumber = 1,
+            int pageSize = 50,
+            CancellationToken cancellationToken = default)
+        {
+            LastHistoryBetweenUsersPair = (currentUserId, otherUserId);
+            return Task.FromResult(new List<MessageModel>(HistoryBetweenUsersResult));
+        }
+
         public Task<bool> MarkAsReadAsync(int conversationId, int receiverId, CancellationToken cancellationToken = default)
         {
             LastMarkAsReadConversationId = conversationId;
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> MarkAsReadBetweenUsersAsync(
+            int currentUserId,
+            int otherUserId,
+            CancellationToken cancellationToken = default)
+        {
+            LastMarkAsReadBetweenUsersPair = (currentUserId, otherUserId);
             return Task.FromResult(true);
         }
 
@@ -254,6 +285,8 @@ public sealed class ChatOrchestrationServiceTests
 
     private sealed class FakeNotificationService : INotificationService
     {
+        public List<int> MarkedConversationIds { get; } = [];
+
         public Task<NotificationEnvelope?> CreateChatMessageNotificationAsync(
             int receiverUserId,
             int senderUserId,
@@ -281,7 +314,10 @@ public sealed class ChatOrchestrationServiceTests
             => Task.FromResult(0);
 
         public Task<int> MarkConversationAsReadAsync(int userId, int conversationId, CancellationToken cancellationToken = default)
-            => Task.FromResult(0);
+        {
+            MarkedConversationIds.Add(conversationId);
+            return Task.FromResult(0);
+        }
 
         public Task UpsertPushSubscriptionAsync(
             int userId,

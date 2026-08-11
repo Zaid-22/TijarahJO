@@ -179,8 +179,20 @@ public interface IMessageService
     Task<bool> CanAccessConversationAsync(int userId, int conversationId, CancellationToken cancellationToken = default);
     Task<ConversationAccessMetadata?> GetConversationMetadataAsync(int conversationId, CancellationToken cancellationToken = default);
     Task<List<MessageModel>> GetChatHistoryAsync(int conversationId, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
+    Task<List<MessageModel>> GetChatHistoryBetweenUsersAsync(
+        int userA,
+        int userB,
+        int pageNumber = 1,
+        int pageSize = 50,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(new List<MessageModel>());
     Task<List<MessageModel>> GetRecentChatsAsync(int userId, CancellationToken cancellationToken = default);
     Task<bool> MarkAsReadAsync(int conversationId, int receiverId, CancellationToken cancellationToken = default);
+    Task<bool> MarkAsReadBetweenUsersAsync(
+        int currentUserId,
+        int otherUserId,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
     Message Create(MessageModel model);
     Task<bool> SaveAsync(Message message, CancellationToken cancellationToken = default);
 }

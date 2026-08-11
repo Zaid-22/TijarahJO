@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using TijarahJo.Api.Common.Configuration;
 using TijarahJo.Api.Common.Services;
+using TijarahJo.Api.Contracts.Requests;
 using TijarahJo.Api.Contracts.Responses;
 using TijarahJo.Api.Features.Chat;
 using TijarahJo.Application.Abstractions.Services;
@@ -105,6 +106,97 @@ public sealed class ChatControllerDownloadImageTests
         await fileResult.FileStream.DisposeAsync();
     }
 
+    [Fact]
+    public async Task SendImage_DeletesSavedFile_WhenMessagePersistenceFails()
+    {
+        using var harness = new DownloadImageHarness();
+        var chat = new FakeChatOrchestrationService
+        {
+            SendResult = new ChatServiceResult<SendChatMessageOutcome>
+            {
+                Success = false,
+                FailureReason = ChatFailureReason.PersistenceFailed,
+                Message = "Message persistence failed."
+            }
+        };
+        var storage = new TrackingPostImageStorageService();
+        var realtime = new TrackingRealtimeDeliveryService();
+        ChatController controller = harness.CreateSendImageController(chat, storage, realtime);
+        using var imageStream = new MemoryStream([1, 2, 3]);
+
+        ActionResult<MessageResponseDTO> result = await controller.SendImage(
+            new UploadChatImageRequest
+            {
+                File = new FormFile(imageStream, 0, imageStream.Length, "File", "sample.png"),
+                ReceiverId = 9,
+                PostId = 3
+            },
+            CancellationToken.None);
+
+        Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal([storage.StoredFile.PublicUrl], storage.DeletedUrls);
+        Assert.Equal(0, realtime.Deliveries);
+    }
+
+    [Fact]
+    public async Task SendImage_ReturnsPersistedMessage_AndRetainsSavedFile()
+    {
+        using var harness = new DownloadImageHarness();
+        var chat = new FakeChatOrchestrationService
+        {
+            SendResultFactory = command =>
+            {
+                var message = new MessageModel(
+                    messageId: 321,
+                    senderId: command.SenderUserId,
+                    conversationId: command.ConversationId!.Value,
+                    content: command.Content!,
+                    timestamp: DateTime.UtcNow,
+                    isRead: false,
+                    receiverId: command.ReceiverId,
+                    postId: command.PostId);
+                return new ChatServiceResult<SendChatMessageOutcome>
+                {
+                    Success = true,
+                    Value = new SendChatMessageOutcome
+                    {
+                        ConversationId = command.ConversationId.Value,
+                        ReceiverId = command.ReceiverId!.Value,
+                        PostId = command.PostId,
+                        Message = new ChatMessageEnvelope
+                        {
+                            Message = message,
+                            ReceiverId = command.ReceiverId.Value,
+                            PostId = command.PostId
+                        }
+                    }
+                };
+            }
+        };
+        var storage = new TrackingPostImageStorageService();
+        var realtime = new TrackingRealtimeDeliveryService();
+        ChatController controller = harness.CreateSendImageController(chat, storage, realtime);
+        using var imageStream = new MemoryStream([1, 2, 3]);
+
+        ActionResult<MessageResponseDTO> result = await controller.SendImage(
+            new UploadChatImageRequest
+            {
+                File = new FormFile(imageStream, 0, imageStream.Length, "File", "sample.png"),
+                ReceiverId = 9,
+                PostId = 3,
+                Caption = "  condition looks good  "
+            },
+            CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<MessageResponseDTO>(ok.Value);
+        Assert.Equal(321, response.MessageId);
+        Assert.StartsWith("[chat-image] /api/v1/chat/download-image?", response.Content, StringComparison.Ordinal);
+        Assert.EndsWith("\ncondition looks good", response.Content, StringComparison.Ordinal);
+        Assert.Empty(storage.DeletedUrls);
+        Assert.Equal(1, realtime.Deliveries);
+    }
+
     private static string SignChatImagePath(string storedPath, int conversationId)
     {
         byte[] signingKey = SHA256.HashData(
@@ -136,6 +228,37 @@ public sealed class ChatControllerDownloadImageTests
                 new FakeMessageService(canAccessConversation),
                 new NoopRealtimeDeliveryService(),
                 new NoopPostImageStorageService(),
+                new NoopImageModerationService(),
+                new FakeWebHostEnvironment(_root),
+                Options.Create(_fileStorageOptions),
+                new JwtOptions { SigningKey = SigningKey },
+                NullLogger<ChatController>.Instance)
+            {
+                ControllerContext = new ControllerContext
+                {
+                    HttpContext = httpContext
+                }
+            };
+        }
+
+        public ChatController CreateSendImageController(
+            FakeChatOrchestrationService chat,
+            TrackingPostImageStorageService storage,
+            TrackingRealtimeDeliveryService realtime)
+        {
+            var httpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(
+                    [new Claim(ClaimTypes.NameIdentifier, "5")],
+                    "UnitTest"))
+            };
+            httpContext.Request.Host = new HostString("localhost");
+
+            return new ChatController(
+                chat,
+                new FakeMessageService(canAccessConversation: true),
+                realtime,
+                storage,
                 new NoopImageModerationService(),
                 new FakeWebHostEnvironment(_root),
                 Options.Create(_fileStorageOptions),
@@ -193,6 +316,9 @@ public sealed class ChatControllerDownloadImageTests
 
     private sealed class FakeChatOrchestrationService : IChatOrchestrationService
     {
+        public ChatServiceResult<SendChatMessageOutcome>? SendResult { get; init; }
+        public Func<SendChatMessageCommand, ChatServiceResult<SendChatMessageOutcome>>? SendResultFactory { get; init; }
+
         public Task<ChatServiceResult<IReadOnlyList<ChatMessageEnvelope>>> GetHistoryAsync(int currentUserId, int otherUserId, CancellationToken cancellationToken = default)
             => Task.FromResult(new ChatServiceResult<IReadOnlyList<ChatMessageEnvelope>> { Success = true, Value = [] });
 
@@ -207,7 +333,10 @@ public sealed class ChatControllerDownloadImageTests
             });
 
         public Task<ChatServiceResult<SendChatMessageOutcome>> SendMessageAsync(SendChatMessageCommand command, CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
+            => Task.FromResult(
+                SendResultFactory?.Invoke(command) ??
+                SendResult ??
+                throw new NotSupportedException());
 
         public Task<ChatServiceResult<SendChatMessageOutcome>> SendRealtimeMessageAsync(SendRealtimeChatMessageCommand command, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
@@ -217,6 +346,20 @@ public sealed class ChatControllerDownloadImageTests
     {
         public Task DeliverToReceiverAsync(int receiverUserId, MessageResponseDTO messagePayload, NotificationResponseDTO? notificationPayload, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
+
+        public Task DeliverReadReceiptAsync(int senderUserId, int conversationId, int readerUserId, int lastReadMessageId, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+    }
+
+    private sealed class TrackingRealtimeDeliveryService : IChatRealtimeDeliveryService
+    {
+        public int Deliveries { get; private set; }
+
+        public Task DeliverToReceiverAsync(int receiverUserId, MessageResponseDTO messagePayload, NotificationResponseDTO? notificationPayload, CancellationToken cancellationToken = default)
+        {
+            Deliveries++;
+            return Task.CompletedTask;
+        }
 
         public Task DeliverReadReceiptAsync(int senderUserId, int conversationId, int readerUserId, int lastReadMessageId, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
@@ -235,6 +378,31 @@ public sealed class ChatControllerDownloadImageTests
             => throw new NotSupportedException();
         public Task DeleteByPublicUrlAsync(string publicUrl, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
+    }
+
+    private sealed class TrackingPostImageStorageService : IPostImageFileStorageService
+    {
+        public StoredPostImageFile StoredFile { get; } = new(
+            "/private/chat-images/stored.webp",
+            "stored.webp",
+            3,
+            "image/webp");
+        public List<string> DeletedUrls { get; } = [];
+
+        public void ValidateFileOrThrow(IFormFile file) { }
+        public Task<StoredPostImageFile> SaveAsync(IFormFile file, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+        public Task<StoredPostImageFile> SaveChatImageAsync(IFormFile file, CancellationToken cancellationToken = default)
+            => Task.FromResult(StoredFile);
+        public Task<StoredPostImageFile> SaveUserAvatarAsync(IFormFile file, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+        public Task<StoredPostImageFile> SaveReportImageAsync(IFormFile file, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+        public Task DeleteByPublicUrlAsync(string publicUrl, CancellationToken cancellationToken = default)
+        {
+            DeletedUrls.Add(publicUrl);
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class NoopImageModerationService : IImageModerationService

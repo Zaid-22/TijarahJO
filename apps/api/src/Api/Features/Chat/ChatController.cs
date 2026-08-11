@@ -115,10 +115,11 @@ public class ChatController(
         List<MessageResponseDTO> response = [.. result.Value
             .Select(item => DTOMapper.ToMessageResponseDTO(item.Message, item.ReceiverId, item.PostId))];
 
-        if (response.Count > 0)
+        foreach (IGrouping<int, MessageResponseDTO> conversation in response
+                     .Where(message => message.ConversationId > 0)
+                     .GroupBy(message => message.ConversationId))
         {
-            int conversationId = response[0].ConversationId;
-            int lastReadMessageId = response
+            int lastReadMessageId = conversation
                 .Where(message =>
                     message.SenderId == otherUserId &&
                     message.ReceiverId == currentUserId &&
@@ -127,11 +128,11 @@ public class ChatController(
                 .DefaultIfEmpty(0)
                 .Max();
 
-            if (conversationId > 0 && lastReadMessageId > 0)
+            if (lastReadMessageId > 0)
             {
                 await _realtimeDelivery.DeliverReadReceiptAsync(
                     otherUserId,
-                    conversationId,
+                    conversation.Key,
                     currentUserId,
                     lastReadMessageId,
                     cancellationToken);
@@ -231,11 +232,13 @@ public class ChatController(
         return Ok(dto);
     }
 
-    [HttpPost("upload-image")]
+    [HttpPost("send-image")]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<ChatImageUploadResponseDTO>> UploadImage(
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<ActionResult<MessageResponseDTO>> SendImage(
         [FromForm] UploadChatImageRequest request,
         CancellationToken cancellationToken)
     {
@@ -302,10 +305,55 @@ public class ChatController(
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: ex.Message);
         }
 
-        return Ok(new ChatImageUploadResponseDTO
+        bool messagePersisted = false;
+        try
         {
-            Url = BuildChatImageDownloadUrl(storedFile.PublicUrl, conversationId.Value)
-        });
+            string imageUrl = BuildChatImageDownloadUrl(storedFile.PublicUrl, conversationId.Value);
+            string caption = request.Caption?.Trim() ?? string.Empty;
+            string content = string.IsNullOrEmpty(caption)
+                ? $"[chat-image] {imageUrl}"
+                : $"[chat-image] {imageUrl}\n{caption}";
+
+            ChatServiceResult<SendChatMessageOutcome> result = await _chat.SendMessageAsync(
+                new SendChatMessageCommand
+                {
+                    SenderUserId = currentUserId,
+                    ConversationId = conversationId.Value,
+                    ReceiverId = request.ReceiverId.Value,
+                    PostId = request.PostId,
+                    Content = content
+                },
+                cancellationToken);
+
+            if (!result.Success || result.Value == null)
+            {
+                return this.ToChatProblem(result, "Chat image could not be sent.");
+            }
+
+            messagePersisted = true;
+            SendChatMessageOutcome outcome = result.Value;
+            MessageResponseDTO dto = DTOMapper.ToMessageResponseDTO(
+                outcome.Message.Message, outcome.ReceiverId, outcome.PostId);
+            NotificationResponseDTO? notificationPayload = outcome.Notification is null
+                ? null
+                : DTOMapper.ToNotificationResponseDTO(outcome.Notification);
+
+            await _realtimeDelivery.DeliverToReceiverAsync(
+                outcome.ReceiverId,
+                dto,
+                notificationPayload,
+                cancellationToken);
+
+            return Ok(dto);
+        }
+        finally
+        {
+            if (!messagePersisted)
+            {
+                await _postImageStorage.DeleteByPublicUrlAsync(
+                    storedFile.PublicUrl, CancellationToken.None);
+            }
+        }
     }
 
     [HttpGet("download-image")]

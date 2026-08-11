@@ -33,8 +33,20 @@ public interface IMessageDataAccess
 {
     Task<int> AddMessageAsync(MessageModel message, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<MessageModel>> GetChatHistoryAsync(int conversationId, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<MessageModel>> GetChatHistoryBetweenUsersAsync(
+        int userA,
+        int userB,
+        int pageNumber = 1,
+        int pageSize = 50,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<MessageModel>>([]);
     Task<IReadOnlyList<MessageModel>> GetRecentChatsAsync(int userId, CancellationToken cancellationToken = default);
     Task<bool> MarkMessagesAsReadAsync(int conversationId, int receiverId, CancellationToken cancellationToken = default);
+    Task<bool> MarkMessagesAsReadBetweenUsersAsync(
+        int currentUserId,
+        int otherUserId,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
 }
 
 public sealed class ConversationMetadataModel

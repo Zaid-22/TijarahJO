@@ -154,7 +154,7 @@
 
   - [x] Post images: `PostImagesController.cs` → `[HttpPost("upload")]` with `[FromForm]`
   - [x] User avatars: `UsersController.cs` → `UploadAvatar` endpoint
-  - [x] Chat images: `ChatController.cs` → `[HttpPost("upload-image")]`
+  - [x] Chat images: `ChatController.cs` -> `[HttpPost("send-image")]` (atomic upload + message persistence)
   - [x] File type validation (allowed extensions configured)
   - [x] File size validation (max 10MB configurable via `MaxPostImageBytes`)
 

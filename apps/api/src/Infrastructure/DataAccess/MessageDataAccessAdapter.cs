@@ -68,6 +68,37 @@ public sealed class MessageDataAccessAdapter(TijarahJoDbContext dbContext) : IMe
             .Select(item => ToModel(item, metadata?.PostID))];
     }
 
+    public async Task<IReadOnlyList<MessageModel>> GetChatHistoryBetweenUsersAsync(
+        int userA,
+        int userB,
+        int pageNumber = 1,
+        int pageSize = 50,
+        CancellationToken cancellationToken = default)
+    {
+        int user1Id = Math.Min(userA, userB);
+        int user2Id = Math.Max(userA, userB);
+        int safePage = Math.Max(1, pageNumber);
+        int safeSize = Math.Clamp(pageSize, 1, 200);
+
+        var rows = await (
+            from message in dbContext.Messages.AsNoTracking()
+            join conversation in dbContext.Conversations.AsNoTracking()
+                on message.ConversationID equals conversation.ConversationID
+            where conversation.User1ID == user1Id && conversation.User2ID == user2Id
+            orderby message.CreatedAt descending, message.MessageID descending
+            select new
+            {
+                Message = message,
+                conversation.PostID
+            })
+            .Skip((safePage - 1) * safeSize)
+            .Take(safeSize)
+            .ToListAsync(cancellationToken);
+
+        rows.Reverse();
+        return [.. rows.Select(row => ToModel(row.Message, row.PostID))];
+    }
+
     /// <summary>
     /// Returns the most recent message per conversation for a given user.
     /// Uses a window function (ROW_NUMBER) over the Conversations table.
@@ -162,6 +193,30 @@ ORDER BY CreatedAt DESC, MessageID DESC;";
                 item.SenderID != receiverId &&
                 !item.IsRead)
             .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.IsRead, true), cancellationToken);
+        return updatedRows > 0;
+    }
+
+    public async Task<bool> MarkMessagesAsReadBetweenUsersAsync(
+        int currentUserId,
+        int otherUserId,
+        CancellationToken cancellationToken = default)
+    {
+        int user1Id = Math.Min(currentUserId, otherUserId);
+        int user2Id = Math.Max(currentUserId, otherUserId);
+        IQueryable<int> conversationIds = dbContext.Conversations
+            .Where(c => c.User1ID == user1Id && c.User2ID == user2Id)
+            .Select(c => c.ConversationID);
+
+        int updatedRows = await dbContext.Messages
+            .Where(message =>
+                conversationIds.Contains(message.ConversationID) &&
+                message.SenderID == otherUserId &&
+                message.ReceiverID == currentUserId &&
+                !message.IsRead)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(message => message.IsRead, true),
+                cancellationToken);
+
         return updatedRows > 0;
     }
 

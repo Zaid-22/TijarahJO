@@ -4812,12 +4812,12 @@
         }
       }
     },
-    "/api/v1/chat/upload-image": {
+    "/api/v1/chat/send-image": {
       "post": {
         "tags": [
           "Chat"
         ],
-        "operationId": "UploadImage",
+        "operationId": "SendImage",
         "requestBody": {
           "content": {
             "multipart/form-data": {
@@ -4833,17 +4833,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ChatImageUploadResponseDTO"
+                  "$ref": "#/components/schemas/MessageResponseDTO"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ChatImageUploadResponseDTO"
+                  "$ref": "#/components/schemas/MessageResponseDTO"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ChatImageUploadResponseDTO"
+                  "$ref": "#/components/schemas/MessageResponseDTO"
                 }
               }
             }
@@ -8822,14 +8822,20 @@
           "File": {
             "type": "string",
             "format": "binary"
-          }
-        },
-        "additionalProperties": false
-      },
-      "ChatImageUploadResponseDTO": {
-        "type": "object",
-        "properties": {
-          "Url": {
+          },
+          "ReceiverId": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1
+          },
+          "PostId": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "nullable": true
+          },
+          "Caption": {
+            "maxLength": 3500,
             "type": "string",
             "nullable": true
           }
