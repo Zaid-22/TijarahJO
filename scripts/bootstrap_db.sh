@@ -339,6 +339,9 @@ GRANT SELECT ON dbo.UserStatusLookup TO [tijarahjo_app_runtime];
 GRANT SELECT ON dbo.PostStatusLookup TO [tijarahjo_app_runtime];
 GRANT SELECT ON dbo.PostComments TO [tijarahjo_app_runtime];
 
+-- Challenge-backed auth flows use compare-and-swap updates and single-use deletes.
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.VerificationChallenges TO [tijarahjo_app_runtime];
+
 GRANT INSERT, UPDATE ON dbo.Users TO [tijarahjo_app_runtime];
 GRANT INSERT, UPDATE ON dbo.Categories TO [tijarahjo_app_runtime];
 GRANT INSERT, UPDATE ON dbo.Posts TO [tijarahjo_app_runtime];

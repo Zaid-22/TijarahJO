@@ -37,4 +37,27 @@ if [[ ! -f "$ROOT_DIR/.env" && ! -f "$ROOT_DIR/infra/.env" ]]; then
   exit 1
 fi
 
+# The web service shares this external network with the host reverse proxy.
+# Compose will not create an external network, so make the wrapper's `up`
+# path self-contained on a fresh host.
+if [[ "${1:-}" == "up" || "${1:-}" == "deploy" ]]; then
+  EDGE_NETWORK_NAME="${EDGE_NETWORK_NAME:-edge}"
+  export EDGE_NETWORK_NAME
+  if ! docker network inspect "$EDGE_NETWORK_NAME" >/dev/null 2>&1; then
+    echo "Creating external reverse-proxy network '$EDGE_NETWORK_NAME'..."
+    docker network create "$EDGE_NETWORK_NAME" >/dev/null
+  fi
+fi
+
+if [[ "${1:-}" == "deploy" ]]; then
+  shift
+  echo "Building production application images..."
+  docker compose -f infra/docker-compose.production.yml build api web
+  echo "Starting production data services..."
+  docker compose -f infra/docker-compose.production.yml up -d sqlserver redis
+  "$ROOT_DIR/scripts/migrate-production-db.sh"
+  echo "Updating production application services..."
+  exec docker compose -f infra/docker-compose.production.yml up -d --no-build "$@" api web
+fi
+
 exec docker compose -f infra/docker-compose.production.yml "$@"

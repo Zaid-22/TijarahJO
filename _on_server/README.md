@@ -24,6 +24,21 @@ cp .env.example .env   # first time only
 
 `.env` is **gitignored**. Never commit it.
 
+**Existing installations upgrading to this release:** `git pull` does not
+update the ignored `_on_server/.env`. Before deploying, merge these settings
+from `.env.example` and replace the placeholders with a live Resend key and a
+verified sender:
+
+```bash
+EmailVerification__Enabled=true
+EmailVerification__ResendApiKey=re_CHANGE_ME_RESEND_API_KEY
+EmailVerification__FromAddress=security@tijarahjo.online
+EmailVerification__FromName="TijarahJo"
+```
+
+Production startup rejects missing or placeholder email-verification delivery
+settings, so update `_on_server/.env` before running `apply.sh` and `deploy`.
+
 ### 2. Apply to project root
 
 **On Linux / VPS:**
@@ -39,19 +54,29 @@ chmod +x _on_server/apply.sh scripts/compose-production.sh
 .\_on_server\apply.ps1
 ```
 
-### 3. Deploy (from repo root)
+### 3. First installation only (destructive)
 
 ```bash
-./scripts/bootstrap_db.sh --sql-only --with-sample-posts   # first time only (no dotnet on VPS)
-./scripts/compose-production.sh up -d --build
+./scripts/bootstrap_db.sh --sql-only --no-verify
+./scripts/compose-production.sh deploy
 ```
 
-Equivalent manual form:
+`bootstrap_db.sh` recreates `TijarahJoDB`. Never run it against an installation
+that contains production data.
+
+### 4. Routine deployment (non-destructive)
 
 ```bash
-set -a && source .env && set +a
-docker compose -f infra/docker-compose.production.yml up -d --build
+git pull
+./_on_server/apply.sh
+./scripts/compose-production.sh deploy
 ```
+
+`deploy` creates the configured external edge network when missing, proves the
+API and web images build, starts SQL Server and Redis, applies only pending
+migrations with a verified backup, then updates the application containers
+from those images. Do not replace it with a direct `docker compose up` during
+an application upgrade.
 
 See `docs/setup/PRODUCTION_DEPLOYMENT_DOCKER.md` for TLS and full steps.
 
@@ -61,7 +86,7 @@ See `docs/setup/PRODUCTION_DEPLOYMENT_DOCKER.md` for TLS and full steps.
 cd /opt/tijarahjo   # or /var/www/tijarahjo
 git pull
 ./_on_server/apply.sh
-./scripts/compose-production.sh up -d --build
+./scripts/compose-production.sh deploy
 ```
 
 Alternatively, copy only `_on_server/.env` with `scp` and rename to `.env` at repo root, then run `apply.sh` once to refresh `infra/.env`.
@@ -73,6 +98,8 @@ Alternatively, copy only `_on_server/.env` with `scp` and rename to `.env` at re
 - [ ] Google OAuth redirect URIs include `https://tijarahjo.online/...`
 - [ ] `GCP_VISION_CREDENTIALS_FILE` points to a service account JSON on the host and Cloud Vision API is enabled (chat/post image uploads fail with 503 otherwise)
 - [ ] Resend sender domain verified if using custom `FromAddress`
+- [ ] `EmailVerification__Enabled=true` and `EmailVerification__ResendApiKey` contains a live Resend key
+- [ ] The reverse-proxy container is attached to `EDGE_NETWORK_NAME` (default: `edge`)
 - [ ] Quote any `.env` value that contains spaces (e.g. `FromName="TijarahJo Security"`)
 - [ ] `ALLOWED_HOSTS` uses **semicolons** (`tijarahjo.online;www.tijarahjo.online`), not commas — commas cause every API request to return 400 Invalid Hostname
 
@@ -136,7 +163,7 @@ nano .env   # set a strong MSSQL_SA_PASSWORD (e.g. TijarahJo_Sa2026!)
 ./scripts/compose-production.sh down
 docker volume rm infra_mssql_data
 ./scripts/bootstrap_db.sh --sql-only --with-sample-posts
-./scripts/compose-production.sh up -d --build
+./scripts/compose-production.sh deploy
 ```
 
 ### API requests return 429 Too Many Requests
@@ -159,7 +186,7 @@ FeatureFlags__EnableRateLimiting=false
 ```bash
 git pull
 ./_on_server/apply.sh
-./scripts/compose-production.sh up -d --build api web
+./scripts/compose-production.sh deploy
 ```
 
 After redeploying the web container, hard-refresh the browser (or unregister the old service worker in DevTools → Application → Service Workers) so the updated SW stops intercepting API calls.

@@ -24,6 +24,16 @@ Set at least:
 - `ALLOWED_HOSTS`
 - `TwoFactor__SecretEncryptionKey`
 - `TwoFactor__ChallengeSigningKey`
+- `EmailVerification__Enabled=true`
+- `EmailVerification__ResendApiKey`
+- `EmailVerification__FromAddress`
+
+For an existing installation, add these `EmailVerification__*` settings to the
+ignored `_on_server/.env` before the first deployment of this release. A
+`git pull` updates only `.env.example`; it does not update the live secrets
+file. Use a live Resend key and a verified sender, then run
+`./_on_server/apply.sh` before `deploy`. Production startup fails closed when
+email-verification delivery is missing or still contains a placeholder.
 
 Set these when the related feature is enabled:
 
@@ -33,7 +43,9 @@ Set these when the related feature is enabled:
 - `PasswordResetEmail__ResendApiKey` when password reset email is enabled
 - `EmailTwoFactor__ResendApiKey` when email 2FA is enabled
 
-Provision the app database login before starting the API container. The normal path is to run the existing database bootstrap/provisioning workflow with `DB_RUNTIME_PRINCIPAL=app`, `DB_APP_LOGIN`, and `DB_APP_PASSWORD`, then use the same app login values in `infra/docker-compose.production.yml`.
+Provision the app database login before starting the API container. Use
+`bootstrap_db.sh --sql-only` only for the first installation; it recreates the
+database. Existing installations must use the forward-only deployment command.
 
 ## 2. Build and Run
 
@@ -41,15 +53,23 @@ From repo root (after `./_on_server/apply.sh` so `infra/.env` exists):
 
 ```bash
 chmod +x scripts/compose-production.sh
-./scripts/compose-production.sh up -d --build
+chmod +x scripts/migrate-production-db.sh
+./scripts/compose-production.sh deploy
 ```
 
-Manual equivalent:
+The `deploy` command is the routine release entrypoint. It first builds the API
+and web images, starts SQL Server and Redis, applies only pending migrations
+after a verified backup, and then updates the application services without
+rebuilding. A failed image build therefore leaves the database untouched.
+
+For an intentional first installation with an empty environment:
 
 ```bash
-set -a && source .env && set +a
-docker compose -f infra/docker-compose.production.yml up -d --build
+./scripts/bootstrap_db.sh --sql-only --no-verify
+./scripts/compose-production.sh deploy
 ```
+
+Never run `bootstrap_db.sh` against an existing production database.
 
 Do **not** pass `--project-directory .` — it breaks build `context: ..` (`lstat /opt/apps`).
 
@@ -72,6 +92,8 @@ Build/runtime notes:
 - For standalone frontend builds, set `VITE_API_BASE_URL=https://tijarahjo.online/api/v1`
 - The API container listens on `5033`
 - The API container stores uploaded files under `/var/lib/tijarahjo/uploads`
+- SQL Server is not published on host port `1433`; administer it with `docker exec` or an explicitly secured tunnel.
+- The wrapper creates `EDGE_NETWORK_NAME` (default `edge`). Attach the reverse proxy to the same Docker network.
 
 ## 3. Uploaded Files
 
@@ -83,14 +105,29 @@ The API serves them from:
 
 - `/uploads/post-images/<filename>`
 
-## 4. Auth and Session Notes
+Private chat and report evidence is persisted separately in
+`api_private_uploads`, mounted at `/var/lib/tijarahjo/private-uploads`. It is not
+served as a public static-file root.
+
+## 4. Database Migrations
+
+`scripts/migrate-production-db.sh` reads `dbo.SchemaMigrations`, recognizes both
+historical filename forms (with and without `.sql`), and applies only pending
+files in lexical order. Before changing the schema it writes and verifies a
+copy-only backup under `/var/opt/mssql/backups` in the persistent SQL volume.
+Copy these backups off-host according to the production retention policy.
+
+Use `./scripts/migrate-production-db.sh --check` to list pending migrations.
+`--skip-backup` is available only for an explicitly managed backup window.
+
+## 5. Auth and Session Notes
 
 - Runtime auth is cookie-backed JWT authentication
 - Session recovery is supported through `/api/v1/auth/refresh`
 - `JWT_SIGNING_KEY` must be set before startup
 - Compose wires the API to SQL Server using the least-privilege app login via `DATABASE_CONNECTION_STRING`; `sa` is only for SQL Server bootstrap/provisioning.
 
-## 5. Notes
+## 6. Notes
 
 - This compose profile is a production baseline, not a full platform setup (TLS, external managed DB/Redis, backup policy, secrets manager).
 - AI comparison sends listing name, price, category, description, city, and view metadata to Gemini when `FeatureFlags__EnableAiComparison=true` and `Gemini__ApiKey` is configured.

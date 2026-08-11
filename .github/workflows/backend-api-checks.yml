@@ -6,6 +6,9 @@ on:
     paths:
       - "scripts/**"
       - "infra/docker-compose.yml"
+      - "infra/docker-compose.production.yml"
+      - "infra/.env.example"
+      - "_on_server/**"
       - "apps/api/**"
       - "apps/web/tests/frontend_api_contract.sh"
       - ".github/workflows/backend-api-checks.yml"
@@ -15,6 +18,9 @@ on:
     paths:
       - "scripts/**"
       - "infra/docker-compose.yml"
+      - "infra/docker-compose.production.yml"
+      - "infra/.env.example"
+      - "_on_server/**"
       - "apps/api/**"
       - "apps/web/tests/frontend_api_contract.sh"
       - ".github/workflows/backend-api-checks.yml"
@@ -58,6 +64,13 @@ jobs:
         run: |
           chmod +x ./scripts/check_structure.sh
           ./scripts/check_structure.sh
+
+      - name: Validate production deployment contract
+        run: |
+          chmod +x ./scripts/compose-production.sh
+          chmod +x ./scripts/migrate-production-db.sh
+          chmod +x ./scripts/tests/production-deployment-contract.sh
+          ./scripts/tests/production-deployment-contract.sh
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4

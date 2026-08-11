@@ -1,11 +1,9 @@
-# Run from repo root: ./scripts/compose-production.sh up -d --build
+# Deploy from repo root: ./scripts/compose-production.sh deploy
 # Or: set -a && source .env && set +a && docker compose -f infra/docker-compose.production.yml ...
 # Do not pass --project-directory . — build context ".." is resolved from the project dir and breaks (lstat /opt/apps).
 services:
   sqlserver:
     container_name: tijarahjo-db
-    ports:
-      - "1433:1433"
     image: mcr.microsoft.com/mssql/server:2022-latest
     restart: unless-stopped
     environment:
@@ -102,8 +100,8 @@ services:
       PasswordResetEmail__FromAddress: ${PasswordResetEmail__FromAddress:-security@tijarahjo.online}
       PasswordResetEmail__FromName: ${PasswordResetEmail__FromName:-TijarahJo Security}
       PasswordResetEmail__LogCodesWhenEmailDisabled: ${PasswordResetEmail__LogCodesWhenEmailDisabled:-false}
-      EmailVerification__Enabled: ${EmailVerification__Enabled:-false}
-      EmailVerification__ResendApiKey: ${EmailVerification__ResendApiKey:-}
+      EmailVerification__Enabled: ${EmailVerification__Enabled:?Set EmailVerification__Enabled=true}
+      EmailVerification__ResendApiKey: ${EmailVerification__ResendApiKey:?Set EmailVerification__ResendApiKey}
       EmailVerification__FromAddress: ${EmailVerification__FromAddress:-security@tijarahjo.online}
       EmailVerification__FromName: ${EmailVerification__FromName:-TijarahJo}
       EmailVerification__LogTokensWhenEmailDisabled: ${EmailVerification__LogTokensWhenEmailDisabled:-false}
@@ -174,4 +172,5 @@ networks:
   backend:
     driver: bridge
   edge:
+    name: ${EDGE_NETWORK_NAME:-edge}
     external: true

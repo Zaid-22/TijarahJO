@@ -42,7 +42,11 @@ builder.Services.Configure<PasswordResetOptions>(builder.Configuration.GetSectio
 builder.Services.Configure<PasswordResetEmailOptions>(builder.Configuration.GetSection("PasswordResetEmail"));
 builder.Services.Configure<TwoFactorOptions>(builder.Configuration.GetSection("TwoFactor"));
 builder.Services.Configure<EmailTwoFactorOptions>(builder.Configuration.GetSection("EmailTwoFactor"));
-builder.Services.Configure<EmailVerificationOptions>(builder.Configuration.GetSection("EmailVerification"));
+builder.Services.AddOptions<EmailVerificationOptions>()
+    .Bind(builder.Configuration.GetSection("EmailVerification"))
+    .ValidateOnStart();
+builder.Services.AddSingleton<IValidateOptions<EmailVerificationOptions>>(
+    new EmailVerificationOptionsValidator(builder.Environment.IsProduction()));
 builder.Services.Configure<AccountLockoutOptions>(builder.Configuration.GetSection("AccountLockout"));
 builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
 builder.Services.Configure<YouTubeSettings>(builder.Configuration.GetSection("YouTube"));

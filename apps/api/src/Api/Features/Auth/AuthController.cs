@@ -179,6 +179,13 @@ public class AuthController(
                 result.User.UserID.Value,
                 verificationResult.FailureReason
             );
+
+            return StatusCode(StatusCodes.Status201Created, new AuthResponse
+            {
+                Success = true,
+                RequiresEmailVerification = true,
+                Message = "Account created, but the verification email could not be delivered. Use resend verification to try again."
+            });
         }
 
         return StatusCode(StatusCodes.Status201Created, new AuthResponse

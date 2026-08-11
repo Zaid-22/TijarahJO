@@ -7,6 +7,8 @@ Canonical operational entrypoints for local development and verification.
 - `./scripts/check_structure.sh`: enforce path conventions and stale-path checks
 - `./scripts/run-dev.sh`: run backend + frontend locally
 - `./scripts/bootstrap_db.sh`: rebuild DB, start backend, optional full API verification
+- `./scripts/migrate-production-db.sh`: back up an existing production database and apply only pending tracked migrations
+- `./scripts/compose-production.sh deploy`: build API/web images, start data services, apply pending migrations, then update the application services without rebuilding
 - `./scripts/verify_all_apis.sh`: full backend API regression checks
 - `./scripts/load_test_api.sh`: concurrent API load probe with latency/success thresholds (feed, search, top-sellers; default profile: `CONCURRENCY=10`, `REQUESTS_PER_PROBE=30`, `WARMUP_REQUESTS=5`)
 - `./scripts/test_delete_post_with_chat.sh`: focused regression scenario

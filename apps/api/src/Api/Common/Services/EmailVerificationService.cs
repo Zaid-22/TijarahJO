@@ -402,9 +402,11 @@ public sealed class EmailVerificationService(
                     verificationLink,
                     lifetimeMinutes
                 );
+                return;
             }
 
-            return;
+            throw new InvalidOperationException(
+                "Email verification delivery is not configured on the server.");
         }
 
         string greetingName = string.IsNullOrWhiteSpace(recipientFirstName)
