@@ -1,12 +1,16 @@
 const { test, expect } = require("@playwright/test");
+const { readFile } = require("node:fs/promises");
+const { join } = require("node:path");
 
 test.skip(
   process.env.E2E_BACKEND_LIVE !== "1",
   "Set E2E_BACKEND_LIVE=1 to run backend-connected browser journeys.",
 );
 
-const PNG_ONE_BY_ONE_BASE64 =
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO6pJ4kAAAAASUVORK5CYII=";
+const VALID_PNG_FIXTURE = join(
+  __dirname,
+  "../../public/icons/icon-192x192.png",
+);
 
 function escapeForRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -32,6 +36,60 @@ function normalizeApiBaseUrl(value) {
     "",
   );
   return /\/api$/i.test(normalized) ? `${normalized}/v1` : normalized;
+}
+
+function extractVerificationToken(logContents, email) {
+  const recipient = escapeForRegex(email);
+  const matches = [
+    ...logContents.matchAll(
+      new RegExp(
+        `Recipient=${recipient}\\s+Link=(\\S*\\/verify-email\\?token=\\S+)`,
+        "g",
+      ),
+    ),
+  ];
+  const verificationLink = matches.at(-1)?.[1];
+  if (!verificationLink) {
+    return "";
+  }
+
+  try {
+    return new URL(verificationLink).searchParams.get("token") || "";
+  } catch {
+    return "";
+  }
+}
+
+async function waitForVerificationToken(email) {
+  const backendLogFile =
+    process.env.E2E_BACKEND_LOG_FILE ||
+    process.env.BACKEND_LOG_FILE ||
+    "/tmp/tijarahjo_bootstrap_backend.log";
+
+  let token = "";
+  await expect
+    .poll(
+      async () => {
+        try {
+          const logContents = await readFile(backendLogFile, "utf8");
+          token = extractVerificationToken(logContents, email);
+          return token;
+        } catch (error) {
+          if (error?.code === "ENOENT") {
+            return "";
+          }
+          throw error;
+        }
+      },
+      {
+        message: `verification token for ${email} was not written to ${backendLogFile}`,
+        timeout: 30_000,
+        intervals: [100, 250, 500, 1_000],
+      },
+    )
+    .not.toBe("");
+
+  return token;
 }
 
 async function forceEnglishUi(page) {
@@ -136,9 +194,31 @@ async function registerUser(page, user) {
   await page.locator("#password").fill(user.password);
   await page.locator("#confirmPassword").fill(user.password);
 
+  const signupResponsePromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      /\/api(?:\/v[0-9]+)?\/auth\/signup$/i.test(response.url()),
+    { timeout: 30_000 },
+  );
   await page.getByRole("button", { name: /create account/i }).click();
+  const signupResponse = await signupResponsePromise;
+  expect(signupResponse.status()).toBe(201);
+  const signupPayload = await signupResponse.json();
+  expect(
+    signupPayload?.requiresEmailVerification ??
+      signupPayload?.RequiresEmailVerification,
+  ).toBe(true);
 
-  // After signup, expect home page OR the complete-profile page (race-condition safety net).
+  await expect(
+    page.getByRole("heading", { name: /check your email/i }),
+  ).toBeVisible({ timeout: 30_000 });
+
+  const verificationToken = await waitForVerificationToken(user.email);
+  await page.goto(
+    `/verify-email?token=${encodeURIComponent(verificationToken)}`,
+  );
+
+  // Verification auto-authenticates, then routes through profile completion if needed.
   await expect(page).toHaveURL(/\/(complete-profile)?$/, { timeout: 30_000 });
 
   if (page.url().includes("/complete-profile")) {
@@ -291,6 +371,7 @@ test("backend live journey: auth, search, favorites, and post CRUD", async ({
   };
 
   test.setTimeout(300_000);
+  const validPng = await readFile(VALID_PNG_FIXTURE);
 
   await registerUser(page, userOne);
   const listingLocation = await resolveLiveLocation(page);
@@ -305,17 +386,35 @@ test("backend live journey: auth, search, favorites, and post CRUD", async ({
   // Wait a small moment to ensure the "Area" fetch resulting from "Amman" doesn't clobber the input
   await page.waitForTimeout(1000);
   
+  const createImageValidationPromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      /\/api(?:\/v[0-9]+)?\/post-images\/validate$/i.test(response.url()),
+    { timeout: 30_000 },
+  );
   await page.setInputFiles("#image-upload", {
     name: "post.png",
     mimeType: "image/png",
-    buffer: Buffer.from(PNG_ONE_BY_ONE_BASE64, "base64"),
+    buffer: validPng,
   });
-  
+  expect((await createImageValidationPromise).ok()).toBe(true);
+
   await expect(page.getByText(/1\/5 images uploaded/i)).toBeVisible({
     timeout: 15_000,
   });
+  await expect(page.getByText(/^verifying\.\.\.$/i)).toBeHidden({
+    timeout: 30_000,
+  });
+  const createPostResponsePromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      /\/api(?:\/v[0-9]+)?\/posts$/i.test(response.url()),
+    { timeout: 30_000 },
+  );
   await page.getByRole("button", { name: /publish post/i }).click();
-  await expect(page).toHaveURL(/\/$/);
+  const createPostResponse = await createPostResponsePromise;
+  expect(createPostResponse.ok()).toBe(true);
+  await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
 
   await searchForPost(page, createdPostTitle);
   await openSearchResult(page, createdPostTitle);
@@ -380,14 +479,23 @@ test("backend live journey: auth, search, favorites, and post CRUD", async ({
   await page.getByRole("button", { name: /edit post/i }).first().click();
   await page.locator("#title").fill(updatedPostTitle);
   
+  const editImageValidationPromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      /\/api(?:\/v[0-9]+)?\/post-images\/validate$/i.test(response.url()),
+    { timeout: 30_000 },
+  );
   await page.setInputFiles("#image-upload", {
     name: "updated.png",
     mimeType: "image/png",
-    buffer: Buffer.from(PNG_ONE_BY_ONE_BASE64, "base64"),
+    buffer: validPng,
   });
-  // Wait shortly for the UI to register the uploaded file
-  await expect(page.getByText(/images uploaded/i)).toBeVisible({
+  expect((await editImageValidationPromise).ok()).toBe(true);
+  await expect(page.getByRole("img", { name: "Upload 2" })).toBeVisible({
     timeout: 10_000,
+  });
+  await expect(page.getByText(/^verifying\.\.\.$/i)).toBeHidden({
+    timeout: 30_000,
   });
 
   await Promise.all([

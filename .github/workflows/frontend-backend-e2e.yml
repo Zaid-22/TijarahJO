@@ -41,6 +41,12 @@ jobs:
       DB_APP_LOGIN: tijarahjo_app
       VITE_API_BASE_URL: http://localhost:5033/api
       E2E_FRONTEND_BASE_URL: http://127.0.0.1:4173
+      BACKEND_LOG_FILE: /tmp/tijarahjo_bootstrap_backend.log
+      E2E_BACKEND_LOG_FILE: /tmp/tijarahjo_bootstrap_backend.log
+      EmailVerification__Enabled: "true"
+      EmailVerification__ResendApiKey: ""
+      EmailVerification__LogTokensWhenEmailDisabled: "true"
+      ImageModeration__Enabled: "false"
       PW_BYPASS_CSP: "0"
       E2E_BACKEND_LIVE: "1"
 
