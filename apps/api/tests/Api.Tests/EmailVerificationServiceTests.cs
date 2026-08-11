@@ -59,9 +59,10 @@ public sealed class EmailVerificationServiceTests
         public Task<int> AddUserAsync(UserModel model, CancellationToken cancellationToken = default)
             => Task.FromResult(0);
 
-        public Task<bool> UpdateUserAsync(
+        public Task<bool> UpdateUserFieldsAsync(
             UserModel model,
             int actorUserId,
+            UserUpdateFields fields,
             CancellationToken cancellationToken = default)
             => Task.FromResult(false);
 

@@ -1,4 +1,5 @@
 using TijarahJo.Application.Common;
+using TijarahJo.Application.Abstractions.DataAccess;
 using TijarahJo.Domain.Entities;
 using TijarahJo.Domain.Models;
 using TijarahJo.Infrastructure.DataAccess;
@@ -124,7 +125,7 @@ public sealed class SessionInvalidationTests
     }
 
     [Fact]
-    public void HasSecurityStateChanged_DoesNotInvalidateTrustedVerificationOrPendingTwoFactorSetup()
+    public void ApplyUserUpdateFields_DoesNotInvalidateTrustedVerificationOrPendingTwoFactorSetup()
     {
         var entity = new UserEntity
         {
@@ -161,11 +162,18 @@ public sealed class SessionInvalidationTests
             suspendedUntil: null,
             isEmailVerified: true);
 
-        Assert.False(UserDataAccessAdapter.HasSecurityStateChanged(entity, model, "hash"));
+        bool securityStateChanged = UserDataAccessAdapter.ApplyUserUpdateFields(
+            entity,
+            model,
+            UserUpdateFields.TwoFactorPendingSecret | UserUpdateFields.IsEmailVerified);
+
+        Assert.False(securityStateChanged);
+        Assert.Equal("pending-secret", entity.TwoFactorPendingSecret);
+        Assert.True(entity.IsEmailVerified);
     }
 
     [Fact]
-    public void HasSecurityStateChanged_InvalidatesFinalTwoFactorAndSuspensionChanges()
+    public void ApplyUserUpdateFields_InvalidatesFinalTwoFactorAndSuspensionChanges()
     {
         var entity = new UserEntity
         {
@@ -193,6 +201,70 @@ public sealed class SessionInvalidationTests
             twoFactorSecret: "active-secret",
             suspendedUntil: UtcNow.AddHours(1));
 
-        Assert.True(UserDataAccessAdapter.HasSecurityStateChanged(entity, model, "hash"));
+        bool securityStateChanged = UserDataAccessAdapter.ApplyUserUpdateFields(
+            entity,
+            model,
+            UserUpdateFields.TwoFactorEnabled |
+            UserUpdateFields.TwoFactorSecret |
+            UserUpdateFields.SuspendedUntil);
+
+        Assert.True(securityStateChanged);
+    }
+
+    [Fact]
+    public void ApplyUserUpdateFields_ProfilePatchPreservesConcurrentSecurityState()
+    {
+        DateTime suspendedUntil = UtcNow.AddHours(4);
+        var entity = new UserEntity
+        {
+            UserID = 7,
+            HashedPassword = "current-hash",
+            Email = "user@example.com",
+            FirstName = "Before",
+            LastName = "User",
+            Status = 2,
+            RoleID = 9,
+            IsDeleted = true,
+            TwoFactorEnabled = true,
+            TwoFactorSecret = "current-secret",
+            TwoFactorPendingSecret = "current-pending",
+            SuspendedUntil = suspendedUntil
+        };
+        var staleProfile = new UserModel(
+            userid: 7,
+            hashedpassword: "stale-hash",
+            email: "user@example.com",
+            firstname: "Updated",
+            lastname: "User",
+            phone: null,
+            cityId: null,
+            areaId: null,
+            bio: null,
+            avatar: "/uploads/user-avatars/new.webp",
+            joindate: UtcNow,
+            status: UserStatusPolicy.Active,
+            roleid: 1,
+            isdeleted: false,
+            twoFactorEnabled: false,
+            twoFactorSecret: null,
+            twoFactorPendingSecret: null,
+            suspendedUntil: null);
+
+        bool securityStateChanged = UserDataAccessAdapter.ApplyUserUpdateFields(
+            entity,
+            staleProfile,
+            UserUpdateFields.FirstName | UserUpdateFields.Avatar);
+
+        Assert.False(securityStateChanged);
+        Assert.Equal("Updated", entity.FirstName);
+        Assert.Equal("/uploads/user-avatars/new.webp", entity.Avatar);
+        Assert.Equal("current-hash", entity.HashedPassword);
+        Assert.Equal(2, entity.Status);
+        Assert.Equal(9, entity.RoleID);
+        Assert.True(entity.IsDeleted);
+        Assert.True(entity.TwoFactorEnabled);
+        Assert.Equal("current-secret", entity.TwoFactorSecret);
+        Assert.Equal("current-pending", entity.TwoFactorPendingSecret);
+        Assert.Equal(suspendedUntil, entity.SuspendedUntil);
     }
 }

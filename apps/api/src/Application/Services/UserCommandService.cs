@@ -3,6 +3,7 @@ using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Application.Common;
 using Microsoft.Extensions.Logging;
 using TijarahJo.Application.Abstractions.DataAccess;
+using System.Net.Mail;
 
 namespace TijarahJo.Application.Services;
 
@@ -115,6 +116,8 @@ public sealed class UserCommandService(IUserDataAccess users, IRoleService roles
             return Failure(UserCommandFailureReason.NotFound, $"User with ID {command.TargetUserId} not found.");
         }
 
+        UserUpdateFields updateFields = UserUpdateFields.None;
+
         if (!string.IsNullOrWhiteSpace(command.Password))
         {
             var (isPasswordValid, passwordError) = PasswordHelper.IsPasswordPolicyCompliant(command.Password.Trim());
@@ -123,21 +126,65 @@ public sealed class UserCommandService(IUserDataAccess users, IRoleService roles
                 return Failure(UserCommandFailureReason.InvalidRequest, passwordError!);
             }
             user = user with { HashedPassword = PasswordHelper.HashPassword(command.Password.Trim()) };
+            updateFields |= UserUpdateFields.HashedPassword;
         }
 
         if (!string.IsNullOrWhiteSpace(command.Email))
         {
-            user = user with { Email = command.Email.Trim().ToLowerInvariant() };
+            string normalizedEmail = command.Email.Trim().ToLowerInvariant();
+            if (normalizedEmail.Length > 255 ||
+                !MailAddress.TryCreate(normalizedEmail, out MailAddress? parsedEmail) ||
+                !string.Equals(parsedEmail.Address, normalizedEmail, StringComparison.OrdinalIgnoreCase))
+            {
+                return Failure(UserCommandFailureReason.InvalidRequest, "A valid email address is required.");
+            }
+
+            bool emailChanged = !string.Equals(
+                normalizedEmail,
+                user.Email,
+                StringComparison.OrdinalIgnoreCase);
+            if (emailChanged)
+            {
+                UserModel? existingUser = await _users.GetUserByLoginAsync(
+                    normalizedEmail,
+                    cancellationToken);
+                if (existingUser != null && existingUser.UserID != user.UserID)
+                {
+                    return Failure(
+                        UserCommandFailureReason.InvalidRequest,
+                        "Email address is already associated with another account.");
+                }
+            }
+
+            if (emailChanged)
+            {
+                user = user with
+                {
+                    Email = normalizedEmail,
+                    IsEmailVerified = false
+                };
+                updateFields |= UserUpdateFields.Email | UserUpdateFields.IsEmailVerified;
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(command.FirstName))
         {
-            user = user with { FirstName = command.FirstName.Trim() };
+            string firstName = command.FirstName.Trim();
+            if (!string.Equals(firstName, user.FirstName, StringComparison.Ordinal))
+            {
+                user = user with { FirstName = firstName };
+                updateFields |= UserUpdateFields.FirstName;
+            }
         }
 
         if (command.LastName != null)
         {
-            user = user with { LastName = string.IsNullOrWhiteSpace(command.LastName) ? string.Empty : command.LastName.Trim() };
+            string lastName = string.IsNullOrWhiteSpace(command.LastName) ? string.Empty : command.LastName.Trim();
+            if (!string.Equals(lastName, user.LastName, StringComparison.Ordinal))
+            {
+                user = user with { LastName = lastName };
+                updateFields |= UserUpdateFields.LastName;
+            }
         }
 
         if (command.Phone != null)
@@ -151,7 +198,11 @@ public sealed class UserCommandService(IUserDataAccess users, IRoleService roles
                     return Failure(UserCommandFailureReason.InvalidRequest, "Phone number is already associated with another account.");
                 }
             }
-            user = user with { Phone = normalizedPhone };
+            if (!string.Equals(normalizedPhone, user.Phone, StringComparison.Ordinal))
+            {
+                user = user with { Phone = normalizedPhone };
+                updateFields |= UserUpdateFields.Phone;
+            }
         }
 
         if (command.CityId.HasValue || command.AreaId.HasValue)
@@ -180,12 +231,21 @@ public sealed class UserCommandService(IUserDataAccess users, IRoleService roles
                 return Failure(UserCommandFailureReason.InvalidRequest, locationMessage);
             }
 
-            user = user with { CityId = nextCityId, AreaId = nextAreaId };
+            if (nextCityId != user.CityId || nextAreaId != user.AreaId)
+            {
+                user = user with { CityId = nextCityId, AreaId = nextAreaId };
+                updateFields |= UserUpdateFields.Location;
+            }
         }
 
         if (command.Bio != null)
         {
-            user = user with { Bio = string.IsNullOrWhiteSpace(command.Bio) ? null : command.Bio.Trim() };
+            string? bio = string.IsNullOrWhiteSpace(command.Bio) ? null : command.Bio.Trim();
+            if (!string.Equals(bio, user.Bio, StringComparison.Ordinal))
+            {
+                user = user with { Bio = bio };
+                updateFields |= UserUpdateFields.Bio;
+            }
         }
 
         if (command.Avatar != null)
@@ -194,7 +254,12 @@ public sealed class UserCommandService(IUserDataAccess users, IRoleService roles
             {
                 return Failure(UserCommandFailureReason.InvalidRequest, "Avatar must be a valid http or https URL.");
             }
-            user = user with { Avatar = string.IsNullOrWhiteSpace(command.Avatar) ? null : command.Avatar.Trim() };
+            string? avatar = string.IsNullOrWhiteSpace(command.Avatar) ? null : command.Avatar.Trim();
+            if (!string.Equals(avatar, user.Avatar, StringComparison.Ordinal))
+            {
+                user = user with { Avatar = avatar };
+                updateFields |= UserUpdateFields.Avatar;
+            }
         }
 
         if (command.ActorIsAdmin)
@@ -206,26 +271,48 @@ public sealed class UserCommandService(IUserDataAccess users, IRoleService roles
                     return Failure(UserCommandFailureReason.InvalidStatus, $"Invalid status. Allowed values: {UserStatusPolicy.AllowedStatusIds}.");
                 }
 
-                user = user with { Status = command.Status.Value };
+                if (command.Status.Value != user.Status)
+                {
+                    user = user with { Status = command.Status.Value };
+                    updateFields |= UserUpdateFields.Status;
+                }
             }
 
-            if (command.RoleId.HasValue && command.RoleId.Value > 0)
+            if (command.RoleId.HasValue &&
+                command.RoleId.Value > 0 &&
+                command.RoleId.Value != user.RoleID)
             {
                 user = user with { RoleID = command.RoleId.Value };
+                updateFields |= UserUpdateFields.Role;
             }
 
-            if (command.IsDeleted.HasValue)
+            if (command.IsDeleted.HasValue && command.IsDeleted.Value != user.IsDeleted)
             {
                 user = user with { IsDeleted = command.IsDeleted.Value };
+                updateFields |= UserUpdateFields.IsDeleted;
             }
 
-            if (command.ClearSuspension == true)
+            if (command.ClearSuspension == true && user.SuspendedUntil.HasValue)
             {
                 user = user with { SuspendedUntil = null };
+                updateFields |= UserUpdateFields.SuspendedUntil;
             }
         }
 
-        bool saved = await _users.UpdateUserAsync(user, command.ActorUserId, cancellationToken);
+        if (updateFields == UserUpdateFields.None)
+        {
+            return new UserCommandResult
+            {
+                Success = true,
+                User = user
+            };
+        }
+
+        bool saved = await _users.UpdateUserFieldsAsync(
+            user,
+            command.ActorUserId,
+            updateFields,
+            cancellationToken);
         if (!saved)
         {
             return Failure(UserCommandFailureReason.PersistenceFailed, "Failed to update user.");

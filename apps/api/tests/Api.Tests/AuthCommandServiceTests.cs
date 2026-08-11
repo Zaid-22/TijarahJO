@@ -511,7 +511,11 @@ public sealed class AuthCommandServiceTests
         public Task<int> AddUserAsync(UserModel user, CancellationToken ct = default)
             => Task.FromResult(_saveResult ? 1 : 0);
 
-        public Task<bool> UpdateUserAsync(UserModel user, int actorUserId, CancellationToken ct = default)
+        public Task<bool> UpdateUserFieldsAsync(
+            UserModel user,
+            int actorUserId,
+            UserUpdateFields fields,
+            CancellationToken ct = default)
         {
             UpdatedUser = user;
             return Task.FromResult(_saveResult);

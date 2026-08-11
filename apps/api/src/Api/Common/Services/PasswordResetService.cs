@@ -273,7 +273,11 @@ public sealed class PasswordResetService(
         UserModel user = validation.User!;
 
         user = user with { HashedPassword = PasswordHelper.HashPassword(submittedPassword) };
-        bool updated = await _users.UpdateUserAsync(user, user.UserID!.Value, cancellationToken);
+        bool updated = await _users.UpdateUserFieldsAsync(
+            user,
+            user.UserID!.Value,
+            UserUpdateFields.HashedPassword,
+            cancellationToken);
         if (!updated)
         {
             return Failure(

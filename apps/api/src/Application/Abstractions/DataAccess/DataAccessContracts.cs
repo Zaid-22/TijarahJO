@@ -114,12 +114,38 @@ public interface IRoleDataAccess
     Task<IReadOnlyList<RoleModel>> GetAllRolesAsync(CancellationToken cancellationToken = default);
 }
 
+[Flags]
+public enum UserUpdateFields
+{
+    None = 0,
+    HashedPassword = 1 << 0,
+    Email = 1 << 1,
+    FirstName = 1 << 2,
+    LastName = 1 << 3,
+    Phone = 1 << 4,
+    Location = 1 << 5,
+    Bio = 1 << 6,
+    Avatar = 1 << 7,
+    Status = 1 << 8,
+    Role = 1 << 9,
+    IsDeleted = 1 << 10,
+    TwoFactorEnabled = 1 << 11,
+    TwoFactorSecret = 1 << 12,
+    TwoFactorPendingSecret = 1 << 13,
+    SuspendedUntil = 1 << 14,
+    IsEmailVerified = 1 << 15
+}
+
 public interface IUserDataAccess
 {
     // Returns null when userId is invalid or not found.
     Task<UserModel?> GetUserByIDAsync(int? userId, CancellationToken cancellationToken = default);
     Task<int> AddUserAsync(UserModel user, CancellationToken cancellationToken = default);
-    Task<bool> UpdateUserAsync(UserModel user, int actorUserId, CancellationToken cancellationToken = default);
+    Task<bool> UpdateUserFieldsAsync(
+        UserModel user,
+        int actorUserId,
+        UserUpdateFields fields,
+        CancellationToken cancellationToken = default);
     Task<bool> UpdatePasswordHashForCredentialRehashAsync(
         int userId,
         string expectedHashedPassword,

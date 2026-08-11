@@ -302,7 +302,11 @@ public sealed class PasswordResetServiceTests
         public Task<int> AddUserAsync(UserModel user, CancellationToken cancellationToken = default)
             => Task.FromResult(1);
 
-        public Task<bool> UpdateUserAsync(UserModel user, int actorUserId, CancellationToken cancellationToken = default)
+        public Task<bool> UpdateUserFieldsAsync(
+            UserModel user,
+            int actorUserId,
+            UserUpdateFields fields,
+            CancellationToken cancellationToken = default)
         {
             lock (this)
             {

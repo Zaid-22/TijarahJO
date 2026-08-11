@@ -549,7 +549,11 @@ public sealed class AuthCommandService(
             user = user with { IsEmailVerified = true };
             try
             {
-                await _users.UpdateUserAsync(user, user.UserID.Value, cancellationToken);
+                await _users.UpdateUserFieldsAsync(
+                    user,
+                    user.UserID.Value,
+                    UserUpdateFields.IsEmailVerified,
+                    cancellationToken);
             }
             catch (Exception ex)
             {
@@ -636,17 +640,20 @@ public sealed class AuthCommandService(
         CancellationToken cancellationToken)
     {
         bool changed = false;
+        UserUpdateFields updateFields = UserUpdateFields.None;
 
         if (string.IsNullOrWhiteSpace(user.FirstName) && !string.IsNullOrWhiteSpace(firstName))
         {
             user = user with { FirstName = firstName.Trim() };
             changed = true;
+            updateFields |= UserUpdateFields.FirstName;
         }
 
         if (string.IsNullOrWhiteSpace(user.LastName) && !string.IsNullOrWhiteSpace(lastName))
         {
             user = user with { LastName = lastName.Trim() };
             changed = true;
+            updateFields |= UserUpdateFields.LastName;
         }
 
         string? normalizedGoogleAvatar =
@@ -664,6 +671,7 @@ public sealed class AuthCommandService(
         {
             user = user with { Avatar = normalizedGoogleAvatar };
             changed = true;
+            updateFields |= UserUpdateFields.Avatar;
         }
 
         if (!changed)
@@ -673,7 +681,11 @@ public sealed class AuthCommandService(
 
         try
         {
-            await _users.UpdateUserAsync(user, user.UserID!.Value, cancellationToken);
+            await _users.UpdateUserFieldsAsync(
+                user,
+                user.UserID!.Value,
+                updateFields,
+                cancellationToken);
         }
         catch (Exception)
         {

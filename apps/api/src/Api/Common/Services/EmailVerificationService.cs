@@ -312,7 +312,11 @@ public sealed class EmailVerificationService(
 
         // Mark user as verified
         var verifiedUser = user with { IsEmailVerified = true };
-        bool updated = await _users.UpdateUserAsync(verifiedUser, userId, cancellationToken);
+        bool updated = await _users.UpdateUserFieldsAsync(
+            verifiedUser,
+            userId,
+            UserUpdateFields.IsEmailVerified,
+            cancellationToken);
         if (!updated)
         {
             return EmailVerificationConfirmResult.Failed(

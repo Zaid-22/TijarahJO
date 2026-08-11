@@ -55,9 +55,13 @@ public sealed class UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<
         return entity.UserID;
     }
 
-    public async Task<bool> UpdateUserAsync(UserModel user, int actorUserId, CancellationToken cancellationToken = default)
+    public async Task<bool> UpdateUserFieldsAsync(
+        UserModel user,
+        int actorUserId,
+        UserUpdateFields fields,
+        CancellationToken cancellationToken = default)
     {
-        return await UpdateUserCoreAsync(user, actorUserId, cancellationToken);
+        return await UpdateUserCoreAsync(user, actorUserId, fields, cancellationToken);
     }
 
     public async Task<bool> UpdatePasswordHashForCredentialRehashAsync(
@@ -90,9 +94,13 @@ public sealed class UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<
     private async Task<bool> UpdateUserCoreAsync(
         UserModel user,
         int actorUserId,
+        UserUpdateFields fields,
         CancellationToken cancellationToken)
     {
-        if (!user.UserID.HasValue || user.UserID.Value < 1 || actorUserId < 1)
+        if (!user.UserID.HasValue ||
+            user.UserID.Value < 1 ||
+            actorUserId < 1 ||
+            fields == UserUpdateFields.None)
         {
             return false;
         }
@@ -104,29 +112,7 @@ public sealed class UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<
             return false;
         }
 
-        string nextHashedPassword = string.IsNullOrWhiteSpace(user.HashedPassword)
-            ? entity.HashedPassword
-            : user.HashedPassword;
-        bool securityStateChanged = HasSecurityStateChanged(entity, user, nextHashedPassword);
-
-        entity.HashedPassword = nextHashedPassword;
-        entity.Email = user.Email;
-        entity.FirstName = user.FirstName;
-        entity.LastName = user.LastName;
-        entity.Phone = user.Phone;
-        entity.CityID = user.CityId;
-        entity.AreaID = user.AreaId;
-        entity.Bio = user.Bio;
-        entity.Avatar = user.Avatar;
-        entity.JoinDate = user.JoinDate == default ? entity.JoinDate : user.JoinDate;
-        entity.Status = user.Status;
-        entity.RoleID = user.RoleID;
-        entity.IsDeleted = user.IsDeleted;
-        entity.TwoFactorEnabled = user.TwoFactorEnabled;
-        entity.TwoFactorSecret = user.TwoFactorSecret;
-        entity.TwoFactorPendingSecret = user.TwoFactorPendingSecret;
-        entity.SuspendedUntil = user.SuspendedUntil;
-        entity.IsEmailVerified = user.IsEmailVerified;
+        bool securityStateChanged = ApplyUserUpdateFields(entity, user, fields);
         if (securityStateChanged)
         {
             entity.LastInvalidatedAt = DateTime.UtcNow;
@@ -145,23 +131,60 @@ public sealed class UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<
         }
     }
 
-    internal static bool HasSecurityStateChanged(
+    internal static bool ApplyUserUpdateFields(
         UserEntity entity,
         UserModel user,
-        string nextHashedPassword)
+        UserUpdateFields fields)
     {
         ArgumentNullException.ThrowIfNull(entity);
         ArgumentNullException.ThrowIfNull(user);
 
+        string originalHashedPassword = entity.HashedPassword;
+        string originalEmail = entity.Email;
+        int originalStatus = entity.Status;
+        int originalRoleId = entity.RoleID;
+        bool originalIsDeleted = entity.IsDeleted;
+        bool originalTwoFactorEnabled = entity.TwoFactorEnabled;
+        string? originalTwoFactorSecret = entity.TwoFactorSecret;
+        DateTime? originalSuspendedUntil = entity.SuspendedUntil;
+
+        if (fields.HasFlag(UserUpdateFields.HashedPassword) &&
+            !string.IsNullOrWhiteSpace(user.HashedPassword))
+        {
+            entity.HashedPassword = user.HashedPassword;
+        }
+        if (fields.HasFlag(UserUpdateFields.Email)) entity.Email = user.Email;
+        if (fields.HasFlag(UserUpdateFields.FirstName)) entity.FirstName = user.FirstName;
+        if (fields.HasFlag(UserUpdateFields.LastName)) entity.LastName = user.LastName;
+        if (fields.HasFlag(UserUpdateFields.Phone)) entity.Phone = user.Phone;
+        if (fields.HasFlag(UserUpdateFields.Location))
+        {
+            entity.CityID = user.CityId;
+            entity.AreaID = user.AreaId;
+        }
+        if (fields.HasFlag(UserUpdateFields.Bio)) entity.Bio = user.Bio;
+        if (fields.HasFlag(UserUpdateFields.Avatar)) entity.Avatar = user.Avatar;
+        if (fields.HasFlag(UserUpdateFields.Status)) entity.Status = user.Status;
+        if (fields.HasFlag(UserUpdateFields.Role)) entity.RoleID = user.RoleID;
+        if (fields.HasFlag(UserUpdateFields.IsDeleted)) entity.IsDeleted = user.IsDeleted;
+        if (fields.HasFlag(UserUpdateFields.TwoFactorEnabled)) entity.TwoFactorEnabled = user.TwoFactorEnabled;
+        if (fields.HasFlag(UserUpdateFields.TwoFactorSecret)) entity.TwoFactorSecret = user.TwoFactorSecret;
+        if (fields.HasFlag(UserUpdateFields.TwoFactorPendingSecret))
+        {
+            entity.TwoFactorPendingSecret = user.TwoFactorPendingSecret;
+        }
+        if (fields.HasFlag(UserUpdateFields.SuspendedUntil)) entity.SuspendedUntil = user.SuspendedUntil;
+        if (fields.HasFlag(UserUpdateFields.IsEmailVerified)) entity.IsEmailVerified = user.IsEmailVerified;
+
         return
-            !string.Equals(entity.HashedPassword, nextHashedPassword, StringComparison.Ordinal) ||
-            !string.Equals(entity.Email, user.Email, StringComparison.OrdinalIgnoreCase) ||
-            entity.Status != user.Status ||
-            entity.RoleID != user.RoleID ||
-            entity.IsDeleted != user.IsDeleted ||
-            entity.TwoFactorEnabled != user.TwoFactorEnabled ||
-            !string.Equals(entity.TwoFactorSecret, user.TwoFactorSecret, StringComparison.Ordinal) ||
-            entity.SuspendedUntil != user.SuspendedUntil;
+            !string.Equals(originalHashedPassword, entity.HashedPassword, StringComparison.Ordinal) ||
+            !string.Equals(originalEmail, entity.Email, StringComparison.OrdinalIgnoreCase) ||
+            originalStatus != entity.Status ||
+            originalRoleId != entity.RoleID ||
+            originalIsDeleted != entity.IsDeleted ||
+            originalTwoFactorEnabled != entity.TwoFactorEnabled ||
+            !string.Equals(originalTwoFactorSecret, entity.TwoFactorSecret, StringComparison.Ordinal) ||
+            originalSuspendedUntil != entity.SuspendedUntil;
     }
 
     public async Task<bool> DeleteUserAsync(int? userId, int actorUserId, CancellationToken cancellationToken = default)

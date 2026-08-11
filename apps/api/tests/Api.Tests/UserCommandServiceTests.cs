@@ -235,6 +235,221 @@ public sealed class UserCommandServiceTests
     }
 
     [Fact]
+    public async Task UpdateAsync_ProfileChangeRequestsOnlyExplicitProfileFields()
+    {
+        var users = new FakeUserDataAccess(new UserModel(
+            userid: 1,
+            hashedpassword: PasswordHelper.HashPassword("Test1234!"),
+            email: "user@example.com",
+            firstname: "Test",
+            lastname: "User",
+            phone: null,
+            cityId: null,
+            areaId: null,
+            bio: null,
+            avatar: null,
+            joindate: DateTime.UtcNow,
+            status: UserStatusPolicy.Active,
+            roleid: 1,
+            isdeleted: false,
+            twoFactorEnabled: true,
+            twoFactorSecret: "existing-secret",
+            suspendedUntil: DateTime.UtcNow.AddHours(1)));
+        var service = new UserCommandService(
+            users,
+            new FakeRoleService(),
+            new FakeLocationReadService(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<UserCommandService>.Instance);
+
+        UserCommandResult result = await service.UpdateAsync(new UpdateUserCommand
+        {
+            ActorUserId = 1,
+            TargetUserId = 1,
+            FirstName = "Updated",
+            Avatar = "/uploads/user-avatars/new.webp"
+        });
+
+        Assert.True(result.Success);
+        Assert.Equal(
+            UserUpdateFields.FirstName | UserUpdateFields.Avatar,
+            users.LastUpdateFields);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_EmailChangeRequiresReverification()
+    {
+        var users = new FakeUserDataAccess(new UserModel(
+            userid: 1,
+            hashedpassword: PasswordHelper.HashPassword("Test1234!"),
+            email: "old@example.com",
+            firstname: "Test",
+            lastname: "User",
+            phone: null,
+            cityId: null,
+            areaId: null,
+            bio: null,
+            avatar: null,
+            joindate: DateTime.UtcNow,
+            status: UserStatusPolicy.Active,
+            roleid: 1,
+            isdeleted: false,
+            isEmailVerified: true));
+        var service = new UserCommandService(
+            users,
+            new FakeRoleService(),
+            new FakeLocationReadService(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<UserCommandService>.Instance);
+
+        UserCommandResult result = await service.UpdateAsync(new UpdateUserCommand
+        {
+            ActorUserId = 1,
+            TargetUserId = 1,
+            Email = "  NEW@example.com  "
+        });
+
+        Assert.True(result.Success);
+        Assert.NotNull(users.LastUpdatedUser);
+        Assert.Equal("new@example.com", users.LastUpdatedUser!.Email);
+        Assert.False(users.LastUpdatedUser.IsEmailVerified);
+        Assert.Equal(
+            UserUpdateFields.Email | UserUpdateFields.IsEmailVerified,
+            users.LastUpdateFields);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_SameEmailIsSuccessfulNoOp()
+    {
+        var users = new FakeUserDataAccess(new UserModel(
+            userid: 1,
+            hashedpassword: PasswordHelper.HashPassword("Test1234!"),
+            email: "user@example.com",
+            firstname: "Test",
+            lastname: "User",
+            phone: null,
+            cityId: null,
+            areaId: null,
+            bio: null,
+            avatar: null,
+            joindate: DateTime.UtcNow,
+            status: UserStatusPolicy.Active,
+            roleid: 1,
+            isdeleted: false,
+            isEmailVerified: true));
+        var service = new UserCommandService(
+            users,
+            new FakeRoleService(),
+            new FakeLocationReadService(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<UserCommandService>.Instance);
+
+        UserCommandResult result = await service.UpdateAsync(new UpdateUserCommand
+        {
+            ActorUserId = 1,
+            TargetUserId = 1,
+            Email = "  USER@example.com  "
+        });
+
+        Assert.True(result.Success);
+        Assert.True(result.User!.IsEmailVerified);
+        Assert.Null(users.LastUpdatedUser);
+        Assert.Null(users.LastUpdateFields);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_UnchangedProfileFieldsAreSuccessfulNoOp()
+    {
+        var users = new FakeUserDataAccess(new UserModel(
+            userid: 1,
+            hashedpassword: PasswordHelper.HashPassword("Test1234!"),
+            email: "user@example.com",
+            firstname: "Test",
+            lastname: "User",
+            phone: "+962790000000",
+            cityId: null,
+            areaId: null,
+            bio: "Bio",
+            avatar: "https://example.com/avatar.webp",
+            joindate: DateTime.UtcNow,
+            status: UserStatusPolicy.Active,
+            roleid: 1,
+            isdeleted: false));
+        var service = new UserCommandService(
+            users,
+            new FakeRoleService(),
+            new FakeLocationReadService(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<UserCommandService>.Instance);
+
+        UserCommandResult result = await service.UpdateAsync(new UpdateUserCommand
+        {
+            ActorUserId = 1,
+            TargetUserId = 1,
+            FirstName = " Test ",
+            LastName = "User",
+            Phone = "0790000000",
+            Bio = " Bio ",
+            Avatar = "https://example.com/avatar.webp"
+        });
+
+        Assert.True(result.Success);
+        Assert.Null(users.LastUpdatedUser);
+        Assert.Null(users.LastUpdateFields);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_RejectsEmailOwnedByAnotherUser()
+    {
+        var users = new FakeUserDataAccess(new UserModel(
+            userid: 1,
+            hashedpassword: PasswordHelper.HashPassword("Test1234!"),
+            email: "old@example.com",
+            firstname: "Test",
+            lastname: "User",
+            phone: null,
+            cityId: null,
+            areaId: null,
+            bio: null,
+            avatar: null,
+            joindate: DateTime.UtcNow,
+            status: UserStatusPolicy.Active,
+            roleid: 1,
+            isdeleted: false,
+            isEmailVerified: true))
+        {
+            ConflictingLoginUser = new UserModel(
+                userid: 2,
+                hashedpassword: "unused",
+                email: "taken@example.com",
+                firstname: "Other",
+                lastname: "User",
+                phone: null,
+                cityId: null,
+                areaId: null,
+                bio: null,
+                avatar: null,
+                joindate: DateTime.UtcNow,
+                status: UserStatusPolicy.Active,
+                roleid: 1,
+                isdeleted: false,
+                isEmailVerified: true)
+        };
+        var service = new UserCommandService(
+            users,
+            new FakeRoleService(),
+            new FakeLocationReadService(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<UserCommandService>.Instance);
+
+        UserCommandResult result = await service.UpdateAsync(new UpdateUserCommand
+        {
+            ActorUserId = 1,
+            TargetUserId = 1,
+            Email = "taken@example.com"
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal(UserCommandFailureReason.InvalidRequest, result.FailureReason);
+        Assert.Null(users.LastUpdatedUser);
+    }
+
+    [Fact]
     public async Task UpdateAsync_ReturnsSuccess_AdminCanUpdateOther()
     {
         var service = BuildService();
@@ -387,6 +602,8 @@ public sealed class UserCommandServiceTests
         private readonly UserModel? _account;
 
         public UserModel? LastUpdatedUser { get; private set; }
+        public UserUpdateFields? LastUpdateFields { get; private set; }
+        public UserModel? ConflictingLoginUser { get; set; }
 
         public FakeUserDataAccess(UserModel? account) => _account = account;
 
@@ -394,7 +611,15 @@ public sealed class UserCommandServiceTests
             => Task.FromResult(_account);
 
         public Task<UserModel?> GetUserByLoginAsync(string login, CancellationToken ct = default)
-            => Task.FromResult(MatchesLogin(login) ? _account : null);
+        {
+            if (ConflictingLoginUser != null &&
+                string.Equals(login, ConflictingLoginUser.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                return Task.FromResult<UserModel?>(ConflictingLoginUser);
+            }
+
+            return Task.FromResult(MatchesLogin(login) ? _account : null);
+        }
 
         public Task<UserModel?> GetUserByLoginCandidatesAsync(IReadOnlyList<string> candidates, CancellationToken ct = default)
             => Task.FromResult(candidates.Any(MatchesLogin) ? _account : null);
@@ -402,8 +627,13 @@ public sealed class UserCommandServiceTests
         public Task<int> AddUserAsync(UserModel user, CancellationToken ct = default)
             => Task.FromResult(1);
 
-        public Task<bool> UpdateUserAsync(UserModel user, int actorUserId, CancellationToken ct = default)
+        public Task<bool> UpdateUserFieldsAsync(
+            UserModel user,
+            int actorUserId,
+            UserUpdateFields fields,
+            CancellationToken cancellationToken = default)
         {
+            LastUpdateFields = fields;
             LastUpdatedUser = user;
             return Task.FromResult(true);
         }

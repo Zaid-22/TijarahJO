@@ -229,7 +229,11 @@ public class TwoFactorController(
         }
 
         user = user with { TwoFactorPendingSecret = "PENDING_EMAIL_SETUP" }; // Just a marker
-        bool persisted = await _users.UpdateUserAsync(user, userId, cancellationToken);
+        bool persisted = await _users.UpdateUserFieldsAsync(
+            user,
+            userId,
+            UserUpdateFields.TwoFactorPendingSecret,
+            cancellationToken);
         if (!persisted)
         {
             return Problem(statusCode: StatusCodes.Status500InternalServerError, detail: "Failed to start two-factor setup.");
@@ -284,7 +288,13 @@ public class TwoFactorController(
             TwoFactorEnabled = true
         };
 
-        bool persisted = await _users.UpdateUserAsync(user, userId, cancellationToken);
+        bool persisted = await _users.UpdateUserFieldsAsync(
+            user,
+            userId,
+            UserUpdateFields.TwoFactorEnabled |
+            UserUpdateFields.TwoFactorSecret |
+            UserUpdateFields.TwoFactorPendingSecret,
+            cancellationToken);
         if (!persisted)
         {
             return Problem(statusCode: StatusCodes.Status500InternalServerError, detail: "Failed to enable two-factor authentication.");
@@ -334,7 +344,13 @@ public class TwoFactorController(
             TwoFactorPendingSecret = null
         };
 
-        bool persisted = await _users.UpdateUserAsync(user, userId, cancellationToken);
+        bool persisted = await _users.UpdateUserFieldsAsync(
+            user,
+            userId,
+            UserUpdateFields.TwoFactorEnabled |
+            UserUpdateFields.TwoFactorSecret |
+            UserUpdateFields.TwoFactorPendingSecret,
+            cancellationToken);
         if (!persisted)
         {
             return Problem(statusCode: StatusCodes.Status500InternalServerError, detail: "Failed to disable two-factor authentication.");

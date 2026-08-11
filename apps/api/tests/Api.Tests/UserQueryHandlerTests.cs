@@ -185,7 +185,11 @@ public sealed class UserQueryHandlerTests
         public Task<int> AddUserAsync(UserModel user, CancellationToken cancellationToken = default)
             => Task.FromResult(user.UserID ?? 1);
 
-        public Task<bool> UpdateUserAsync(UserModel user, int actorUserId, CancellationToken cancellationToken = default)
+        public Task<bool> UpdateUserFieldsAsync(
+            UserModel user,
+            int actorUserId,
+            UserUpdateFields fields,
+            CancellationToken cancellationToken = default)
             => Task.FromResult(true);
 
         public Task<bool> DeleteUserAsync(int? userId, int actorUserId, CancellationToken cancellationToken = default)
