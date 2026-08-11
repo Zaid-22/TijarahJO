@@ -241,17 +241,13 @@ public sealed class EmailVerificationService(
                 "User account not found.");
         }
 
-        // Already verified — idempotent success
+        // Verification is also an authentication flow because the controller issues
+        // a JWT on success. Never treat an unvalidated token as an idempotent success.
         if (user.IsEmailVerified)
         {
-            string? lingeringState = await _challenges.GetChallengeStateAsync(
-                userId, ChallengeType, cancellationToken);
-            if (!string.IsNullOrEmpty(lingeringState))
-            {
-                await _challenges.TryDeleteChallengeStateAsync(
-                    userId, ChallengeType, lingeringState, cancellationToken);
-            }
-            return EmailVerificationConfirmResult.Ok(user);
+            return EmailVerificationConfirmResult.Failed(
+                EmailVerificationConfirmFailureReason.InvalidToken,
+                "Verification token is invalid or no longer available.");
         }
 
         // Load challenge state
