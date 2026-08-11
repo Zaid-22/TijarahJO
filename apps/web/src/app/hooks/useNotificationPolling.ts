@@ -23,12 +23,14 @@ export function useNotificationPolling(
   options: UseNotificationPollingOptions = {},
 ) {
   const { suspended = false } = options;
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const [loadedOwnerId, setLoadedOwnerId] = useState("");
   const [notificationsRetryAt, setNotificationsRetryAt] = useState<number | null>(null);
   const subscriptionCleanupRef = useRef<(() => void) | null>(null);
+  const ownerId = isAuthenticated ? String(user?.id || "").trim() : "";
 
   const normalizedPathname = location.pathname
     .toLowerCase()
@@ -62,6 +64,7 @@ export function useNotificationPolling(
   useEffect(() => {
     if (!isAuthenticated || suspended) {
       setUnreadNotificationsCount(0);
+      setLoadedOwnerId("");
       return;
     }
 
@@ -70,9 +73,11 @@ export function useNotificationPolling(
     }
 
     let isCancelled = false;
+    setUnreadNotificationsCount(0);
+    setLoadedOwnerId("");
     const refreshUnreadCount = async () => {
       try {
-        const result = await api.notifications.getUnreadCountResult();
+        const result = await api.notifications.getUnreadCountResult(ownerId);
         if (!isCancelled) {
           if (result.serviceUnavailable) {
             setNotificationsRetryAt(Date.now() + NOTIFICATION_SERVICE_RETRY_MS);
@@ -81,6 +86,7 @@ export function useNotificationPolling(
 
           setNotificationsRetryAt(null);
           setUnreadNotificationsCount(result.unreadCount);
+          setLoadedOwnerId(ownerId);
         }
       } catch (error) {
         logger.warn("[App] Failed to load unread notifications count:", error);
@@ -100,7 +106,7 @@ export function useNotificationPolling(
       window.clearInterval(intervalId);
       window.removeEventListener("tijarahjo:refreshUnreadCount", refreshUnreadCount);
     };
-  }, [isAuthenticated, suspended, isNotificationsServiceCoolingDown]);
+  }, [isAuthenticated, ownerId, suspended, isNotificationsServiceCoolingDown]);
 
   // Realtime notifications via SignalR (dynamically loaded)
   useEffect(() => {
@@ -153,8 +159,11 @@ export function useNotificationPolling(
         }
 
         void api.notifications
-          .getUnreadCountResult()
+          .getUnreadCountResult(ownerId)
           .then((result) => {
+            if (isDisposed) {
+              return;
+            }
             if (result.serviceUnavailable) {
               setNotificationsRetryAt(Date.now() + NOTIFICATION_SERVICE_RETRY_MS);
               return;
@@ -162,6 +171,7 @@ export function useNotificationPolling(
 
             setNotificationsRetryAt(null);
             setUnreadNotificationsCount(result.unreadCount);
+            setLoadedOwnerId(ownerId);
           })
           .catch((error) => {
             logger.warn(
@@ -183,6 +193,7 @@ export function useNotificationPolling(
     location.search,
     navigate,
     normalizedPathname,
+    ownerId,
     suspended,
     isNotificationsServiceCoolingDown,
   ]);
@@ -198,10 +209,14 @@ export function useNotificationPolling(
       return;
     }
 
+    let isCancelled = false;
     const timeoutId = window.setTimeout(() => {
       void api.notifications
-        .getUnreadCountResult()
+        .getUnreadCountResult(ownerId)
         .then((result) => {
+          if (isCancelled) {
+            return;
+          }
           if (result.serviceUnavailable) {
             setNotificationsRetryAt(Date.now() + NOTIFICATION_SERVICE_RETRY_MS);
             return;
@@ -209,6 +224,7 @@ export function useNotificationPolling(
 
           setNotificationsRetryAt(null);
           setUnreadNotificationsCount(result.unreadCount);
+          setLoadedOwnerId(ownerId);
         })
         .catch((error) => {
           logger.warn(
@@ -219,9 +235,13 @@ export function useNotificationPolling(
     }, 1200);
 
     return () => {
+      isCancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [isAuthenticated, isChatRoute, location.pathname, suspended, isNotificationsServiceCoolingDown]);
+  }, [isAuthenticated, isChatRoute, location.pathname, ownerId, suspended, isNotificationsServiceCoolingDown]);
 
-  return { unreadNotificationsCount };
+  return {
+    unreadNotificationsCount:
+      loadedOwnerId === ownerId ? unreadNotificationsCount : 0,
+  };
 }

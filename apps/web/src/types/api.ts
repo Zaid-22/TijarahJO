@@ -79,11 +79,6 @@ export interface UpdatePostStatusRequest {
   status: "ACTIVE" | "SOLD" | "DELETED" | "BLOCKED" | "INACTIVE";
 }
 
-export interface ChatImageUploadResponse {
-  url: string;
-  Url?: string; // Support both cases for robustness
-}
-
 export interface PostResponse {
   success: boolean;
   post?: Post;
@@ -231,7 +226,7 @@ export interface SellerProfileResponse {
  * - GET    /api/v1/chat/history/:otherUserId
  * - GET    /api/v1/chat/presence/:otherUserId
  * - POST   /api/v1/chat/send
- * - POST   /api/v1/chat/upload-image
+ * - POST   /api/v1/chat/send-image
  *
  * FAVORITES:
  * - GET    /api/v1/favorites

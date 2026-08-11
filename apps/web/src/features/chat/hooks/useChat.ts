@@ -1,11 +1,11 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { chatService } from "../../../services/chatService";
 import { Message } from "../../../types";
 import { useAuth } from "../../../contexts/AuthContext";
 import { api } from "../../../services/api";
 import { toPositiveIntegerId } from "../../../utils/idValidation";
 import { logger } from "../../../shared/lib/logger";
-import { serializeChatImageMessage } from "../chatMessageContent";
+import { isChatMessageForParticipants } from "../chatOwnership";
 
 function isSameChatMessage(left: Message, right: Message): boolean {
   if (
@@ -30,6 +30,7 @@ export function useChat(otherUserId?: number) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const historyRunIdRef = useRef(0);
 
   // Connect to SignalR
   useEffect(() => {
@@ -70,8 +71,7 @@ export function useChat(otherUserId?: number) {
 
     const unsub = chatService.onMessageReceived((msg) => {
       if (
-        otherUserId &&
-        (msg.senderId === otherUserId || msg.receiverId === otherUserId)
+        isChatMessageForParticipants(msg, currentUserId, otherUserId)
       ) {
         setMessages((prev) => {
           if (prev.some((existingMessage) => isSameChatMessage(existingMessage, msg))) {
@@ -133,14 +133,23 @@ export function useChat(otherUserId?: number) {
 
   // Fetch history
   const loadHistory = useCallback(async () => {
-    if (!otherUserId || !isAuthenticated) {
+    const runId = ++historyRunIdRef.current;
+    const isCurrentRun = () => runId === historyRunIdRef.current;
+    const currentUserId = toPositiveIntegerId(user?.id);
+
+    if (!otherUserId || !isAuthenticated || !currentUserId) {
       setMessages([]);
+      setIsLoading(false);
       return;
     }
 
+    setMessages([]);
     setIsLoading(true);
     try {
       const history = await api.chat.getChatHistory(otherUserId);
+      if (!isCurrentRun()) {
+        return;
+      }
       const sortedHistory = [...history].sort(
         (a, b) =>
           new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
@@ -148,15 +157,23 @@ export function useChat(otherUserId?: number) {
       setMessages(sortedHistory);
       setError(null);
     } catch (err) {
+      if (!isCurrentRun()) {
+        return;
+      }
       logger.warn("[useChat] Failed to load history", err);
       setError("Failed to load history");
     } finally {
-      setIsLoading(false);
+      if (isCurrentRun()) {
+        setIsLoading(false);
+      }
     }
-  }, [otherUserId, isAuthenticated]);
+  }, [otherUserId, isAuthenticated, user?.id]);
 
   useEffect(() => {
-    loadHistory();
+    void loadHistory();
+    return () => {
+      historyRunIdRef.current += 1;
+    };
   }, [loadHistory]);
 
   const sendMessage = async (content: string, postId?: number): Promise<boolean> => {
@@ -204,12 +221,25 @@ export function useChat(otherUserId?: number) {
     }
 
     try {
-      const imageUrl = await api.chat.uploadImage(file, otherUserId, postId);
-      return sendMessage(serializeChatImageMessage(imageUrl, caption), postId);
+      const sentMessage = await api.chat.sendImageMessage(
+        file,
+        otherUserId,
+        caption,
+        postId,
+      );
+      setMessages((prev) => {
+        if (prev.some((existingMessage) => isSameChatMessage(existingMessage, sentMessage))) {
+          return prev;
+        }
+
+        return [...prev, sentMessage];
+      });
+      setError(null);
+      return true;
     } catch (err) {
-      logger.warn("[useChat] Failed to upload image", err);
+      logger.warn("[useChat] Failed to send image", err);
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to upload image.";
+        err instanceof Error ? err.message : "Failed to send image.";
       setError(errorMessage);
       return false;
     }

@@ -6,6 +6,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "../contexts/AuthContext";
 import { serverQueryClient } from "../shared/query/queryClient";
 import { ErrorBoundary } from "../shared/ui/error-boundary";
+import { purgeLegacySensitiveRuntimeCaches } from "../shared/pwa/cacheHygiene";
 import App from "./App";
 import "../styles/globals.css";
 
@@ -101,6 +102,8 @@ const appTree = (
 );
 
 async function bootstrap() {
+  await purgeLegacySensitiveRuntimeCaches();
+
   if (shouldWarmInitialHomeRoute) {
     await Promise.all([
       import("../features/home/pages/HomePage"),

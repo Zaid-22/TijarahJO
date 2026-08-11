@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Bell,
   Check,
@@ -17,6 +17,7 @@ import { api } from "../../../services/api";
 import { formatRelativeTime } from "../../../shared/lib/dateTime";
 import type { AppNotification, Language } from "../../../types";
 import { formatChatPreviewText } from "../../chat/chatMessageContent";
+import { useAuth } from "../../../contexts/AuthContext";
 
 interface NotificationsPageProps {
   language: Language;
@@ -92,6 +93,7 @@ export function NotificationsPage({
   onBack,
   onNavigate,
 }: NotificationsPageProps) {
+  const { user, isAuthenticated } = useAuth();
   const isRTL = language === "ar";
   const copy = COPY[language];
   const dateTimeLocale = language === "ar" ? "ar-JO" : "en-US";
@@ -99,27 +101,61 @@ export function NotificationsPage({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
+  const [loadedOwnerId, setLoadedOwnerId] = useState("");
+  const requestRunIdRef = useRef(0);
+  const ownerId = isAuthenticated ? String(user?.id || "").trim() : "";
+  const currentOwnerIdRef = useRef(ownerId);
+  currentOwnerIdRef.current = ownerId;
 
   const fetchNotifications = useCallback(async () => {
+    const requestedOwnerId = ownerId;
+    const runId = ++requestRunIdRef.current;
+    const isCurrentRequest = () =>
+      runId === requestRunIdRef.current &&
+      currentOwnerIdRef.current === requestedOwnerId;
+
+    setNotifications([]);
+    setLoadedOwnerId("");
     setIsLoading(true);
     setError(null);
+    if (!requestedOwnerId) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const data = await api.notifications.getNotifications();
+      if (!isCurrentRequest()) {
+        return;
+      }
       setNotifications(data);
+      setLoadedOwnerId(requestedOwnerId);
     } catch {
-      setError(copy.error);
+      if (isCurrentRequest()) {
+        setError(copy.error);
+        setLoadedOwnerId(requestedOwnerId);
+      }
     } finally {
-      setIsLoading(false);
+      if (isCurrentRequest()) {
+        setIsLoading(false);
+      }
     }
-  }, [copy.error]);
+  }, [copy.error, ownerId]);
 
   useEffect(() => {
-    fetchNotifications();
+    void fetchNotifications();
+    return () => {
+      requestRunIdRef.current += 1;
+    };
   }, [fetchNotifications]);
 
   const markAsRead = useCallback(async (notificationId: number) => {
+    const requestedOwnerId = currentOwnerIdRef.current;
     try {
-      await api.notifications.markAsRead(notificationId);
+      const success = await api.notifications.markAsRead(notificationId);
+      if (!success || currentOwnerIdRef.current !== requestedOwnerId) {
+        return;
+      }
       setNotifications((prev) =>
         prev.map((n) =>
           n.notificationId === notificationId ? { ...n, isRead: true } : n,
@@ -131,15 +167,22 @@ export function NotificationsPage({
   }, []);
 
   const markAllAsRead = useCallback(async () => {
+    const requestedOwnerId = currentOwnerIdRef.current;
     try {
       await api.notifications.markAllAsRead();
+      if (currentOwnerIdRef.current !== requestedOwnerId) {
+        return;
+      }
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     } catch {
       // silently fail
     }
   }, []);
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
-  const filteredNotifications = notifications.filter((n) => {
+  const dataBelongsToCurrentOwner = loadedOwnerId === ownerId;
+  const scopedNotifications = dataBelongsToCurrentOwner ? notifications : [];
+  const showLoading = isLoading || !dataBelongsToCurrentOwner;
+  const unreadCount = scopedNotifications.filter((n) => !n.isRead).length;
+  const filteredNotifications = scopedNotifications.filter((n) => {
     if (activeTab === "all") return true;
     const type = getNotificationType(n.notificationType);
     if (activeTab === "messages") return type === "message";
@@ -207,7 +250,7 @@ export function NotificationsPage({
         </div>
 
         {/* Content */}
-        {isLoading ? (
+        {showLoading ? (
           <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
             <Loader2 className="h-8 w-8 animate-spin" />
             <p>{copy.loading}</p>

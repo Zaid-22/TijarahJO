@@ -204,13 +204,15 @@ export function ChatPage({ language }: ChatPageProps) {
   // Uses the shared fetchedIdsRef from useChatList to avoid duplicate requests.
   useEffect(() => {
     if (selectedUserId === null) return;
+    const requestedOwnerId = String(user?.id || "").trim();
+    if (!requestedOwnerId) return;
     if (fetchedIdsRef.current?.has(selectedUserId)) return; // already fetched by useChatList or us
 
     fetchedIdsRef.current?.add(selectedUserId);
     let isCancelled = false;
     (async () => {
       const userData = await api.users.getUser(String(selectedUserId));
-      if (isCancelled) return;
+      if (isCancelled || String(user?.id || "").trim() !== requestedOwnerId) return;
 
       const resolvedName = resolveUserDisplayName(
         userData as Record<string, unknown> | null | undefined,
@@ -223,7 +225,7 @@ export function ChatPage({ language }: ChatPageProps) {
     })();
 
     return () => { isCancelled = true; };
-  }, [selectedUserId, setUserDisplayNamesById, setUserAvatarsById, fetchedIdsRef]);
+  }, [selectedUserId, setUserDisplayNamesById, setUserAvatarsById, fetchedIdsRef, user?.id]);
 
   const handleSelectUser = (id: number) => {
     const normalizedUserId = toPositiveIntegerId(id);
@@ -329,6 +331,7 @@ export function ChatPage({ language }: ChatPageProps) {
           >
             {selectedUserId ? (
               <ChatWindow
+                key={`${user?.id || "signed-out"}:${selectedUserId}`}
                 otherUserId={selectedUserId}
                 otherDisplayName={selectedDisplayName}
                 otherUserAvatar={selectedUserAvatar}

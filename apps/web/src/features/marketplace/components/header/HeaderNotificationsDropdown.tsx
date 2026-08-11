@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Bell,
   CheckCheck,
   MessageCircle,
   Heart,
   ShoppingBag,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "../../../../shared/ui/button";
 import {
@@ -16,6 +17,7 @@ import { api } from "../../../../services/api";
 import type { AppNotification, Language } from "../../../../types";
 import { logger } from "../../../../shared/lib/logger";
 import { formatChatPreviewText } from "../../../chat/chatMessageContent";
+import { useAuth } from "../../../../contexts/AuthContext";
 
 interface HeaderNotificationsDropdownProps {
   language: Language;
@@ -67,45 +69,95 @@ export function HeaderNotificationsDropdown({
   onNavigate,
   onUnreadCountChange,
 }: HeaderNotificationsDropdownProps) {
+  const { user, isAuthenticated } = useAuth();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [hasFetchError, setHasFetchError] = useState(false);
+  const [loadedOwnerId, setLoadedOwnerId] = useState("");
+  const requestRunIdRef = useRef(0);
+  const ownerId = isAuthenticated ? String(user?.id || "").trim() : "";
+  const currentOwnerIdRef = useRef(ownerId);
+  currentOwnerIdRef.current = ownerId;
 
   const fetchNotifications = useCallback(async () => {
+    const requestedOwnerId = ownerId;
+    const runId = ++requestRunIdRef.current;
+    const isCurrentRequest = () =>
+      runId === requestRunIdRef.current &&
+      currentOwnerIdRef.current === requestedOwnerId;
+
+    setNotifications([]);
+    setLoadedOwnerId("");
+    setHasFetchError(false);
     setIsLoading(true);
+    if (!requestedOwnerId) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const data = await api.notifications.getNotifications({ take: 20 });
+      if (!isCurrentRequest()) {
+        return;
+      }
       setNotifications(data);
+      setLoadedOwnerId(requestedOwnerId);
     } catch (error) {
-      logger.warn("[NotificationsDropdown] Failed to fetch:", error);
+      if (isCurrentRequest()) {
+        logger.warn("[NotificationsDropdown] Failed to fetch:", error);
+        setHasFetchError(true);
+        setLoadedOwnerId(requestedOwnerId);
+      }
     } finally {
-      setIsLoading(false);
+      if (isCurrentRequest()) {
+        setIsLoading(false);
+      }
     }
-  }, []);
+  }, [ownerId]);
 
   useEffect(() => {
     if (isOpen) {
       void fetchNotifications();
     }
+    return () => {
+      requestRunIdRef.current += 1;
+    };
   }, [isOpen, fetchNotifications]);
 
   const handleMarkAsRead = async (notificationId: number) => {
-    await api.notifications.markAsRead(notificationId);
-    setNotifications((prev) =>
-      prev.map((n) =>
-        n.notificationId === notificationId ? { ...n, isRead: true } : n,
-      ),
-    );
-    const newCount = Math.max(0, unreadCount - 1);
-    onUnreadCountChange?.(newCount);
-    window.dispatchEvent(new Event("tijarahjo:refreshUnreadCount"));
+    const requestedOwnerId = currentOwnerIdRef.current;
+    try {
+      const success = await api.notifications.markAsRead(notificationId);
+      if (!success || currentOwnerIdRef.current !== requestedOwnerId) {
+        return;
+      }
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.notificationId === notificationId ? { ...n, isRead: true } : n,
+        ),
+      );
+      const newCount = Math.max(0, unreadCount - 1);
+      onUnreadCountChange?.(newCount);
+      window.dispatchEvent(new Event("tijarahjo:refreshUnreadCount"));
+    } catch (error) {
+      logger.warn("[NotificationsDropdown] Failed to mark notification as read:", error);
+    }
   };
 
   const handleMarkAllAsRead = async () => {
-    await api.notifications.markAllAsRead();
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    onUnreadCountChange?.(0);
-    window.dispatchEvent(new Event("tijarahjo:refreshUnreadCount"));
+    const requestedOwnerId = currentOwnerIdRef.current;
+    try {
+      await api.notifications.markAllAsRead();
+      if (currentOwnerIdRef.current !== requestedOwnerId) {
+        return;
+      }
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      onUnreadCountChange?.(0);
+      window.dispatchEvent(new Event("tijarahjo:refreshUnreadCount"));
+    } catch (error) {
+      logger.warn("[NotificationsDropdown] Failed to mark all notifications as read:", error);
+    }
   };
 
   const handleNotificationClick = (notification: AppNotification) => {
@@ -119,6 +171,9 @@ export function HeaderNotificationsDropdown({
   };
 
   const normalizedUnread = Math.max(0, Math.floor(unreadCount));
+  const dataBelongsToCurrentOwner = loadedOwnerId === ownerId;
+  const scopedNotifications = dataBelongsToCurrentOwner ? notifications : [];
+  const showLoading = isLoading || !dataBelongsToCurrentOwner;
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen} modal={false}>
@@ -146,7 +201,7 @@ export function HeaderNotificationsDropdown({
           <h3 className="font-semibold text-foreground text-sm">
             {language === "ar" ? "الإشعارات" : "Notifications"}
           </h3>
-          {notifications.some((n) => !n.isRead) && (
+          {scopedNotifications.some((n) => !n.isRead) && (
             <button
               type="button"
               onClick={() => void handleMarkAllAsRead()}
@@ -160,11 +215,29 @@ export function HeaderNotificationsDropdown({
 
         {/* List */}
         <div className="overflow-y-auto flex-1">
-          {isLoading ? (
+          {showLoading ? (
             <div className="flex items-center justify-center py-10">
               <span className="h-6 w-6 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
             </div>
-          ) : notifications.length === 0 ? (
+          ) : hasFetchError ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-10 text-muted-foreground">
+              <Bell className="h-10 w-10 opacity-30" />
+              <p className="text-sm font-medium">
+                {language === "ar"
+                  ? "تعذر تحميل الإشعارات"
+                  : "Could not load notifications"}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void fetchNotifications()}
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                {language === "ar" ? "إعادة المحاولة" : "Retry"}
+              </Button>
+            </div>
+          ) : scopedNotifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
               <Bell className="h-10 w-10 mb-3 opacity-30" />
               <p className="text-sm font-medium">
@@ -177,7 +250,7 @@ export function HeaderNotificationsDropdown({
               </p>
             </div>
           ) : (
-            notifications.map((notification) => {
+            scopedNotifications.map((notification) => {
               const Icon = getNotificationIcon(notification.notificationType);
               return (
                 <button

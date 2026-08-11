@@ -257,10 +257,10 @@ export default defineConfig(({ mode }) => {
           navigateFallbackDenylist: [/^\/api\//, /^\/chatHub/, /^\/uploads\//],
           runtimeCaching: [
             {
-              urlPattern: /\/uploads\//,
+              urlPattern: /\/uploads\/(?:post-images|user-avatars|category-images)\//,
               handler: "CacheFirst",
               options: {
-                cacheName: "image-cache",
+                cacheName: "public-image-cache-v2",
                 expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
               },
             },

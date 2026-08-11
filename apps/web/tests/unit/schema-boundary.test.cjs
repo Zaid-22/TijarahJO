@@ -44,6 +44,24 @@ test("parseSentChatMessagePayload unwraps envelope message", () => {
   assert.equal(parsed.Content, "sent");
 });
 
+test("parseSentChatMessagePayload accepts the atomic image-send DTO", () => {
+  const parsed = parseSentChatMessagePayload({
+    messageId: 51,
+    senderId: 10,
+    receiverId: 11,
+    postId: 9,
+    conversationId: 4,
+    content: "[chat-image] /api/v1/chat/images/51/download\nCaption",
+    timestamp: "2026-08-09T12:00:00.000Z",
+    isRead: false,
+  });
+
+  assert.ok(parsed);
+  assert.equal(parsed.messageId, 51);
+  assert.equal(parsed.receiverId, 11);
+  assert.equal(parsed.content.includes("[chat-image]"), true);
+});
+
 test("parsePresencePayload supports nested presence envelope", () => {
   const parsed = parsePresencePayload({
     data: { IsOnline: true, LastSeenAtUtc: "2026-02-21T12:00:00.000Z" },

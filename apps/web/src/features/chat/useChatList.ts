@@ -7,6 +7,7 @@ import { logger } from "../../shared/lib/logger";
 import { formatChatPreviewText } from "./chatMessageContent";
 import type { ChatSummary } from "./chatSessionUtils";
 import type { Language } from "../../types";
+import { isOwnedChatScope } from "./chatOwnership";
 
 // Module-level deduplication — prevents duplicate /users/{id} fetches when
 // multiple components (chat list + chat page) resolve the same user simultaneously.
@@ -42,14 +43,26 @@ export function useChatList({
   const [isLoadingChats, setIsLoadingChats] = useState(true);
   const [userDisplayNamesById, setUserDisplayNamesById] = useState<Record<number, string>>({});
   const [userAvatarsById, setUserAvatarsById] = useState<Record<number, string | undefined>>({});
+  const [loadedUserId, setLoadedUserId] = useState("");
+  const requestRunIdRef = useRef(0);
 
   // Track which user IDs we've already attempted to fetch so we never
   // re-fetch even if the map is updated from elsewhere (e.g. ChatPage effect).
   const fetchedIdsRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
+    const requestedUserId = isAuthenticated ? String(userId || "").trim() : "";
+    const runId = ++requestRunIdRef.current;
+    const isCurrentRequest = () => runId === requestRunIdRef.current;
+
     async function fetchChats() {
-      if (!isAuthenticated || !userId) {
+      setLoadedUserId("");
+      setChats([]);
+      setUserDisplayNamesById({});
+      setUserAvatarsById({});
+      fetchedIdsRef.current = new Set();
+
+      if (!requestedUserId) {
         setChats([]);
         setUserDisplayNamesById({});
         setIsLoadingChats(false);
@@ -58,13 +71,16 @@ export function useChatList({
 
       setIsLoadingChats(true);
       try {
-        const currentUserId = toPositiveIntegerId(userId);
+        const currentUserId = toPositiveIntegerId(requestedUserId);
         if (!currentUserId) {
           setChats([]);
           return;
         }
 
         const recentMessages = await api.chat.getRecentChats();
+        if (!isCurrentRequest()) {
+          return;
+        }
         const sorted = [...recentMessages].sort(
           (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
         );
@@ -112,6 +128,10 @@ export function useChatList({
           }),
         );
 
+        if (!isCurrentRequest()) {
+          return;
+        }
+
         // MERGE into existing maps — don't wipe names that ChatPage's effect
         // may have already resolved for the selected user.
         setUserDisplayNamesById((prev) => ({ ...prev, ...namesById }));
@@ -124,15 +144,22 @@ export function useChatList({
           })),
         );
       } catch (error) {
-        logger.warn("Failed to load chats", error);
-        setChats([]);
-        // Don't wipe userDisplayNamesById — keep any names already resolved.
+        if (isCurrentRequest()) {
+          logger.warn("Failed to load chats", error);
+          setChats([]);
+        }
       } finally {
-        setIsLoadingChats(false);
+        if (isCurrentRequest()) {
+          setLoadedUserId(requestedUserId);
+          setIsLoadingChats(false);
+        }
       }
     }
 
-    fetchChats();
+    void fetchChats();
+    return () => {
+      requestRunIdRef.current += 1;
+    };
   }, [isAuthenticated, userId, resolvedLanguage, userPrefix]);
 
   useEffect(() => {
@@ -140,11 +167,17 @@ export function useChatList({
 
     const currentUserId = toPositiveIntegerId(userId);
     if (!currentUserId) return;
+    let isActiveOwner = true;
 
-    return chatService.onMessageReceived((message) => {
+    const unsubscribe = chatService.onMessageReceived((message) => {
+      if (!isActiveOwner) {
+        return;
+      }
       const otherUserId =
         message.senderId === currentUserId ? message.receiverId : message.senderId;
-      if (!otherUserId || otherUserId === currentUserId) return;
+      const belongsToCurrentUser =
+        message.senderId === currentUserId || message.receiverId === currentUserId;
+      if (!belongsToCurrentUser || !otherUserId || otherUserId === currentUserId) return;
 
       setChats((prevChats) => {
         const existing = prevChats.find((c) => c.userId === otherUserId);
@@ -165,6 +198,9 @@ export function useChatList({
         fetchedIdsRef.current.add(otherUserId);
         (async () => {
           const userData = await api.users.getUser(String(otherUserId));
+          if (!isActiveOwner) {
+            return;
+          }
           const resolvedName = resolveUserDisplayName(
             userData as Record<string, unknown> | null | undefined,
             otherUserId,
@@ -184,13 +220,23 @@ export function useChatList({
         })();
       }
     });
+
+    return () => {
+      isActiveOwner = false;
+      unsubscribe();
+    };
   }, [isAuthenticated, userId, userPrefix, selectedUserId, resolvedLanguage, userAvatarsById, userDisplayNamesById]);
 
+  const currentOwnerId = isAuthenticated ? String(userId || "").trim() : "";
+  const dataBelongsToCurrentUser =
+    isAuthenticated && isOwnedChatScope(currentOwnerId, loadedUserId);
+
   return {
-    chats,
-    isLoadingChats,
-    userDisplayNamesById,
-    userAvatarsById,
+    chats: dataBelongsToCurrentUser ? chats : [],
+    isLoadingChats:
+      isAuthenticated && (isLoadingChats || !dataBelongsToCurrentUser),
+    userDisplayNamesById: dataBelongsToCurrentUser ? userDisplayNamesById : {},
+    userAvatarsById: dataBelongsToCurrentUser ? userAvatarsById : {},
     setUserDisplayNamesById,
     setUserAvatarsById,
     fetchedIdsRef,

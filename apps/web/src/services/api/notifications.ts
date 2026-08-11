@@ -1,6 +1,7 @@
 import { AppNotification } from "../../types";
 import { toPositiveIntegerId } from "../../utils/idValidation";
 import { apiRequest } from "./client";
+import { createOwnerScopedRequestDeduper } from "./ownerScopedRequestDeduper";
 
 type RawNotification = {
   NotificationId?: unknown;
@@ -85,8 +86,8 @@ function normalizeNotification(payload: RawNotification | null | undefined): App
   };
 }
 
-// In-flight deduplication — prevents concurrent duplicate requests to the unread count endpoint
-let _unreadCountInflight: Promise<UnreadCountResult> | null = null;
+const dedupeUnreadCountRequest =
+  createOwnerScopedRequestDeduper<UnreadCountResult>();
 
 export const notificationsApi = {
   getNotifications: async (params?: {
@@ -102,8 +103,11 @@ export const notificationsApi = {
       },
     );
 
-    if (!response.success || !Array.isArray(response.data)) {
-      return [];
+    if (!response.success) {
+      throw new Error(response.error?.message || "Failed to load notifications.");
+    }
+    if (!Array.isArray(response.data)) {
+      throw new Error("Failed to load notifications because the response was invalid.");
     }
 
     return response.data
@@ -111,13 +115,8 @@ export const notificationsApi = {
       .filter((notification): notification is AppNotification => notification !== null);
   },
 
-  getUnreadCountResult: async (): Promise<UnreadCountResult> => {
-    // Deduplicate: if another caller is already fetching the unread count, share the promise.
-    if (_unreadCountInflight) {
-      return _unreadCountInflight;
-    }
-
-    const promise = (async () => {
+  getUnreadCountResult: (ownerId = ""): Promise<UnreadCountResult> =>
+    dedupeUnreadCountRequest(ownerId, async () => {
       const response = await apiRequest<UnreadCountPayload>("/notifications/unread-count", {
         method: "GET",
       });
@@ -140,16 +139,10 @@ export const notificationsApi = {
           Number.isFinite(unreadCount) && unreadCount > 0 ? Math.floor(unreadCount) : 0,
         serviceUnavailable: false,
       };
-    })().finally(() => {
-      _unreadCountInflight = null;
-    });
+    }),
 
-    _unreadCountInflight = promise;
-    return promise;
-  },
-
-  getUnreadCount: async (): Promise<number> => {
-    const result = await notificationsApi.getUnreadCountResult();
+  getUnreadCount: async (ownerId = ""): Promise<number> => {
+    const result = await notificationsApi.getUnreadCountResult(ownerId);
     return result.unreadCount;
   },
 
@@ -179,7 +172,11 @@ export const notificationsApi = {
     });
 
     if (!response.success || !response.data) {
-      return 0;
+      throw new Error(
+        !response.success
+          ? response.error?.message || "Failed to mark notifications as read."
+          : "Failed to mark notifications as read.",
+      );
     }
 
     const updatedCount = Number(response.data.UpdatedCount ?? response.data.updatedCount ?? 0);

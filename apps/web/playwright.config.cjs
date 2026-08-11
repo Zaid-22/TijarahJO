@@ -22,6 +22,8 @@ module.exports = defineConfig({
   use: {
     baseURL: frontendBaseUrl,
     bypassCSP: process.env.PW_BYPASS_CSP !== "0",
+    // API-mocked journeys rely on page.route(), which service workers can bypass.
+    serviceWorkers: "block",
     trace: process.env.CI ? "retain-on-failure" : "off",
     screenshot: "only-on-failure",
     video: process.env.CI ? "retain-on-failure" : "off",
