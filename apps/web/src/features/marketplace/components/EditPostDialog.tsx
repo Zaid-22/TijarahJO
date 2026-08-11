@@ -247,27 +247,27 @@ export function EditPostDialog({
     const files = e.target.files;
     if (!files) return;
     setImageValidationError(undefined);
-    setImages((prev: EditableImageEntry[]) => {
-      const remainingSlots = Math.max(0, MAX_IMAGES - prev.length);
-      if (remainingSlots === 0) return prev;
-      const nextEntries = Array.from(files).slice(0, remainingSlots).map((file: File, index: number) => {
+    const remainingSlots = Math.max(0, MAX_IMAGES - images.length);
+    const nextEntries = Array.from(files)
+      .slice(0, remainingSlots)
+      .map((file: File, index: number) => {
         const previewUrl = URL.createObjectURL(file);
         objectUrlsRef.current.add(previewUrl);
-        const itemId = `new-${file.name}-${file.size}-${file.lastModified}-${index}-${Date.now()}`;
-        
-        // Trigger validation asynchronously
-        void validateImageAsync(itemId, file);
-
         return {
-          id: itemId,
+          id: `new-${file.name}-${file.size}-${file.lastModified}-${index}-${Date.now()}`,
           kind: "new" as const,
           previewUrl,
           file,
           isValidating: true,
         };
       });
-      return [...prev, ...nextEntries];
-    });
+
+    setImages((prev: EditableImageEntry[]) =>
+      [...prev, ...nextEntries].slice(0, MAX_IMAGES),
+    );
+    for (const entry of nextEntries) {
+      void validateImageAsync(entry.id, entry.file);
+    }
     e.target.value = "";
   };
 

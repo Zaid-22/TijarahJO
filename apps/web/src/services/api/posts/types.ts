@@ -42,10 +42,12 @@ export interface RawUserLookup {
 export interface RawPost {
   PostID?: unknown;
   postID?: unknown;
+  postId?: unknown;
   id?: unknown;
   UserID?: unknown;
   userID?: unknown;
   UserId?: unknown;
+  userId?: unknown;
   SellerID?: unknown;
   SellerId?: unknown;
   sellerId?: unknown;
@@ -58,8 +60,10 @@ export interface RawPost {
   Seller?: unknown;
   seller?: unknown;
   PostTitle?: unknown;
+  postTitle?: unknown;
   name?: unknown;
   PostDescription?: unknown;
+  postDescription?: unknown;
   description?: unknown;
   Price?: unknown;
   price?: unknown;
@@ -100,6 +104,7 @@ export interface RawPost {
   Status?: unknown;
   status?: unknown;
   IsDeleted?: unknown;
+  isDeleted?: unknown;
 }
 
 export type PostStatus = NonNullable<Post["status"]>;

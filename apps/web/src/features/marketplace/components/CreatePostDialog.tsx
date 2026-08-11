@@ -233,30 +233,22 @@ export function CreatePostDialogContent({
     setImageValidationError(undefined);
 
     const filesArray = Array.from(files);
-    setSelectedImages((prev) => {
-      const remainingSlots = Math.max(0, MAX_IMAGES - prev.length);
-      if (remainingSlots === 0) return prev;
-
-      const nextItems = filesArray
-        .slice(0, remainingSlots)
-        .map((file, index) => {
-          const previewUrl = URL.createObjectURL(file);
-          objectUrlsRef.current.add(previewUrl);
-          const itemId = `${file.name}-${file.size}-${file.lastModified}-${index}-${Date.now()}`;
-          
-          // Trigger validation asynchronously
-          void validateImageAsync(itemId, file);
-
-          return {
-            id: itemId,
-            previewUrl,
-            file,
-            isValidating: true,
-          };
-        });
-
-      return [...prev, ...nextItems];
+    const remainingSlots = Math.max(0, MAX_IMAGES - selectedImages.length);
+    const nextItems = filesArray.slice(0, remainingSlots).map((file, index) => {
+      const previewUrl = URL.createObjectURL(file);
+      objectUrlsRef.current.add(previewUrl);
+      return {
+        id: `${file.name}-${file.size}-${file.lastModified}-${index}-${Date.now()}`,
+        previewUrl,
+        file,
+        isValidating: true,
+      };
     });
+
+    setSelectedImages((prev) => [...prev, ...nextItems].slice(0, MAX_IMAGES));
+    for (const item of nextItems) {
+      void validateImageAsync(item.id, item.file);
+    }
     e.target.value = "";
   };
 

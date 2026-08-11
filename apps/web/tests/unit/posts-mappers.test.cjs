@@ -96,3 +96,24 @@ test("parseRawPost preserves phone fields used by marketplace call actions", () 
   assert.equal(parsed.Phone, "+962791234567");
   assert.equal(parsed.phone, "+962791234567");
 });
+
+test("parseRawPost normalizes canonical camelCase create responses", () => {
+  const parsed = parseRawPost({
+    postId: 21,
+    userId: 7,
+    categoryId: 3,
+    postTitle: "Laptop",
+    postDescription: "16GB RAM",
+    isDeleted: false,
+  });
+
+  assert.ok(parsed);
+  assert.equal(parsed.PostID, 21);
+  assert.equal(parsed.UserID, 7);
+  assert.equal(parsed.CategoryID, 3);
+  assert.equal(parsed.PostTitle, "Laptop");
+  assert.equal(parsed.name, "Laptop");
+  assert.equal(parsed.PostDescription, "16GB RAM");
+  assert.equal(parsed.description, "16GB RAM");
+  assert.equal(parsed.IsDeleted, false);
+});
