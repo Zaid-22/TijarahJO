@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -34,7 +34,11 @@ function AdminLayoutInner() {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { showWarning, minutesLeft, resetTimer } = useSessionTimeout();
+  const expireSession = useCallback(async () => {
+    await logout();
+    navigate("/login", { replace: true });
+  }, [logout, navigate]);
+  const { showWarning, minutesLeft, resetTimer } = useSessionTimeout(expireSession);
 
   const navItems = [
     { label: "Dashboard", path: "/admin", icon: LayoutDashboard },

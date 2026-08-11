@@ -1,14 +1,19 @@
 import { createContext, ReactNode, useContext } from "react";
 import { useUserProfile } from "../features/auth/hooks/useUserProfile";
+import type { ProfileOwnerTransition } from "../features/auth/profileState";
 import { UserProfile } from "../types";
 
 interface UserProfileContextType {
   userProfile: UserProfile;
-  setUserProfile: (profile: UserProfile) => void;
+  setUserProfile: (
+    profile: UserProfile,
+    ownerTransition?: ProfileOwnerTransition,
+  ) => boolean;
   currentUserDisplayName: string;
   isLoading: boolean;
   isProfileComplete: boolean;
   refreshProfile: () => void;
+  isCurrentProfileOwner: (userId: string) => boolean;
 }
 
 const UserProfileContext = createContext<UserProfileContextType | undefined>(

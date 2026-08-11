@@ -490,18 +490,20 @@ export function useAuthProviderController(): AuthContextType {
   const logout = useCallback(async () => {
     // Set logout flag FIRST so checkAuth won't auto-restore even if
     // the backend call fails or the cookie isn't properly deleted.
+    authCheckRunIdRef.current += 1;
     localStorage.setItem(AUTH_LOGOUT_KEY, "true");
+    clearAuthStorage();
+    setSignedOutState();
+    setLoading(false);
     try {
       await api.auth.logout();
     } catch (error) {
       debugAuthError("Logout error:", error);
-    } finally {
-      clearAuthStorage();
-      setSignedOutState();
     }
   }, [clearAuthStorage, setSignedOutState]);
 
   const loginAsGuest = useCallback(async () => {
+    authCheckRunIdRef.current += 1;
     try {
       await api.auth.logout();
     } catch (error) {

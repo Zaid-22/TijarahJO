@@ -1,6 +1,7 @@
 import { type ReactElement } from "react";
 import { type NavigateFunction } from "react-router-dom";
 import { Language, Post, UserProfile, ViewMode } from "../../types";
+import type { ProfileOwnerTransition } from "../../features/auth/profileState";
 import { CreatePostInput } from "./appRoutesUtils";
 import type { UpdatePostInput, UpdatePostStatusInput } from "./usePostActions";
 import type { EditProfileFormProfile } from "../../features/profile/types";
@@ -14,7 +15,10 @@ export interface BaseAppRouteProps {
   toggleLanguage: () => void;
   logout: () => Promise<void>;
   loginAsGuest: () => Promise<void>;
-  setUserProfile: (profile: UserProfile) => void;
+  setUserProfile: (
+    profile: UserProfile,
+    ownerTransition?: ProfileOwnerTransition,
+  ) => boolean;
   currentUserDisplayName: string;
   registrationEnabled: boolean;
 }
@@ -55,7 +59,10 @@ export interface AppRouteElementsParams {
   toggleLanguage: () => void;
   logout: () => Promise<void>;
   loginAsGuest: () => Promise<void>;
-  setUserProfile: (profile: UserProfile) => void;
+  setUserProfile: (
+    profile: UserProfile,
+    ownerTransition?: ProfileOwnerTransition,
+  ) => boolean;
   currentUserDisplayName: string;
   registrationEnabled: boolean;
   routeState: MarketplaceRouteState;

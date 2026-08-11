@@ -300,3 +300,45 @@ export const isProfileCompleteForRouting = (
         )
       ),
   );
+
+export const resolveProfileCompletionReturnPath = ({
+  pathname,
+  search = "",
+  fromPath,
+}: {
+  pathname: string;
+  search?: string;
+  fromPath?: unknown;
+}): string => {
+  const normalizeInternalPath = (value: unknown): string => {
+    if (typeof value !== "string") {
+      return "";
+    }
+
+    const normalized = value.trim();
+    return normalized.startsWith("/") &&
+      !normalized.startsWith("//") &&
+      !normalized.includes("\\")
+      ? normalized
+      : "";
+  };
+
+  const normalizedPathname = normalizeInternalPath(pathname) || "/";
+  const currentPath = `${normalizedPathname}${search}`;
+  const currentPathname = (
+    normalizedPathname.split(/[?#]/, 1)[0].replace(/\/+$/, "") || "/"
+  ).toLowerCase();
+  const statePath = normalizeInternalPath(fromPath);
+  const candidate =
+    currentPathname === "/login" || currentPathname === "/complete-profile"
+      ? statePath || "/"
+      : currentPath;
+  const candidatePathname = (
+    candidate.split(/[?#]/, 1)[0].replace(/\/+$/, "") || "/"
+  ).toLowerCase();
+
+  return candidatePathname === "/login" ||
+    candidatePathname === "/complete-profile"
+    ? "/"
+    : candidate;
+};

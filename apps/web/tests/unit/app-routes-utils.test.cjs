@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const {
   applyLoginUserDataToProfile,
   isProfileCompleteForRouting,
+  resolveProfileCompletionReturnPath,
   shouldLoadPostsForPath,
   shouldLoadFavoritesForPath,
 } = require("../../.unit-dist/app/routes/appRoutesUtils.js");
@@ -148,5 +149,60 @@ test("isProfileCompleteForRouting only trusts fresh login payload fields", () =>
       areaId: 2,
     }),
     true,
+  );
+});
+
+test("resolveProfileCompletionReturnPath preserves safe deep links", () => {
+  assert.equal(
+    resolveProfileCompletionReturnPath({
+      pathname: "/post/42",
+      search: "?source=favorites",
+    }),
+    "/post/42?source=favorites",
+  );
+  assert.equal(
+    resolveProfileCompletionReturnPath({
+      pathname: "/login",
+      fromPath: "/seller/8?tab=reviews",
+    }),
+    "/seller/8?tab=reviews",
+  );
+  assert.equal(
+    resolveProfileCompletionReturnPath({
+      pathname: "/post/42",
+      search: "?source=favorites",
+      fromPath: "/search?q=phones",
+    }),
+    "/post/42?source=favorites",
+  );
+});
+
+test("resolveProfileCompletionReturnPath rejects auth loops and external URLs", () => {
+  assert.equal(
+    resolveProfileCompletionReturnPath({
+      pathname: "/login",
+      fromPath: "//example.com/private",
+    }),
+    "/",
+  );
+  assert.equal(
+    resolveProfileCompletionReturnPath({
+      pathname: "/complete-profile",
+    }),
+    "/",
+  );
+  assert.equal(
+    resolveProfileCompletionReturnPath({
+      pathname: "/post/42",
+      fromPath: "/Complete-Profile?next=/post/42",
+    }),
+    "/post/42",
+  );
+  assert.equal(
+    resolveProfileCompletionReturnPath({
+      pathname: "/post/42",
+      fromPath: "/\\evil.example/private",
+    }),
+    "/post/42",
   );
 });

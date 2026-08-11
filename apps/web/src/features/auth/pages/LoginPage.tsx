@@ -3,7 +3,10 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { APP_CONFIG } from "../../../constants/appConfig";
 import { useAuth } from "../../../contexts/AuthContext";
-import { persistAuthSessionHint } from "../../../contexts/authContextUtils";
+import {
+  AUTH_LOGOUT_KEY,
+  persistAuthSessionHint,
+} from "../../../contexts/authContextUtils";
 import { api } from "../../../services/api";
 import { debugError } from "../../../services/api/client";
 import { normalizeJordanPhone } from "../../../utils/phone";
@@ -266,7 +269,7 @@ export function LoginPage({
     hasAdminAccess?: boolean;
     permissions?: string[];
   }) => {
-    localStorage.removeItem("tijarahjo_logged_out");
+    localStorage.removeItem(AUTH_LOGOUT_KEY);
     persistAuthSessionHint();
 
     // We already have a valid session cookie from the login/signup response.
@@ -693,9 +696,9 @@ export function LoginPage({
     dispatch({ type: "SET_GENERAL_ERROR", error: "" });
     // Clear the logged-out flag so checkAuth will detect the new JWT
     // session when Google OAuth redirects back to the frontend.
-    localStorage.removeItem("tijarahjo_logged_out");
+    localStorage.removeItem(AUTH_LOGOUT_KEY);
     // Ensure the frontend probes the backend for the session upon return
-    localStorage.setItem("tijarahjo_has_authenticated", "true");
+    persistAuthSessionHint();
 
     const authModeStr = state.mode === "signUp" ? "signup" : "login";
     window.location.assign(api.auth.getGoogleAuthStartUrl(authModeStr));

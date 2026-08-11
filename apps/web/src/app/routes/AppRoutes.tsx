@@ -16,6 +16,7 @@ import { useState, useEffect } from "react";
 import {
   applyLoginUserDataToProfile,
   isProfileCompleteForRouting,
+  resolveProfileCompletionReturnPath,
 } from "./appRoutesUtils";
 import { APP_ROUTE_PATHS } from "./routeConfig";
 
@@ -54,7 +55,7 @@ export function AppRoutes({ registrationEnabled = true }: { registrationEnabled?
     loading: isAuthLoading,
     user,
   } = useAuth();
-  const { userProfile, setUserProfile, currentUserDisplayName, isLoading: isProfileLoading, isProfileComplete } =
+  const { userProfile, setUserProfile, currentUserDisplayName, isLoading: isProfileLoading, isProfileComplete, isCurrentProfileOwner } =
     useUserProfileContext();
   const { activeSearchQuery } = useSearch();
 
@@ -74,6 +75,7 @@ export function AppRoutes({ registrationEnabled = true }: { registrationEnabled?
     navigate,
     userProfile,
     setUserProfile,
+    isCurrentProfileOwner,
   });
 
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -130,7 +132,20 @@ export function AppRoutes({ registrationEnabled = true }: { registrationEnabled?
   }
 
   if (shouldShowProfileCompletion && location.pathname !== APP_ROUTE_PATHS.completeProfile) {
-    return <Navigate to={APP_ROUTE_PATHS.completeProfile} replace />;
+    const locationState = location.state as { fromPath?: unknown } | null;
+    return (
+      <Navigate
+        to={APP_ROUTE_PATHS.completeProfile}
+        replace
+        state={{
+          fromPath: resolveProfileCompletionReturnPath({
+            pathname: location.pathname,
+            search: location.search,
+            fromPath: locationState?.fromPath,
+          }),
+        }}
+      />
+    );
   }
 
   return (
@@ -164,8 +179,11 @@ export function AppRoutes({ registrationEnabled = true }: { registrationEnabled?
         language={language}
         allowSignup={registrationEnabled}
         onLogin={(userData) => {
+          const previousOwnerId = userProfile.id;
           const nextProfile = applyLoginUserDataToProfile(userProfile, userData);
-          setUserProfile(nextProfile);
+          setUserProfile(nextProfile, {
+            expectedPreviousOwnerId: previousOwnerId,
+          });
 
           const intendedPath = userHasAdminAccess({
             role: userData.role ?? "user",

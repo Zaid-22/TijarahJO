@@ -2,8 +2,11 @@ import { MutableRefObject, useEffect } from "react";
 import { OFFLINE_SESSION_MESSAGE } from "./authRuntimePolicy";
 import { canRevalidateSession } from "./authRuntimePolicy";
 import {
+  AUTH_ADMIN_ACCESS_HINT_KEY,
   AUTH_GUEST_KEY,
   AUTH_LEGACY_KEYS,
+  AUTH_LOGOUT_KEY,
+  AUTH_SESSION_HINT_KEY,
   debugAuthLog,
 } from "./authContextUtils";
 
@@ -24,6 +27,9 @@ export function useAuthEventSync({
     const handleStorageChange = (e: StorageEvent) => {
       if (
         e.key === AUTH_GUEST_KEY ||
+        e.key === AUTH_LOGOUT_KEY ||
+        e.key === AUTH_SESSION_HINT_KEY ||
+        e.key === AUTH_ADMIN_ACCESS_HINT_KEY ||
         e.key === null ||
         (typeof e.key === "string" && AUTH_LEGACY_KEYS.includes(e.key))
       ) {

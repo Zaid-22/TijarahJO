@@ -47,11 +47,14 @@ export function renderAuthRouteGroup({
         element={
           <LoginPage
             onLogin={(userData) => {
+              const previousOwnerId = appProps.userProfile.id;
               const nextProfile = applyLoginUserDataToProfile(
                 appProps.userProfile,
                 userData,
               );
-              appProps.setUserProfile(nextProfile);
+              appProps.setUserProfile(nextProfile, {
+                expectedPreviousOwnerId: previousOwnerId,
+              });
 
               const currentPath = buildCurrentPath(
                 window.location.pathname,
@@ -120,8 +123,11 @@ export function renderAuthRouteGroup({
           <VerifyEmailPage
             language={appProps.language}
             onLogin={(userData) => {
+              const previousOwnerId = appProps.userProfile.id;
               const nextProfile = applyLoginUserDataToProfile(appProps.userProfile, userData);
-              appProps.setUserProfile(nextProfile);
+              appProps.setUserProfile(nextProfile, {
+                expectedPreviousOwnerId: previousOwnerId,
+              });
             }}
           />
         }
