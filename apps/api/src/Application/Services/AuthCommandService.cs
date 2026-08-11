@@ -49,11 +49,13 @@ public sealed class AuthCommandService(
         }
 
         UserModel? user = await _users.GetUserByLoginCandidatesAsync(loginCandidates, cancellationToken);
+        string? observedLockoutStateToken = null;
 
         // Check account lockout before password verification
         if (user != null && user.UserID.HasValue)
         {
             AccountLockoutResult lockoutResult = await _accountLockout.IsLockedOutAsync(user.UserID.Value, cancellationToken);
+            observedLockoutStateToken = lockoutResult.StateToken;
             if (lockoutResult.IsLockedOut)
             {
                 string remainingTime = FormatLockoutRemaining(lockoutResult.LockedUntilUtc);
@@ -128,7 +130,10 @@ public sealed class AuthCommandService(
         }
 
         // Clear lockout on successful authentication
-        await _accountLockout.ClearLockoutAsync(user.UserID!.Value, cancellationToken);
+        await _accountLockout.ClearLockoutAsync(
+            user.UserID!.Value,
+            observedLockoutStateToken,
+            cancellationToken);
 
         string? roleName = await ResolveRoleNameForTokenAsync(user.RoleID, cancellationToken);
         if (string.IsNullOrWhiteSpace(roleName))

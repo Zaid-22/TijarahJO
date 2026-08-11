@@ -111,6 +111,24 @@ public sealed class AuthCommandServiceTests
     }
 
     [Fact]
+    public async Task LoginAsync_ClearsOnlyLockoutStateObservedBeforePasswordVerification()
+    {
+        const string stateToken = "observed-lockout-state";
+        var lockout = new FakeAccountLockoutService { StateTokenToReturn = stateToken };
+        var hash = PasswordHelper.HashPassword("Test1234!");
+        var service = BuildService(hashedPassword: hash, accountLockout: lockout);
+
+        AuthCommandResult result = await service.LoginAsync(new LoginCommand
+        {
+            Login = "user@example.com",
+            Password = "Test1234!"
+        });
+
+        Assert.True(result.Success);
+        Assert.Equal(stateToken, lockout.ClearedStateToken);
+    }
+
+    [Fact]
     public async Task LoginAsync_CredentialRehashPreservesConcurrentUserStateChanges()
     {
         const string password = "Test1234!";
@@ -443,7 +461,8 @@ public sealed class AuthCommandServiceTests
         string? hashedPassword = null,
         bool isDeleted = false,
         int status = 1 /* Active */,
-        bool registrationEnabled = true)
+        bool registrationEnabled = true,
+        IAccountLockoutService? accountLockout = null)
     {
         var model = CreateDefaultUser(
             hashedPassword: hashedPassword,
@@ -452,18 +471,22 @@ public sealed class AuthCommandServiceTests
 
         var account = nextFindUser ?? model;
 
-        return BuildServiceWithAccount(account, registrationEnabled: registrationEnabled).Service;
+        return BuildServiceWithAccount(
+            account,
+            registrationEnabled: registrationEnabled,
+            accountLockout: accountLockout).Service;
     }
 
     private static (AuthCommandService Service, FakeUserDataAccess Users) BuildServiceWithAccount(
         UserModel account,
-        bool registrationEnabled = true)
+        bool registrationEnabled = true,
+        IAccountLockoutService? accountLockout = null)
     {
         var users = new FakeUserDataAccess(account);
         var externalIdentities = new FakeExternalIdentityDataAccess();
         var roles = new FakeRoleService();
         var locations = new FakeLocationReadService();
-        var lockout = new FakeAccountLockoutService();
+        IAccountLockoutService lockout = accountLockout ?? new FakeAccountLockoutService();
         var systemSettings = new FakeSystemSettingsRuntimeService(registrationEnabled);
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<AuthCommandService>.Instance;
 
@@ -629,14 +652,23 @@ public sealed class AuthCommandServiceTests
 
     private sealed class FakeAccountLockoutService : IAccountLockoutService
     {
+        public string? StateTokenToReturn { get; set; }
+        public string? ClearedStateToken { get; private set; }
+
         public Task<AccountLockoutResult> IsLockedOutAsync(int userId, CancellationToken cancellationToken = default)
-            => Task.FromResult(new AccountLockoutResult(false));
+            => Task.FromResult(new AccountLockoutResult(false, StateToken: StateTokenToReturn));
 
         public Task<AccountLockoutResult> RecordFailedAttemptAsync(int userId, CancellationToken cancellationToken = default)
             => Task.FromResult(new AccountLockoutResult(false));
 
-        public Task ClearLockoutAsync(int userId, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
+        public Task ClearLockoutAsync(
+            int userId,
+            string? expectedStateToken,
+            CancellationToken cancellationToken = default)
+        {
+            ClearedStateToken = expectedStateToken;
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeSystemSettingsRuntimeService : ISystemSettingsRuntimeService

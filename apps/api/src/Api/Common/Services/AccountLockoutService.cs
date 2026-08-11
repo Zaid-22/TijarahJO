@@ -26,21 +26,11 @@ public sealed class AccountLockoutService(
 
         for (int attempt = 0; attempt < MaxConcurrencyRetries; attempt++)
         {
-            (LockoutState? state, string? stateJson) = await GetStateAsync(userId, cancellationToken);
-            if (state == null)
-            {
-                return new AccountLockoutResult(false);
-            }
-
-            if (state.LockedUntilUtc.HasValue && state.LockedUntilUtc.Value > DateTime.UtcNow)
-            {
-                return new AccountLockoutResult(true, state.FailedAttempts, state.LockedUntilUtc.Value);
-            }
-
-            if (state.LockedUntilUtc.HasValue && state.LockedUntilUtc.Value <= DateTime.UtcNow)
+            LockoutStateSnapshot snapshot = await GetStateAsync(userId, cancellationToken);
+            if (snapshot.IsInvalid)
             {
                 if (await _challenges.TryDeleteChallengeStateAsync(
-                        userId, ChallengeType, stateJson!, cancellationToken))
+                        userId, ChallengeType, snapshot.StateJson!, cancellationToken))
                 {
                     return new AccountLockoutResult(false);
                 }
@@ -48,10 +38,39 @@ public sealed class AccountLockoutService(
                 continue;
             }
 
-            return new AccountLockoutResult(false, state.FailedAttempts);
+            LockoutState? state = snapshot.State;
+            if (state == null)
+            {
+                return new AccountLockoutResult(false);
+            }
+
+            if (state.LockedUntilUtc.HasValue && state.LockedUntilUtc.Value > DateTime.UtcNow)
+            {
+                return new AccountLockoutResult(
+                    true,
+                    state.FailedAttempts,
+                    state.LockedUntilUtc.Value,
+                    snapshot.StateJson);
+            }
+
+            if (state.LockedUntilUtc.HasValue && state.LockedUntilUtc.Value <= DateTime.UtcNow)
+            {
+                if (await _challenges.TryDeleteChallengeStateAsync(
+                        userId, ChallengeType, snapshot.StateJson!, cancellationToken))
+                {
+                    return new AccountLockoutResult(false);
+                }
+
+                continue;
+            }
+
+            return new AccountLockoutResult(
+                false,
+                state.FailedAttempts,
+                StateToken: snapshot.StateJson);
         }
 
-        throw new InvalidOperationException("Unable to read a stable account-lockout state.");
+        return FailClosed(userId, "read");
     }
 
     public async Task<AccountLockoutResult> RecordFailedAttemptAsync(int userId, CancellationToken cancellationToken = default)
@@ -63,7 +82,9 @@ public sealed class AccountLockoutService(
 
         for (int attempt = 0; attempt < MaxConcurrencyRetries; attempt++)
         {
-            (LockoutState? state, string? expectedStateJson) = await GetStateAsync(userId, cancellationToken);
+            LockoutStateSnapshot snapshot = await GetStateAsync(userId, cancellationToken);
+            LockoutState? state = snapshot.State;
+            string? expectedStateJson = snapshot.StateJson;
             DateTime now = DateTime.UtcNow;
 
             if (state == null || state.LockedUntilUtc.HasValue && state.LockedUntilUtc.Value <= now)
@@ -109,41 +130,46 @@ public sealed class AccountLockoutService(
                     userId,
                     state.LockedUntilUtc.Value.ToString("yyyy-MM-dd HH:mm:ss") + " UTC");
 
-                return new AccountLockoutResult(true, state.FailedAttempts, state.LockedUntilUtc.Value);
+                return new AccountLockoutResult(
+                    true,
+                    state.FailedAttempts,
+                    state.LockedUntilUtc.Value,
+                    stateJson);
             }
 
-            return new AccountLockoutResult(false, state.FailedAttempts);
+            return new AccountLockoutResult(
+                false,
+                state.FailedAttempts,
+                StateToken: stateJson);
         }
 
-        throw new InvalidOperationException("Unable to update account-lockout state because of concurrent requests.");
+        return FailClosed(userId, "update");
     }
 
-    public async Task ClearLockoutAsync(int userId, CancellationToken cancellationToken = default)
+    public async Task ClearLockoutAsync(
+        int userId,
+        string? expectedStateToken,
+        CancellationToken cancellationToken = default)
     {
-        if (!_options.Enabled)
+        if (!_options.Enabled || string.IsNullOrEmpty(expectedStateToken))
         {
             return;
         }
 
-        string? stateJson = await _challenges.GetChallengeStateAsync(
-            userId, ChallengeType, cancellationToken);
-        if (!string.IsNullOrEmpty(stateJson))
-        {
-            // Do not erase a failed attempt that arrived after authentication
-            // succeeded and replaced the state we observed.
-            await _challenges.TryDeleteChallengeStateAsync(
-                userId, ChallengeType, stateJson, cancellationToken);
-        }
+        // Delete only the state observed before credential verification. A failed
+        // attempt arriving during authentication replaces it and must survive.
+        await _challenges.TryDeleteChallengeStateAsync(
+            userId, ChallengeType, expectedStateToken, cancellationToken);
     }
 
-    private async Task<(LockoutState? State, string? StateJson)> GetStateAsync(
+    private async Task<LockoutStateSnapshot> GetStateAsync(
         int userId,
         CancellationToken cancellationToken)
     {
         string? stateJson = await _challenges.GetChallengeStateAsync(userId, ChallengeType, cancellationToken);
         if (string.IsNullOrEmpty(stateJson))
         {
-            return (null, null);
+            return new LockoutStateSnapshot(null, null, false);
         }
 
         try
@@ -151,21 +177,41 @@ public sealed class AccountLockoutService(
             LockoutState? state = JsonSerializer.Deserialize<LockoutState>(stateJson);
             if (state is not null)
             {
-                return (state, stateJson);
+                return new LockoutStateSnapshot(state, stateJson, false);
             }
         }
         catch (JsonException)
         {
         }
 
-        if (await _challenges.TryDeleteChallengeStateAsync(
-                userId, ChallengeType, stateJson, cancellationToken))
-        {
-            return (null, null);
-        }
-
-        throw new InvalidOperationException("Unable to discard an invalid account-lockout state.");
+        return new LockoutStateSnapshot(null, stateJson, true);
     }
+
+    private AccountLockoutResult FailClosed(
+        int userId,
+        string operation)
+    {
+        DateTime now = DateTime.UtcNow;
+        int failedAttempts = Math.Max(1, _options.MaxFailedAttempts);
+        DateTime lockedUntilUtc = now.AddMinutes(Math.Max(1, _options.LockoutDurationMinutes));
+
+        _logger.LogWarning(
+            "Account-lockout CAS {Operation} exhausted after {RetryCount} attempts. Failing closed. UserId={UserId}, LockedUntil={LockedUntil}",
+            operation,
+            MaxConcurrencyRetries,
+            userId,
+            lockedUntilUtc.ToString("yyyy-MM-dd HH:mm:ss") + " UTC");
+
+        // Never force an unconditional write here: doing so could overwrite a
+        // newer lockout and shorten its duration. This request is denied while
+        // the winning concurrent writer remains authoritative.
+        return new AccountLockoutResult(true, failedAttempts, lockedUntilUtc);
+    }
+
+    private sealed record LockoutStateSnapshot(
+        LockoutState? State,
+        string? StateJson,
+        bool IsInvalid);
 
     private sealed class LockoutState
     {
