@@ -10,6 +10,8 @@ using TijarahJo.Api.Common.Configuration;
 using TijarahJo.Api.Common.Services;
 using TijarahJo.Infrastructure.Persistence;
 using System.Security.Claims;
+using System.ComponentModel.DataAnnotations;
+using TijarahJo.Domain.Enums;
 
 namespace TijarahJo.Api.Features.Admin;
 
@@ -97,7 +99,17 @@ public class AdminReportsQueueController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> UpdateReportStatus(int id, [FromBody] UpdateReportStatusRequest request)
     {
-        var adminUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        if (id < 1 || !Enum.IsDefined(typeof(ReportStatus), request.Status))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: "Invalid report identifier or status.");
+        }
+
+        if (!int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out int adminUserId) || adminUserId < 1)
+        {
+            return Problem(statusCode: StatusCodes.Status401Unauthorized, detail: "Invalid authenticated user.");
+        }
 
         bool updated = await _adminDataAccess.UpdateReportStatusAsync(
             id,
@@ -113,6 +125,9 @@ public class AdminReportsQueueController(
 
 public sealed class UpdateReportStatusRequest
 {
+    [Range((int)ReportStatus.Pending, (int)ReportStatus.Dismissed)]
     public int Status { get; set; }
+
+    [StringLength(1000)]
     public string? ResolutionNotes { get; set; }
 }

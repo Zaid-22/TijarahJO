@@ -883,20 +883,54 @@ public sealed class AdminDataAccessAdapter(TijarahJoDbContext dbContext, ILogger
 
     public async Task<bool> UpdateReportStatusAsync(int reportId, int newStatus, int adminUserId, string? resolutionNotes = null, CancellationToken cancellationToken = default)
     {
+        if (reportId < 1 || adminUserId < 1 || !System.Enum.IsDefined(typeof(ReportStatus), newStatus))
+        {
+            return false;
+        }
+
         var entity = await _dbContext.Reports.FindAsync([reportId], cancellationToken);
         if (entity == null) return false;
 
-        entity.Status = newStatus;
-        if (newStatus == (int)ReportStatus.Resolved || newStatus == (int)ReportStatus.Dismissed)
-        {
-            entity.ResolvedByUserID = adminUserId;
-            entity.ResolvedAt = System.DateTime.UtcNow;
-        }
-        if (!string.IsNullOrWhiteSpace(resolutionNotes))
-            entity.ResolutionNotes = resolutionNotes;
+        ApplyReportStatus(entity, newStatus, adminUserId, resolutionNotes, System.DateTime.UtcNow);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    internal static void ApplyReportStatus(
+        ReportEntity entity,
+        int newStatus,
+        int adminUserId,
+        string? resolutionNotes,
+        System.DateTime utcNow)
+    {
+        if (entity is null)
+        {
+            throw new System.ArgumentNullException(nameof(entity));
+        }
+
+        if (adminUserId < 1 || !System.Enum.IsDefined(typeof(ReportStatus), newStatus))
+        {
+            throw new System.ArgumentOutOfRangeException(nameof(newStatus));
+        }
+
+        entity.Status = newStatus;
+        bool isTerminal = newStatus == (int)ReportStatus.Resolved ||
+                          newStatus == (int)ReportStatus.Dismissed;
+        if (isTerminal)
+        {
+            entity.ResolvedByUserID = adminUserId;
+            entity.ResolvedAt = utcNow;
+            entity.ResolutionNotes = string.IsNullOrWhiteSpace(resolutionNotes)
+                ? null
+                : resolutionNotes.Trim();
+        }
+        else
+        {
+            entity.ResolvedByUserID = null;
+            entity.ResolvedAt = null;
+            entity.ResolutionNotes = null;
+        }
     }
 
     public async Task<bool> SuspendUserAsync(int userId, System.DateTime? suspendedUntil, int adminUserId, CancellationToken cancellationToken = default)
