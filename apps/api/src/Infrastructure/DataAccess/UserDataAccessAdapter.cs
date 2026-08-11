@@ -57,21 +57,39 @@ public sealed class UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<
 
     public async Task<bool> UpdateUserAsync(UserModel user, int actorUserId, CancellationToken cancellationToken = default)
     {
-        return await UpdateUserCoreAsync(user, actorUserId, invalidateSecuritySessions: true, cancellationToken);
+        return await UpdateUserCoreAsync(user, actorUserId, cancellationToken);
     }
 
-    public async Task<bool> UpdateUserForCredentialRehashAsync(
-        UserModel user,
-        int actorUserId,
+    public async Task<bool> UpdatePasswordHashForCredentialRehashAsync(
+        int userId,
+        string expectedHashedPassword,
+        string replacementHashedPassword,
         CancellationToken cancellationToken = default)
     {
-        return await UpdateUserCoreAsync(user, actorUserId, invalidateSecuritySessions: false, cancellationToken);
+        if (userId < 1 ||
+            string.IsNullOrWhiteSpace(expectedHashedPassword) ||
+            string.IsNullOrWhiteSpace(replacementHashedPassword) ||
+            string.Equals(expectedHashedPassword, replacementHashedPassword, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        int updatedRows = await _dbContext.Users
+            .Where(user =>
+                user.UserID == userId &&
+                user.HashedPassword == expectedHashedPassword)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(
+                    user => user.HashedPassword,
+                    replacementHashedPassword),
+                cancellationToken);
+
+        return updatedRows == 1;
     }
 
     private async Task<bool> UpdateUserCoreAsync(
         UserModel user,
         int actorUserId,
-        bool invalidateSecuritySessions,
         CancellationToken cancellationToken)
     {
         if (!user.UserID.HasValue || user.UserID.Value < 1 || actorUserId < 1)
@@ -109,7 +127,7 @@ public sealed class UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<
         entity.TwoFactorPendingSecret = user.TwoFactorPendingSecret;
         entity.SuspendedUntil = user.SuspendedUntil;
         entity.IsEmailVerified = user.IsEmailVerified;
-        if (invalidateSecuritySessions && securityStateChanged)
+        if (securityStateChanged)
         {
             entity.LastInvalidatedAt = DateTime.UtcNow;
         }

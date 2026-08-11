@@ -120,11 +120,12 @@ public interface IUserDataAccess
     Task<UserModel?> GetUserByIDAsync(int? userId, CancellationToken cancellationToken = default);
     Task<int> AddUserAsync(UserModel user, CancellationToken cancellationToken = default);
     Task<bool> UpdateUserAsync(UserModel user, int actorUserId, CancellationToken cancellationToken = default);
-    Task<bool> UpdateUserForCredentialRehashAsync(
-        UserModel user,
-        int actorUserId,
+    Task<bool> UpdatePasswordHashForCredentialRehashAsync(
+        int userId,
+        string expectedHashedPassword,
+        string replacementHashedPassword,
         CancellationToken cancellationToken = default)
-        => UpdateUserAsync(user, actorUserId, cancellationToken);
+        => Task.FromResult(false);
     Task<bool> DeleteUserAsync(int? userId, int actorUserId, CancellationToken cancellationToken = default);
     Task<bool> DoesUserExistAsync(int? userId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<UserModel>> GetAllUsersAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);

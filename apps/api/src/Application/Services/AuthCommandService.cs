@@ -113,8 +113,12 @@ public sealed class AuthCommandService(
         {
             try
             {
-                user = user with { HashedPassword = PasswordHelper.HashPassword(command.Password) };
-                await _users.UpdateUserForCredentialRehashAsync(user, user.UserID.Value, cancellationToken);
+                string replacementHash = PasswordHelper.HashPassword(command.Password);
+                await _users.UpdatePasswordHashForCredentialRehashAsync(
+                    user.UserID.Value,
+                    user.HashedPassword,
+                    replacementHash,
+                    cancellationToken);
             }
             catch (Exception ex)
             {

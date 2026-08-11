@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using TijarahJo.Domain.Models;
 using TijarahJo.Application.Abstractions.DataAccess;
 using TijarahJo.Application.Abstractions.Services;
@@ -107,6 +108,44 @@ public sealed class AuthCommandServiceTests
         Assert.True(result.Success);
         Assert.NotNull(result.User);
         Assert.Equal("User", result.RoleName);
+    }
+
+    [Fact]
+    public async Task LoginAsync_CredentialRehashPreservesConcurrentUserStateChanges()
+    {
+        const string password = "Test1234!";
+        var account = CreateDefaultUser(hashedPassword: CreateLowIterationPbkdf2Hash(password));
+        DateTime suspendedUntil = DateTime.UtcNow.AddDays(3);
+        UserModel concurrentState = account with
+        {
+            Status = 2,
+            RoleID = 9,
+            IsDeleted = true,
+            TwoFactorEnabled = true,
+            TwoFactorSecret = "concurrent-secret",
+            TwoFactorPendingSecret = "concurrent-pending-secret",
+            SuspendedUntil = suspendedUntil
+        };
+        var (service, users) = BuildServiceWithAccount(account);
+        users.ConcurrentUserAtRehash = concurrentState;
+
+        AuthCommandResult result = await service.LoginAsync(new LoginCommand
+        {
+            Login = account.Email,
+            Password = password
+        });
+
+        Assert.True(result.Success);
+        Assert.NotNull(users.RehashUpdatedUser);
+        UserModel updated = users.RehashUpdatedUser!;
+        Assert.NotEqual(account.HashedPassword, updated.HashedPassword);
+        Assert.Equal(concurrentState.Status, updated.Status);
+        Assert.Equal(concurrentState.RoleID, updated.RoleID);
+        Assert.Equal(concurrentState.IsDeleted, updated.IsDeleted);
+        Assert.Equal(concurrentState.TwoFactorEnabled, updated.TwoFactorEnabled);
+        Assert.Equal(concurrentState.TwoFactorSecret, updated.TwoFactorSecret);
+        Assert.Equal(concurrentState.TwoFactorPendingSecret, updated.TwoFactorPendingSecret);
+        Assert.Equal(concurrentState.SuspendedUntil, updated.SuspendedUntil);
     }
 
     // -------------------------------------------------------------------------
@@ -386,6 +425,19 @@ public sealed class AuthCommandServiceTests
         );
     }
 
+    private static string CreateLowIterationPbkdf2Hash(string password)
+    {
+        const int iterations = 1_000;
+        byte[] salt = Enumerable.Range(1, 16).Select(value => (byte)value).ToArray();
+        byte[] key = Rfc2898DeriveBytes.Pbkdf2(
+            password,
+            salt,
+            iterations,
+            HashAlgorithmName.SHA256,
+            32);
+        return $"PBKDF2_SHA256${iterations}${Convert.ToBase64String(salt)}${Convert.ToBase64String(key)}";
+    }
+
     private static AuthCommandService BuildService(
         UserModel? nextFindUser = null,
         string? hashedPassword = null,
@@ -430,6 +482,8 @@ public sealed class AuthCommandServiceTests
         public FakeUserDataAccess(UserModel account) => _account = account;
 
         public UserModel? UpdatedUser { get; private set; }
+        public UserModel? ConcurrentUserAtRehash { get; set; }
+        public UserModel? RehashUpdatedUser { get; private set; }
 
         public Task<UserModel?> GetUserByIDAsync(int? userId, CancellationToken ct = default)
             => Task.FromResult<UserModel?>(userId == _account.UserID ? _account : null);
@@ -461,6 +515,23 @@ public sealed class AuthCommandServiceTests
         {
             UpdatedUser = user;
             return Task.FromResult(_saveResult);
+        }
+
+        public Task<bool> UpdatePasswordHashForCredentialRehashAsync(
+            int userId,
+            string expectedHashedPassword,
+            string replacementHashedPassword,
+            CancellationToken cancellationToken = default)
+        {
+            UserModel current = ConcurrentUserAtRehash ?? _account;
+            if (current.UserID != userId ||
+                !string.Equals(current.HashedPassword, expectedHashedPassword, StringComparison.Ordinal))
+            {
+                return Task.FromResult(false);
+            }
+
+            RehashUpdatedUser = current with { HashedPassword = replacementHashedPassword };
+            return Task.FromResult(true);
         }
 
         public Task<bool> DeleteUserAsync(int? userId, int actorUserId, CancellationToken ct = default)
