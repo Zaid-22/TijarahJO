@@ -140,7 +140,8 @@ public static class AuthenticationExtensions
             .AddPolicy(AuthorizationPolicies.AdminOnly, policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireRole(AppRoles.Admin);
+                policy.RequireAssertion(context =>
+                    AuthorizationPrincipalHelpers.IsAdminRole(context.User));
             })
             .AddPolicy(AuthorizationPolicies.AdminAccess, RequireAdminAccess())
             .AddPolicy(AuthorizationPolicies.UsersView, RequirePermission(PermissionKeys.UsersView))

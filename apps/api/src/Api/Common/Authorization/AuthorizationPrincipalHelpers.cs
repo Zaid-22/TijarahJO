@@ -16,6 +16,11 @@ public static class AuthorizationPrincipalHelpers
             return AppRoles.IsAdminRoleName(currentRole);
         }
 
+        if (user.HasClaim(PermissionClaimTypes.PermissionsLoaded, "true"))
+        {
+            return false;
+        }
+
         if (user.IsInRole(AppRoles.Admin))
         {
             return true;

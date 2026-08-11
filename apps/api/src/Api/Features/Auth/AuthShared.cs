@@ -22,7 +22,8 @@ internal static class AuthShared
         return user != null &&
                user.UserID.HasValue &&
                !user.IsDeleted &&
-               user.Status == UserStatusPolicy.Active;
+               user.Status == UserStatusPolicy.Active &&
+               (!user.SuspendedUntil.HasValue || user.SuspendedUntil.Value <= DateTime.UtcNow);
     }
 
     public static async Task<string?> ResolveRoleNameForTokenAsync(

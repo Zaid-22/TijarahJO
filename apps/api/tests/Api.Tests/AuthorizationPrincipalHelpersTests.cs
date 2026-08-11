@@ -54,4 +54,17 @@ public sealed class AuthorizationPrincipalHelpersTests
 
         Assert.False(AuthorizationPrincipalHelpers.HasPermission(principal, PermissionKeys.UsersView));
     }
+
+    [Fact]
+    public void IsAdminRole_DeniesStaleJwtAdminRole_WhenDatabasePermissionsDidNotLoadARole()
+    {
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(ClaimTypes.Role, AppRoles.Admin),
+            new Claim(PermissionClaimTypes.PermissionsLoaded, "true")
+        ],
+        authenticationType: "Bearer"));
+
+        Assert.False(AuthorizationPrincipalHelpers.IsAdminRole(principal));
+    }
 }

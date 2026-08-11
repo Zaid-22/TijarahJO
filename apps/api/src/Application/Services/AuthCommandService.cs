@@ -114,7 +114,7 @@ public sealed class AuthCommandService(
             try
             {
                 user = user with { HashedPassword = PasswordHelper.HashPassword(command.Password) };
-                await _users.UpdateUserAsync(user, user.UserID.Value, cancellationToken);
+                await _users.UpdateUserForCredentialRehashAsync(user, user.UserID.Value, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -583,6 +583,12 @@ public sealed class AuthCommandService(
         if (user.Status != UserStatusPolicy.Active)
         {
             return Failure(AuthCommandFailureReason.UserInactive, "User account is banned or inactive.");
+        }
+
+        if (user.SuspendedUntil.HasValue && user.SuspendedUntil.Value > DateTime.UtcNow)
+        {
+            string until = user.SuspendedUntil.Value.ToString("yyyy-MM-dd HH:mm") + " UTC";
+            return Failure(AuthCommandFailureReason.UserInactive, $"Your account is suspended until {until}. Please try again later.");
         }
 
         return null;

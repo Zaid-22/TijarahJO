@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using TijarahJo.Application.Common;
 using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Domain.Entities;
 using TijarahJo.Infrastructure.Persistence;
@@ -87,17 +88,47 @@ public sealed class DatabaseTokenBlacklistService(
 
     public async Task<bool> IsUserSessionInvalidatedAsync(int userId, DateTimeOffset tokenIssuedAt, CancellationToken cancellationToken = default)
     {
-        var lastInvalidatedAt = await dbContext.Users
+        var userState = await dbContext.Users
+            .IgnoreQueryFilters()
             .Where(u => u.UserID == userId)
-            .Select(u => u.LastInvalidatedAt)
+            .Select(u => new
+            {
+                u.IsDeleted,
+                u.Status,
+                u.SuspendedUntil,
+                u.LastInvalidatedAt
+            })
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (lastInvalidatedAt.HasValue)
+        return ShouldRejectUserSession(
+            userState is not null,
+            userState?.IsDeleted ?? false,
+            userState?.Status ?? 0,
+            userState?.SuspendedUntil,
+            userState?.LastInvalidatedAt,
+            tokenIssuedAt,
+            DateTime.UtcNow);
+    }
+
+    internal static bool ShouldRejectUserSession(
+        bool userExists,
+        bool isDeleted,
+        int status,
+        DateTime? suspendedUntil,
+        DateTime? lastInvalidatedAt,
+        DateTimeOffset tokenIssuedAt,
+        DateTime utcNow)
+    {
+        if (!userExists || isDeleted || status != UserStatusPolicy.Active)
         {
-            // If the token was issued before the last invalidation time, it's invalid
-            return tokenIssuedAt.UtcDateTime < lastInvalidatedAt.Value;
+            return true;
         }
 
-        return false;
+        if (suspendedUntil.HasValue && suspendedUntil.Value > utcNow)
+        {
+            return true;
+        }
+
+        return lastInvalidatedAt.HasValue && tokenIssuedAt.UtcDateTime < lastInvalidatedAt.Value;
     }
 }

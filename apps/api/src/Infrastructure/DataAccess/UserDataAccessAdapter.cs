@@ -57,6 +57,23 @@ public sealed class UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<
 
     public async Task<bool> UpdateUserAsync(UserModel user, int actorUserId, CancellationToken cancellationToken = default)
     {
+        return await UpdateUserCoreAsync(user, actorUserId, invalidateSecuritySessions: true, cancellationToken);
+    }
+
+    public async Task<bool> UpdateUserForCredentialRehashAsync(
+        UserModel user,
+        int actorUserId,
+        CancellationToken cancellationToken = default)
+    {
+        return await UpdateUserCoreAsync(user, actorUserId, invalidateSecuritySessions: false, cancellationToken);
+    }
+
+    private async Task<bool> UpdateUserCoreAsync(
+        UserModel user,
+        int actorUserId,
+        bool invalidateSecuritySessions,
+        CancellationToken cancellationToken)
+    {
         if (!user.UserID.HasValue || user.UserID.Value < 1 || actorUserId < 1)
         {
             return false;
@@ -69,9 +86,12 @@ public sealed class UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<
             return false;
         }
 
-        entity.HashedPassword = string.IsNullOrWhiteSpace(user.HashedPassword)
+        string nextHashedPassword = string.IsNullOrWhiteSpace(user.HashedPassword)
             ? entity.HashedPassword
             : user.HashedPassword;
+        bool securityStateChanged = HasSecurityStateChanged(entity, user, nextHashedPassword);
+
+        entity.HashedPassword = nextHashedPassword;
         entity.Email = user.Email;
         entity.FirstName = user.FirstName;
         entity.LastName = user.LastName;
@@ -89,6 +109,10 @@ public sealed class UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<
         entity.TwoFactorPendingSecret = user.TwoFactorPendingSecret;
         entity.SuspendedUntil = user.SuspendedUntil;
         entity.IsEmailVerified = user.IsEmailVerified;
+        if (invalidateSecuritySessions && securityStateChanged)
+        {
+            entity.LastInvalidatedAt = DateTime.UtcNow;
+        }
 
         _dbContext.AuditActorUserId = actorUserId;
         try
@@ -101,6 +125,25 @@ public sealed class UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<
             _logger.LogError(ex, "Failed to update user {UserId}", user.UserID);
             return false;
         }
+    }
+
+    internal static bool HasSecurityStateChanged(
+        UserEntity entity,
+        UserModel user,
+        string nextHashedPassword)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+        ArgumentNullException.ThrowIfNull(user);
+
+        return
+            !string.Equals(entity.HashedPassword, nextHashedPassword, StringComparison.Ordinal) ||
+            !string.Equals(entity.Email, user.Email, StringComparison.OrdinalIgnoreCase) ||
+            entity.Status != user.Status ||
+            entity.RoleID != user.RoleID ||
+            entity.IsDeleted != user.IsDeleted ||
+            entity.TwoFactorEnabled != user.TwoFactorEnabled ||
+            !string.Equals(entity.TwoFactorSecret, user.TwoFactorSecret, StringComparison.Ordinal) ||
+            entity.SuspendedUntil != user.SuspendedUntil;
     }
 
     public async Task<bool> DeleteUserAsync(int? userId, int actorUserId, CancellationToken cancellationToken = default)
@@ -160,7 +203,7 @@ public sealed class UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<
                 NewValues = $"{{\"UserID\":{userId.Value},\"IsDeleted\":true}}"
             });
 
-            entity.IsDeleted = true;
+            ApplyDeletionState(entity, DateTime.UtcNow);
             _dbContext.AuditActorUserId = actorUserId;
             bool deleted = await _dbContext.SaveChangesAsync(cancellationToken) > 0;
             if (!deleted)
@@ -177,6 +220,13 @@ public sealed class UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<
             await transaction.RollbackAsync(cancellationToken);
             throw;
         }
+    }
+
+    internal static void ApplyDeletionState(UserEntity entity, DateTime utcNow)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+        entity.IsDeleted = true;
+        entity.LastInvalidatedAt = utcNow;
     }
 
     public async Task<bool> DoesUserExistAsync(int? userId, CancellationToken cancellationToken = default)

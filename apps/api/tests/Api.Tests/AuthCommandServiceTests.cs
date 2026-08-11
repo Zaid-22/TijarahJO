@@ -317,6 +317,43 @@ public sealed class AuthCommandServiceTests
         Assert.Null(users.UpdatedUser);
     }
 
+    [Fact]
+    public async Task GoogleAuthAsync_RejectsCurrentlySuspendedAccount()
+    {
+        var account = CreateDefaultUser(suspendedUntil: DateTime.UtcNow.AddHours(1));
+        var (service, _) = BuildServiceWithAccount(account);
+
+        AuthCommandResult result = await service.GoogleAuthAsync(new GoogleAuthCommand
+        {
+            Subject = "google-suspended-user",
+            Email = account.Email,
+            FirstName = account.FirstName,
+            LastName = account.LastName
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal(AuthCommandFailureReason.UserInactive, result.FailureReason);
+    }
+
+    [Fact]
+    public async Task GoogleAuthAsync_MarksProviderVerifiedEmailWithoutChangingLoginOutcome()
+    {
+        var account = CreateDefaultUser(isEmailVerified: false);
+        var (service, users) = BuildServiceWithAccount(account);
+
+        AuthCommandResult result = await service.GoogleAuthAsync(new GoogleAuthCommand
+        {
+            Subject = "google-first-login",
+            Email = account.Email,
+            FirstName = account.FirstName,
+            LastName = account.LastName
+        });
+
+        Assert.True(result.Success);
+        Assert.True(result.User!.IsEmailVerified);
+        Assert.True(users.UpdatedUser!.IsEmailVerified);
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
@@ -325,7 +362,9 @@ public sealed class AuthCommandServiceTests
         string? hashedPassword = null,
         bool isDeleted = false,
         int status = 1 /* Active */,
-        string? avatar = null)
+        string? avatar = null,
+        DateTime? suspendedUntil = null,
+        bool isEmailVerified = true)
     {
         return new UserModel(
             userid: 1,
@@ -342,7 +381,8 @@ public sealed class AuthCommandServiceTests
             status: status,
             roleid: 1,
             isdeleted: isDeleted,
-            isEmailVerified: true
+            suspendedUntil: suspendedUntil,
+            isEmailVerified: isEmailVerified
         );
     }
 

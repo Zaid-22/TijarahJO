@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Globalization;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
@@ -25,13 +26,21 @@ public class TokenService : ITokenService
     public string GenerateToken(int userId, string email, string roleName)
     {
         string normalizedRoleName = AppRoles.NormalizeRoleName(roleName);
+        DateTimeOffset issuedAt = DateTimeOffset.UtcNow;
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
             new Claim(ClaimTypes.Email, email),
             new Claim(ClaimTypes.Role, normalizedRoleName),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
+            new Claim(
+                JwtRegisteredClaimNames.Iat,
+                issuedAt.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture),
+                ClaimValueTypes.Integer64),
+            new Claim(
+                TokenClaimTypes.IssuedAtUtcTicks,
+                issuedAt.UtcDateTime.Ticks.ToString(CultureInfo.InvariantCulture),
+                ClaimValueTypes.Integer64)
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SigningKey));
@@ -41,7 +50,7 @@ public class TokenService : ITokenService
             issuer: _jwtOptions.Issuer,
             audience: _jwtOptions.Audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(_jwtOptions.Lifetime),
+            expires: issuedAt.UtcDateTime.AddMinutes(_jwtOptions.Lifetime),
             signingCredentials: credentials
         );
 
