@@ -21,6 +21,7 @@ import { normalizeSellerDisplayName } from "../../../utils/sellerDisplayName";
 import { logger } from "../../../shared/lib/logger";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { Breadcrumbs } from "../../../shared/ui/breadcrumbs";
+import { useAuth } from "../../../contexts/AuthContext";
 
 import type {
   UpdatePostInput,
@@ -66,6 +67,7 @@ export function PostDetailsPage({
   isAuthenticated = false,
   onRequireAuth,
 }: PostDetailsPageProps) {
+  const { user: currentUser } = useAuth();
   type ActiveDialog = "delete" | "edit" | "phone" | "report" | "share" | null;
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
   const [sellerJoinDate, setSellerJoinDate] = useState<string | null>(null);
@@ -338,6 +340,7 @@ export function PostDetailsPage({
             />
 
             <PostCommentsSection
+              key={`${post.id}:${currentUser?.id || "signed-out"}`}
               postId={post.id}
               language={language}
               postOwnerId={post.sellerId}

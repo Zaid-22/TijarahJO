@@ -30,6 +30,7 @@ import { AdminReportItem } from "../../../services/api/admin";
 import { resolveUploadUrl } from "../../../services/api/utils";
 import { formatCompactDateTime } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
+import { getReportActionFailureOutcome } from "../reportActionOutcome";
 import { ReportActionDialog } from "./ReportActionDialog";
 
 const STATUS_LABELS: Record<number, string> = {
@@ -190,17 +191,44 @@ export function ReportsQueue() {
   const handleUpdateStatus = async () => {
     if (!selectedReport) return;
     try {
-      await api.admin.updateReportStatus(
+      const success = await api.admin.updateReportStatus(
         selectedReport.reportID,
         newStatus,
         resolutionNotes || undefined,
       );
+      if (!success) {
+        toast.error("Failed to update report");
+        return;
+      }
       toast.success("Report updated");
       setActionDialogOpen(false);
       await fetchReports();
     } catch (error) {
       logger.warn("[ReportsQueue] Update failed", error);
       toast.error("Failed to update report");
+    }
+  };
+
+  const handleReportActionFailure = async ({
+    primaryActionSucceeded,
+    primaryFailureMessage,
+    resolutionFailureMessage,
+  }: {
+    primaryActionSucceeded: boolean;
+    primaryFailureMessage: string;
+    resolutionFailureMessage: string;
+  }) => {
+    const outcome = getReportActionFailureOutcome({
+      primaryActionSucceeded,
+      primaryFailureMessage,
+      resolutionFailureMessage,
+    });
+    toast.error(outcome.message);
+    if (outcome.shouldCloseDialog) {
+      setActionDialogOpen(false);
+    }
+    if (outcome.shouldRefreshReports) {
+      await fetchReports();
     }
   };
 
@@ -213,6 +241,7 @@ export function ReportsQueue() {
         : Number(selectedSuspensionHours);
 
     setIsSuspending(true);
+    let primaryActionSucceeded = false;
     try {
       const result = await api.admin.suspendUser(
         selectedReport.targetUserID,
@@ -220,15 +249,25 @@ export function ReportsQueue() {
       );
 
       if (result.success) {
-        toast.success(result.message ?? "User blocked successfully");
-
+        primaryActionSucceeded = true;
         // Auto-resolve the report
-        await api.admin.updateReportStatus(
+        const reportResolved = await api.admin.updateReportStatus(
           selectedReport.reportID,
           2, // Resolved
           `User #${selectedReport.targetUserID} ${durationHours === null ? "permanently banned" : `suspended for ${durationHours}h`} via report #${selectedReport.reportID}`,
         );
 
+        if (!reportResolved) {
+          await handleReportActionFailure({
+            primaryActionSucceeded: true,
+            primaryFailureMessage: "Failed to block user",
+            resolutionFailureMessage:
+              "User blocked, but the report could not be resolved",
+          });
+          return;
+        }
+
+        toast.success(result.message ?? "User blocked successfully");
         setActionDialogOpen(false);
         await fetchReports();
       } else {
@@ -236,7 +275,12 @@ export function ReportsQueue() {
       }
     } catch (error) {
       logger.warn("[ReportsQueue] Block user failed", error);
-      toast.error("Failed to block user");
+      await handleReportActionFailure({
+        primaryActionSucceeded,
+        primaryFailureMessage: "Failed to block user",
+        resolutionFailureMessage:
+          "User blocked, but the report could not be resolved",
+      });
     } finally {
       setIsSuspending(false);
     }
@@ -246,6 +290,7 @@ export function ReportsQueue() {
     if (!selectedReport || selectedReport.reportType !== "LISTING") return;
 
     setIsBlockingPost(true);
+    let primaryActionSucceeded = false;
     try {
       const success = await api.admin.updatePostStatus(
         selectedReport.targetID,
@@ -253,15 +298,25 @@ export function ReportsQueue() {
       );
 
       if (success) {
-        toast.success("Post blocked successfully");
-
+        primaryActionSucceeded = true;
         // Auto-resolve the report
-        await api.admin.updateReportStatus(
+        const reportResolved = await api.admin.updateReportStatus(
           selectedReport.reportID,
           2, // Resolved
           `Post blocked via report #${selectedReport.reportID}`,
         );
 
+        if (!reportResolved) {
+          await handleReportActionFailure({
+            primaryActionSucceeded: true,
+            primaryFailureMessage: "Failed to block post",
+            resolutionFailureMessage:
+              "Post blocked, but the report could not be resolved",
+          });
+          return;
+        }
+
+        toast.success("Post blocked successfully");
         setActionDialogOpen(false);
         await fetchReports();
       } else {
@@ -269,7 +324,12 @@ export function ReportsQueue() {
       }
     } catch (error) {
       logger.warn("[ReportsQueue] Block post failed", error);
-      toast.error("Failed to block post");
+      await handleReportActionFailure({
+        primaryActionSucceeded,
+        primaryFailureMessage: "Failed to block post",
+        resolutionFailureMessage:
+          "Post blocked, but the report could not be resolved",
+      });
     } finally {
       setIsBlockingPost(false);
     }
@@ -279,18 +339,29 @@ export function ReportsQueue() {
     if (!selectedReport || selectedReport.reportType !== "COMMENT") return;
 
     setIsDeletingComment(true);
+    let primaryActionSucceeded = false;
     try {
       const result = await api.admin.deletePostComment(selectedReport.targetID);
 
       if (result.success) {
-        toast.success(result.message || "Comment deleted successfully");
-
-        await api.admin.updateReportStatus(
+        primaryActionSucceeded = true;
+        const reportResolved = await api.admin.updateReportStatus(
           selectedReport.reportID,
           2,
           `Comment deleted via report #${selectedReport.reportID}`,
         );
 
+        if (!reportResolved) {
+          await handleReportActionFailure({
+            primaryActionSucceeded: true,
+            primaryFailureMessage: "Failed to delete comment",
+            resolutionFailureMessage:
+              "Comment deleted, but the report could not be resolved",
+          });
+          return;
+        }
+
+        toast.success(result.message || "Comment deleted successfully");
         setActionDialogOpen(false);
         await fetchReports();
       } else {
@@ -298,7 +369,12 @@ export function ReportsQueue() {
       }
     } catch (error) {
       logger.warn("[ReportsQueue] Delete comment failed", error);
-      toast.error("Failed to delete comment");
+      await handleReportActionFailure({
+        primaryActionSucceeded,
+        primaryFailureMessage: "Failed to delete comment",
+        resolutionFailureMessage:
+          "Comment deleted, but the report could not be resolved",
+      });
     } finally {
       setIsDeletingComment(false);
     }

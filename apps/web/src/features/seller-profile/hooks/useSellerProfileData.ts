@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { api } from "../../../services/api";
 import { transformPostModelToPost } from "../../../services/api/posts/mappers";
@@ -102,14 +102,28 @@ export function useSellerProfileData(userId: string | undefined) {
   const [sellerProfile, setSellerProfile] = useState<SellerProfileState | null>(
     null,
   );
+  const [loadedUserId, setLoadedUserId] = useState("");
+  const requestRunIdRef = useRef(0);
 
   const reload = useCallback(async () => {
-    if (!userId) {
+    const requestedUserId = String(userId || "").trim();
+    const runId = ++requestRunIdRef.current;
+    const isCurrentRequest = () =>
+      runId === requestRunIdRef.current &&
+      String(userId || "").trim() === requestedUserId;
+
+    if (!requestedUserId) {
+      setLoadedUserId("");
+      setActiveListings([]);
+      setSoldListings([]);
+      setReviews([]);
+      setSellerProfile(null);
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
+    setLoadedUserId("");
     setActiveListings([]);
     setSoldListings([]);
     setReviews([]);
@@ -117,9 +131,12 @@ export function useSellerProfileData(userId: string | undefined) {
 
     try {
       const [sellerResponse, reviewList] = await Promise.all([
-        api.sellers.getSellerProfile(String(userId)),
-        api.reviews.getUserReviews(String(userId)),
+        api.sellers.getSellerProfile(requestedUserId),
+        api.reviews.getUserReviews(requestedUserId),
       ]);
+      if (!isCurrentRequest()) {
+        return;
+      }
       const normalizedReviews = reviewList.map((review: unknown, index: number) => {
         const reviewRow = toRecord(review);
         const reviewIdRaw = reviewRow.ReviewID ?? reviewRow.reviewID;
@@ -188,7 +205,7 @@ export function useSellerProfileData(userId: string | undefined) {
         const location = [area, city].filter(Boolean).join(", ") || "Amman, Jordan";
         const sellerName = normalizeSellerDisplayName(
           seller.name,
-          String(seller?.id || userId),
+          String(seller?.id || requestedUserId),
         );
         const sellerPhone = readPhone(seller) || findFirstPostPhone(sellerPosts);
 
@@ -208,7 +225,7 @@ export function useSellerProfileData(userId: string | undefined) {
               post,
               index,
               sellerName,
-              String(seller?.id || userId),
+              String(seller?.id || requestedUserId),
               location,
               sellerAverageRating,
               sellerReviewCount,
@@ -223,7 +240,7 @@ export function useSellerProfileData(userId: string | undefined) {
               post,
               index,
               sellerName,
-              String(seller?.id || userId),
+              String(seller?.id || requestedUserId),
               location,
               sellerAverageRating,
               sellerReviewCount,
@@ -232,11 +249,14 @@ export function useSellerProfileData(userId: string | undefined) {
         setSoldListings(soldPosts);
       } else {
         const [sellerUser, userPosts] = await Promise.all([
-          api.users.getUser(String(userId)),
-          api.posts.getUserPosts(String(userId)),
+          api.users.getUser(requestedUserId),
+          api.posts.getUserPosts(requestedUserId),
         ]);
+        if (!isCurrentRequest()) {
+          return;
+        }
         const userPostPhone = findFirstPostPhone(userPosts);
-        let fallbackSellerName = `User ${userId}`;
+        let fallbackSellerName = `User ${requestedUserId}`;
         let fallbackLocation = "Amman, Jordan";
         if (sellerUser) {
           const sellerRow = toRecord(sellerUser);
@@ -245,8 +265,8 @@ export function useSellerProfileData(userId: string | undefined) {
           const location = [area, city].filter(Boolean).join(", ") || "Amman, Jordan";
 
           fallbackSellerName = normalizeSellerDisplayName(
-            resolveUserDisplayName(sellerRow, String(userId)),
-            String(userId),
+            resolveUserDisplayName(sellerRow, requestedUserId),
+            requestedUserId,
           );
           fallbackLocation = location;
           setSellerProfile({
@@ -266,7 +286,7 @@ export function useSellerProfileData(userId: string | undefined) {
               post,
               index,
               fallbackSellerName,
-              String(userId),
+              requestedUserId,
               fallbackLocation,
               sellerAverageRating,
               sellerReviewCount,
@@ -281,7 +301,7 @@ export function useSellerProfileData(userId: string | undefined) {
               post,
               index,
               fallbackSellerName,
-              String(userId),
+              requestedUserId,
               fallbackLocation,
               sellerAverageRating,
               sellerReviewCount,
@@ -290,22 +310,32 @@ export function useSellerProfileData(userId: string | undefined) {
         setSoldListings(soldPosts);
       }
     } catch {
-      toast.error("Failed to load seller profile");
+      if (isCurrentRequest()) {
+        toast.error("Failed to load seller profile");
+      }
     } finally {
-      setIsLoading(false);
+      if (isCurrentRequest()) {
+        setLoadedUserId(requestedUserId);
+        setIsLoading(false);
+      }
     }
   }, [userId]);
 
   useEffect(() => {
     void reload();
+    return () => {
+      requestRunIdRef.current += 1;
+    };
   }, [reload]);
 
+  const dataBelongsToCurrentUser = loadedUserId === String(userId || "").trim();
+
   return {
-    activeListings,
-    soldListings,
-    reviews,
-    isLoading,
-    sellerProfile,
+    activeListings: dataBelongsToCurrentUser ? activeListings : [],
+    soldListings: dataBelongsToCurrentUser ? soldListings : [],
+    reviews: dataBelongsToCurrentUser ? reviews : [],
+    isLoading: isLoading || !dataBelongsToCurrentUser,
+    sellerProfile: dataBelongsToCurrentUser ? sellerProfile : null,
     reload,
   };
 }

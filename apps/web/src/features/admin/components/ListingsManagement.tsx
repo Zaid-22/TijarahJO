@@ -34,6 +34,7 @@ export function ListingsManagement() {
 
   // Bulk actions state
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   // Listing detail modal
   const [detailPost, setDetailPost] = useState<
     AdminPostListResult["posts"][0] | null
@@ -66,6 +67,11 @@ export function ListingsManagement() {
   useEffect(() => {
     void fetchPosts(page, statusFilter);
   }, [page, statusFilter]);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setFocusedIndex(-1);
+  }, [page, searchQuery, statusFilter]);
 
   const handleUpdateStatus = async () => {
     if (!actionPost) return;
@@ -172,15 +178,38 @@ export function ListingsManagement() {
   };
 
   const handleBulkBlock = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0 || isBulkUpdating) {
+      return;
+    }
+
+    setIsBulkUpdating(true);
+    let succeeded = 0;
+    let failed = 0;
     try {
-      for (const id of selectedIds) {
-        await api.admin.updatePostStatus(id, 1);
+      for (const id of ids) {
+        try {
+          const success = await api.admin.updatePostStatus(id, 1);
+          if (success) {
+            succeeded += 1;
+          } else {
+            failed += 1;
+          }
+        } catch {
+          failed += 1;
+        }
       }
-      toast.success(`Blocked ${selectedIds.size} listings`);
+
+      if (succeeded > 0) {
+        toast.success(`Blocked ${succeeded} ${succeeded === 1 ? "listing" : "listings"}`);
+      }
+      if (failed > 0) {
+        toast.error(`Failed to block ${failed} ${failed === 1 ? "listing" : "listings"}`);
+      }
       setSelectedIds(new Set());
       await fetchPosts(page, statusFilter);
-    } catch {
-      toast.error("Failed to bulk block listings");
+    } finally {
+      setIsBulkUpdating(false);
     }
   };
 
@@ -518,7 +547,12 @@ export function ListingsManagement() {
           <span className="text-sm font-medium">
             {selectedIds.size} selected
           </span>
-          <Button variant="destructive" size="sm" onClick={handleBulkBlock}>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleBulkBlock}
+            disabled={isBulkUpdating}
+          >
             <Ban className="w-3.5 h-3.5 mr-1.5" /> Bulk Block
           </Button>
           <Button

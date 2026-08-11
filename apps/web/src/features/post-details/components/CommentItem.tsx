@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { MoreVertical, Reply, Trash2, Edit2, ChevronDown, ChevronUp, Flag } from "lucide-react";
 import { api } from "../../../services/api";
@@ -58,6 +58,14 @@ export function CommentItem({
   const [editContent, setEditContent] = useState(comment.content);
   const [submittingReply, setSubmittingReply] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     setReplyCount(comment.replyCount);
@@ -76,17 +84,26 @@ export function CommentItem({
       setLoadingReplies(true);
       try {
         const response = await api.comments.getReplies(postId, comment.commentId);
+        if (!isMountedRef.current) {
+          return;
+        }
         if (response.success && response.data) {
           setReplies(response.data.comments);
         }
       } catch (error) {
-        logger.error("Failed to fetch replies", error);
-        toast.error("Failed to load replies");
+        if (isMountedRef.current) {
+          logger.error("Failed to fetch replies", error);
+          toast.error("Failed to load replies");
+        }
       } finally {
-        setLoadingReplies(false);
+        if (isMountedRef.current) {
+          setLoadingReplies(false);
+        }
       }
     }
-    setShowReplies(!showReplies);
+    if (isMountedRef.current) {
+      setShowReplies(!showReplies);
+    }
   };
 
   const handleReplySubmit = async () => {
@@ -94,6 +111,9 @@ export function CommentItem({
     setSubmittingReply(true);
     try {
       const response = await api.comments.addComment(postId, replyContent, comment.commentId);
+      if (!isMountedRef.current) {
+        return;
+      }
       if (response.success && response.data) {
         toast.success(labels.commentAdded);
         setReplyContent("");
@@ -107,9 +127,13 @@ export function CommentItem({
         }
       }
     } catch (error) {
-      toast.error("Failed to send reply");
+      if (isMountedRef.current) {
+        toast.error("Failed to send reply");
+      }
     } finally {
-      setSubmittingReply(false);
+      if (isMountedRef.current) {
+        setSubmittingReply(false);
+      }
     }
   };
 
@@ -121,6 +145,27 @@ export function CommentItem({
 
     setReplies((prev) => prev.filter((reply) => reply.commentId !== replyId));
     setReplyCount((prev) => Math.max(0, prev - 1));
+    return true;
+  };
+
+  const handleUpdateReply = async (replyId: number, content: string) => {
+    const success = await onUpdate(replyId, content);
+    if (!success) {
+      return false;
+    }
+
+    setReplies((prev) =>
+      prev.map((reply) =>
+        reply.commentId === replyId
+          ? {
+              ...reply,
+              content,
+              isEdited: true,
+              updatedAt: new Date().toISOString(),
+            }
+          : reply,
+      ),
+    );
     return true;
   };
 
@@ -296,7 +341,7 @@ export function CommentItem({
                     currentUser={currentUser}
                     postOwnerId={postOwnerId}
                     onDelete={handleDeleteReply}
-                    onUpdate={onUpdate}
+                    onUpdate={handleUpdateReply}
                     onRequireAuth={onRequireAuth}
                     isRTL={isRTL}
                     nowTimestamp={nowTimestamp}
