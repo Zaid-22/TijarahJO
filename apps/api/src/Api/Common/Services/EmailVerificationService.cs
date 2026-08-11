@@ -129,6 +129,9 @@ public sealed class EmailVerificationService(
                 "Email verification is currently disabled.");
         }
 
+        string? expectedStateJson = await _challenges.GetChallengeStateAsync(
+            userId, ChallengeType, cancellationToken);
+
         // Generate a cryptographically secure random token
         byte[] tokenBytes = RandomNumberGenerator.GetBytes(TokenByteLength);
         string rawToken = Base64UrlEncode(tokenBytes);
@@ -149,13 +152,19 @@ public sealed class EmailVerificationService(
         );
 
         string stateJson = JsonSerializer.Serialize(challengeState);
-        await _challenges.UpsertChallengeStateAsync(
+        bool stored = await _challenges.TryReplaceChallengeStateAsync(
             userId,
             ChallengeType,
+            expectedStateJson,
             stateJson,
             challengeState.ExpiresAtUtc.UtcDateTime,
             cancellationToken
         );
+        if (!stored)
+        {
+            return EmailVerificationRequestResult.Ok(
+                "A verification email is already being sent. Please check your inbox.");
+        }
 
         // Build verification link
         string frontendUrl = ResolveFrontendUrl();
@@ -175,7 +184,8 @@ public sealed class EmailVerificationService(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Clean up challenge state if email send fails
-            await _challenges.DeleteChallengeStateAsync(userId, ChallengeType, cancellationToken);
+            await _challenges.TryDeleteChallengeStateAsync(
+                userId, ChallengeType, stateJson, cancellationToken);
             _logger.LogWarning(
                 ex,
                 "Email verification send failed for user {UserId} ({Email}). Challenge was discarded.",
@@ -234,8 +244,13 @@ public sealed class EmailVerificationService(
         // Already verified — idempotent success
         if (user.IsEmailVerified)
         {
-            // Clean up any lingering challenge
-            await _challenges.DeleteChallengeStateAsync(userId, ChallengeType, cancellationToken);
+            string? lingeringState = await _challenges.GetChallengeStateAsync(
+                userId, ChallengeType, cancellationToken);
+            if (!string.IsNullOrEmpty(lingeringState))
+            {
+                await _challenges.TryDeleteChallengeStateAsync(
+                    userId, ChallengeType, lingeringState, cancellationToken);
+            }
             return EmailVerificationConfirmResult.Ok(user);
         }
 
@@ -255,7 +270,8 @@ public sealed class EmailVerificationService(
         }
         catch (JsonException)
         {
-            await _challenges.DeleteChallengeStateAsync(userId, ChallengeType, cancellationToken);
+            await _challenges.TryDeleteChallengeStateAsync(
+                userId, ChallengeType, stateStr, cancellationToken);
             return EmailVerificationConfirmResult.Failed(
                 EmailVerificationConfirmFailureReason.ExpiredToken,
                 "Verification link has expired. Please request a new one.");
@@ -263,7 +279,8 @@ public sealed class EmailVerificationService(
 
         if (challenge == null || challenge.ExpiresAtUtc <= DateTimeOffset.UtcNow)
         {
-            await _challenges.DeleteChallengeStateAsync(userId, ChallengeType, cancellationToken);
+            await _challenges.TryDeleteChallengeStateAsync(
+                userId, ChallengeType, stateStr, cancellationToken);
             return EmailVerificationConfirmResult.Failed(
                 EmailVerificationConfirmFailureReason.ExpiredToken,
                 "Verification link has expired. Please request a new one.");
@@ -289,6 +306,14 @@ public sealed class EmailVerificationService(
                 "Invalid verification token.");
         }
 
+        if (!await _challenges.TryDeleteChallengeStateAsync(
+                userId, ChallengeType, stateStr, cancellationToken))
+        {
+            return EmailVerificationConfirmResult.Failed(
+                EmailVerificationConfirmFailureReason.InvalidToken,
+                "Verification link has expired. Please request a new one.");
+        }
+
         // Mark user as verified
         var verifiedUser = user with { IsEmailVerified = true };
         bool updated = await _users.UpdateUserAsync(verifiedUser, userId, cancellationToken);
@@ -298,9 +323,6 @@ public sealed class EmailVerificationService(
                 EmailVerificationConfirmFailureReason.PersistenceFailed,
                 "Unable to verify email. Please try again.");
         }
-
-        // Clean up challenge state
-        await _challenges.DeleteChallengeStateAsync(userId, ChallengeType, cancellationToken);
 
         _logger.LogInformation("Email verified successfully for user {UserId}.", userId);
         return EmailVerificationConfirmResult.Ok(verifiedUser);

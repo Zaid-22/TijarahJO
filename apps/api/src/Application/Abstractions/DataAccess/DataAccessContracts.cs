@@ -122,6 +122,40 @@ public interface IVerificationChallengeDataAccess
     Task<string?> GetChallengeStateAsync(int userId, string challengeType, CancellationToken cancellationToken = default);
     Task UpsertChallengeStateAsync(int userId, string challengeType, string stateJson, DateTime expiresAt, CancellationToken cancellationToken = default);
     Task DeleteChallengeStateAsync(int userId, string challengeType, CancellationToken cancellationToken = default);
+
+    async Task<bool> TryReplaceChallengeStateAsync(
+        int userId,
+        string challengeType,
+        string? expectedStateJson,
+        string stateJson,
+        DateTime expiresAt,
+        CancellationToken cancellationToken = default)
+    {
+        string? currentState = await GetChallengeStateAsync(userId, challengeType, cancellationToken);
+        if (!string.Equals(currentState, expectedStateJson, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        await UpsertChallengeStateAsync(userId, challengeType, stateJson, expiresAt, cancellationToken);
+        return true;
+    }
+
+    async Task<bool> TryDeleteChallengeStateAsync(
+        int userId,
+        string challengeType,
+        string expectedStateJson,
+        CancellationToken cancellationToken = default)
+    {
+        string? currentState = await GetChallengeStateAsync(userId, challengeType, cancellationToken);
+        if (!string.Equals(currentState, expectedStateJson, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        await DeleteChallengeStateAsync(userId, challengeType, cancellationToken);
+        return true;
+    }
 }
 
 public interface IPostCommentDataAccess

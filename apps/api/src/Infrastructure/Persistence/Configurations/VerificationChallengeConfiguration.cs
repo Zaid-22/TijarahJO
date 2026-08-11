@@ -25,6 +25,10 @@ public class VerificationChallengeConfiguration : IEntityTypeConfiguration<Verif
         builder.HasIndex(e => e.ExpiresAt)
             .HasDatabaseName("IX_VerificationChallenges_ExpiresAt");
 
+        builder.HasIndex(e => new { e.UserId, e.ChallengeType })
+            .IsUnique()
+            .HasDatabaseName("UX_VerificationChallenges_User_Type");
+
         builder.HasOne(e => e.User)
             .WithMany()
             .HasForeignKey(e => e.UserId)

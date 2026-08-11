@@ -53,6 +53,7 @@ public sealed class PasswordResetService(
     ITokenBlacklistService tokenBlacklist,
     JwtOptions jwtOptions) : IPasswordResetService
 {
+    private const int MaxConcurrencyRetries = 8;
     private readonly IUserDataAccess _users = users;
     private readonly IVerificationChallengeDataAccess _challenges = challenges;
     private readonly IPasswordResetEmailSender _emailSender = emailSender;
@@ -126,13 +127,19 @@ public sealed class PasswordResetService(
         );
 
         string stateJson = System.Text.Json.JsonSerializer.Serialize(challenge);
-        await _challenges.UpsertChallengeStateAsync(
+        bool stored = await _challenges.TryReplaceChallengeStateAsync(
             user.UserID.Value,
             "PasswordReset",
+            stateStr,
             stateJson,
             challenge.ExpiresAtUtc.UtcDateTime,
             cancellationToken
         );
+        if (!stored)
+        {
+            // A concurrent request installed the active challenge and owns delivery.
+            return true;
+        }
 
         try
         {
@@ -146,7 +153,8 @@ public sealed class PasswordResetService(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
+            await _challenges.TryDeleteChallengeStateAsync(
+                user.UserID.Value, "PasswordReset", stateJson, cancellationToken);
             _logger.LogWarning(
                 ex,
                 "Password reset email failed for {Email}. Challenge was discarded.",
@@ -193,6 +201,7 @@ public sealed class PasswordResetService(
         CodeValidationResult validation = await ValidateResetCodeAsync(
             normalizedEmail,
             submittedCode,
+            consumeOnSuccess: false,
             cancellationToken
         );
 
@@ -252,6 +261,7 @@ public sealed class PasswordResetService(
         CodeValidationResult validation = await ValidateResetCodeAsync(
             normalizedEmail,
             submittedCode,
+            consumeOnSuccess: true,
             cancellationToken
         );
 
@@ -273,7 +283,6 @@ public sealed class PasswordResetService(
         }
 
         await _tokenBlacklist.InvalidateAllUserSessionsAsync(user.UserID.Value, cancellationToken);
-        await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
 
         return new PasswordResetConfirmationResult
         {
@@ -284,6 +293,7 @@ public sealed class PasswordResetService(
     private async Task<CodeValidationResult> ValidateResetCodeAsync(
         string normalizedEmail,
         string submittedCode,
+        bool consumeOnSuccess,
         CancellationToken cancellationToken)
     {
         UserModel? user = await _users.GetUserByLoginAsync(normalizedEmail, cancellationToken);
@@ -295,103 +305,142 @@ public sealed class PasswordResetService(
             );
         }
 
-        string? stateStr = await _challenges.GetChallengeStateAsync(
-            user.UserID.Value,
-            "PasswordReset",
-            cancellationToken
-        );
-        if (string.IsNullOrEmpty(stateStr))
+        for (int attempt = 0; attempt < MaxConcurrencyRetries; attempt++)
         {
-            return CodeValidationResult.Failed(
-                PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
-                "Invalid or expired verification code."
+            string? stateStr = await _challenges.GetChallengeStateAsync(
+                user.UserID.Value,
+                "PasswordReset",
+                cancellationToken
             );
-        }
-
-        PasswordResetChallengeState? challenge;
-        try
-        {
-            challenge = System.Text.Json.JsonSerializer.Deserialize<PasswordResetChallengeState>(stateStr);
-        }
-        catch (System.Text.Json.JsonException)
-        {
-            await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
-            return CodeValidationResult.Failed(
-                PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
-                "Invalid or expired verification code."
-            );
-        }
-
-        DateTimeOffset now = DateTimeOffset.UtcNow;
-        if (challenge == null || challenge.ExpiresAtUtc <= now)
-        {
-            await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
-            return CodeValidationResult.Failed(
-                PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
-                "Invalid or expired verification code."
-            );
-        }
-
-        int maxAttempts = GetMaxAttempts();
-        if (challenge.FailedAttempts >= maxAttempts)
-        {
-            await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
-            return CodeValidationResult.Failed(
-                PasswordResetConfirmationFailureReason.TooManyAttempts,
-                "Too many invalid verification attempts. Please request a new code."
-            );
-        }
-
-        byte[] expectedHash = challenge.CodeHash;
-        byte[] providedHash = ComputeCodeHash(normalizedEmail, submittedCode);
-        
-        bool lengthMatch = expectedHash.Length == providedHash.Length;
-        int maxLen = Math.Max(expectedHash.Length, providedHash.Length);
-        byte[] p1 = new byte[maxLen];
-        byte[] p2 = new byte[maxLen];
-        Array.Copy(expectedHash, p1, expectedHash.Length);
-        Array.Copy(providedHash, p2, providedHash.Length);
-        
-        bool isCodeValid = lengthMatch && CryptographicOperations.FixedTimeEquals(p1, p2);
-
-        if (!isCodeValid)
-        {
-            int nextFailedAttempts = challenge.FailedAttempts + 1;
-            if (nextFailedAttempts >= maxAttempts)
+            if (string.IsNullOrEmpty(stateStr))
             {
-                await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
                 return CodeValidationResult.Failed(
-                    PasswordResetConfirmationFailureReason.TooManyAttempts,
-                    "Too many invalid verification attempts. Please request a new code."
+                    PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
+                    "Invalid or expired verification code."
                 );
             }
 
-            var updatedChallenge = challenge with { FailedAttempts = nextFailedAttempts };
-            string updatedStateJson = System.Text.Json.JsonSerializer.Serialize(updatedChallenge);
-            await _challenges.UpsertChallengeStateAsync(
-                user.UserID.Value,
-                "PasswordReset",
-                updatedStateJson,
-                updatedChallenge.ExpiresAtUtc.UtcDateTime,
-                cancellationToken
-            );
+            PasswordResetChallengeState? challenge;
+            try
+            {
+                challenge = System.Text.Json.JsonSerializer.Deserialize<PasswordResetChallengeState>(stateStr);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                if (await _challenges.TryDeleteChallengeStateAsync(
+                        user.UserID.Value, "PasswordReset", stateStr, cancellationToken))
+                {
+                    return CodeValidationResult.Failed(
+                        PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
+                        "Invalid or expired verification code."
+                    );
+                }
 
-            return CodeValidationResult.Failed(
-                PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
-                "Invalid or expired verification code."
-            );
+                continue;
+            }
+
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            if (challenge == null || challenge.ExpiresAtUtc <= now)
+            {
+                if (await _challenges.TryDeleteChallengeStateAsync(
+                        user.UserID.Value, "PasswordReset", stateStr, cancellationToken))
+                {
+                    return CodeValidationResult.Failed(
+                        PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
+                        "Invalid or expired verification code."
+                    );
+                }
+
+                continue;
+            }
+
+            int maxAttempts = GetMaxAttempts();
+            if (challenge.FailedAttempts >= maxAttempts)
+            {
+                if (await _challenges.TryDeleteChallengeStateAsync(
+                        user.UserID.Value, "PasswordReset", stateStr, cancellationToken))
+                {
+                    return CodeValidationResult.Failed(
+                        PasswordResetConfirmationFailureReason.TooManyAttempts,
+                        "Too many invalid verification attempts. Please request a new code."
+                    );
+                }
+
+                continue;
+            }
+
+            byte[] expectedHash = challenge.CodeHash;
+            byte[] providedHash = ComputeCodeHash(normalizedEmail, submittedCode);
+
+            bool lengthMatch = expectedHash.Length == providedHash.Length;
+            int maxLen = Math.Max(expectedHash.Length, providedHash.Length);
+            byte[] p1 = new byte[maxLen];
+            byte[] p2 = new byte[maxLen];
+            Array.Copy(expectedHash, p1, expectedHash.Length);
+            Array.Copy(providedHash, p2, providedHash.Length);
+
+            bool isCodeValid = lengthMatch && CryptographicOperations.FixedTimeEquals(p1, p2);
+            if (!isCodeValid)
+            {
+                int nextFailedAttempts = challenge.FailedAttempts + 1;
+                if (nextFailedAttempts >= maxAttempts)
+                {
+                    if (await _challenges.TryDeleteChallengeStateAsync(
+                            user.UserID.Value, "PasswordReset", stateStr, cancellationToken))
+                    {
+                        return CodeValidationResult.Failed(
+                            PasswordResetConfirmationFailureReason.TooManyAttempts,
+                            "Too many invalid verification attempts. Please request a new code."
+                        );
+                    }
+
+                    continue;
+                }
+
+                var updatedChallenge = challenge with { FailedAttempts = nextFailedAttempts };
+                string updatedStateJson = System.Text.Json.JsonSerializer.Serialize(updatedChallenge);
+                if (await _challenges.TryReplaceChallengeStateAsync(
+                        user.UserID.Value,
+                        "PasswordReset",
+                        stateStr,
+                        updatedStateJson,
+                        updatedChallenge.ExpiresAtUtc.UtcDateTime,
+                        cancellationToken))
+                {
+                    return CodeValidationResult.Failed(
+                        PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
+                        "Invalid or expired verification code."
+                    );
+                }
+
+                continue;
+            }
+
+            if (user.IsDeleted || user.Status != UserStatusPolicy.Active)
+            {
+                if (await _challenges.TryDeleteChallengeStateAsync(
+                        user.UserID.Value, "PasswordReset", stateStr, cancellationToken))
+                {
+                    return CodeValidationResult.Failed(
+                        PasswordResetConfirmationFailureReason.UserUnavailable,
+                        "Unable to reset password for this account."
+                    );
+                }
+
+                continue;
+            }
+
+            if (!consumeOnSuccess || await _challenges.TryDeleteChallengeStateAsync(
+                    user.UserID.Value, "PasswordReset", stateStr, cancellationToken))
+            {
+                return CodeValidationResult.Valid(user);
+            }
         }
 
-        if (user.IsDeleted || user.Status != UserStatusPolicy.Active)
-        {
-            await _challenges.DeleteChallengeStateAsync(user.UserID.Value, "PasswordReset", cancellationToken);
-            return CodeValidationResult.Failed(
-                PasswordResetConfirmationFailureReason.UserUnavailable,
-                "Unable to reset password for this account."
-            );
-        }
-
-        return CodeValidationResult.Valid(user);
+        return CodeValidationResult.Failed(
+            PasswordResetConfirmationFailureReason.PersistenceFailed,
+            "Unable to verify the code because of concurrent requests. Please try again."
+        );
     }
 
     private static string? NormalizeEmail(string? email)
