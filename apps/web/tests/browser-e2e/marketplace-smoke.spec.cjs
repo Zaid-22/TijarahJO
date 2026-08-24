@@ -7,6 +7,8 @@ const PNG_ONE_BY_ONE_BASE64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO6pJ4kAAAAASUVORK5CYII=";
 const SIGN_IN_BUTTON_PATTERN = /^(sign in|تسجيل الدخول)$/i;
 const GLOBAL_SEARCH_INPUT_PATTERN = /search in tijarahjo|ابحث في تجارة جو/i;
+const HOME_HERO_HEADING_PATTERN =
+  /buy & sell anything in jordan|اشتري وبيع أي شيء في الأردن/i;
 const SEARCH_LOADING_PATTERN = /searching|جاري البحث/i;
 const POST_LOADING_PATTERN = /loading post|جار تحميل المنشور/i;
 const PROFILE_PAGE_HEADING_PATTERN = /my profile|ملفي الشخصي/i;
@@ -25,6 +27,8 @@ const POSTS_COLLECTION_RESPONSE_PATTERN =
   /\/api(?:\/v[0-9]+)?\/posts(?:\/|$)/i;
 const POSTS_ITEM_RESPONSE_PATTERN = /\/api(?:\/v[0-9]+)?\/posts\/\d+$/i;
 const SEARCH_RESPONSE_PATTERN = /\/api(?:\/v[0-9]+)?\/search(?:\?.*)?$/i;
+const POST_IMAGE_VALIDATE_RESPONSE_PATTERN =
+  /\/api(?:\/v[0-9]+)?\/post-images\/validate$/i;
 
 function escapeForRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -110,23 +114,36 @@ async function waitForPostDetailsLoaded(page) {
 }
 
 async function submitMarketplaceSearch(page, query) {
-  await page.goto("/");
+  const currentUrl = new URL(page.url());
+  if (currentUrl.pathname !== "/" || currentUrl.search) {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+  }
+
+  // The global header renders before the lazy home route. Wait for the route
+  // to mount so its one-time search reset cannot clear a freshly filled input.
+  await expect(
+    page.getByRole("heading", { name: HOME_HERO_HEADING_PATTERN }).first(),
+  ).toBeVisible({ timeout: 20_000 });
+
   const searchInput = page.getByRole("textbox", {
     name: GLOBAL_SEARCH_INPUT_PATTERN,
   }).first();
-  await expect(searchInput).toBeVisible();
+  await expect(searchInput).toBeEditable({ timeout: 20_000 });
   await searchInput.fill(query);
-  await Promise.all([
-    page.waitForURL(/\/search$/),
-    page.waitForResponse(
-      (response) =>
-        response.request().method() === "GET" &&
-        SEARCH_RESPONSE_PATTERN.test(response.url()) &&
-        response.ok(),
-    ),
-    searchInput.press("Enter"),
-  ]);
-  await expect(page).toHaveURL(/\/search$/);
+  await expect(searchInput).toHaveValue(query);
+
+  await searchInput.press("Enter");
+  await expect
+    .poll(
+      () => {
+        const url = new URL(page.url());
+        return url.pathname === "/search" ? url.searchParams.get("q") : null;
+      },
+      { timeout: 20_000 },
+    )
+    .toBe(query);
+
+  expect(new URL(page.url()).searchParams.get("q")).toBe(query);
   await waitForSearchResultsLoaded(page);
 }
 
@@ -367,6 +384,40 @@ test("home feed resilience: online error retries in place and restores listings"
     await submitMarketplaceSearch(page, "phone");
     await expectPostTitleVisible(page, "Demo Phone");
     await expectPostTitleAbsent(page, "Vintage Camera");
+
+    const shareableSearchUrl = page.url();
+    expect(new URL(shareableSearchUrl).searchParams.get("q")).toBe("phone");
+
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.request().method() === "GET" &&
+          SEARCH_RESPONSE_PATTERN.test(response.url()) &&
+          response.ok(),
+      ),
+      page.reload(),
+    ]);
+    await waitForSearchResultsLoaded(page);
+    await expect(
+      page
+        .getByRole("textbox", { name: GLOBAL_SEARCH_INPUT_PATTERN })
+        .first(),
+    ).toHaveValue("phone");
+    await expectPostTitleVisible(page, "Demo Phone");
+
+    await page.goto("/");
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.request().method() === "GET" &&
+          SEARCH_RESPONSE_PATTERN.test(response.url()) &&
+          response.ok(),
+      ),
+      page.goto(shareableSearchUrl),
+    ]);
+    await waitForSearchResultsLoaded(page);
+    expect(new URL(page.url()).searchParams.get("q")).toBe("phone");
+    await expectPostTitleVisible(page, "Demo Phone");
   });
 
   test(`favorites journey${suffix}: add and remove favorites for authenticated user`, async ({ page }) => {
@@ -378,6 +429,7 @@ test("home feed resilience: online error retries in place and restores listings"
     await expectPostTitleVisible(page, "Demo Phone");
 
     await page.goto("/post/101");
+    await waitForPostDetailsLoaded(page);
     await setPostFavoriteState(page, true);
 
     await page.goto("/favorites");
@@ -417,11 +469,19 @@ test("home feed resilience: online error retries in place and restores listings"
     await page.locator("#description").fill(
       isAr ? "Playwright Arabic E2E post creation" : "Playwright E2E post creation"
     );
-    await page.setInputFiles("#image-upload", {
-      name: isAr ? "post-ar.png" : "post.png",
-      mimeType: "image/png",
-      buffer: Buffer.from(PNG_ONE_BY_ONE_BASE64, "base64"),
-    });
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          POST_IMAGE_VALIDATE_RESPONSE_PATTERN.test(response.url()) &&
+          response.ok(),
+      ),
+      page.setInputFiles("#image-upload", {
+        name: isAr ? "post-ar.png" : "post.png",
+        mimeType: "image/png",
+        buffer: Buffer.from(PNG_ONE_BY_ONE_BASE64, "base64"),
+      }),
+    ]);
     await expect(page.getByText(/1\/5 images uploaded|1\/5 صور محملة/i)).toBeVisible();
 
     await Promise.all([

@@ -496,6 +496,32 @@ function createMarketplaceApiMock(options = {}) {
         return;
       }
 
+      if (apiPath === "/reviews/ratings" && method === "GET") {
+        const requestedUserIds = normalizeString(url.searchParams.get("userIds"))
+          .split(",")
+          .map((userId) => normalizeString(userId))
+          .filter(Boolean);
+        const ratings = Object.fromEntries(
+          requestedUserIds.map((userId) => {
+            const reviews = reviewsByUserId.get(userId) || [];
+            const totalRating = reviews.reduce(
+              (sum, review) => sum + Number(review.Rating || 0),
+              0,
+            );
+            return [
+              userId,
+              {
+                AverageRating:
+                  reviews.length > 0 ? totalRating / reviews.length : 0,
+                ReviewCount: reviews.length,
+              },
+            ];
+          }),
+        );
+        await fulfillJson(route, 200, ratings);
+        return;
+      }
+
       if (apiPath.startsWith("/reviews/user/") && method === "GET") {
         const userId = normalizeString(apiPath.split("/").pop());
         await fulfillJson(route, 200, reviewsByUserId.get(userId) || []);
@@ -600,6 +626,10 @@ function createMarketplaceApiMock(options = {}) {
 
       if ((apiPath === "/posts/feed" || apiPath === "/userposts/feed") && method === "GET") {
         feedRequestCount += 1;
+        if (!initialOnline) {
+          await route.abort("internetdisconnected");
+          return;
+        }
         if (remainingFeedFailures > 0) {
           remainingFeedFailures -= 1;
           await fulfillJson(route, feedFailureStatus, {
@@ -699,7 +729,7 @@ function createMarketplaceApiMock(options = {}) {
         return;
       }
 
-      if (apiPath.startsWith("/posts/") && method === "GET") {
+      if (/^\/posts\/\d+$/.test(apiPath) && method === "GET") {
         const postId = toInteger(apiPath.split("/").pop(), 0);
         const post = posts.find((item) => item.postId === postId);
         if (!post) {
@@ -776,6 +806,16 @@ function createMarketplaceApiMock(options = {}) {
         const postId = normalizeString(apiPath.split("/").pop());
         const images = postImagesByPostId.get(postId) || [];
         await fulfillJson(route, 200, images);
+        return;
+      }
+
+      if (apiPath === "/post-images/validate" && method === "POST") {
+        if (!sessionAuthenticated) {
+          await fulfillJson(route, 401, { Message: "Unauthorized" });
+          return;
+        }
+
+        await fulfillJson(route, 200, { safe: true });
         return;
       }
 

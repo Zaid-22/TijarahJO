@@ -119,7 +119,7 @@ apps/web/src/
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 20+
 - npm
 
 ### Installation
@@ -209,11 +209,18 @@ Electronics • Mobile Phones & Tablets • Computers & Laptops • Home Applian
 ## 🧪 Testing
 
 ```bash
-# Unit tests
+# Unit, integration, and policy tests
 cd apps/web && npm test
 
-# E2E tests (Playwright)
-cd apps/web && npx playwright test
+# Mocked Playwright journeys on desktop, tablet, and mobile Chromium profiles
+cd apps/web && npx playwright install chromium
+cd apps/web && npm run test:e2e:browser
+
+# Production build plus enforced bundle budgets
+cd apps/web && npm run perf:bundle
+
+# Compile the baseline Storybook stories
+cd apps/web && npm run storybook:check
 
 # Frontend API contract checks
 ./apps/web/tests/frontend_api_contract.sh
@@ -235,12 +242,12 @@ cd apps/web && npx playwright test
 - [x] Multi-language support (EN/AR)
 - [x] Dark mode
 - [x] Server-side image uploads
+- [x] Installable PWA app shell and runtime route-asset caching
 
 ### 🔮 Future
 - [ ] Payment integration
 - [ ] Mobile app (React Native)
 - [ ] Advanced analytics dashboard
-- [ ] Service Worker for offline support
 
 ---
 
