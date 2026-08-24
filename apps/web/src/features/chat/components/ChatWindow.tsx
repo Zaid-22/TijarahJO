@@ -24,6 +24,12 @@ import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
 import { formatCompactTime } from "../../../shared/lib/dateTime";
 import { APP_CONFIG } from "../../../constants/appConfig";
 import { ReportPostDialog } from "../../marketplace/components/ReportPostDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "../../../shared/ui/dialog";
 
 /** Splits message text on URLs and renders clickable anchor links for each one. */
 function renderTextWithLinks(text: string, isMe: boolean) {
@@ -119,10 +125,19 @@ export function ChatWindow({
       language === "ar" ? "تم الإرسال" : "Sent",
     seen:
       language === "ar" ? "تمت المشاهدة" : "Seen",
+    fullscreenImage:
+      language === "ar" ? "عرض الصورة بالحجم الكامل" : "Fullscreen image",
+    reportImage:
+      language === "ar" ? "الإبلاغ عن الصورة" : "Report image",
+    downloadImage:
+      language === "ar" ? "تنزيل الصورة" : "Download image",
+    closeFullscreen:
+      language === "ar" ? "إغلاق عرض الصورة" : "Close fullscreen image",
   };
   const dateTimeLocale = language === "ar" ? "ar-JO" : "en-US";
 
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  const fullscreenCloseButtonRef = useRef<HTMLButtonElement>(null);
   const [avatarError, setAvatarError] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
 
@@ -561,87 +576,102 @@ export function ChatWindow({
       </div>
 
       {/* Fullscreen Image Modal */}
-      {fullscreenImage && (
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
-          onClick={() => setFullscreenImage(null)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") setFullscreenImage(null);
-          }}
-          role="dialog"
-          aria-modal="true"
-          tabIndex={-1}
-        >
-          {/* Action Bar */}
-          <div
-            className="absolute top-4 right-16 flex items-center gap-3 rounded-full bg-black/50 px-4 py-2 text-white shadow-lg backdrop-blur-sm"
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-            role="presentation"
-          >
-            <button
-              type="button"
-              className="group flex items-center gap-2 text-sm font-medium transition-colors hover:text-white/80"
-              onClick={() => {
-                setFullscreenImage(null);
-                setShowReportDialog(true);
-              }}
-              title={language === "ar" ? "الإبلاغ عن الصورة" : "Report image"}
-            >
-              <Flag className="h-4 w-4 text-destructive group-hover:text-destructive/80" />
-              <span className="hidden sm:inline">{language === "ar" ? "إبلاغ" : "Report"}</span>
-            </button>
-            <div className="h-4 w-px bg-white/20" />
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  const downloadUrl = fullscreenImage.includes("/chat/download-image?")
-                    ? fullscreenImage
-                    : `${APP_CONFIG.apiBaseUrl}/chat/download-image?url=${encodeURIComponent(fullscreenImage)}`;
-                  const response = await fetch(downloadUrl, { credentials: "include" });
-                  const blob = await response.blob();
-                  const blobUrl = URL.createObjectURL(blob);
-                  const anchor = document.createElement("a");
-                  anchor.href = blobUrl;
-                  anchor.download = `chat-image-${Date.now()}.jpg`;
-                  anchor.click();
-                  URL.revokeObjectURL(blobUrl);
-                } catch {
-                  window.open(fullscreenImage, "_blank", "noopener,noreferrer");
-                }
-              }}
-              className="flex items-center gap-2 text-sm font-medium transition-colors hover:text-white/80"
-              title={language === "ar" ? "تنزيل الصورة" : "Download image"}
-            >
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">{language === "ar" ? "تنزيل" : "Download"}</span>
-            </button>
-          </div>
-
-          <button
-            type="button"
-            className="absolute top-4 right-4 rounded-full bg-black/50 p-2 text-white transition-colors hover:bg-black/70"
-            onClick={(e) => {
-              e.stopPropagation();
-              setFullscreenImage(null);
+      <Dialog
+        open={Boolean(fullscreenImage)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setFullscreenImage(null);
+          }
+        }}
+      >
+        {fullscreenImage && (
+          <DialogContent
+            hideCloseButton
+            dir={language === "ar" ? "rtl" : "ltr"}
+            className="inset-0 z-100 flex h-dvh w-screen max-w-none translate-x-0 translate-y-0 items-center justify-center overflow-hidden rounded-none border-0 bg-black/90 p-4 backdrop-blur-sm"
+            onOpenAutoFocus={(event) => {
+              event.preventDefault();
+              fullscreenCloseButtonRef.current?.focus();
             }}
-            aria-label="Close fullscreen image"
           >
-            <X className="h-6 w-6" />
-          </button>
-          
-          <img
-            src={fullscreenImage}
-            alt="Fullscreen view"
-            className="max-h-full max-w-full rounded-md object-contain shadow-2xl cursor-default"
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-            role="presentation"
-          />
-        </div>
-      )}
+            <DialogTitle className="sr-only">
+              {labels.fullscreenImage}
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              {labels.fullscreenImage}
+            </DialogDescription>
+
+            <div className="absolute end-16 top-4 flex items-center gap-3 rounded-full bg-black/50 px-4 py-2 text-white shadow-lg backdrop-blur-sm">
+              <button
+                type="button"
+                className="group flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium transition-colors hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                onClick={() => {
+                  setFullscreenImage(null);
+                  setShowReportDialog(true);
+                }}
+                aria-label={labels.reportImage}
+              >
+                <Flag className="h-4 w-4 text-destructive group-hover:text-destructive/80" />
+                <span className="hidden sm:inline">
+                  {language === "ar" ? "إبلاغ" : "Report"}
+                </span>
+              </button>
+              <div className="h-4 w-px bg-white/20" aria-hidden="true" />
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const downloadUrl = fullscreenImage.includes(
+                      "/chat/download-image?",
+                    )
+                      ? fullscreenImage
+                      : `${APP_CONFIG.apiBaseUrl}/chat/download-image?url=${encodeURIComponent(fullscreenImage)}`;
+                    const response = await fetch(downloadUrl, {
+                      credentials: "include",
+                    });
+                    const blob = await response.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+                    const anchor = document.createElement("a");
+                    anchor.href = blobUrl;
+                    anchor.download = `chat-image-${Date.now()}.jpg`;
+                    anchor.click();
+                    URL.revokeObjectURL(blobUrl);
+                  } catch {
+                    window.open(
+                      fullscreenImage,
+                      "_blank",
+                      "noopener,noreferrer",
+                    );
+                  }
+                }}
+                className="flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium transition-colors hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                aria-label={labels.downloadImage}
+              >
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">
+                  {language === "ar" ? "تنزيل" : "Download"}
+                </span>
+              </button>
+            </div>
+
+            <button
+              ref={fullscreenCloseButtonRef}
+              type="button"
+              className="absolute end-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-white transition-colors hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              onClick={() => setFullscreenImage(null)}
+              aria-label={labels.closeFullscreen}
+            >
+              <X className="h-6 w-6" />
+            </button>
+
+            <img
+              src={fullscreenImage}
+              alt={labels.fullscreenImage}
+              className="max-h-full max-w-full cursor-default rounded-md object-contain shadow-2xl"
+            />
+          </DialogContent>
+        )}
+      </Dialog>
 
       {/* Report Dialog for chat images */}
       <ReportPostDialog

@@ -12,7 +12,7 @@ import { resolveCategoryName } from "../../../shared/lib/categoryVisuals";
 export const ComparePanel = React.memo(function ComparePanel() {
   const navigate = useNavigate();
   const location = useLocation();
-    const { selectedPosts, removeFromCompare, clearCompare, compareCount } =
+  const { selectedPosts, removeFromCompare, clearCompare, compareCount } =
     useCompare();
   const { language } = useAppSettings();
   const { categories } = useCatalogCategories();
@@ -107,15 +107,15 @@ export const ComparePanel = React.memo(function ComparePanel() {
                       alt={post.name}
                       className="compare-panel-thumb-img block h-10 w-10 rounded-xl border border-border bg-card object-cover shadow-sm ring-2 ring-transparent transition-all group-hover:ring-primary/30"
                     />
-                    {/* X badge — 18×18 px, pinned to top-right corner */}
+                    {/* Remove badge — 28×28 px for a reliable pointer target. */}
                     <button
                       type="button"
                       onClick={() => removeFromCompare(post.id)}
                       title={t.removeProduct}
                       aria-label={t.removeProduct}
-                      className="compare-remove-btn absolute -right-1.5 -top-1.5 z-20 flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 border-white bg-slate-700 p-0 text-white shadow transition-colors hover:bg-red-500"
+                      className="compare-remove-btn absolute -end-2 -top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-slate-700 p-0 text-white shadow transition-colors hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                     >
-                      <X className="compare-remove-btn-icon h-2.5 w-2.5" strokeWidth={3} />
+                      <X className="compare-remove-btn-icon h-3.5 w-3.5" strokeWidth={3} />
                     </button>
                   </div>
                   <div className="hidden min-w-[120px] max-w-[180px] flex-1 xl:block">

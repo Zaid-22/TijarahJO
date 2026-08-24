@@ -36,7 +36,7 @@ export function CreatePostPage({
       />
 
       {/* Main Content */}
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
           <div className="mb-6">
             <h1 className="mb-2 text-2xl font-bold text-foreground">
@@ -56,7 +56,7 @@ export function CreatePostPage({
             userProfile={userProfile}
           />
         </div>
-      </main>
+      </div>
     </PageShell>
   );
 }

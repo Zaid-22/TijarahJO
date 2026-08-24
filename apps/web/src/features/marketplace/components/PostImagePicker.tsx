@@ -101,7 +101,9 @@ export function PostImagePicker({
                   size="icon"
                   className={cn(
                     "absolute right-2 top-2 h-7 w-7 rounded-full bg-destructive text-destructive-foreground transition-opacity hover:bg-destructive/90",
-                    image.error ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    image.error
+                      ? "opacity-100"
+                      : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
                   )}
                 >
                   <X className="h-4 w-4" />

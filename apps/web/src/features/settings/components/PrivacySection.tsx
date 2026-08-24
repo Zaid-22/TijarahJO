@@ -1,7 +1,6 @@
 import { Lock, Mail, Shield } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "../../../shared/ui/button";
-import { Switch } from "../../../shared/ui/switch";
 import { Separator } from "../../../shared/ui/separator";
 import {
   Card,
@@ -47,14 +46,11 @@ export function PrivacySection({
       <CardContent className="space-y-4">
         <SettingsActionRow
           icon={Mail}
+          controlId="settings-show-email"
           label={text.showEmail}
           description={text.showEmailDesc}
-          control={
-            <Switch
-              checked={settingsPreferences.showEmail}
-              onCheckedChange={updatePreference("showEmail")}
-            />
-          }
+          checked={settingsPreferences.showEmail}
+          onCheckedChange={updatePreference("showEmail")}
         />
         <Separator />
         <SettingsActionRow

@@ -3,9 +3,18 @@ Allow: /
 
 Disallow: /admin
 Disallow: /api/
-Disallow: /messages
+Disallow: /chat
+Disallow: /compare
+Disallow: /complete-profile
+Disallow: /favorites
+Disallow: /forgot-password
+Disallow: /login
+Disallow: /notifications
 Disallow: /profile
+Disallow: /register
+Disallow: /search
 Disallow: /settings
 Disallow: /sell
+Disallow: /verify-email
 
 Sitemap: https://tijarahjo.online/sitemap.xml

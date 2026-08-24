@@ -1,11 +1,19 @@
-import { useCallback, useEffect, useState } from "react";
-import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from "lucide-react";
+import type { Language } from "../../types";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "./dialog";
 
 interface ImageLightboxProps {
   images: string[];
   initialIndex?: number;
   open: boolean;
   onClose: () => void;
+  language?: Language;
 }
 
 export function ImageLightbox({
@@ -13,9 +21,12 @@ export function ImageLightbox({
   initialIndex = 0,
   open,
   onClose,
+  language = "en",
 }: ImageLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [zoom, setZoom] = useState(1);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const isRtl = language === "ar";
 
   useEffect(() => {
     if (open) {
@@ -25,149 +36,189 @@ export function ImageLightbox({
   }, [open, initialIndex]);
 
   const goNext = useCallback(() => {
-    setCurrentIndex((i) => (i + 1) % images.length);
+    setCurrentIndex((index) => (index + 1) % images.length);
     setZoom(1);
   }, [images.length]);
 
   const goPrev = useCallback(() => {
-    setCurrentIndex((i) => (i - 1 + images.length) % images.length);
+    setCurrentIndex((index) => (index - 1 + images.length) % images.length);
     setZoom(1);
   }, [images.length]);
 
   const toggleZoom = useCallback(() => {
-    setZoom((z) => (z === 1 ? 2 : 1));
+    setZoom((currentZoom) => (currentZoom === 1 ? 2 : 1));
   }, []);
 
-  useEffect(() => {
-    if (!open) return;
+  if (images.length === 0) {
+    return null;
+  }
 
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-      if (e.key === "ArrowRight") goNext();
-      if (e.key === "ArrowLeft") goPrev();
-    };
-
-    document.addEventListener("keydown", handler);
-    document.body.classList.add("lightbox-open");
-
-    return () => {
-      document.removeEventListener("keydown", handler);
-      document.body.classList.remove("lightbox-open");
-    };
-  }, [open, onClose, goNext, goPrev]);
-
-  if (!open || images.length === 0) return null;
+  const imagePosition = `${currentIndex + 1} / ${images.length}`;
+  const viewerLabel = isRtl ? "عارض الصور" : "Image viewer";
+  const imageDescription = isRtl
+    ? `الصورة ${currentIndex + 1} من ${images.length}`
+    : `Image ${currentIndex + 1} of ${images.length}`;
+  const zoomLabel =
+    zoom > 1
+      ? isRtl
+        ? "تصغير الصورة"
+        : "Zoom out"
+      : isRtl
+        ? "تكبير الصورة"
+        : "Zoom in";
 
   return (
-    <div
-      className="fixed inset-0 z-100 flex items-center justify-center"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Image viewer"
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          onClose();
+        }
+      }}
     >
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/90 backdrop-blur-sm"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      <DialogContent
+        hideCloseButton
+        dir={isRtl ? "rtl" : "ltr"}
+        className="inset-0 z-100 flex h-dvh w-screen max-w-none translate-x-0 translate-y-0 items-center justify-center gap-0 overflow-hidden rounded-none border-0 bg-black/95 p-0"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          closeButtonRef.current?.focus();
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowRight") {
+            event.preventDefault();
+            if (isRtl) {
+              goPrev();
+            } else {
+              goNext();
+            }
+          } else if (event.key === "ArrowLeft") {
+            event.preventDefault();
+            if (isRtl) {
+              goNext();
+            } else {
+              goPrev();
+            }
+          }
+        }}
+      >
+        <DialogTitle className="sr-only">{viewerLabel}</DialogTitle>
+        <DialogDescription className="sr-only">
+          {imageDescription}
+        </DialogDescription>
 
-      {/* Top bar */}
-      <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-3 bg-linear-to-b from-black/60 to-transparent">
-        <span className="text-white/80 text-sm font-medium">
-          {currentIndex + 1} / {images.length}
-        </span>
-        <div className="flex items-center gap-2">
+        <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between bg-linear-to-b from-black/70 to-transparent px-4 py-3">
+          <span
+            className="text-sm font-medium text-white/85"
+            aria-live="polite"
+          >
+            {imagePosition}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleZoom}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              aria-label={zoomLabel}
+            >
+              {zoom > 1 ? (
+                <ZoomOut className="h-5 w-5" aria-hidden="true" />
+              ) : (
+                <ZoomIn className="h-5 w-5" aria-hidden="true" />
+              )}
+            </button>
+            <button
+              ref={closeButtonRef}
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              aria-label={isRtl ? "إغلاق عارض الصور" : "Close image viewer"}
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+
+        <div className="relative flex h-full w-full items-center justify-center overflow-auto px-16 py-20">
           <button
             type="button"
             onClick={toggleZoom}
-            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-            aria-label={zoom > 1 ? "Zoom out" : "Zoom in"}
+            className="inline-flex max-h-full max-w-full items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-4 focus-visible:ring-offset-black"
+            aria-label={zoomLabel}
           >
-            {zoom > 1 ? (
-              <ZoomOut className="h-5 w-5" />
-            ) : (
-              <ZoomIn className="h-5 w-5" />
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Image */}
-      <div className="relative z-1 flex items-center justify-center w-full h-full px-16 py-16 overflow-auto">
-        <button
-          type="button"
-          onClick={toggleZoom}
-          className="contents"
-          aria-label={zoom > 1 ? "Zoom out" : "Zoom in"}
-        >
-          <img
-            src={images[currentIndex]}
-            alt={`${currentIndex + 1} of ${images.length}`}
-            className={`max-h-full max-w-full object-contain transition-transform duration-300 select-none cursor-pointer ${zoom > 1 ? "scale-200" : "scale-100"}`}
-            draggable={false}
-          />
-        </button>
-      </div>
-
-      {/* Navigation arrows */}
-      {images.length > 1 && (
-        <>
-          <button
-            type="button"
-            onClick={goPrev}
-            className="absolute left-3 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white backdrop-blur-sm transition-all hover:scale-110"
-            aria-label="Previous image"
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </button>
-          <button
-            type="button"
-            onClick={goNext}
-            className="absolute right-3 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white backdrop-blur-sm transition-all hover:scale-110"
-            aria-label="Next image"
-          >
-            <ChevronRight className="h-6 w-6" />
-          </button>
-        </>
-      )}
-
-      {/* Thumbnail strip */}
-      {images.length > 1 && (
-        <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-center gap-2 px-4 py-4 bg-linear-to-t from-black/60 to-transparent">
-          {images.map((img, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => {
-                setCurrentIndex(idx);
-                setZoom(1);
-              }}
-              className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${
-                idx === currentIndex
-                  ? "border-white shadow-lg scale-110"
-                  : "border-white/30 opacity-60 hover:opacity-100"
+            <img
+              src={images[currentIndex]}
+              alt={imageDescription}
+              className={`max-h-full max-w-full cursor-pointer select-none object-contain transition-transform duration-300 ${
+                zoom > 1 ? "scale-200" : "scale-100"
               }`}
-              aria-label={`View image ${idx + 1}`}
-            >
-              <img
-                src={img}
-                alt=""
-                className="w-full h-full object-cover"
-                draggable={false}
-              />
-            </button>
-          ))}
+              draggable={false}
+            />
+          </button>
         </div>
-      )}
-    </div>
+
+        {images.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={goPrev}
+              className="absolute start-3 top-1/2 z-20 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              aria-label={isRtl ? "الصورة السابقة" : "Previous image"}
+            >
+              {isRtl ? (
+                <ChevronRight className="h-6 w-6" aria-hidden="true" />
+              ) : (
+                <ChevronLeft className="h-6 w-6" aria-hidden="true" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={goNext}
+              className="absolute end-3 top-1/2 z-20 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              aria-label={isRtl ? "الصورة التالية" : "Next image"}
+            >
+              {isRtl ? (
+                <ChevronLeft className="h-6 w-6" aria-hidden="true" />
+              ) : (
+                <ChevronRight className="h-6 w-6" aria-hidden="true" />
+              )}
+            </button>
+          </>
+        )}
+
+        {images.length > 1 && (
+          <div className="absolute inset-x-0 bottom-0 z-20 flex items-center justify-center gap-2 overflow-x-auto bg-linear-to-t from-black/70 to-transparent px-4 py-4">
+            {images.map((image, index) => (
+              <button
+                key={`${image}-${index}`}
+                type="button"
+                onClick={() => {
+                  setCurrentIndex(index);
+                  setZoom(1);
+                }}
+                className={`h-12 w-12 shrink-0 overflow-hidden rounded-lg border-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                  index === currentIndex
+                    ? "scale-110 border-white shadow-lg"
+                    : "border-white/30 opacity-60 hover:opacity-100"
+                }`}
+                aria-label={
+                  isRtl
+                    ? `عرض الصورة ${index + 1}`
+                    : `View image ${index + 1}`
+                }
+                aria-current={index === currentIndex ? "true" : undefined}
+              >
+                <img
+                  src={image}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  draggable={false}
+                />
+              </button>
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

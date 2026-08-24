@@ -262,7 +262,11 @@ export function CompleteProfilePage() {
   return (
     <PageShell tone="account">
       {/* Back Button */}
-      <div className={`absolute top-4 ${isRTL ? 'right-4' : 'left-4'} sm:top-8 sm:${isRTL ? 'right-8' : 'left-8'} z-50`}>
+      <div
+        className={`absolute top-4 z-50 sm:top-8 ${
+          isRTL ? "right-4 sm:right-8" : "left-4 sm:left-8"
+        }`}
+      >
         <Button
           variant="ghost"
           onClick={handleBack}

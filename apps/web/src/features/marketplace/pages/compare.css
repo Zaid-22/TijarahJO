@@ -123,10 +123,10 @@
 
 .compare-remove-btn {
   position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 18px;
-  height: 18px;
+  top: -8px;
+  inset-inline-end: -8px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: 2px solid white;
   background: #374151;
@@ -147,8 +147,8 @@
 }
 
 .compare-remove-btn-icon {
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
 }
 
 /* ── Respect reduced motion ── */

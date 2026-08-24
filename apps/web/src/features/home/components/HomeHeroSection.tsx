@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useId, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Language } from "../../../types";
+import { usePrefersReducedMotion } from "../../../shared/hooks/usePrefersReducedMotion";
 import {
   getAllHeroBanners,
   clearSavedHeroBanners,
@@ -10,6 +11,8 @@ import {
   type HeroBanner,
 } from "./heroBannerData";
 import { bannersApi } from "../../../services/api/banners";
+import { HomeHeroFallback } from "./HomeHeroFallback";
+import { HomeHeroAutoplayControl } from "./HomeHeroAutoplayControl";
 
 type HomeHeroSectionProps = {
   language: Language;
@@ -78,10 +81,16 @@ function resolveLocalizedBannerCopy(
 
 export function HomeHeroSection({
   language,
+  isAuthenticated,
+  t,
   isRTL,
+  setShowLoginPrompt,
+  setShowCreatePost,
+  onBrowseItems,
   onNavigate,
 }: HomeHeroSectionProps) {
   const titleId = useId();
+  const prefersReducedMotion = usePrefersReducedMotion();
   const [banners, setBanners] = useState<HeroBanner[]>(() =>
     getAllHeroBanners(),
   );
@@ -137,10 +146,21 @@ export function HomeHeroSection({
     };
   }, []);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isAutoPlayEnabled, setIsAutoPlayEnabled] = useState(
+    () => !prefersReducedMotion,
+  );
+  const [isPointerPaused, setIsPointerPaused] = useState(false);
+  const [isFocusPaused, setIsFocusPaused] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const totalSlides = banners.length;
+  const isAutoPlayPaused = !isAutoPlayEnabled || isPointerPaused || isFocusPaused;
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      setIsAutoPlayEnabled(false);
+    }
+  }, [prefersReducedMotion]);
 
   const goToSlide = useCallback(
     (index: number) => {
@@ -162,16 +182,19 @@ export function HomeHeroSection({
 
   // Auto-play
   useEffect(() => {
-    if (isPaused || totalSlides <= 1) return;
+    if (isAutoPlayPaused || totalSlides <= 1) return;
 
     timerRef.current = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % totalSlides);
+      setCurrentIndex(
+        (previousIndex) =>
+          (previousIndex + (isRTL ? -1 : 1) + totalSlides) % totalSlides,
+      );
     }, AUTO_PLAY_INTERVAL);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isPaused, totalSlides]);
+  }, [isAutoPlayPaused, isRTL, totalSlides]);
 
   useEffect(() => {
     if (typeof window === "undefined" || totalSlides <= 1) {
@@ -220,21 +243,26 @@ export function HomeHeroSection({
     }
   };
 
+  const handleStartSelling = () => {
+    if (isAuthenticated) {
+      setShowCreatePost(true);
+      return;
+    }
+
+    setShowLoginPrompt(true);
+  };
+
   if (banners.length === 0) {
     return (
-      <section className="relative w-full overflow-hidden bg-linear-to-b from-muted/30 to-background">
-        <div className="relative w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 pt-4 sm:pt-6 pb-2">
-          {/* Main banner skeleton matching exact dimensions */}
-          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl bg-muted animate-pulse w-full min-h-96 sm:min-h-80 md:min-h-0 md:aspect-21/8" />
-
-          {/* Pagination dots skeleton matching exact margin/padding */}
-          <div className="flex items-center justify-center gap-2 mt-3 sm:mt-4 pb-2">
-            <div className="w-8 h-2.5 rounded-full bg-muted animate-pulse" />
-            <div className="w-2.5 h-2.5 rounded-full bg-muted animate-pulse" />
-            <div className="w-2.5 h-2.5 rounded-full bg-muted animate-pulse" />
-          </div>
-        </div>
-      </section>
+      <HomeHeroFallback
+        titleId={titleId}
+        title={t.heroTitle}
+        subtitle={t.heroSubtitle}
+        browseLabel={t.browseItems}
+        sellLabel={t.startSelling}
+        onBrowseItems={onBrowseItems}
+        onStartSelling={handleStartSelling}
+      />
     );
   }
 
@@ -243,8 +271,14 @@ export function HomeHeroSection({
   return (
     <section
       className="relative w-full overflow-hidden bg-linear-to-b from-muted/30 to-background"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
+      onMouseEnter={() => setIsPointerPaused(true)}
+      onMouseLeave={() => setIsPointerPaused(false)}
+      onFocusCapture={() => setIsFocusPaused(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setIsFocusPaused(false);
+        }
+      }}
       aria-roledescription="carousel"
       aria-labelledby={titleId}
     >
@@ -255,7 +289,10 @@ export function HomeHeroSection({
       <div className="relative w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 pt-4 sm:pt-6 pb-2">
         <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl">
           {/* Aspect ratio wrapper — responsive for mobile, taller or aspect based */}
-          <div className="relative w-full min-h-96 sm:min-h-80 md:min-h-0 md:aspect-21/8">
+          <div
+            className="relative w-full min-h-96 sm:min-h-80 md:min-h-0 md:aspect-21/8"
+            aria-live={isAutoPlayEnabled ? "off" : "polite"}
+          >
             {banners.map((banner, index) => {
               const isActive = index === currentIndex;
               const slideLabel = `${language === "ar" ? "الشريحة" : "Slide"} ${index + 1} ${language === "ar" ? "من" : "of"} ${totalSlides}: ${resolveLocalizedBannerCopy(
@@ -425,6 +462,11 @@ export function HomeHeroSection({
             className="flex items-center justify-center gap-2 mt-3 sm:mt-4 pb-2"
             aria-label={language === "ar" ? "شرائح الإعلانات" : "Banner slides"}
           >
+            <HomeHeroAutoplayControl
+              enabled={isAutoPlayEnabled}
+              language={language}
+              onToggle={() => setIsAutoPlayEnabled((enabled) => !enabled)}
+            />
             {banners.map((banner, index) => (
               <button
                 key={banner.id}

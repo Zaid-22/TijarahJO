@@ -58,6 +58,7 @@ export function AuthInputField({
   isRTL = false,
 }: AuthInputFieldProps) {
   const labelId = `${id}-label`;
+  const errorId = `${id}-error`;
   const isActive = focused || value.length > 0;
   const iconContainerClassName = "";
   const iconClassName = isActive ? "text-primary" : "text-muted-foreground";
@@ -85,7 +86,12 @@ export function AuthInputField({
         htmlFor={id}
         className={`text-sm text-foreground text-start`}
       >
-        {label} {required && <span className="text-destructive">*</span>}
+        {label}{" "}
+        {required && (
+          <span className="text-destructive" aria-hidden="true">
+            *
+          </span>
+        )}
       </label>
 
       <div className="relative">
@@ -97,6 +103,10 @@ export function AuthInputField({
           id={id}
           name={name}
           aria-labelledby={labelId}
+          aria-describedby={error ? errorId : undefined}
+          aria-invalid={Boolean(error)}
+          aria-errormessage={error ? errorId : undefined}
+          required={required}
           type={inputType}
           autoComplete={autoComplete}
           placeholder={placeholder}
@@ -123,7 +133,11 @@ export function AuthInputField({
         )}
       </div>
 
-      {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+      {error && (
+        <p id={errorId} className="mt-1 text-xs text-destructive" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

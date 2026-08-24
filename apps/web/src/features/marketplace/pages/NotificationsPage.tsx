@@ -1,4 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  type KeyboardEvent,
+} from "react";
 import {
   Bell,
   Check,
@@ -41,6 +47,8 @@ const COPY = {
     loading: "Loading notifications...",
     error: "Failed to load notifications",
     retry: "Retry",
+    markRead: "Mark as read",
+    filterLabel: "Filter notifications",
   },
   ar: {
     title: "الإشعارات",
@@ -55,6 +63,8 @@ const COPY = {
     loading: "جاري تحميل الإشعارات...",
     error: "فشل تحميل الإشعارات",
     retry: "إعادة المحاولة",
+    markRead: "تحديد كمقروء",
+    filterLabel: "تصفية الإشعارات",
   },
 };
 
@@ -93,7 +103,7 @@ export function NotificationsPage({
   onBack,
   onNavigate,
 }: NotificationsPageProps) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const isRTL = language === "ar";
   const copy = COPY[language];
   const dateTimeLocale = language === "ar" ? "ar-JO" : "en-US";
@@ -149,6 +159,12 @@ export function NotificationsPage({
     };
   }, [fetchNotifications]);
 
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      onNavigate?.("/login");
+    }
+  }, [authLoading, isAuthenticated, onNavigate]);
+
   const markAsRead = useCallback(async (notificationId: number) => {
     const requestedOwnerId = currentOwnerIdRef.current;
     try {
@@ -180,7 +196,11 @@ export function NotificationsPage({
   }, []);
   const dataBelongsToCurrentOwner = loadedOwnerId === ownerId;
   const scopedNotifications = dataBelongsToCurrentOwner ? notifications : [];
-  const showLoading = isLoading || !dataBelongsToCurrentOwner;
+  const showLoading =
+    authLoading ||
+    (!isAuthenticated && Boolean(onNavigate)) ||
+    isLoading ||
+    !dataBelongsToCurrentOwner;
   const unreadCount = scopedNotifications.filter((n) => !n.isRead).length;
   const filteredNotifications = scopedNotifications.filter((n) => {
     if (activeTab === "all") return true;
@@ -198,6 +218,30 @@ export function NotificationsPage({
     { key: "listings", label: copy.listings },
     { key: "system", label: copy.system },
   ];
+
+  const handleTabKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    tabIndex: number,
+  ) => {
+    let nextIndex = tabIndex;
+
+    if (event.key === "ArrowRight") {
+      nextIndex = (tabIndex + (isRTL ? -1 : 1) + tabs.length) % tabs.length;
+    } else if (event.key === "ArrowLeft") {
+      nextIndex = (tabIndex + (isRTL ? 1 : -1) + tabs.length) % tabs.length;
+    } else if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = tabs.length - 1;
+    } else {
+      return;
+    }
+
+    event.preventDefault();
+    const nextTab = tabs[nextIndex];
+    setActiveTab(nextTab.key);
+    document.getElementById(`notifications-tab-${nextTab.key}`)?.focus();
+  };
 
   return (
     <PageShell>
@@ -219,12 +263,22 @@ export function NotificationsPage({
 
         {/* Tab Filters + Mark All */}
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <div className="flex gap-1 bg-muted rounded-xl p-1">
-            {tabs.map((tab) => (
+          <div
+            className="flex gap-1 bg-muted rounded-xl p-1"
+            role="tablist"
+            aria-label={copy.filterLabel}
+          >
+            {tabs.map((tab, tabIndex) => (
               <button
                 key={tab.key}
+                id={`notifications-tab-${tab.key}`}
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
+                onKeyDown={(event) => handleTabKeyDown(event, tabIndex)}
+                role="tab"
+                aria-selected={activeTab === tab.key}
+                aria-controls="notifications-tabpanel"
+                tabIndex={activeTab === tab.key ? 0 : -1}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   activeTab === tab.key
                     ? "bg-card text-foreground shadow-sm"
@@ -250,87 +304,103 @@ export function NotificationsPage({
         </div>
 
         {/* Content */}
-        {showLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
-            <Loader2 className="h-8 w-8 animate-spin" />
-            <p>{copy.loading}</p>
-          </div>
-        ) : error ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <AlertCircle className="h-8 w-8 text-destructive" />
-            <p className="text-destructive">{error}</p>
-            <Button variant="outline" onClick={fetchNotifications}>
-              {copy.retry}
-            </Button>
-          </div>
-        ) : filteredNotifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
-            <Bell className="h-12 w-12 opacity-30" />
-            <p className="font-medium text-lg">{copy.noNotifications}</p>
-            <p className="text-sm">{copy.noNotificationsDesc}</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {filteredNotifications.map((notification) => (
-              <button
-                type="button"
-                key={notification.notificationId}
-                onClick={() => {
-                  if (!notification.isRead)
-                    markAsRead(notification.notificationId);
-                  if (notification.routeUrl && onNavigate) {
-                    onNavigate(notification.routeUrl);
-                  }
-                }}
-                className={`w-full text-left rounded-xl border p-4 transition-all hover:shadow-sm ${
-                  "text-start"
-                } ${
-                  notification.isRead
-                    ? "bg-card border-border"
-                    : "bg-primary/5 border-primary/20"
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 shrink-0">
-                    {getNotificationIcon(notification.notificationType)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <h4
-                        className={`text-sm truncate ${
-                          notification.isRead
-                            ? "font-medium text-foreground"
-                            : "font-semibold text-foreground"
-                        }`}
-                      >
-                        {notification.title}
-                      </h4>
-                      <span className="text-xs text-muted-foreground shrink-0">
-                        {formatRelativeTime(notification.createdAt, dateTimeLocale)}
-                      </span>
+        <div
+          id="notifications-tabpanel"
+          role="tabpanel"
+          aria-labelledby={`notifications-tab-${activeTab}`}
+        >
+          {showLoading ? (
+            <div
+              className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3"
+              role="status"
+              aria-live="polite"
+            >
+              <Loader2 className="h-8 w-8 animate-spin" aria-hidden="true" />
+              <p>{copy.loading}</p>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3" role="alert">
+              <AlertCircle className="h-8 w-8 text-destructive" aria-hidden="true" />
+              <p className="text-destructive">{error}</p>
+              <Button variant="outline" onClick={fetchNotifications}>
+                {copy.retry}
+              </Button>
+            </div>
+          ) : filteredNotifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
+              <Bell className="h-12 w-12 opacity-30" aria-hidden="true" />
+              <p className="font-medium text-lg">{copy.noNotifications}</p>
+              <p className="text-sm">{copy.noNotificationsDesc}</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredNotifications.map((notification) => (
+                <div
+                  key={notification.notificationId}
+                  className={`relative overflow-hidden rounded-xl border transition-all hover:shadow-sm ${
+                    notification.isRead
+                      ? "bg-card border-border"
+                      : "bg-primary/5 border-primary/20"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    aria-label={notification.title}
+                    onClick={() => {
+                      if (!notification.isRead) {
+                        void markAsRead(notification.notificationId);
+                      }
+                      if (notification.routeUrl && onNavigate) {
+                        onNavigate(notification.routeUrl);
+                      }
+                    }}
+                    className="w-full p-4 pe-14 text-start transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 shrink-0" aria-hidden="true">
+                        {getNotificationIcon(notification.notificationType)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <h4
+                            className={`text-sm truncate ${
+                              notification.isRead
+                                ? "font-medium text-foreground"
+                                : "font-semibold text-foreground"
+                            }`}
+                          >
+                            {notification.title}
+                          </h4>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            {formatRelativeTime(
+                              notification.createdAt,
+                              dateTimeLocale,
+                            )}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
+                          {formatChatPreviewText(notification.body, language)}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
-                      {formatChatPreviewText(notification.body, language)}
-                    </p>
-                  </div>
+                  </button>
                   {!notification.isRead && (
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        markAsRead(notification.notificationId);
+                      onClick={() => {
+                        void markAsRead(notification.notificationId);
                       }}
-                      className="mt-0.5 shrink-0 p-1 rounded-full hover:bg-muted transition-colors"
-                      aria-label="Mark as read"
+                      className="absolute end-2 top-2 inline-flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      aria-label={`${copy.markRead}: ${notification.title}`}
                     >
-                      <Check className="h-4 w-4 text-primary" />
+                      <Check className="h-4 w-4 text-primary" aria-hidden="true" />
                     </button>
                   )}
                 </div>
-              </button>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </PageShell>
   );

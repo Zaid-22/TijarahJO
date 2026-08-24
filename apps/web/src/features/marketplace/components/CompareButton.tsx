@@ -1,6 +1,7 @@
 import React from "react";
 import { Scale } from "lucide-react";
 import { useCompare, type ComparePost } from "../../../contexts/CompareContext";
+import { useAppSettings } from "../../../contexts/AppSettingsContext";
 import { cn } from "../../../shared/ui/utils";
 
 interface CompareButtonProps {
@@ -17,7 +18,15 @@ export const CompareButton = React.memo(function CompareButton({
   onRequireAuth,
 }: CompareButtonProps) {
   const { addToCompare, removeFromCompare, isInCompare } = useCompare();
+  const { language } = useAppSettings();
   const isSelected = isInCompare(post.id);
+  const compareLabel = isSelected
+    ? language === "ar"
+      ? "إزالة من المقارنة"
+      : "Remove from comparison"
+    : language === "ar"
+      ? "إضافة إلى المقارنة"
+      : "Add to comparison";
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -37,8 +46,8 @@ export const CompareButton = React.memo(function CompareButton({
     <button
       type="button"
       onClick={handleClick}
-      aria-label={isSelected ? "Remove from comparison" : "Add to comparison"}
-      title={isSelected ? "Remove from comparison" : "Add to comparison"}
+      aria-label={compareLabel}
+      title={compareLabel}
       className={cn(
         "pointer-events-auto z-30 inline-flex items-center justify-center rounded-full transition-all duration-200",
         isSelected

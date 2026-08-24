@@ -48,6 +48,7 @@ export function AuthSelectField({
   isRTL = false,
 }: AuthSelectFieldProps) {
   const labelId = `${id}-label`;
+  const errorId = `${id}-error`;
   const isActive = focused || value.length > 0;
   const iconContainerClassName = "";
   const iconClassName = isActive ? "text-primary" : "text-muted-foreground";
@@ -78,7 +79,12 @@ export function AuthSelectField({
         htmlFor={id}
         className={`text-sm text-foreground block w-full text-start`}
       >
-        {label} {required && <span className="text-destructive">*</span>}
+        {label}{" "}
+        {required && (
+          <span className="text-destructive" aria-hidden="true">
+            *
+          </span>
+        )}
       </label>
 
       <div className="relative">
@@ -94,6 +100,10 @@ export function AuthSelectField({
           id={id}
           name={name}
           aria-labelledby={labelId}
+          aria-describedby={error ? errorId : undefined}
+          aria-invalid={Boolean(error)}
+          aria-errormessage={error ? errorId : undefined}
+          required={required}
           autoComplete={autoComplete}
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -121,7 +131,9 @@ export function AuthSelectField({
 
       {error && (
         <p
-          className={`mt-1 text-xs text-destructive text-start`}
+          id={errorId}
+          className="mt-1 text-xs text-destructive text-start"
+          role="alert"
         >
           {error}
         </p>

@@ -101,6 +101,8 @@ const MAINTENANCE_STATUS_CACHE_KEY = "tijarahjo_public_system_status_v1";
 const MAINTENANCE_STATUS_TTL_MS = 60_000;
 const COMPARISON_EXCLUDED_SEGMENTS = new Set([
   "admin",
+  "compare",
+  "favorites",
   "settings",
   "profile",
   "chat",
@@ -220,7 +222,7 @@ function AppContent() {
   const { searchQuery, setSearchQuery, submitSearch } = useSearch();
 
   // Extracted effect hooks
-  useScrollReset();
+  const routeAnnouncement = useScrollReset(language);
   useChatConnection();
   const { unreadNotificationsCount } = useNotificationPolling({
     suspended:
@@ -251,10 +253,6 @@ function AppContent() {
 
     clearAuthError();
   }, [authError, clearAuthError]);
-
-  useEffect(() => {
-    document.title = "TijarahJO";
-  }, []);
 
   useEffect(() => {
     let isCurrent = true;
@@ -360,6 +358,14 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <div
+        className="sr-only"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {routeAnnouncement}
+      </div>
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-100 focus:px-3 focus:py-2 focus:rounded-md focus:bg-primary focus:text-primary-foreground"
@@ -370,7 +376,11 @@ function AppContent() {
       </a>
       {globalHeader}
 
-      <main id="main-content" className="flex-1">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="flex-1 focus:outline-none"
+      >
         <AppRoutes
           registrationEnabled={
             // During maintenance mode, always disable registration regardless
@@ -389,6 +399,9 @@ function AppContent() {
             <Footer language={language} />
           </div>
         </Suspense>
+      ) : null}
+      {isComparePanelVisible ? (
+        <div aria-hidden="true" className="h-44 shrink-0 sm:h-40 lg:h-44" />
       ) : null}
       <ScrollToTop avoidBottomOverlay={isComparePanelVisible} />
       {shouldShowComparePanel && <ComparePanel />}
