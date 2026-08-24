@@ -5,6 +5,8 @@ import { lazyImportWithRetry } from "../../../shared/lib/lazyImportWithRetry";
 import { useSearch } from "../../../contexts/SearchContext";
 import { APP_ROUTE_PATHS } from "../routeConfig";
 import { LoadingState } from "../../../shared/ui/loading-state";
+import { useLocation } from "react-router-dom";
+import { buildCurrentPath } from "../../../shared/lib/backNavigation";
 
 const AllPostsPage = lazy(
   lazyImportWithRetry(
@@ -37,6 +39,7 @@ const CategoryRouteWrapper = lazy(
 );
 
 function AllPostsMarketplaceRouteScreen() {
+  const location = useLocation();
   const {
     appProps,
     navigate,
@@ -51,7 +54,9 @@ function AllPostsMarketplaceRouteScreen() {
       onBack={() => navigate(APP_ROUTE_PATHS.home)}
       language={appProps.language}
       posts={sharedPostRouteProps.availablePosts}
-      onPostClick={(id) => navigateToPost(id, "/posts")}
+      onPostClick={(id) =>
+        navigateToPost(id, buildCurrentPath(location.pathname, location.search))
+      }
       favoriteIds={sharedPostRouteProps.favoriteIds}
       onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
       isAuthenticated={sharedUserRouteProps.isAuthenticated}
@@ -63,6 +68,7 @@ function AllPostsMarketplaceRouteScreen() {
 }
 
 function SearchResultsMarketplaceRouteScreen() {
+  const location = useLocation();
   const {
     appProps,
     navigate,
@@ -79,7 +85,9 @@ function SearchResultsMarketplaceRouteScreen() {
       searchQuery={activeSearchQuery}
       posts={sharedPostRouteProps.availablePosts}
       onBack={() => navigate(APP_ROUTE_PATHS.home)}
-      onPostClick={(id) => navigateToPost(id, "/search")}
+      onPostClick={(id) =>
+        navigateToPost(id, buildCurrentPath(location.pathname, location.search))
+      }
       language={appProps.language}
       favoriteIds={sharedPostRouteProps.favoriteIds}
       onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
@@ -95,6 +103,7 @@ function SearchResultsMarketplaceRouteScreen() {
 }
 
 function CategoryMarketplaceRouteScreen() {
+  const location = useLocation();
   const {
     appProps,
     navigate,
@@ -115,7 +124,9 @@ function CategoryMarketplaceRouteScreen() {
         favoriteIds={sharedPostRouteProps.favoriteIds}
         onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
         onBack={() => navigate(APP_ROUTE_PATHS.home)}
-        onOpenPost={(id) => navigateToPost(id, "/category")}
+        onOpenPost={(id) =>
+          navigateToPost(id, buildCurrentPath(location.pathname, location.search))
+        }
         onRequireAuth={promptLoginModal}
       />
     </Suspense>

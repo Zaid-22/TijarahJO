@@ -31,7 +31,7 @@ interface HeaderProps {
   showSearch?: boolean;
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
-  onSearchSubmit?: () => void;
+  onSearchSubmit?: (query: string) => void;
   onBack?: () => void;
   onShowFavorites?: () => void;
   onShowMessages?: () => void;

@@ -5,8 +5,13 @@ import { isActivePost } from "../../../lib/searchRanking";
 import { Post } from "../../../types";
 import {
   MarketplaceSearchPreset,
+  resolveMarketplaceSearchLimit,
   runMarketplaceSearchPipeline,
 } from "./marketplaceSearch";
+import type {
+  SearchPagination,
+  SearchPipelineResult,
+} from "./searchPipeline";
 
 type MarketplaceSearchSortBy = "date" | "price" | "views";
 type MarketplaceSearchSortOrder = "asc" | "desc";
@@ -25,6 +30,9 @@ interface UseMarketplaceSearchResultsOptions {
   transformRemotePosts?: (posts: Post[], query: string) => Post[];
   enabled?: boolean;
   page?: number;
+  limit?: number;
+  category?: string;
+  city?: string;
   minPrice?: number;
   maxPrice?: number;
   sortBy?: MarketplaceSearchSortBy;
@@ -41,7 +49,8 @@ interface UseMarketplaceSearchResultsReturn {
   error: string | null;
   isSearching: boolean;
   query: string;
-  refetch: () => Promise<{ posts: Post[]; error: string | null } | undefined>;
+  pagination: SearchPagination;
+  refetch: () => Promise<SearchPipelineResult | undefined>;
 }
 
 function normalizeQueryKey(value: string): string {
@@ -58,6 +67,9 @@ function buildSearchCacheKey({
   preset,
   query,
   page,
+  limit,
+  category,
+  city,
   minPrice,
   maxPrice,
   sortBy,
@@ -66,6 +78,9 @@ function buildSearchCacheKey({
   preset: MarketplaceSearchPreset;
   query: string;
   page: number;
+  limit: number;
+  category?: string;
+  city?: string;
   minPrice?: number;
   maxPrice?: number;
   sortBy: MarketplaceSearchSortBy;
@@ -76,6 +91,9 @@ function buildSearchCacheKey({
     preset,
     normalizeQueryKey(query),
     `page:${page}`,
+    `limit:${limit}`,
+    `category:${normalizeQueryKey(category || "")}`,
+    `city:${normalizeQueryKey(city || "")}`,
     `min:${formatOptionalNumber(minPrice)}`,
     `max:${formatOptionalNumber(maxPrice)}`,
     `sort:${sortBy}`,
@@ -92,6 +110,9 @@ export function useMarketplaceSearchResults({
   transformRemotePosts,
   enabled = true,
   page = 1,
+  limit: requestedLimit,
+  category,
+  city,
   minPrice,
   maxPrice,
   sortBy = "date",
@@ -102,6 +123,7 @@ export function useMarketplaceSearchResults({
   retryCount = 1,
   retryDelayMs = 600,
 }: UseMarketplaceSearchResultsOptions): UseMarketplaceSearchResultsReturn {
+  const limit = requestedLimit ?? resolveMarketplaceSearchLimit(preset);
   const debouncedQuery = useDebounce(query, debounceMs);
   const normalizedQuery = debouncedQuery.trim();
   const activePosts = useMemo(
@@ -118,18 +140,40 @@ export function useMarketplaceSearchResults({
   );
   const shouldRequest =
     enabled && (shouldRequestWhenQueryEmpty || normalizedQuery.length > 0);
+  const fallbackPagePosts = useMemo(() => {
+    if (!shouldRequest) {
+      return fallbackPosts;
+    }
+
+    const start = (page - 1) * limit;
+    return fallbackPosts.slice(start, start + limit);
+  }, [fallbackPosts, limit, page, shouldRequest]);
   const cacheKey = useMemo(
     () =>
       buildSearchCacheKey({
         preset,
         query: normalizedQuery,
         page,
+        limit,
+        category,
+        city,
         minPrice,
         maxPrice,
         sortBy,
         sortOrder,
       }),
-    [maxPrice, minPrice, normalizedQuery, page, preset, sortBy, sortOrder],
+    [
+      category,
+      city,
+      limit,
+      maxPrice,
+      minPrice,
+      normalizedQuery,
+      page,
+      preset,
+      sortBy,
+      sortOrder,
+    ],
   );
   const queryTags = useMemo(
     () => ["posts", "marketplace-search", `marketplace-search:${preset}`],
@@ -142,7 +186,7 @@ export function useMarketplaceSearchResults({
     isLoading,
     isFetching,
     refetch,
-  } = useServerQuery<{ posts: Post[]; error: string | null }>({
+  } = useServerQuery<SearchPipelineResult>({
     key: cacheKey,
     tags: queryTags,
     enabled: shouldRequest,
@@ -156,6 +200,9 @@ export function useMarketplaceSearchResults({
           query: normalizedQuery || undefined,
           preset,
           page,
+          limit,
+          category,
+          city,
           minPrice,
           maxPrice,
           sortBy,
@@ -176,16 +223,16 @@ export function useMarketplaceSearchResults({
     }
 
     if (!data) {
-      return fallbackPosts;
+      return fallbackPagePosts;
     }
 
     // Keep fallback posts synced with source data on remote failures.
     if (data.error) {
-      return fallbackPosts;
+      return fallbackPagePosts;
     }
 
     return data.posts;
-  }, [data, fallbackPosts, shouldRequest]);
+  }, [data, fallbackPagePosts, fallbackPosts, shouldRequest]);
 
   const resolvedError = useMemo(() => {
     if (!enabled || !shouldRequest) {
@@ -199,11 +246,32 @@ export function useMarketplaceSearchResults({
     return data?.error || error;
   }, [data?.error, enabled, error, fallbackPosts.length, shouldRequest]);
 
+  const pagination = useMemo<SearchPagination>(() => {
+    if (data?.pagination && !data.error) {
+      return {
+        ...data.pagination,
+        currentPage: Math.max(1, data.pagination.currentPage),
+        // The API represents an empty result set with zero pages, while the
+        // URL state always has a valid first page. Normalizing here avoids a
+        // repeated `page=0` correction on empty searches.
+        totalPages: Math.max(1, data.pagination.totalPages),
+      };
+    }
+
+    return {
+      currentPage: page,
+      totalPages: Math.max(1, Math.ceil(fallbackPosts.length / limit)),
+      totalPosts: fallbackPosts.length,
+      postsPerPage: limit,
+    };
+  }, [data?.error, data?.pagination, fallbackPosts.length, limit, page]);
+
   return {
     posts,
     error: resolvedError,
     isSearching: shouldRequest && (isLoading || isFetching),
     query: normalizedQuery,
+    pagination,
     refetch,
   };
 }

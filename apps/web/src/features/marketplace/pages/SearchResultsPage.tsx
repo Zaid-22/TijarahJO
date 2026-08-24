@@ -13,11 +13,11 @@ import { PostResultsGridSkeleton } from "../components/PostResultsGridSkeleton";
 
 import { Language } from "../../../translations";
 import { Post } from "../../../types";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { rankMarketplacePosts } from "../search/marketplaceSearch";
 import { useMarketplaceSearchResults } from "../search/useMarketplaceSearchResults";
-import { useMarketplaceDiscoveryState } from "../../../shared/hooks/useMarketplaceDiscoveryState";
-import { useMarketplaceSearchFilter } from "../../../shared/hooks/useMarketplaceSearchFilter";
+import { useMarketplaceUrlState } from "../search/useMarketplaceUrlState";
+import { useMarketplacePaginationNavigation } from "../search/useMarketplacePaginationNavigation";
 
 interface SearchResultsPageProps {
   searchQuery: string;
@@ -46,31 +46,52 @@ export function SearchResultsPage({
   currentUserId,
   onRequireAuth,
 }: SearchResultsPageProps) {
-  const [appliedSearchQuery, setAppliedSearchQuery] = useState(
-    initialSearchQuery.trim(),
-  );
   const [showFilters, setShowFilters] = useState(false);
-  const [appliedSearchFilters, setAppliedSearchFilters] =
-    useState<SearchFilters>({ sortBy: "views", sortOrder: "desc" });
-  const [draftSearchFilters, setDraftSearchFilters] = useState<SearchFilters>({
-    sortBy: "views",
-    sortOrder: "desc",
+  const {
+    query: queryFromUrl,
+    page,
+    filters: appliedSearchFilters,
+    setPage,
+    setQuery,
+    applyFilters: setAppliedSearchFilters,
+    clearFilters,
+  } = useMarketplaceUrlState({
+    defaultSortBy: "views",
+    defaultSortOrder: "desc",
   });
-
-  const { normalizedSearchQuery, clearSearch: clearAppliedSearch } =
-    useMarketplaceSearchFilter({
-      language,
-      searchQuery: appliedSearchQuery,
-      setSearchQuery: setAppliedSearchQuery,
-    });
+  const [draftSearchFilters, setDraftSearchFilters] =
+    useState<SearchFilters>(appliedSearchFilters);
+  const { navigateToPage, resultsHeadingRef } =
+    useMarketplacePaginationNavigation(setPage);
+  const normalizedSearchQuery = (queryFromUrl || initialSearchQuery).trim();
   const clearSearch = useCallback(() => {
-    clearAppliedSearch();
+    setQuery("");
     onSearch("");
-  }, [clearAppliedSearch, onSearch]);
+  }, [onSearch, setQuery]);
 
   const buildFallbackPosts = useCallback(
     ({ activePosts, query }: { activePosts: Post[]; query: string }) => {
+      if (!query) {
+        return [];
+      }
+
       let results = activePosts;
+
+      if (appliedSearchFilters.category) {
+        results = results.filter(
+          (post) =>
+            post.category?.toLowerCase() ===
+            appliedSearchFilters.category?.toLowerCase(),
+        );
+      }
+      if (appliedSearchFilters.city) {
+        const cityFilter = appliedSearchFilters.city.toLowerCase();
+        results = results.filter(
+          (post) =>
+            post.location?.toLowerCase().includes(cityFilter) ||
+            post.locationAr?.toLowerCase().includes(cityFilter),
+        );
+      }
 
       if (appliedSearchFilters.minPrice != null) {
         results = results.filter(
@@ -117,56 +138,25 @@ export function SearchResultsPage({
     posts: searchPosts,
     isSearching,
     error: searchError,
+    pagination,
+    refetch,
   } = useMarketplaceSearchResults({
     preset: "search-results",
     query: normalizedSearchQuery,
     sourcePosts: posts,
-    page: 1,
+    page,
+    limit: 12,
+    category: appliedSearchFilters.category,
+    city: appliedSearchFilters.city,
     sortBy: appliedSearchFilters.sortBy || "date",
     sortOrder: appliedSearchFilters.sortOrder || "desc",
     minPrice: appliedSearchFilters.minPrice,
     maxPrice: appliedSearchFilters.maxPrice,
-    fallbackErrorMessage: "Search failed",
+    fallbackErrorMessage:
+      language === "ar" ? "تعذر إكمال البحث" : "Search failed",
     buildFallbackPosts,
     transformRemotePosts,
   });
-
-  // Apply category & city filters client-side (API doesn't support them)
-  const filteredPosts = useMemo(() => {
-    let results = searchPosts;
-    if (appliedSearchFilters.category) {
-      results = results.filter(
-        (p) =>
-          p.category?.toLowerCase() ===
-          appliedSearchFilters.category?.toLowerCase(),
-      );
-    }
-    if (appliedSearchFilters.city) {
-      const cityFilter = appliedSearchFilters.city.toLowerCase();
-      results = results.filter((p) =>
-        p.location?.toLowerCase().includes(cityFilter) ||
-        p.locationAr?.toLowerCase().includes(cityFilter)
-      );
-    }
-    return results;
-  }, [searchPosts, appliedSearchFilters.category, appliedSearchFilters.city]);
-
-  const {
-    viewMode,
-    displayedResults: displayedPosts,
-    shouldShowPagination,
-    pagination,
-  } = useMarketplaceDiscoveryState({
-    items: filteredPosts,
-    itemsPerPage: 12,
-    defaultViewMode: "list",
-    storageKey: "tijarahjo_view_mode_search",
-  });
-
-  useEffect(() => {
-    const normalizedInitialQuery = initialSearchQuery.trim();
-    setAppliedSearchQuery(normalizedInitialQuery);
-  }, [initialSearchQuery]);
 
   useEffect(() => {
     setDraftSearchFilters(appliedSearchFilters);
@@ -175,12 +165,18 @@ export function SearchResultsPage({
   const applySearchFilters = useCallback(() => {
     setAppliedSearchFilters(draftSearchFilters);
     setShowFilters(false);
-  }, [draftSearchFilters]);
+  }, [draftSearchFilters, setAppliedSearchFilters]);
+
+  useEffect(() => {
+    if (!isSearching && !searchError && page > pagination.totalPages) {
+      setPage(pagination.totalPages);
+    }
+  }, [isSearching, page, pagination.totalPages, searchError, setPage]);
 
   return (
     <PageShell>
       {/* Main Content */}
-      <main className="mx-auto w-full max-w-376 px-4 pt-6 pb-8 sm:px-6 lg:px-8 xl:px-10">
+      <div className="mx-auto w-full max-w-376 px-4 pt-6 pb-8 sm:px-6 lg:px-8 xl:px-10">
         <button
           type="button"
           onClick={onBack}
@@ -197,14 +193,7 @@ export function SearchResultsPage({
               filters={appliedSearchFilters}
               onFiltersChange={setAppliedSearchFilters}
               onApply={() => {}}
-              onClear={() => {
-                const defaultSort = {
-                  sortBy: "views" as const,
-                  sortOrder: "desc" as const,
-                };
-                setDraftSearchFilters(defaultSort);
-                setAppliedSearchFilters(defaultSort);
-              }}
+              onClear={clearFilters}
               showApplyButton={false}
               showCategory
             />
@@ -213,7 +202,11 @@ export function SearchResultsPage({
           {/* Main Results Area */}
           <div className="min-w-0 flex-1">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-4 px-2">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-800">
+              <h1
+                ref={resultsHeadingRef}
+                tabIndex={-1}
+                className="scroll-mt-24 text-2xl font-bold tracking-tight text-foreground focus:outline-none"
+              >
                 {language === "ar" ? "نتائج البحث" : "Search Results"}
               </h1>
             </div>
@@ -223,6 +216,10 @@ export function SearchResultsPage({
               loadingLabel={
                 language === "ar" ? "جاري البحث..." : "Searching..."
               }
+              retryLabel={language === "ar" ? "إعادة المحاولة" : "Retry"}
+              onRetry={() => {
+                void refetch();
+              }}
             />
 
             <MarketplaceDiscoveryControls
@@ -243,7 +240,7 @@ export function SearchResultsPage({
                         sortOrder: "desc" as const,
                       };
                       setDraftSearchFilters(defaultSort);
-                      setAppliedSearchFilters(defaultSort);
+                      clearFilters();
                       setShowFilters(false);
                     }}
                     showCategory
@@ -255,12 +252,12 @@ export function SearchResultsPage({
 
             {isSearching ? (
               <div className="py-2.5">
-                <PostResultsGridSkeleton viewMode={viewMode} count={8} />
+                <PostResultsGridSkeleton viewMode="list" count={8} />
               </div>
-            ) : (
+            ) : searchError ? null : (
               <PostResultsGrid
-                posts={displayedPosts}
-                viewMode={viewMode}
+                posts={searchPosts}
+                viewMode="list"
                 onPostClick={onPostClick}
                 favoriteIds={favoriteIds}
                 onFavoriteToggle={onFavoriteToggle}
@@ -287,21 +284,23 @@ export function SearchResultsPage({
                 onRequireAuth={onRequireAuth}
               />
             )}
-            {shouldShowPagination ? (
+            {!searchError && pagination.totalPages > 1 ? (
               <MarketplaceResultsPagination
                 currentPage={pagination.currentPage}
                 totalPages={pagination.totalPages}
-                isLoading={pagination.isLoading}
+                isLoading={isSearching}
                 language={language}
-                onPrevious={pagination.onPrevious}
-                onNext={pagination.onNext}
+                onPrevious={() => navigateToPage(Math.max(1, page - 1))}
+                onNext={() =>
+                  navigateToPage(Math.min(pagination.totalPages, page + 1))
+                }
                 className="mt-12 mb-8"
                 showLoadingIndicator
               />
             ) : null}
           </div>
         </div>
-      </main>
+      </div>
     </PageShell>
   );
 }

@@ -65,15 +65,50 @@ function PaginationLink({
   );
 }
 
+type PaginationCurrentProps = Partial<
+  Pick<React.ComponentProps<typeof Button>, "size">
+> &
+  React.ComponentProps<"span">;
+
+function PaginationCurrent({
+  className,
+  size = "icon",
+  ...props
+}: PaginationCurrentProps) {
+  return (
+    <span
+      aria-current="page"
+      data-slot="pagination-current"
+      className={cn(
+        buttonVariants({ variant: "default", size }),
+        "h-10 min-w-[40px] bg-primary text-white dark:bg-secondary",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+type PaginationDirectionProps = React.ComponentProps<
+  typeof PaginationLink
+> & {
+  disabled?: boolean;
+  isRtl?: boolean;
+  label?: string;
+};
+
 function PaginationPrevious({
   className,
   disabled,
+  isRtl = false,
+  label = "Previous",
   size,
+  "aria-label": ariaLabel,
   ...props
-}: React.ComponentProps<typeof PaginationLink> & { disabled?: boolean }) {
+}: PaginationDirectionProps) {
   return (
     <PaginationLink
-      aria-label="Go to previous page"
+      aria-label={ariaLabel ?? "Go to previous page"}
       size={size ?? "default"}
       className={cn(
         "gap-1 px-3 sm:px-4",
@@ -83,8 +118,12 @@ function PaginationPrevious({
       disabled={disabled}
       {...props}
     >
-      <ChevronLeftIcon className="w-4 h-4" />
-      <span className="hidden sm:inline">Previous</span>
+      {isRtl ? (
+        <ChevronRightIcon className="w-4 h-4" aria-hidden="true" />
+      ) : (
+        <ChevronLeftIcon className="w-4 h-4" aria-hidden="true" />
+      )}
+      <span className="hidden sm:inline">{label}</span>
     </PaginationLink>
   );
 }
@@ -92,12 +131,15 @@ function PaginationPrevious({
 function PaginationNext({
   className,
   disabled,
+  isRtl = false,
+  label = "Next",
   size,
+  "aria-label": ariaLabel,
   ...props
-}: React.ComponentProps<typeof PaginationLink> & { disabled?: boolean }) {
+}: PaginationDirectionProps) {
   return (
     <PaginationLink
-      aria-label="Go to next page"
+      aria-label={ariaLabel ?? "Go to next page"}
       size={size ?? "default"}
       className={cn(
         "gap-1 px-3 sm:px-4",
@@ -107,8 +149,12 @@ function PaginationNext({
       disabled={disabled}
       {...props}
     >
-      <span className="hidden sm:inline">Next</span>
-      <ChevronRightIcon className="w-4 h-4" />
+      <span className="hidden sm:inline">{label}</span>
+      {isRtl ? (
+        <ChevronLeftIcon className="w-4 h-4" aria-hidden="true" />
+      ) : (
+        <ChevronRightIcon className="w-4 h-4" aria-hidden="true" />
+      )}
     </PaginationLink>
   );
 }
@@ -116,6 +162,7 @@ function PaginationNext({
 export {
   Pagination,
   PaginationContent,
+  PaginationCurrent,
   PaginationLink,
   PaginationItem,
   PaginationPrevious,

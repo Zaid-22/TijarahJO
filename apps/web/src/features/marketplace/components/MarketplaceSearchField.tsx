@@ -47,7 +47,7 @@ export function MarketplaceSearchField({
     }
 
     event.preventDefault();
-    onSubmit(value);
+    onSubmit(event.currentTarget.value);
     inputRef.current?.blur();
   };
 
@@ -94,7 +94,7 @@ export function MarketplaceSearchField({
           type="button"
           size="icon"
           aria-label={effectiveSubmitLabel}
-          onClick={() => onSubmit?.(value)}
+          onClick={() => onSubmit?.(inputRef.current?.value ?? value)}
           className={cn(
             "h-full w-12 bg-linear-to-b from-primary to-primary/90 px-0 font-bold text-primary-foreground shadow-none transition-all duration-300 hover:brightness-105 active:brightness-95 md:w-auto md:min-w-24 md:px-4",
             submitButtonRadiusClass,

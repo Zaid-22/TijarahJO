@@ -1,4 +1,4 @@
-import { lazy, useEffect } from "react";
+import { lazy } from "react";
 import { useMarketplaceRouteContext } from "./marketplaceRouteContext";
 import { type MarketplaceRouteDefinition } from "./marketplaceRouteDefinitions";
 import { useSearch } from "../../../contexts/SearchContext";
@@ -38,15 +38,6 @@ function HomeMarketplaceRouteScreen() {
   } = useMarketplaceRouteContext();
   const { activeSearchQuery, setSearchQuery, setActiveSearchQuery } =
     useSearch();
-
-  // Clear the search state when the home page mounts so that a previous
-  // search query doesn't bleed into the home sections (Featured, Recently
-  // Added, All Listings, etc.).
-  useEffect(() => {
-    setSearchQuery("");
-    setActiveSearchQuery("");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   return (
     <HomePage

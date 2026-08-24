@@ -6,7 +6,7 @@ interface HeaderSearchInputProps {
   isRTL: boolean;
   searchQuery: string;
   onSearchChange?: (query: string) => void;
-  onSearchSubmit?: () => void;
+  onSearchSubmit?: (query: string) => void;
 }
 
 export function HeaderSearchInput({

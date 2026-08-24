@@ -65,12 +65,10 @@ export const APP_DATA_ROUTE_CONFIG: readonly AppDataRouteConfig[] = [
   },
   {
     path: APP_ROUTE_PATHS.posts,
-    loadsPostsData: true,
     loadsFavoritesData: true,
   },
   {
     path: APP_ROUTE_PATHS.search,
-    loadsPostsData: true,
     loadsFavoritesData: true,
   },
   {
@@ -80,7 +78,6 @@ export const APP_DATA_ROUTE_CONFIG: readonly AppDataRouteConfig[] = [
   },
   {
     path: APP_ROUTE_PATHS.category,
-    loadsPostsData: true,
     loadsFavoritesData: true,
   },
   {

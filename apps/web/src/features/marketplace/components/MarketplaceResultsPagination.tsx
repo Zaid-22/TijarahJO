@@ -2,8 +2,8 @@ import { Loader2 } from "lucide-react";
 import {
   Pagination,
   PaginationContent,
+  PaginationCurrent,
   PaginationItem,
-  PaginationLink,
   PaginationNext,
   PaginationPrevious,
 } from "../../../shared/ui/pagination";
@@ -34,33 +34,64 @@ export function MarketplaceResultsPagination({
     return null;
   }
 
+  const isRtl = language === "ar";
+  const labels = isRtl
+    ? {
+        pagination: "ترقيم صفحات النتائج",
+        previous: "السابق",
+        previousPage: "الانتقال إلى الصفحة السابقة",
+        next: "التالي",
+        nextPage: "الانتقال إلى الصفحة التالية",
+        currentPage: "الصفحة الحالية",
+      }
+    : {
+        pagination: "Results pagination",
+        previous: "Previous",
+        previousPage: "Go to previous page",
+        next: "Next",
+        nextPage: "Go to next page",
+        currentPage: "Current page",
+      };
+
   return (
     <div className={className}>
-      <Pagination>
+      <Pagination aria-label={labels.pagination} dir={isRtl ? "rtl" : "ltr"}>
         <PaginationContent>
           <PaginationItem>
             <PaginationPrevious
               onClick={onPrevious}
               disabled={currentPage === 1 || isLoading}
+              isRtl={isRtl}
+              label={labels.previous}
+              aria-label={labels.previousPage}
             />
           </PaginationItem>
           <PaginationItem>
-            <PaginationLink isActive>
+            <PaginationCurrent
+              aria-label={`${labels.currentPage}: ${currentPage} / ${totalPages}`}
+            >
               {currentPage} / {totalPages}
-            </PaginationLink>
+            </PaginationCurrent>
           </PaginationItem>
           <PaginationItem>
             <PaginationNext
               onClick={onNext}
               disabled={currentPage === totalPages || isLoading}
+              isRtl={isRtl}
+              label={labels.next}
+              aria-label={labels.nextPage}
             />
           </PaginationItem>
         </PaginationContent>
       </Pagination>
 
       {showLoadingIndicator && isLoading ? (
-        <div className="mt-6 flex items-center justify-center gap-3">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        <div
+          className="mt-6 flex items-center justify-center gap-3"
+          role="status"
+          aria-live="polite"
+        >
+          <Loader2 className="w-6 h-6 animate-spin text-primary" aria-hidden="true" />
           <span className="text-muted-foreground">
             {language === "ar" ? "جارٍ التحميل..." : "Loading..."}
           </span>

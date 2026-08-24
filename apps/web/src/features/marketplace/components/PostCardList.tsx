@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Badge } from "../../../shared/ui/badge";
 import { Button } from "../../../shared/ui/button";
@@ -28,41 +28,6 @@ import { api } from "../../../services/api";
 import { type PhoneLookupStatus } from "./postCardPhoneDialog";
 import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
 import { normalizeSellerDisplayName } from "../../../utils/sellerDisplayName";
-
-const sellerAvatarCache = new Map<string, string | null>();
-const sellerAvatarRequestCache = new Map<string, Promise<string | null>>();
-
-async function getSellerAvatar(sellerId: string): Promise<string | null> {
-  const normalizedSellerId = sellerId.trim();
-  if (!normalizedSellerId) {
-    return null;
-  }
-
-  if (sellerAvatarCache.has(normalizedSellerId)) {
-    return sellerAvatarCache.get(normalizedSellerId) ?? null;
-  }
-
-  const pendingRequest = sellerAvatarRequestCache.get(normalizedSellerId);
-  if (pendingRequest) {
-    return pendingRequest;
-  }
-
-  const request = api.sellers
-    .getSellerProfile(normalizedSellerId)
-    .then((sellerProfile) => {
-      const avatar = String(sellerProfile?.seller?.avatar || "").trim() || null;
-      sellerAvatarCache.set(normalizedSellerId, avatar);
-      sellerAvatarRequestCache.delete(normalizedSellerId);
-      return avatar;
-    })
-    .catch(() => {
-      sellerAvatarRequestCache.delete(normalizedSellerId);
-      return null;
-    });
-
-  sellerAvatarRequestCache.set(normalizedSellerId, request);
-  return request;
-}
 
 function toLocalJordanMaskedPhone(value: string, fallback: string): string {
   const digitsOnly = value.replace(/\D/g, "");
@@ -103,7 +68,9 @@ export const PostCardList = React.memo(function PostCardList(
   const [resolvedPhone, setResolvedPhone] = useState("");
   const [isResolvingPhone, setIsResolvingPhone] = useState(false);
   const [showPhoneDialog, setShowPhoneDialog] = useState(false);
-  const [sellerAvatar, setSellerAvatar] = useState<string | null>(null);
+  // Listing endpoints do not currently include avatars. Keep the card on an
+  // initials fallback instead of issuing one seller-profile request per card.
+  const sellerAvatar = null;
   const [phoneLookupStatus, setPhoneLookupStatus] =
     useState<PhoneLookupStatus>("idle");
   // phoneLookupStatus is read by the setter calls; suppress TS6133
@@ -140,6 +107,13 @@ export const PostCardList = React.memo(function PostCardList(
     "",
   );
   const isArabic = resolvedLanguage === "ar";
+  const compareLabel = isInCompare(String(post.id))
+    ? isArabic
+      ? "إزالة من المقارنة"
+      : "Remove from comparison"
+    : isArabic
+      ? "إضافة إلى المقارنة"
+      : "Add to comparison";
   const displayLocation = isArabic
     ? post.locationAr || post.location
     : post.location;
@@ -159,31 +133,6 @@ export const PostCardList = React.memo(function PostCardList(
   const hasPhone = trimmedPhone.length > 0;
   const canResolvePhone = hasPhone || hasChatTarget;
   const maskedPhone = toLocalJordanMaskedPhone(trimmedPhone, labels.callButton);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!trimmedSellerId) {
-      setSellerAvatar(null);
-      return;
-    }
-
-    const cachedAvatar = sellerAvatarCache.get(trimmedSellerId);
-    if (cachedAvatar !== undefined) {
-      setSellerAvatar(cachedAvatar);
-      return;
-    }
-
-    void getSellerAvatar(trimmedSellerId).then((avatar) => {
-      if (!cancelled) {
-        setSellerAvatar(avatar);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [trimmedSellerId]);
 
   const handleChatClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
@@ -447,16 +396,8 @@ export const PostCardList = React.memo(function PostCardList(
                   addToCompare(comparePost);
                 }
               }}
-              aria-label={
-                isInCompare(String(post.id))
-                  ? "Remove from comparison"
-                  : "Add to comparison"
-              }
-              title={
-                isInCompare(String(post.id))
-                  ? "Remove from comparison"
-                  : "Add to comparison"
-              }
+              aria-label={compareLabel}
+              title={compareLabel}
               className={
                 isInCompare(String(post.id))
                   ? "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"

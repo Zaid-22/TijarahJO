@@ -30,6 +30,7 @@ const areasCacheByCityId: Record<
 
 const USERS_ENDPOINT = "/users";
 const LOOKUP_CACHE_TTL_MS = 60_000;
+const OPTIONAL_RATINGS_WAIT_MS = 750;
 
 // ---------------------------------------------------------------------------
 // In-flight deduplication — when multiple callers race to fetch the same
@@ -60,6 +61,10 @@ async function ensureSellerRatingsCache(
         .filter((id) => toPositiveIntegerId(id)),
     ),
   );
+
+  if (requestedUserIds.length === 0) {
+    return {};
+  }
 
   const staleOrMissingUserIds = requestedUserIds.filter((userId) => {
     const entry = sellerRatingsCache[userId];
@@ -113,6 +118,50 @@ async function ensureSellerRatingsCache(
       },
     ]),
   );
+}
+
+function readCachedSellerRatings(
+  userIds: Array<string | number>,
+): Record<string, { averageRating: number; reviewCount: number }> {
+  return Object.fromEntries(
+    userIds.map((id) => String(id).trim()).filter(Boolean).map((userId) => [
+      userId,
+      {
+        averageRating: sellerRatingsCache[userId]?.averageRating ?? 0,
+        reviewCount: sellerRatingsCache[userId]?.reviewCount ?? 0,
+      },
+    ]),
+  );
+}
+
+async function resolveSellerRatingsWithoutBlockingListings(
+  userIds: Array<string | number>,
+  forceRefresh: boolean,
+): Promise<Record<string, { averageRating: number; reviewCount: number }>> {
+  if (userIds.length === 0) {
+    return {};
+  }
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeoutResult = new Promise<
+    Record<string, { averageRating: number; reviewCount: number }>
+  >((resolve) => {
+    timeoutId = setTimeout(
+      () => resolve(readCachedSellerRatings(userIds)),
+      OPTIONAL_RATINGS_WAIT_MS,
+    );
+  });
+
+  try {
+    return await Promise.race([
+      ensureSellerRatingsCache(forceRefresh, userIds),
+      timeoutResult,
+    ]);
+  } finally {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
+  }
 }
 
 function normalizeCategoryNameKey(categoryName: string): string {
@@ -182,6 +231,10 @@ async function ensureUsersCache(
         .filter((id) => id.length > 0 && id !== "0"),
     ),
   );
+
+  if (requestedUserIds.length === 0) {
+    return usersCache;
+  }
 
   const shouldRefreshAllUsersCache =
     forceRefresh ||
@@ -427,28 +480,49 @@ export async function enrichPostsWithCategoryAndSeller(
   posts: RawPost[],
   forceRefresh: boolean = false,
 ): Promise<RawPost[]> {
-  const postUserIds: Array<string | number> = posts
-    .map(
-      (post) =>
-        post?.UserID ??
-        post?.userID ??
-        post?.UserId ??
-        post?.sellerId ??
-        post?.SellerId ??
-        post?.SellerID,
-    )
-    .filter(
-      (id): id is string | number =>
-        (typeof id === "string" || typeof id === "number") &&
-        id !== null &&
-        id !== undefined &&
-        String(id).trim() !== "" &&
-        String(id) !== "0",
+  const resolvePostUserId = (post: RawPost) =>
+    post?.UserID ??
+    post?.userID ??
+    post?.UserId ??
+    post?.sellerId ??
+    post?.SellerId ??
+    post?.SellerID;
+  const isUsableLookupId = (id: unknown): id is string | number =>
+    (typeof id === "string" || typeof id === "number") &&
+    String(id).trim() !== "" &&
+    String(id) !== "0";
+  const hasText = (...values: unknown[]) =>
+    values.some(
+      (value) => typeof value === "string" && value.trim().length > 0,
     );
+
+  const postUserIds: Array<string | number> = posts
+    .map(resolvePostUserId)
+    .filter(isUsableLookupId);
+  const sellerLookupUserIds: Array<string | number> = posts
+    .filter((post) => !hasText(post?.Seller, post?.seller))
+    .map(resolvePostUserId)
+    .filter(isUsableLookupId);
+  const needsCategoryLookup = posts.some(
+    (post) =>
+      !hasText(post?.Category, post?.category) &&
+      isUsableLookupId(
+        post?.CategoryID ?? post?.categoryID ?? post?.CategoryId,
+      ),
+  );
+  const needsCityLookup = posts.some(
+    (post) =>
+      !hasText(post?.City, post?.city, post?.LocationAr, post?.locationAr) &&
+      toPositiveIntegerId(post?.CityId ?? post?.cityId),
+  );
 
   const postCityIds = Array.from(
     new Set(
       posts
+        .filter(
+          (post) =>
+            !hasText(post?.Area, post?.area, post?.AreaAr, post?.areaAr),
+        )
         .map((post) => post?.CityId ?? post?.cityId)
         .map(Number)
         .filter((id) => Number.isFinite(id) && id > 0),
@@ -456,10 +530,14 @@ export async function enrichPostsWithCategoryAndSeller(
   );
 
   const [resolvedCategories, resolvedUsers, resolvedCities, resolvedSellerRatings] = await Promise.all([
-    ensureCategoriesCache(forceRefresh),
-    ensureUsersCache(forceRefresh, postUserIds),
-    ensureCitiesCache(forceRefresh),
-    ensureSellerRatingsCache(forceRefresh, postUserIds),
+    needsCategoryLookup
+      ? ensureCategoriesCache(forceRefresh)
+      : Promise.resolve(categoriesCache ?? {}),
+    ensureUsersCache(forceRefresh, sellerLookupUserIds),
+    needsCityLookup
+      ? ensureCitiesCache(forceRefresh)
+      : Promise.resolve(citiesCache ?? {}),
+    resolveSellerRatingsWithoutBlockingListings(postUserIds, forceRefresh),
   ]);
 
   await Promise.all(

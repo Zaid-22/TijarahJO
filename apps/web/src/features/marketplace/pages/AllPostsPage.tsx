@@ -1,14 +1,17 @@
 import { PostResultsGrid } from "../components/PostResultsGrid";
+import { PostResultsGridSkeleton } from "../components/PostResultsGridSkeleton";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { MarketplaceDiscoveryControls } from "../components/MarketplaceDiscoveryControls";
+import { MarketplaceQueryStatus } from "../components/MarketplaceQueryStatus";
 import { MarketplaceResultsPagination } from "../components/MarketplaceResultsPagination";
 import { translations, Language } from "../../../translations";
 import { Post } from "../../../types";
-import { useMarketplaceDiscoveryState } from "../../../shared/hooks/useMarketplaceDiscoveryState";
-import { useCallback, useState, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
 import { AdvancedSearchFilters, type SearchFilters } from "../components/AdvancedSearchFilters";
 import { ArrowLeft } from "lucide-react";
+import { useMarketplaceSearchResults } from "../search/useMarketplaceSearchResults";
+import { useMarketplaceUrlState } from "../search/useMarketplaceUrlState";
+import { useMarketplacePaginationNavigation } from "../search/useMarketplacePaginationNavigation";
 
 interface AllPostsPageProps {
   onBack: () => void;
@@ -35,62 +38,58 @@ export function AllPostsPage({
   onRequireAuth,
 }: AllPostsPageProps) {
   const t = translations[language];
-  const [searchParams, setSearchParams] = useSearchParams();
-  const sortFromUrl = searchParams.get("sortBy") as "date" | "views" | "price" | null;
-  const initialSortBy = sortFromUrl || "views";
-
-  const requestedPage = Number.parseInt(searchParams.get("page") || "1", 10);
-  const initialPage =
-    Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
-  const syncPageToUrl = useCallback(
-    (page: number) => {
-      const nextParams = new URLSearchParams(searchParams);
-      if (page <= 1) {
-        nextParams.delete("page");
-      } else {
-        nextParams.set("page", String(page));
-      }
-      setSearchParams(nextParams, { replace: true });
-    },
-    [searchParams, setSearchParams],
-  );
-
-  const [appliedSearchFilters, setAppliedSearchFilters] = useState<SearchFilters>({
-    sortBy: initialSortBy,
-    sortOrder: "desc",
+  const {
+    page,
+    filters: appliedSearchFilters,
+    setPage,
+    applyFilters: setAppliedSearchFilters,
+    clearFilters,
+  } = useMarketplaceUrlState({
+    defaultSortBy: "views",
+    defaultSortOrder: "desc",
   });
-  const [draftSearchFilters, setDraftSearchFilters] = useState<SearchFilters>({
-    sortBy: initialSortBy,
-    sortOrder: "desc",
-  });
+  const [draftSearchFilters, setDraftSearchFilters] =
+    useState<SearchFilters>(appliedSearchFilters);
   const [showFilters, setShowFilters] = useState(false);
+  const { navigateToPage, resultsHeadingRef } =
+    useMarketplacePaginationNavigation(setPage);
 
-  const filteredPosts = useMemo(() => {
-    let results = [...posts];
+  useEffect(() => {
+    setDraftSearchFilters(appliedSearchFilters);
+  }, [appliedSearchFilters]);
 
-    if (appliedSearchFilters.category) {
-      results = results.filter(
-        (p) =>
-          p.category?.toLowerCase() === appliedSearchFilters.category?.toLowerCase()
-      );
-    }
-    if (appliedSearchFilters.city) {
-      const cityFilter = appliedSearchFilters.city.toLowerCase();
-      results = results.filter((p) =>
-        p.location?.toLowerCase().includes(cityFilter) ||
-        p.locationAr?.toLowerCase().includes(cityFilter)
-      );
-    }
-    if (appliedSearchFilters.minPrice != null) {
-      results = results.filter((p) => p.price >= (appliedSearchFilters.minPrice ?? 0));
-    }
-    if (appliedSearchFilters.maxPrice != null) {
-      results = results.filter((p) => p.price <= (appliedSearchFilters.maxPrice ?? Infinity));
-    }
-    
-    if (appliedSearchFilters.sortBy) {
+  const buildFallbackPosts = useCallback(
+    ({ activePosts }: { activePosts: Post[] }) => {
+      let results = [...activePosts];
+
+      if (appliedSearchFilters.category) {
+        results = results.filter(
+          (post) =>
+            post.category?.toLowerCase() ===
+            appliedSearchFilters.category?.toLowerCase(),
+        );
+      }
+      if (appliedSearchFilters.city) {
+        const cityFilter = appliedSearchFilters.city.toLowerCase();
+        results = results.filter(
+          (post) =>
+            post.location?.toLowerCase().includes(cityFilter) ||
+            post.locationAr?.toLowerCase().includes(cityFilter),
+        );
+      }
+      if (appliedSearchFilters.minPrice != null) {
+        results = results.filter(
+          (post) => post.price >= (appliedSearchFilters.minPrice ?? 0),
+        );
+      }
+      if (appliedSearchFilters.maxPrice != null) {
+        results = results.filter(
+          (post) => post.price <= (appliedSearchFilters.maxPrice ?? Infinity),
+        );
+      }
+
       const order = appliedSearchFilters.sortOrder === "asc" ? 1 : -1;
-      results = [...results].sort((a, b) => {
+      results.sort((a, b) => {
         if (appliedSearchFilters.sortBy === "price") {
           return (a.price - b.price) * order;
         }
@@ -101,24 +100,42 @@ export function AllPostsPage({
         const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return (dateA - dateB) * order;
       });
-    }
 
-    return results;
-  }, [posts, appliedSearchFilters]);
+      return results;
+    },
+    [appliedSearchFilters],
+  );
 
   const {
-    viewMode,
-    displayedResults: displayedPosts,
-    shouldShowPagination,
+    posts: displayedPosts,
+    error: searchError,
+    isSearching,
     pagination,
-  } = useMarketplaceDiscoveryState({
-    items: filteredPosts,
-    itemsPerPage: 12,
-    defaultViewMode: "list",
-    initialPage,
-    onPageChange: syncPageToUrl,
-    storageKey: "tijarahjo_view_mode_all_posts",
+    refetch,
+  } = useMarketplaceSearchResults({
+    preset: "all-posts",
+    query: "",
+    sourcePosts: posts,
+    page,
+    limit: 12,
+    category: appliedSearchFilters.category,
+    city: appliedSearchFilters.city,
+    minPrice: appliedSearchFilters.minPrice,
+    maxPrice: appliedSearchFilters.maxPrice,
+    sortBy: appliedSearchFilters.sortBy,
+    sortOrder: appliedSearchFilters.sortOrder,
+    shouldRequestWhenQueryEmpty: true,
+    debounceMs: 0,
+    fallbackErrorMessage:
+      language === "ar" ? "تعذر تحميل الإعلانات" : "Failed to load listings",
+    buildFallbackPosts,
   });
+
+  useEffect(() => {
+    if (!isSearching && !searchError && page > pagination.totalPages) {
+      setPage(pagination.totalPages);
+    }
+  }, [isSearching, page, pagination.totalPages, searchError, setPage]);
 
   return (
     <PageShell>
@@ -142,7 +159,7 @@ export function AllPostsPage({
         </p>
       </div>
 
-      <main className="mx-auto w-full max-w-376 px-4 py-8 sm:px-6 lg:px-8 xl:px-10">
+      <div className="mx-auto w-full max-w-376 px-4 py-8 sm:px-6 lg:px-8 xl:px-10">
         <div className="flex flex-col gap-6">
           <div className="hidden lg:block">
             <AdvancedSearchFilters
@@ -150,11 +167,7 @@ export function AllPostsPage({
               filters={appliedSearchFilters}
               onFiltersChange={setAppliedSearchFilters}
               onApply={() => {}}
-              onClear={() => {
-                const defaultSort = { sortBy: initialSortBy, sortOrder: "desc" as const };
-                setDraftSearchFilters(defaultSort);
-                setAppliedSearchFilters(defaultSort);
-              }}
+              onClear={clearFilters}
               showCategory
               showApplyButton={false}
             />
@@ -163,7 +176,11 @@ export function AllPostsPage({
 
           <div className="min-w-0 flex-1">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-4 px-2">
-              <h2 className="text-2xl font-bold tracking-tight text-slate-800">
+              <h2
+                ref={resultsHeadingRef}
+                tabIndex={-1}
+                className="scroll-mt-24 text-2xl font-bold tracking-tight text-foreground focus:outline-none"
+              >
                 {language === "ar" ? "الإعلانات المتاحة" : "Available Listings"}
               </h2>
 
@@ -187,9 +204,7 @@ export function AllPostsPage({
                       setShowFilters(false);
                     }}
                     onClear={() => {
-                      const defaultSort = { sortBy: initialSortBy, sortOrder: "desc" as const };
-                      setDraftSearchFilters(defaultSort);
-                      setAppliedSearchFilters(defaultSort);
+                      clearFilters();
                       setShowFilters(false);
                     }}
                     showCategory
@@ -198,46 +213,64 @@ export function AllPostsPage({
               }}
             />
 
-            <PostResultsGrid
-              posts={displayedPosts}
-              viewMode={viewMode}
-              onPostClick={onPostClick}
-              favoriteIds={favoriteIds}
-              onFavoriteToggle={onFavoriteToggle}
-              isAuthenticated={isAuthenticated}
-              currentUserId={currentUserId}
-              language={language}
-              emptyState={{
-                title: language === "ar" ? "لم يتم العثور على منشورات" : "No Posts Found",
-                description:
-                  language === "ar"
-                    ? "حاول تعديل الفلاتر أو مصطلحات البحث للعثور على ما تبحث عنه."
-                    : "Try adjusting your filters or search terms to find what you're looking for.",
-                actionLabel: t.clearFilters,
-                onAction: () => {
-                  const defaultSort = { sortBy: initialSortBy, sortOrder: "desc" as const };
-                  setDraftSearchFilters(defaultSort);
-                  setAppliedSearchFilters(defaultSort);
-                },
+            <MarketplaceQueryStatus
+              isLoading={isSearching}
+              error={searchError}
+              loadingLabel={
+                language === "ar" ? "جارٍ تحميل الإعلانات..." : "Loading listings..."
+              }
+              retryLabel={language === "ar" ? "إعادة المحاولة" : "Retry"}
+              onRetry={() => {
+                void refetch();
               }}
-              onRequireAuth={onRequireAuth}
             />
 
-            {shouldShowPagination ? (
+            {isSearching ? (
+              <div className="py-2.5">
+                <PostResultsGridSkeleton viewMode="list" count={12} />
+              </div>
+            ) : searchError ? null : (
+              <PostResultsGrid
+                posts={displayedPosts}
+                viewMode="list"
+                onPostClick={onPostClick}
+                favoriteIds={favoriteIds}
+                onFavoriteToggle={onFavoriteToggle}
+                isAuthenticated={isAuthenticated}
+                currentUserId={currentUserId}
+                language={language}
+                emptyState={{
+                  title: language === "ar" ? "لم يتم العثور على منشورات" : "No Posts Found",
+                  description:
+                    language === "ar"
+                      ? "حاول تعديل الفلاتر أو مصطلحات البحث للعثور على ما تبحث عنه."
+                      : "Try adjusting your filters or search terms to find what you're looking for.",
+                  actionLabel: t.clearFilters,
+                  onAction: () => {
+                    clearFilters();
+                  },
+                }}
+                onRequireAuth={onRequireAuth}
+              />
+            )}
+
+            {!searchError && pagination.totalPages > 1 ? (
               <MarketplaceResultsPagination
                 currentPage={pagination.currentPage}
                 totalPages={pagination.totalPages}
-                isLoading={pagination.isLoading}
+                isLoading={isSearching}
                 language={language}
-                onPrevious={pagination.onPrevious}
-                onNext={pagination.onNext}
+                onPrevious={() => navigateToPage(Math.max(1, page - 1))}
+                onNext={() =>
+                  navigateToPage(Math.min(pagination.totalPages, page + 1))
+                }
                 className="mt-12 mb-8"
                 showLoadingIndicator
               />
             ) : null}
           </div>
         </div>
-      </main>
+      </div>
 
     </PageShell>
   );
