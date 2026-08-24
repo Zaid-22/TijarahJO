@@ -14,13 +14,28 @@ function parsePushPayload(eventData) {
   }
 }
 
+function normalizeNotificationRouteUrl(value) {
+  try {
+    const routeUrl = new URL(String(value || "/chat"), self.location.origin);
+    if (routeUrl.origin !== self.location.origin) {
+      return "/chat";
+    }
+
+    return `${routeUrl.pathname}${routeUrl.search}${routeUrl.hash}` || "/chat";
+  } catch {
+    return "/chat";
+  }
+}
+
 self.addEventListener("push", (event) => {
   const payload = parsePushPayload(event.data);
   const title =
     String(payload.title || payload.Title || payload.notificationTitle || "TijarahJo").trim() ||
     "TijarahJo";
   const body = String(payload.body || payload.Body || payload.message || "").trim();
-  const routeUrl = String(payload.routeUrl || payload.RouteUrl || payload.url || "/chat").trim();
+  const routeUrl = normalizeNotificationRouteUrl(
+    payload.routeUrl || payload.RouteUrl || payload.url,
+  );
   const tag = String(payload.tag || payload.notificationId || "").trim();
 
   event.waitUntil(
@@ -28,7 +43,7 @@ self.addEventListener("push", (event) => {
       body,
       tag: tag || undefined,
       data: {
-        routeUrl: routeUrl || "/chat",
+        routeUrl,
       },
     }),
   );
@@ -37,13 +52,18 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
-  const routeUrl = String(event.notification?.data?.routeUrl || "/chat");
+  const routeUrl = normalizeNotificationRouteUrl(
+    event.notification?.data?.routeUrl,
+  );
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if ("focus" in client) {
-          client.navigate(routeUrl);
-          return client.focus();
+          const navigation =
+            "navigate" in client
+              ? client.navigate(routeUrl).catch(() => undefined)
+              : Promise.resolve();
+          return navigation.then(() => client.focus());
         }
       }
 

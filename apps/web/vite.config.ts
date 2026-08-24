@@ -220,7 +220,7 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: "autoUpdate",
-        includeAssets: ["favicon.svg", "icons/*.png", "robots.txt"],
+        includeAssets: ["favicon.svg", "icons/*.png"],
         manifest: {
           name: "TijarahJO — سوق الأردن",
           short_name: "TijarahJO",
@@ -253,9 +253,37 @@ export default defineConfig(({ mode }) => {
           ],
         },
         workbox: {
-          globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+          // Precache only the installable app shell. Route chunks are cached on
+          // first use below instead of making every deploy download the whole app.
+          globPatterns: [
+            "index.html",
+            "assets/app-shell-*.js",
+            "assets/index-*.css",
+            "assets/react-vendor-*.js",
+            "assets/router-vendor-*.js",
+            "assets/query-vendor-*.js",
+            "assets/ui-utils-vendor-*.js",
+            "assets/icons-vendor-*.js",
+          ],
+          importScripts: ["notifications-sw.js"],
+          cleanupOutdatedCaches: true,
           navigateFallbackDenylist: [/^\/api\//, /^\/chatHub/, /^\/uploads\//],
           runtimeCaching: [
+            {
+              urlPattern: ({ request, sameOrigin, url }) =>
+                sameOrigin &&
+                url.pathname.startsWith("/assets/") &&
+                (request.destination === "script" ||
+                  request.destination === "style"),
+              handler: "StaleWhileRevalidate",
+              options: {
+                cacheName: "route-assets-v1",
+                expiration: {
+                  maxEntries: 120,
+                  maxAgeSeconds: 30 * 24 * 60 * 60,
+                },
+              },
+            },
             {
               urlPattern: /\/uploads\/(?:post-images|user-avatars|category-images)\//,
               handler: "CacheFirst",
@@ -313,6 +341,7 @@ export default defineConfig(({ mode }) => {
       },
       rollupOptions: {
         output: {
+          entryFileNames: "assets/app-shell-[hash].js",
           manualChunks(id) {
             const normalizedId = id.replace(/\\/g, "/");
 

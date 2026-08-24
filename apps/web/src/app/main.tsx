@@ -54,22 +54,6 @@ if (typeof window !== "undefined") {
     true // Capture phase to intercept script loading errors
   );
 }
-
-
-function normalizePathname(pathname: string): string {
-  const normalized = pathname.toLowerCase().replace(/\/+$/, "");
-  return normalized || "/";
-}
-
-const shouldWarmInitialHomeRoute =
-  typeof window !== "undefined" &&
-  normalizePathname(window.location.pathname) === "/";
-
-if (shouldWarmInitialHomeRoute) {
-  void import("../features/home/pages/HomePage");
-  void import("../features/home/components/HomeDeferredSections");
-}
-
 // Use the real sonner Toaster so all `import { toast } from "sonner"` calls
 // throughout the codebase are wired to the mounted Toaster instance.
 // Previously the app mounted a custom Toaster clone while all feature code used
@@ -103,13 +87,6 @@ const appTree = (
 
 async function bootstrap() {
   await purgeLegacySensitiveRuntimeCaches();
-
-  if (shouldWarmInitialHomeRoute) {
-    await Promise.all([
-      import("../features/home/pages/HomePage"),
-      import("../features/home/components/HomeDeferredSections"),
-    ]);
-  }
 
   ReactDOM.createRoot(rootContainer).render(appTree);
 }
