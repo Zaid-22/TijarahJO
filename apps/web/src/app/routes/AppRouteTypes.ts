@@ -37,6 +37,7 @@ export interface MarketplaceRouteState {
   isLoading: boolean;
   goToNextPage: () => void;
   goToPreviousPage: () => void;
+  fetchPostsFromBackend: () => Promise<void>;
   t: Record<string, string>;
   isRTL: boolean;
   translateCategory: (category: string) => string;

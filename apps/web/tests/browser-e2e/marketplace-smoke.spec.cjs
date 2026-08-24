@@ -234,6 +234,120 @@ async function ensureFavoriteListingVisible(page, postId, postTitle) {
   return removeFavoriteButton;
 }
 
+test("home feed resilience: Arabic offline state explains recovery", async ({
+  page,
+}) => {
+  const apiMock = createMarketplaceApiMock({
+    authenticated: false,
+    online: false,
+  });
+  await apiMock.install(page);
+  await setUiLanguage(page, "ar");
+
+  await page.goto("/");
+
+  await expect(
+    page.getByRole("heading", { name: "لا يوجد اتصال بالإنترنت" }),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(
+    page.getByText(
+      "تعذّر تحميل المنشورات. تحقّق من اتصالك بالإنترنت ثم أعد المحاولة.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "إعادة المحاولة" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/We're having trouble loading the marketplace feed/i),
+  ).toHaveCount(0);
+});
+
+test("home feed resilience: warm listings stay visible after going offline", async ({
+  page,
+}) => {
+  const apiMock = createMarketplaceApiMock({ authenticated: false });
+  await apiMock.install(page);
+  await setUiLanguage(page, "ar");
+
+  await page.goto("/");
+  await expectPostTitleVisible(page, "Demo Phone");
+
+  const promotionalBanner = page.getByRole("region", {
+    name: "بيع في كل مكان بالأردن",
+  });
+  await expect(
+    promotionalBanner.getByRole("button", { name: "سجل الآن" }),
+  ).toBeVisible();
+
+  await page.evaluate(() => {
+    Object.defineProperty(window.navigator, "onLine", {
+      configurable: true,
+      get: () => false,
+    });
+    window.dispatchEvent(new Event("offline"));
+  });
+
+  await expectPostTitleVisible(page, "Demo Phone");
+  await expect(
+    page.getByText(
+      "أنت غير متصل بالإنترنت — يتم عرض آخر محتوى محفوظ",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "لا يوجد اتصال بالإنترنت" }),
+  ).toHaveCount(0);
+  await expect(
+    promotionalBanner.getByRole("button", { name: "سجل الآن" }),
+  ).toHaveCount(0);
+});
+
+test("home feed resilience: online error retries in place and restores listings", async ({
+  page,
+}) => {
+  const apiMock = createMarketplaceApiMock({
+    authenticated: false,
+    feedFailureCount: 2,
+    feedFailureStatus: 500,
+  });
+  await apiMock.install(page);
+  await setUiLanguage(page, "en");
+
+  await page.goto("/");
+
+  await expect(
+    page.getByRole("heading", { name: "Couldn't load listings" }),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(
+    page.getByText("Something went wrong on our side. Please try again.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "No internet connection" }),
+  ).toHaveCount(0);
+
+  await page.evaluate(() => {
+    window.__feedRetryDocumentMarker = "preserved";
+  });
+
+  await page.getByRole("button", { name: "Try again" }).click();
+
+  await expectPostTitleVisible(page, "Demo Phone");
+  await expect(
+    page.getByRole("heading", { name: "Couldn't load listings" }),
+  ).toHaveCount(0);
+  await expect
+    .poll(() => apiMock.getFeedRequestCount())
+    .toBeGreaterThanOrEqual(3);
+  await expect
+    .poll(() =>
+      page.evaluate(() => window.__feedRetryDocumentMarker),
+    )
+    .toBe("preserved");
+});
+
 ["en", "ar"].forEach((lang) => {
   const suffix = lang === "ar" ? " (arabic)" : "";
 

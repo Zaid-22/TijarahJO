@@ -1,5 +1,5 @@
-import { Globe } from "lucide-react";
-import { useMemo } from "react";
+import { AlertCircle, Globe, WifiOff } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 import type { Language, Post } from "../../../types";
 import type { Category } from "../../../types/api";
 import { PostCarousel } from "./PostCarousel";
@@ -8,6 +8,8 @@ import { HomePromotionalBanner } from "./HomePromotionalBanner";
 import { MarketplaceEmptyState } from "../../marketplace/components/MarketplaceEmptyState";
 import { isActivePost } from "../../../lib/searchRanking";
 import { resolveCategoryName } from "../../../shared/lib/categoryVisuals";
+import { useOnlineStatus } from "../../../shared/hooks/useOnlineStatus";
+import { homeTranslations } from "../translations";
 
 type CategorySection = {
   categoryName: string;
@@ -25,6 +27,7 @@ type HomeDeferredSectionsProps = {
   isLoadingPosts: boolean;
   isLoadingCategories: boolean;
   postsError: string | null;
+  retryPosts: () => Promise<void>;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   setShowLoginPrompt: (show: boolean) => void;
@@ -39,7 +42,6 @@ type HomeDeferredSectionsProps = {
   availablePosts: Post[];
   filteredPosts: Post[];
   categories: Category[];
-  backendUrlHint: string;
 };
 
 export function HomeDeferredSections({
@@ -48,6 +50,7 @@ export function HomeDeferredSections({
   isLoadingPosts,
   isLoadingCategories,
   postsError = null,
+  retryPosts,
   searchQuery = "",
   setSearchQuery,
   setShowLoginPrompt,
@@ -62,8 +65,10 @@ export function HomeDeferredSections({
   availablePosts = [],
   filteredPosts = [],
   categories = [],
-  backendUrlHint,
 }: HomeDeferredSectionsProps) {
+  const isOnline = useOnlineStatus();
+  const copy = homeTranslations[language];
+  const [isRetrying, setIsRetrying] = useState(false);
   const safeDisplayedPosts = useMemo(
     () => (Array.isArray(displayedPosts) ? displayedPosts : []),
     [displayedPosts],
@@ -154,9 +159,54 @@ export function HomeDeferredSections({
       });
   }, [safeFilteredPosts]);
 
+  const hasRetainedPosts = safeAvailablePosts.some(isActivePost);
+  const showFeedLoading = isLoadingPosts && isOnline;
+  const showOfflineEmptyState = !isOnline && !hasRetainedPosts;
+  const showServerErrorState =
+    isOnline && !isLoadingPosts && Boolean(postsError) && !hasRetainedPosts;
+  const hasBlockingFeedFailure =
+    showOfflineEmptyState || showServerErrorState;
+
+  const handleRetry = useCallback(async () => {
+    if (isRetrying) {
+      return;
+    }
+
+    if (!isOnline) {
+      // TanStack Query resumes the queued feed request automatically when the
+      // browser reports that connectivity has returned. Do not leave the CTA
+      // in a permanent loading state while that request is paused.
+      void retryPosts().catch(() => undefined);
+      return;
+    }
+
+    setIsRetrying(true);
+    try {
+      await retryPosts();
+    } finally {
+      setIsRetrying(false);
+    }
+  }, [isOnline, isRetrying, retryPosts]);
+
   return (
     <>
-      {isLoadingPosts ? (
+      {!isOnline && hasRetainedPosts ? (
+        <section
+          aria-label={copy.offlineCachedNotice}
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4"
+        >
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex items-center justify-center gap-2 rounded-xl border border-border bg-muted/60 px-4 py-3 text-center text-sm text-muted-foreground"
+          >
+            <WifiOff aria-hidden="true" className="h-4 w-4 shrink-0" />
+            <span>{copy.offlineCachedNotice}</span>
+          </div>
+        </section>
+      ) : null}
+
+      {showFeedLoading ? (
         <PostCarouselSkeleton hasSubtitle />
       ) : featuredPosts.length > 0 ? (
         <PostCarousel
@@ -179,7 +229,7 @@ export function HomeDeferredSections({
         />
       ) : null}
 
-      {isLoadingPosts ? (
+      {showFeedLoading ? (
         <PostCarouselSkeleton hasSubtitle />
       ) : recentPosts.length > 0 ? (
         <PostCarousel
@@ -202,7 +252,7 @@ export function HomeDeferredSections({
         />
       ) : null}
 
-      {!isLoadingPosts && !isLoadingCategories
+      {!showFeedLoading && !isLoadingCategories
         ? categorySections.map((section) => (
             <PostCarousel
               key={section.categoryName}
@@ -228,56 +278,81 @@ export function HomeDeferredSections({
           ))
         : null}
 
-      <HomePromotionalBanner
-        title={
-          language === "ar"
-            ? "بيع في كل مكان بالأردن"
-            : "Sell Across All of Jordan"
-        }
-        subtitle={
-          language === "ar"
-            ? "اعرض منشوراتك ووصلها للمشترين في كل المحافظات"
-            : "List your posts and reach buyers in every governorate"
-        }
-        buttonLabel={
-          isAuthenticated
-            ? language === "ar"
-              ? "أضف إعلان"
-              : "Post a Listing"
-            : language === "ar"
-              ? "سجل الآن"
-              : "Sign Up Now"
-        }
-        onButtonClick={() =>
-          isAuthenticated ? setShowCreatePost(true) : setShowLoginPrompt(true)
-        }
-        icon={Globe}
-        variant="gradient"
-      />
+      {!hasBlockingFeedFailure ? (
+        <HomePromotionalBanner
+          title={
+            language === "ar"
+              ? "بيع في كل مكان بالأردن"
+              : "Sell Across All of Jordan"
+          }
+          subtitle={
+            language === "ar"
+              ? "اعرض منشوراتك ووصلها للمشترين في كل المحافظات"
+              : "List your posts and reach buyers in every governorate"
+          }
+          buttonLabel={
+            !isOnline
+              ? undefined
+              : isAuthenticated
+                ? language === "ar"
+                  ? "أضف إعلان"
+                  : "Post a Listing"
+                : language === "ar"
+                  ? "سجل الآن"
+                  : "Sign Up Now"
+          }
+          onButtonClick={
+            !isOnline
+              ? undefined
+              : () =>
+                  isAuthenticated
+                    ? setShowCreatePost(true)
+                    : setShowLoginPrompt(true)
+          }
+          icon={Globe}
+          variant="gradient"
+        />
+      ) : null}
 
       <section
         id="home-marketplace-content"
         aria-label={language === "ar" ? "محتوى السوق" : "Marketplace content"}
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
       >
-        {isLoadingPosts ? <PostCarouselSkeleton hasSubtitle /> : null}
+        {showFeedLoading ? <PostCarouselSkeleton hasSubtitle /> : null}
 
-        {!isLoadingPosts && postsError && (
-          <div className="col-span-full mb-4 flex flex-col items-center justify-center rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-8 dark:border-yellow-800 dark:bg-yellow-900/20">
-            <p className="text-center text-sm text-yellow-800 dark:text-yellow-200">
-              {postsError}
-            </p>
-            {postsError.includes("Cannot connect") && (
-              <p className="mt-2 text-center text-xs text-yellow-700 dark:text-yellow-300">
-                {language === "ar"
-                  ? `تأكد من تشغيل الخادم الخلفي على ${backendUrlHint}`
-                  : `Make sure the backend server is running on ${backendUrlHint}`}
-              </p>
-            )}
-          </div>
-        )}
+        {showOfflineEmptyState ? (
+          <MarketplaceEmptyState
+            title={copy.offlineTitle}
+            description={copy.offlineDescription}
+            actionLabel={copy.retry}
+            actionPendingLabel={copy.retrying}
+            onAction={() => void handleRetry()}
+            isActionPending={isRetrying}
+            icon={WifiOff}
+            liveRegion
+            className="min-h-72 rounded-2xl border border-border bg-card"
+          />
+        ) : null}
 
-        {!isLoadingPosts && !postsError && allListingsCarouselPosts.length > 0 ? (
+        {showServerErrorState ? (
+          <MarketplaceEmptyState
+            title={copy.feedErrorTitle}
+            description={copy.feedErrorDescription}
+            actionLabel={copy.retry}
+            actionPendingLabel={copy.retrying}
+            onAction={() => void handleRetry()}
+            isActionPending={isRetrying}
+            icon={AlertCircle}
+            liveRegion
+            className="min-h-72 rounded-2xl border border-border bg-card"
+          />
+        ) : null}
+
+        {!showFeedLoading &&
+        !showOfflineEmptyState &&
+        !showServerErrorState &&
+        allListingsCarouselPosts.length > 0 ? (
           <PostCarousel
             title={language === "ar" ? "جميع المنتجات" : "All Listings"}
             subtitle={
@@ -298,8 +373,9 @@ export function HomeDeferredSections({
           />
         ) : null}
 
-        {!isLoadingPosts &&
-        !postsError &&
+        {!showFeedLoading &&
+        !showOfflineEmptyState &&
+        !showServerErrorState &&
         allListingsCarouselPosts.length === 0 ? (
           <MarketplaceEmptyState
             title={

@@ -1,6 +1,5 @@
 import { Suspense, lazy } from "react";
 import { Language, Post, ViewMode } from "../../../types";
-import { APP_CONFIG } from "../../../constants/appConfig";
 import { HomeHeroSection } from "../components/HomeHeroSection";
 import { HomeCategoriesSection } from "../components/HomeCategoriesSection";
 import { PostCarouselSkeleton } from "../components/PostCarouselSkeleton";
@@ -75,6 +74,7 @@ interface HomePageProps {
   // Data
   isLoadingPosts: boolean;
   postsError: string | null;
+  retryPosts: () => Promise<void>;
   displayedPosts: Post[];
   availablePosts: Post[];
   filteredPosts: Post[];
@@ -114,6 +114,7 @@ export function HomePage({
   setSelectedCategoryForPage,
   isLoadingPosts,
   postsError,
+  retryPosts,
   displayedPosts = [],
   availablePosts = [],
   filteredPosts = [],
@@ -130,7 +131,6 @@ export function HomePage({
   getCategoryTranslation,
   onNavigate,
 }: HomePageProps) {
-  const backendUrlHint = APP_CONFIG.backendHostUrl;
   const prefersReducedMotion = usePrefersReducedMotion();
   const { categories, isLoading: isLoadingCategories } = useCatalogCategories({
     useInitialFallback: true,
@@ -185,6 +185,7 @@ export function HomePage({
           isLoadingPosts={isLoadingPosts}
           isLoadingCategories={isLoadingCategories}
           postsError={postsError}
+          retryPosts={retryPosts}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           setShowLoginPrompt={setShowLoginPrompt}
@@ -199,7 +200,6 @@ export function HomePage({
           availablePosts={availablePosts}
           filteredPosts={filteredPosts}
           categories={categories as Category[]}
-          backendUrlHint={backendUrlHint}
         />
       </Suspense>
     </PageShell>

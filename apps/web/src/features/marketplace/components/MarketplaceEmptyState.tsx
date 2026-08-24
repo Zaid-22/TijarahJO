@@ -1,4 +1,4 @@
-import { Search, type LucideIcon } from "lucide-react";
+import { Loader2, Search, type LucideIcon } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
 import { cn } from "../../../shared/ui/utils";
 
@@ -7,8 +7,11 @@ interface MarketplaceEmptyStateProps {
   description: string;
   actionLabel?: string;
   onAction?: () => void;
+  isActionPending?: boolean;
+  actionPendingLabel?: string;
   icon?: LucideIcon;
   className?: string;
+  liveRegion?: boolean;
 }
 
 export function MarketplaceEmptyState({
@@ -16,11 +19,16 @@ export function MarketplaceEmptyState({
   description,
   actionLabel,
   onAction,
+  isActionPending = false,
+  actionPendingLabel,
   icon: Icon = Search,
   className,
+  liveRegion = false,
 }: MarketplaceEmptyStateProps) {
   return (
     <div
+      role={liveRegion ? "status" : undefined}
+      aria-live={liveRegion ? "polite" : undefined}
       className={cn(
         "col-span-full flex flex-col items-center justify-center p-8 sm:p-12 text-center",
         "w-full min-h-96",
@@ -39,10 +47,22 @@ export function MarketplaceEmptyState({
       {actionLabel && onAction ? (
         <Button
           onClick={onAction}
+          disabled={isActionPending}
+          aria-busy={isActionPending}
+          aria-label={
+            isActionPending && actionPendingLabel
+              ? actionPendingLabel
+              : actionLabel
+          }
           size="lg"
           className="rounded-xl px-8 bg-primary text-white shadow-md hover:shadow-lg transition-all"
         >
-          {actionLabel}
+          {isActionPending ? (
+            <Loader2 aria-hidden="true" className="animate-spin" />
+          ) : null}
+          {isActionPending && actionPendingLabel
+            ? actionPendingLabel
+            : actionLabel}
         </Button>
       ) : null}
     </div>

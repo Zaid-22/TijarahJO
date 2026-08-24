@@ -86,6 +86,7 @@ function HomeMarketplaceRouteScreen() {
       }
       isLoadingPosts={routeState.isLoadingPostsFromRouteData}
       postsError={routeState.postsError}
+      retryPosts={routeState.fetchPostsFromBackend}
       displayedPosts={routeState.displayedPosts}
       availablePosts={routeState.availablePosts}
       filteredPosts={routeState.filteredPosts}

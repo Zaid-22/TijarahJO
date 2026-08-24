@@ -164,6 +164,16 @@ function createMarketplaceApiMock(options = {}) {
   let nextPostId = 400;
   let nextPostImageId = 700;
   let sessionAuthenticated = Boolean(options.authenticated);
+  const initialOnline = options.online !== false;
+  let remainingFeedFailures = Math.max(
+    0,
+    toInteger(options.feedFailureCount, 0),
+  );
+  const feedFailureStatus = Math.max(
+    400,
+    toInteger(options.feedFailureStatus, 500),
+  );
+  let feedRequestCount = 0;
   const favoritesByUserId = new Map([[String(authUser.Id), new Set()]]);
 
   for (const post of posts) {
@@ -333,11 +343,11 @@ function createMarketplaceApiMock(options = {}) {
   async function install(page) {
     const shouldBootAuthenticatedSession = sessionAuthenticated;
 
-    await page.addInitScript((bootAuthenticatedSession) => {
+    await page.addInitScript(({ bootAuthenticatedSession, bootOnline }) => {
       try {
         Object.defineProperty(window.navigator, "onLine", {
           configurable: true,
-          get: () => true,
+          get: () => bootOnline,
         });
       } catch {
         // Ignore readonly navigator environments.
@@ -347,7 +357,10 @@ function createMarketplaceApiMock(options = {}) {
         window.localStorage.setItem("tijarahjo_has_authenticated", "true");
         window.localStorage.removeItem("tijarahjo_logged_out");
       }
-    }, shouldBootAuthenticatedSession);
+    }, {
+      bootAuthenticatedSession: shouldBootAuthenticatedSession,
+      bootOnline: initialOnline,
+    });
 
     await page.route("**/*", async (route) => {
       const request = route.request();
@@ -586,6 +599,15 @@ function createMarketplaceApiMock(options = {}) {
       }
 
       if ((apiPath === "/posts/feed" || apiPath === "/userposts/feed") && method === "GET") {
+        feedRequestCount += 1;
+        if (remainingFeedFailures > 0) {
+          remainingFeedFailures -= 1;
+          await fulfillJson(route, feedFailureStatus, {
+            Message: "Mock marketplace feed failure",
+          });
+          return;
+        }
+
         const page = toInteger(url.searchParams.get("page"), 1);
         const limit = toInteger(url.searchParams.get("limit"), 20);
         const includeDeleted =
@@ -870,6 +892,7 @@ function createMarketplaceApiMock(options = {}) {
   }
 
   return {
+    getFeedRequestCount: () => feedRequestCount,
     install,
   };
 }
