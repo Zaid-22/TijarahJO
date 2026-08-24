@@ -145,6 +145,25 @@ export const resolveCurrentUserId = (
   return null;
 };
 
+export const shouldRouteToProfileCompletion = ({
+  isAuthenticated,
+  isAuthLoading,
+  isProfileLoading,
+  isProfileComplete,
+  hasProfileError,
+}: {
+  isAuthenticated: boolean;
+  isAuthLoading: boolean;
+  isProfileLoading: boolean;
+  isProfileComplete: boolean;
+  hasProfileError: boolean;
+}): boolean =>
+  isAuthenticated &&
+  !isAuthLoading &&
+  !isProfileLoading &&
+  !hasProfileError &&
+  !isProfileComplete;
+
 const resolvePostCity = (
   userProfile: UserProfile,
   preferredCity?: string,
@@ -196,17 +215,27 @@ export const isOwnPostForUser = (
     return false;
   }
 
-  const normalizedSellerName = String(post.seller || "")
-    .trim()
-    .toLowerCase();
-  const normalizedCurrentUserDisplayName = String(userProfile.name || "")
-    .trim()
-    .toLowerCase();
+  const normalizedSellerId = normalizeIdentityValue(post.sellerId);
+  const normalizedCurrentUserId = normalizeIdentityValue(userProfile.id);
 
-  return (
-    post.sellerId === userProfile.id ||
-    (normalizedSellerName.length > 0 &&
-      normalizedSellerName === normalizedCurrentUserDisplayName)
+  // An available stable identifier is authoritative. Display names are not
+  // unique and must never override an ID mismatch or a one-sided missing ID.
+  if (normalizedSellerId || normalizedCurrentUserId) {
+    return Boolean(
+      normalizedSellerId &&
+        normalizedCurrentUserId &&
+        normalizedSellerId === normalizedCurrentUserId,
+    );
+  }
+
+  const normalizedSellerName = normalizeIdentityValue(post.seller);
+  const normalizedCurrentUserDisplayName = normalizeIdentityValue(
+    userProfile.name,
+  );
+
+  return Boolean(
+    normalizedSellerName &&
+      normalizedSellerName === normalizedCurrentUserDisplayName,
   );
 };
 

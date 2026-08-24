@@ -29,7 +29,6 @@ type ParsedUserSchema = {
 
 function resolveRawUserId(
   record: Record<string, unknown>,
-  fallbackId: string,
 ): string {
   const normalizeCandidate = (candidate: unknown): string => {
     if (typeof candidate === "string") {
@@ -54,7 +53,6 @@ function resolveRawUserId(
     record.id,
     record.UserID,
     record.userID,
-    fallbackId,
   ];
   for (const candidate of candidates) {
     const normalized = normalizeCandidate(candidate);
@@ -84,7 +82,7 @@ export function parseUserSchema(
     return null;
   }
 
-  const id = resolveRawUserId(userRecord, fallbackUserId);
+  const id = resolveRawUserId(userRecord);
   if (!id) {
     return null;
   }

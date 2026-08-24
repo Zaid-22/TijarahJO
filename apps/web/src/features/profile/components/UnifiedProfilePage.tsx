@@ -5,7 +5,6 @@ import { PageShell } from "../../../shared/ui/page-shell";
 import { SubpageHeader } from "../../../shared/ui/subpage-header";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -13,6 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../../../shared/ui/alert-dialog";
+import { Button } from "../../../shared/ui/button";
 import { Dialog } from "../../../shared/ui/dialog";
 import { EditPostDialog } from "../../marketplace/components/EditPostDialog";
 import { ReportPostDialog } from "../../marketplace/components/ReportPostDialog";
@@ -79,6 +79,7 @@ export function UnifiedProfilePage({
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [postToEdit, setPostToEdit] = useState<Post | null>(null);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
+  const [isDeletingPost, setIsDeletingPost] = useState(false);
   const [isReportUserOpen, setIsReportUserOpen] = useState(false);
   const [reviewToReport, setReviewToReport] = useState<UnifiedProfileReview | null>(null);
   const listingViewMode: ViewMode = "list";
@@ -143,9 +144,20 @@ export function UnifiedProfilePage({
       return;
     }
 
-    await onDeletePost(postToDelete);
-    setPostToDelete(null);
-    await onReload?.();
+    setIsDeletingPost(true);
+    try {
+      await onDeletePost(postToDelete);
+      setPostToDelete(null);
+      try {
+        await onReload?.();
+      } catch {
+        // The deletion succeeded; a refresh failure must not reopen the dialog.
+      }
+    } catch {
+      // The route callback owns error feedback. Keep the confirmation open.
+    } finally {
+      setIsDeletingPost(false);
+    }
   };
 
   const handleUpdatePost = async (updatedPost: UpdatePostInput) => {
@@ -156,7 +168,11 @@ export function UnifiedProfilePage({
 
     await onUpdatePost(updatedPost);
     setPostToEdit(null);
-    await onReload?.();
+    try {
+      await onReload?.();
+    } catch {
+      // The authoritative mutation response is already applied elsewhere.
+    }
   };
 
   const displayLocation = useMemo(() => {
@@ -280,7 +296,11 @@ export function UnifiedProfilePage({
 
       <AlertDialog
         open={postToDelete !== null}
-        onOpenChange={() => setPostToDelete(null)}
+        onOpenChange={(open) => {
+          if (!open && !isDeletingPost) {
+            setPostToDelete(null);
+          }
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -290,15 +310,18 @@ export function UnifiedProfilePage({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{labels.cancel}</AlertDialogCancel>
-            <AlertDialogAction
+            <AlertDialogCancel disabled={isDeletingPost}>
+              {labels.cancel}
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={isDeletingPost}
               onClick={() => {
                 void handleDeletePost();
               }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {labels.delete}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -307,8 +330,8 @@ export function UnifiedProfilePage({
         {postToEdit ? (
           <EditPostDialog
             post={postToEdit}
-            onSave={(updatedPost) => {
-              void handleUpdatePost(updatedPost as UpdatePostInput);
+            onSave={async (updatedPost) => {
+              await handleUpdatePost(updatedPost as UpdatePostInput);
             }}
             onCancel={() => setPostToEdit(null)}
             language={language}

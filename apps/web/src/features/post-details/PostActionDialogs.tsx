@@ -151,12 +151,18 @@ export function PostActionDialogs({
       setShowDeleteDialog(false);
       setSelectedReason(null);
       setOtherText("");
+    } catch {
+      // The route callback owns error feedback. Keep the dialog and its
+      // selected reason open so the user can retry.
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteDialogClose = (open: boolean) => {
+    if (!open && isSubmitting) {
+      return;
+    }
     if (!open) {
       setSelectedReason(null);
       setOtherText("");
@@ -175,12 +181,12 @@ export function PostActionDialogs({
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <EditPostDialog
           post={post}
-            onSave={async (updatedPost) => {
-              if (onUpdatePost) {
-                await onUpdatePost(updatedPost as UpdatePostInput);
-              }
-              setShowEditDialog(false);
-            }}
+          onSave={async (updatedPost) => {
+            if (onUpdatePost) {
+              await onUpdatePost(updatedPost as UpdatePostInput);
+            }
+            setShowEditDialog(false);
+          }}
           onCancel={() => setShowEditDialog(false)}
           language={language}
         />
@@ -249,6 +255,7 @@ export function PostActionDialogs({
           <AlertDialogFooter>
             <Button
               variant="outline"
+              disabled={isSubmitting}
               onClick={() => handleDeleteDialogClose(false)}
             >
               {language === "ar" ? "إلغاء" : "Cancel"}

@@ -3,6 +3,7 @@ import { toPositiveIntegerId } from "../../utils/idValidation";
 import { apiRequest } from "./client";
 import { normalizeChatMessage, RawChatMessage } from "./chatNormalization";
 import {
+  isChatMessagesPayload,
   parseChatMessagesPayload,
   normalizePresenceTimestamp,
   parsePresencePayload,
@@ -37,7 +38,11 @@ async function fetchChatMessages(endpoint: string): Promise<Message[]> {
     method: "GET",
   });
   if (!response.success) {
-    return [];
+    throw new Error(response.error.message || "Failed to load chat messages");
+  }
+
+  if (!isChatMessagesPayload(response.data)) {
+    throw new Error("Invalid chat messages response");
   }
 
   return mapChatMessages(parseChatMessagesPayload(response.data));
@@ -49,7 +54,7 @@ export const chatApi = {
   getChatHistory: async (otherUserId: number): Promise<Message[]> => {
     const normalizedOtherUserId = normalizeChatUserId(otherUserId);
     if (!normalizedOtherUserId) {
-      return [];
+      throw new Error("Invalid chat user ID");
     }
 
     return fetchChatMessages(`/chat/history/${normalizedOtherUserId}`);
@@ -58,9 +63,7 @@ export const chatApi = {
   getPresence: async (otherUserId: number): Promise<ChatPresence> => {
     const normalizedOtherUserId = normalizeChatUserId(otherUserId);
     if (!normalizedOtherUserId) {
-      return {
-        isOnline: false,
-      };
+      throw new Error("Invalid chat user ID");
     }
 
     const response = await apiRequest<unknown>(
@@ -71,16 +74,12 @@ export const chatApi = {
     );
 
     if (!response.success) {
-      return {
-        isOnline: false,
-      };
+      throw new Error(response.error.message || "Failed to load chat presence");
     }
 
     const presence = parsePresencePayload(response.data);
     if (!presence) {
-      return {
-        isOnline: false,
-      };
+      throw new Error("Invalid chat presence response");
     }
 
     const isOnline = Boolean(

@@ -18,6 +18,16 @@ import {
   getDefaultCreateRoleId,
 } from "./users/userManagementUtils";
 
+async function verifyUserExists(userId: string): Promise<boolean | null> {
+  try {
+    return await api.users.exists(userId);
+  } catch (error) {
+    logger.warn("[UsersManagement] Failed to verify user existence", error);
+    toast.error("Could not verify the user. The user list was not changed.");
+    return null;
+  }
+}
+
 export function UsersManagement() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -236,14 +246,17 @@ export function UsersManagement() {
     userId: string,
     newStatus: "active" | "banned",
   ) => {
-    try {
-      const exists = await api.users.exists(userId);
-      if (!exists) {
-        setUsers((previous) => previous.filter((user) => user.id !== userId));
-        toast.error("User no longer exists");
-        return;
-      }
+    const exists = await verifyUserExists(userId);
+    if (exists === null) {
+      return;
+    }
+    if (!exists) {
+      setUsers((previous) => previous.filter((user) => user.id !== userId));
+      toast.error("User no longer exists");
+      return;
+    }
 
+    try {
       const success = await api.users.updateUserStatus(userId, newStatus);
       if (success) {
         setUsers((previous) =>
@@ -265,14 +278,17 @@ export function UsersManagement() {
   };
 
   const handleRoleChange = async (userId: string, newRoleId: number) => {
-    try {
-      const exists = await api.users.exists(userId);
-      if (!exists) {
-        setUsers((previous) => previous.filter((user) => user.id !== userId));
-        toast.error("User no longer exists");
-        return;
-      }
+    const exists = await verifyUserExists(userId);
+    if (exists === null) {
+      return;
+    }
+    if (!exists) {
+      setUsers((previous) => previous.filter((user) => user.id !== userId));
+      toast.error("User no longer exists");
+      return;
+    }
 
+    try {
       const targetRole = roles.find((role) => role.RoleID === newRoleId);
       if (!targetRole) {
         toast.error("Selected role was not found");
@@ -304,14 +320,17 @@ export function UsersManagement() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    try {
-      const exists = await api.users.exists(userId);
-      if (!exists) {
-        setUsers((previous) => previous.filter((user) => user.id !== userId));
-        toast.error("User already deleted");
-        return;
-      }
+    const exists = await verifyUserExists(userId);
+    if (exists === null) {
+      return;
+    }
+    if (!exists) {
+      setUsers((previous) => previous.filter((user) => user.id !== userId));
+      toast.error("User already deleted");
+      return;
+    }
 
+    try {
       const response = await api.users.deleteUser(userId);
       if (response.success) {
         setUsers((previous) => previous.filter((user) => user.id !== userId));

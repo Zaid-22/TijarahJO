@@ -28,6 +28,16 @@ function normalizeUserId(userId: string): number | undefined {
   return toPositiveIntegerId(userId);
 }
 
+function hasMatchingUserIdentity(
+  user: RawUser,
+  expectedUserId: number,
+): boolean {
+  const responseUserId = toPositiveIntegerId(
+    user.Id ?? user.id ?? user.UserID ?? user.userID,
+  );
+  return responseUserId === expectedUserId;
+}
+
 async function updateUserWithAdminPatch(
   userId: string,
   patch: Record<string, unknown>,
@@ -66,7 +76,7 @@ export const usersApi = {
   getUser: async (userId: string) => {
     const normalizedUserId = normalizeUserId(userId);
     if (!normalizedUserId) {
-      return null;
+      throw new Error("Invalid user ID");
     }
 
     let inflight = _userInflight.get(normalizedUserId);
@@ -81,6 +91,9 @@ export const usersApi = {
 
       if (response.success && response.data) {
         const rawUser = response.data;
+        if (!hasMatchingUserIdentity(rawUser, normalizedUserId)) {
+          throw new Error("Invalid user profile response");
+        }
         
         // Resolve City and Area IDs to names if they are present but names are missing
         const cityId = rawUser.CityId ?? rawUser.cityId;
@@ -106,10 +119,26 @@ export const usersApi = {
           }
         }
 
-        return normalizeUserProfile(rawUser, String(normalizedUserId));
+        const normalizedUser = normalizeUserProfile(
+          rawUser,
+          String(normalizedUserId),
+        );
+        if (!normalizedUser) {
+          throw new Error("Invalid user profile response");
+        }
+
+        return normalizedUser;
       }
 
-      return null;
+      if (!response.success && response.error.code === "HTTP_404") {
+        return null;
+      }
+
+      throw new Error(
+        response.success
+          ? "Invalid user profile response"
+          : response.error.message || "Failed to load user profile",
+      );
     })().finally(() => {
       _userInflight.delete(normalizedUserId);
     });
@@ -347,7 +376,7 @@ export const usersApi = {
   exists: async (userId: string): Promise<boolean> => {
     const normalizedUserId = normalizeUserId(userId);
     if (!normalizedUserId) {
-      return false;
+      throw new Error("Invalid user ID");
     }
 
     const response = await apiRequest<boolean>(
@@ -356,7 +385,15 @@ export const usersApi = {
         method: "GET",
       },
     );
-    return response.success ? Boolean(response.data) : false;
+    if (!response.success) {
+      throw new Error(response.error.message || "Failed to verify user");
+    }
+
+    if (typeof response.data !== "boolean") {
+      throw new Error("Invalid user existence response");
+    }
+
+    return response.data;
   },
 
   /**

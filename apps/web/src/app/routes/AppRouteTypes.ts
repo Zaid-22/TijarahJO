@@ -3,7 +3,11 @@ import { type NavigateFunction } from "react-router-dom";
 import { Language, Post, UserProfile, ViewMode } from "../../types";
 import type { ProfileOwnerTransition } from "../../features/auth/profileState";
 import { CreatePostInput } from "./appRoutesUtils";
-import type { UpdatePostInput, UpdatePostStatusInput } from "./usePostActions";
+import type {
+  UpdatePostInput,
+  UpdatePostResult,
+  UpdatePostStatusInput,
+} from "./usePostActions";
 import type { EditProfileFormProfile } from "../../features/profile/types";
 
 export interface BaseAppRouteProps {
@@ -46,7 +50,7 @@ export interface MarketplaceRouteState {
 
 export interface PostActions {
   createPost: (post: CreatePostInput) => Promise<unknown>;
-  updatePost: (post: UpdatePostInput) => Promise<unknown>;
+  updatePost: (post: UpdatePostInput) => Promise<UpdatePostResult>;
   updatePostStatus: (statusData: UpdatePostStatusInput) => Promise<void>;
   deletePost: (postId: string) => Promise<void>;
 }

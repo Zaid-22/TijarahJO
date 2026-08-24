@@ -17,6 +17,7 @@ import {
   applyLoginUserDataToProfile,
   isProfileCompleteForRouting,
   resolveProfileCompletionReturnPath,
+  shouldRouteToProfileCompletion,
 } from "./appRoutesUtils";
 import { APP_ROUTE_PATHS } from "./routeConfig";
 
@@ -55,8 +56,15 @@ export function AppRoutes({ registrationEnabled = true }: { registrationEnabled?
     loading: isAuthLoading,
     user,
   } = useAuth();
-  const { userProfile, setUserProfile, currentUserDisplayName, isLoading: isProfileLoading, isProfileComplete, isCurrentProfileOwner } =
-    useUserProfileContext();
+  const {
+    userProfile,
+    setUserProfile,
+    currentUserDisplayName,
+    isLoading: isProfileLoading,
+    isProfileComplete,
+    profileError,
+    isCurrentProfileOwner,
+  } = useUserProfileContext();
   const { activeSearchQuery } = useSearch();
 
   const routeState = useMarketplaceRouteState({
@@ -85,7 +93,13 @@ export function AppRoutes({ registrationEnabled = true }: { registrationEnabled?
     setShowAuthModal(false);
   };
 
-  const shouldShowProfileCompletion = isAuthenticated && !isAuthLoading && !isProfileLoading && !isProfileComplete;
+  const shouldShowProfileCompletion = shouldRouteToProfileCompletion({
+    isAuthenticated,
+    isAuthLoading,
+    isProfileLoading,
+    isProfileComplete,
+    hasProfileError: Boolean(profileError),
+  });
 
   useEffect(() => {
     if (

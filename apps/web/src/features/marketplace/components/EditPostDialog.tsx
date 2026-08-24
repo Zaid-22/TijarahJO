@@ -282,7 +282,7 @@ export function EditPostDialog({
     });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (isSubmitting) return;
 
     const hasValidating = images.some(img => img.isValidating);
@@ -350,13 +350,29 @@ export function EditPostDialog({
     };
 
     setIsSubmitting(true);
-    onSave(updatedPost);
+    try {
+      await onSave(updatedPost);
+    } catch {
+      // The owning route surfaces the mutation error. Keeping this dialog
+      // mounted preserves the user's form and image selections for retry.
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const t = translations[language];
 
   return (
-    <DialogContent onPointerDownOutside={(e) => e.preventDefault()} className="max-w-2xl max-h-dialog-90vh overflow-y-auto">
+    <DialogContent
+      hideCloseButton={isSubmitting}
+      onEscapeKeyDown={(event) => {
+        if (isSubmitting) {
+          event.preventDefault();
+        }
+      }}
+      onPointerDownOutside={(event) => event.preventDefault()}
+      className="max-w-2xl max-h-dialog-90vh overflow-y-auto"
+    >
       <DialogHeader>
         <DialogTitle className={cn("text-start", language === "ar" ? "ps-12" : "pe-12")}>
           {language === "ar" ? "تعديل المنشور" : "Edit Post"}

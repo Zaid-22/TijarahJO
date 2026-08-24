@@ -9,6 +9,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toPositiveIntegerId } from "../../../utils/idValidation";
 import { resolveUserDisplayName } from "../../../utils/userDisplayName";
 import { resolveDocumentLanguage } from "../../../shared/lib/locale";
+import { logger } from "../../../shared/lib/logger";
 import type { Language } from "../../../types";
 import { Button } from "../../../shared/ui/button";
 import { SubpageHeader } from "../../../shared/ui/subpage-header";
@@ -107,6 +108,11 @@ export function ChatPage({ language }: ChatPageProps) {
       resolvedLanguage === "ar"
         ? "اختر محادثة للبدء بالدردشة"
         : "Select a conversation to start chatting",
+    loadChatsFailed:
+      resolvedLanguage === "ar"
+        ? "تعذر تحميل المحادثات. حاول مرة أخرى."
+        : "We couldn't load your conversations. Try again.",
+    retry: resolvedLanguage === "ar" ? "إعادة المحاولة" : "Retry",
     back: resolvedLanguage === "ar" ? "العودة" : "Back",
   };
 
@@ -118,6 +124,8 @@ export function ChatPage({ language }: ChatPageProps) {
   const {
     chats,
     isLoadingChats,
+    chatListError,
+    refetchChats,
     userDisplayNamesById,
     userAvatarsById,
     setUserDisplayNamesById,
@@ -211,16 +219,23 @@ export function ChatPage({ language }: ChatPageProps) {
     fetchedIdsRef.current?.add(selectedUserId);
     let isCancelled = false;
     (async () => {
-      const userData = await api.users.getUser(String(selectedUserId));
-      if (isCancelled || String(user?.id || "").trim() !== requestedOwnerId) return;
+      try {
+        const userData = await api.users.getUser(String(selectedUserId));
+        if (isCancelled || String(user?.id || "").trim() !== requestedOwnerId) return;
 
-      const resolvedName = resolveUserDisplayName(
-        userData as Record<string, unknown> | null | undefined,
-        selectedUserId,
-      );
-      setUserDisplayNamesById((prev) => ({ ...prev, [selectedUserId]: resolvedName }));
-      if (userData?.avatar) {
-        setUserAvatarsById((prev) => ({ ...prev, [selectedUserId]: userData.avatar }));
+        const resolvedName = resolveUserDisplayName(
+          userData as Record<string, unknown> | null | undefined,
+          selectedUserId,
+        );
+        setUserDisplayNamesById((prev) => ({ ...prev, [selectedUserId]: resolvedName }));
+        if (userData?.avatar) {
+          setUserAvatarsById((prev) => ({ ...prev, [selectedUserId]: userData.avatar }));
+        }
+      } catch (error) {
+        fetchedIdsRef.current?.delete(selectedUserId);
+        if (!isCancelled) {
+          logger.warn("[ChatPage] Failed to load selected user", error);
+        }
       }
     })();
 
@@ -315,6 +330,18 @@ export function ChatPage({ language }: ChatPageProps) {
                 }
                 minHeightClassName="min-h-64"
               />
+            ) : chatListError ? (
+              <div
+                className="flex min-h-64 flex-col items-center justify-center gap-4 rounded-2xl border border-destructive/30 bg-card p-6 text-center"
+                role="alert"
+              >
+                <p className="text-sm text-destructive">
+                  {labels.loadChatsFailed}
+                </p>
+                <Button type="button" variant="outline" onClick={refetchChats}>
+                  {labels.retry}
+                </Button>
+              </div>
             ) : (
               <ChatList
                 chats={chats}

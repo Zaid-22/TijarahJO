@@ -107,25 +107,27 @@ function SellerMarketplaceRouteScreen() {
           deferredToast.success(
             appProps.language === "ar" ? "تم حذف المنشور" : "Post deleted",
           );
-        } catch {
+        } catch (error) {
           deferredToast.error(
             appProps.language === "ar" ? "حدث خطأ أثناء الحذف" : "Error deleting post",
           );
+          throw error;
         }
       }}
       onUpdatePost={async (updatedPost) => {
         try {
-          const result = await postActions.updatePost(updatedPost) as Record<string, unknown> | undefined;
+          const result = await postActions.updatePost(updatedPost);
           deferredToast.success(
             appProps.language === "ar" ? "تم تحديث المنشور" : "Post updated",
           );
-          if (result && typeof result.message === "string" && result.message.trim().length > 0) {
+          if (result.message?.trim()) {
             deferredToast.error(result.message);
           }
-        } catch {
+        } catch (error) {
           deferredToast.error(
             appProps.language === "ar" ? "حدث خطأ أثناء التحديث" : "Error updating post",
           );
+          throw error;
         }
       }}
     />

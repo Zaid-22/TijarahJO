@@ -74,6 +74,21 @@ function unwrapChatMessagesPayload(value: unknown): unknown {
   return record.messages ?? record.Messages ?? record.data ?? record.Data;
 }
 
+export function isChatMessagesPayload(value: unknown): boolean {
+  if (Array.isArray(value)) {
+    return true;
+  }
+
+  const record = asRecord(value);
+  if (!record) {
+    return false;
+  }
+
+  return [record.messages, record.Messages, record.data, record.Data].some(
+    Array.isArray,
+  );
+}
+
 export function parseChatMessagesPayload(value: unknown): RawChatMessage[] {
   return parseRawChatMessagesCollection(unwrapChatMessagesPayload(value));
 }

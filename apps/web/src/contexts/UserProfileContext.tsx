@@ -12,7 +12,8 @@ interface UserProfileContextType {
   currentUserDisplayName: string;
   isLoading: boolean;
   isProfileComplete: boolean;
-  refreshProfile: () => void;
+  profileError: string | null;
+  refreshProfile: () => Promise<void>;
   isCurrentProfileOwner: (userId: string) => boolean;
 }
 

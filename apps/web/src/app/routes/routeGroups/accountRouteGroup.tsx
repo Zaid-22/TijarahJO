@@ -245,19 +245,25 @@ export function renderAccountRouteGroup({
               try {
                 await postActions.deletePost(postId);
                 deferredToast.success("Post deleted");
-              } catch {
-                deferredToast.error("Error deleting post");
+              } catch (error) {
+                deferredToast.error(
+                  error instanceof Error ? error.message : "Error deleting post",
+                );
+                throw error;
               }
             }}
             onUpdatePost={async (updatedPost) => {
               try {
-                const result = await postActions.updatePost(updatedPost) as Record<string, unknown> | undefined;
+                const result = await postActions.updatePost(updatedPost);
                 deferredToast.success("Post updated");
-                if (result && typeof result.message === "string" && result.message.trim().length > 0) {
+                if (result.message?.trim()) {
                   deferredToast.error(result.message);
                 }
-              } catch {
-                deferredToast.error("Error updating post");
+              } catch (error) {
+                deferredToast.error(
+                  error instanceof Error ? error.message : "Error updating post",
+                );
+                throw error;
               }
             }}
             onAddPost={async (post) => {

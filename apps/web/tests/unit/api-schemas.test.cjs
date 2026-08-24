@@ -75,6 +75,10 @@ test("parseUserSchema normalizes mixed casing and IDs", () => {
   assert.equal(parsed.lastName, "Yousef");
 });
 
+test("parseUserSchema rejects a payload with only a fallback identity", () => {
+  assert.equal(parseUserSchema({}, "55"), null);
+});
+
 test("parseUsersCollection filters invalid entries", () => {
   const parsed = parseUsersCollection([
     { Id: 1, FirstName: "A" },

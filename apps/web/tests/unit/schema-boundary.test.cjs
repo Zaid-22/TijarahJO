@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
+  isChatMessagesPayload,
   parseChatMessagesPayload,
   parseSentChatMessagePayload,
   parsePresencePayload,
@@ -25,6 +26,14 @@ test("parseChatMessagesPayload supports envelope and direct array", () => {
     { MessageId: 3, SenderId: 10, ReceiverId: 11, Content: "ok" },
   ]);
   assert.equal(directMessages.length, 1);
+});
+
+test("isChatMessagesPayload distinguishes valid empty chats from malformed payloads", () => {
+  assert.equal(isChatMessagesPayload([]), true);
+  assert.equal(isChatMessagesPayload({ messages: [] }), true);
+  assert.equal(isChatMessagesPayload({ data: [] }), true);
+  assert.equal(isChatMessagesPayload({ data: null }), false);
+  assert.equal(isChatMessagesPayload({}), false);
 });
 
 test("parseSentChatMessagePayload unwraps envelope message", () => {

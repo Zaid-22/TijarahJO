@@ -40,6 +40,7 @@ export function useUserProfile() {
     createProfileForAuthUser(isAuthenticated ? user : null),
   );
   const [isLoading, setIsLoading] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const fetchedForUserRef = useRef<string>("");
   const profileOwnerIdRef = useRef(isAuthenticated ? CURRENT_USER_ID : "");
   const renderedAuthUserIdRef = useRef(
@@ -91,6 +92,7 @@ export function useUserProfile() {
           retryTimerRef.current = null;
         }
         setUserProfileState(nextProfile);
+        setProfileError(null);
         setIsLoading(true);
         return true;
       }
@@ -103,6 +105,7 @@ export function useUserProfile() {
       }
 
       setUserProfileState(nextProfile);
+      setProfileError(null);
       return true;
     },
     [isCurrentProfileOwner],
@@ -120,6 +123,7 @@ export function useUserProfile() {
       fetchedForUserRef.current = "";
       fetchRetryCountRef.current = 0;
       setUserProfileState(createProfileForAuthUser(null));
+      setProfileError(null);
       setIsLoading(false);
       return;
     }
@@ -130,6 +134,7 @@ export function useUserProfile() {
       fetchedForUserRef.current = "";
       fetchRetryCountRef.current = 0;
       setUserProfileState(createProfileForAuthUser(user));
+      setProfileError(null);
       setIsLoading(true);
       return;
     }
@@ -166,6 +171,7 @@ export function useUserProfile() {
     if (!isAuthenticated || !userId) {
       fetchedForUserRef.current = "";
       fetchRetryCountRef.current = 0;
+      setProfileError(null);
       setIsLoading(false);
       return;
     }
@@ -191,15 +197,16 @@ export function useUserProfile() {
     // fetch would leave the hook stuck in loading because the useCallback
     // deps (isAuthenticated, user?.id) haven't changed, so the effect that
     // calls fetchProfileData never re-fires.
-    const scheduleRetry = () => {
+    const scheduleRetry = (errorMessage: string) => {
       if (!isCurrentRequest()) {
         return;
       }
       const attempt = fetchRetryCountRef.current;
       if (attempt >= MAX_FETCH_RETRIES) {
-        // Exhausted all retries — unblock the UI. isProfileComplete will be
-        // false only if the backend is genuinely unavailable, not a transient glitch.
+        // Exhausted all retries. Preserve the failure separately from profile
+        // completeness so routing never treats an outage as missing fields.
         markAsFetched();
+        setProfileError(errorMessage);
         setIsLoading(false);
         return;
       }
@@ -224,11 +231,12 @@ export function useUserProfile() {
       }
 
       if (!backendUser) {
-        // Backend returned null — transient error or race during rapid reloads.
-        // Increment the counter and schedule an active retry with back-off so
-        // we don't depend on React re-triggering the effect.
-        fetchRetryCountRef.current += 1;
-        scheduleRetry();
+        // A null result is reserved for a confirmed missing profile (404).
+        // This is different from a request failure and may legitimately route
+        // the user to profile completion.
+        markAsFetched();
+        setProfileError(null);
+        setIsLoading(false);
         return;
       }
 
@@ -262,15 +270,19 @@ export function useUserProfile() {
           "Jan 2024",
         ),
       });
+      setProfileError(null);
       fetchSucceeded = true;
     } catch (error) {
       if (!isCurrentRequest()) {
         return;
       }
       logger.warn("[useUserProfile] Failed to fetch extended profile:", error);
-      // Treat thrown errors the same as null — schedule an active retry.
       fetchRetryCountRef.current += 1;
-      scheduleRetry();
+      scheduleRetry(
+        error instanceof Error
+          ? error.message
+          : "Failed to load user profile",
+      );
     } finally {
       // Advance the guard only on success. On failure, scheduleRetry() above
       // will call fetchProfileData() again after the back-off delay, keeping
@@ -331,6 +343,7 @@ export function useUserProfile() {
     // re-fetches from scratch (ignoring the skip-if-already-fetched guard).
     fetchedForUserRef.current = "";
     fetchRetryCountRef.current = 0;
+    setProfileError(null);
     return fetchProfileData();
   }, [fetchProfileData]);
 
@@ -340,6 +353,7 @@ export function useUserProfile() {
     currentUserDisplayName: CURRENT_USER_DISPLAY_NAME,
     isLoading: isLoading || pendingFetchForNewUser,
     isProfileComplete,
+    profileError,
     refreshProfile,
     isCurrentProfileOwner,
   };

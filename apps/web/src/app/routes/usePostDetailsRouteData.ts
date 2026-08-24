@@ -11,6 +11,12 @@ interface UsePostDetailsRouteDataParams {
   userProfile: UserProfile;
 }
 
+interface FallbackPostState {
+  id: string;
+  status: "idle" | "loading" | "done";
+  error: string | null;
+}
+
 export const usePostDetailsRouteData = ({
   id,
   availablePosts,
@@ -20,10 +26,12 @@ export const usePostDetailsRouteData = ({
 }: UsePostDetailsRouteDataParams) => {
   const post = availablePosts.find((item) => item.id === id);
   const [fallbackPost, setFallbackPost] = useState<Post | null>(null);
-  const [fallbackState, setFallbackState] = useState<{ id: string; status: "idle" | "loading" | "done" }>({
+  const [fallbackState, setFallbackState] = useState<FallbackPostState>({
     id: "",
     status: "idle",
+    error: null,
   });
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     let isCancelled = false;
@@ -32,7 +40,7 @@ export const usePostDetailsRouteData = ({
       return;
     }
 
-    setFallbackState({ id, status: "loading" });
+    setFallbackState({ id, status: "loading", error: null });
     setFallbackPost(null);
 
     (async () => {
@@ -42,11 +50,18 @@ export const usePostDetailsRouteData = ({
           return;
         }
         setFallbackPost(fetchedPost);
-        setFallbackState({ id, status: "done" });
-      } catch {
+        setFallbackState({ id, status: "done", error: null });
+      } catch (error) {
         if (!isCancelled) {
           setFallbackPost(null);
-          setFallbackState({ id, status: "done" });
+          setFallbackState({
+            id,
+            status: "done",
+            error:
+              error instanceof Error
+                ? error.message
+                : "Failed to load post",
+          });
         }
       }
     })();
@@ -54,13 +69,20 @@ export const usePostDetailsRouteData = ({
     return () => {
       isCancelled = true;
     };
-  }, [id, isLoadingPosts, post]);
+  }, [id, isLoadingPosts, post, retryKey]);
 
   const fallbackPostForRoute =
     fallbackPost && String(fallbackPost.id) === String(id) ? fallbackPost : null;
   const resolvedPost = fallbackPostForRoute || post;
   const isFallbackDoneForId = fallbackState.id === id && fallbackState.status === "done";
   const isLoadingRoutePost = !!id && !resolvedPost && (isLoadingPosts || !isFallbackDoneForId);
+  const routePostError =
+    !resolvedPost && isFallbackDoneForId ? fallbackState.error : null;
+
+  const retryRoutePost = useCallback(() => {
+    setFallbackState({ id: id || "", status: "idle", error: null });
+    setRetryKey((currentKey) => currentKey + 1);
+  }, [id]);
 
   const isOwnPost = useMemo(
     () =>
@@ -82,10 +104,18 @@ export const usePostDetailsRouteData = ({
     });
   }, [post]);
 
+  const replaceRoutePost = useCallback((nextPost: Post) => {
+    setFallbackPost(nextPost);
+    setFallbackState({ id: nextPost.id, status: "done", error: null });
+  }, []);
+
   return {
     resolvedPost,
     isLoadingRoutePost,
+    routePostError,
+    retryRoutePost,
     isOwnPost,
     mutateRoutePost,
+    replaceRoutePost,
   };
 };

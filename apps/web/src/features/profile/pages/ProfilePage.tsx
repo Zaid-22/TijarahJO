@@ -13,8 +13,8 @@ interface ProfilePageProps {
   onBackToMarketplace: () => void;
   posts: Post[];
   onPostClick?: (postId: string) => void;
-  onDeletePost?: (postId: string) => void;
-  onUpdatePost?: (post: UpdatePostInput) => void;
+  onDeletePost?: (postId: string) => void | Promise<void>;
+  onUpdatePost?: (post: UpdatePostInput) => void | Promise<void>;
   onAddPost?: (post: CreatePostInput) => void | Promise<void>;
   onAddPostClick?: () => void;
   onSettingsClick?: () => void;
