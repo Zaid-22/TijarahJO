@@ -38,6 +38,7 @@ grep -Fq '"$ROOT_DIR/scripts/migrate-production-db.sh"' scripts/compose-producti
 grep -Fq "ScriptName = N'\$script_name'" scripts/migrate-production-db.sh
 grep -Fq 'GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.VerificationChallenges TO [tijarahjo_app_runtime];' \
   scripts/bootstrap_db.sh
+grep -Fq 'FeatureFlags__EnableRateLimiting=true' _on_server/.env.example
 
 app_build_line="$(grep -nF 'build api web' scripts/compose-production.sh | cut -d: -f1)"
 data_start_line="$(grep -nF 'up -d sqlserver redis' scripts/compose-production.sh | cut -d: -f1)"
