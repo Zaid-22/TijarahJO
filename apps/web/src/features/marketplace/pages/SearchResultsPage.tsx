@@ -4,7 +4,6 @@ import { MarketplaceQueryStatus } from "../components/MarketplaceQueryStatus";
 import { MarketplaceResultsPagination } from "../components/MarketplaceResultsPagination";
 import {
   AdvancedSearchFilters,
-  type SearchFilters,
 } from "../components/AdvancedSearchFilters";
 import { ArrowLeft } from "lucide-react";
 
@@ -13,11 +12,16 @@ import { PostResultsGridSkeleton } from "../components/PostResultsGridSkeleton";
 
 import { Language } from "../../../translations";
 import { Post } from "../../../types";
-import { useCallback, useEffect, useState } from "react";
-import { rankMarketplacePosts } from "../search/marketplaceSearch";
+import { useCallback } from "react";
+import {
+  filterAndSortMarketplacePosts,
+  rankMarketplacePosts,
+} from "../search/marketplaceSearch";
 import { useMarketplaceSearchResults } from "../search/useMarketplaceSearchResults";
-import { useMarketplaceUrlState } from "../search/useMarketplaceUrlState";
-import { useMarketplacePaginationNavigation } from "../search/useMarketplacePaginationNavigation";
+import {
+  useMarketplacePageBounds,
+  useMarketplaceResultsPageState,
+} from "../search/useMarketplaceResultsPageState";
 
 interface SearchResultsPageProps {
   searchQuery: string;
@@ -46,7 +50,6 @@ export function SearchResultsPage({
   currentUserId,
   onRequireAuth,
 }: SearchResultsPageProps) {
-  const [showFilters, setShowFilters] = useState(false);
   const {
     query: queryFromUrl,
     page,
@@ -55,14 +58,18 @@ export function SearchResultsPage({
     setQuery,
     applyFilters: setAppliedSearchFilters,
     clearFilters,
-  } = useMarketplaceUrlState({
+    draftFilters: draftSearchFilters,
+    setDraftFilters: setDraftSearchFilters,
+    showFilters,
+    applyDraftFilters,
+    clearMobileFilters,
+    toggleFilters,
+    navigateToPage,
+    resultsHeadingRef,
+  } = useMarketplaceResultsPageState({
     defaultSortBy: "views",
     defaultSortOrder: "desc",
   });
-  const [draftSearchFilters, setDraftSearchFilters] =
-    useState<SearchFilters>(appliedSearchFilters);
-  const { navigateToPage, resultsHeadingRef } =
-    useMarketplacePaginationNavigation(setPage);
   const normalizedSearchQuery = (queryFromUrl || initialSearchQuery).trim();
   const clearSearch = useCallback(() => {
     setQuery("");
@@ -75,56 +82,9 @@ export function SearchResultsPage({
         return [];
       }
 
-      let results = activePosts;
-
-      if (appliedSearchFilters.category) {
-        results = results.filter(
-          (post) =>
-            post.category?.toLowerCase() ===
-            appliedSearchFilters.category?.toLowerCase(),
-        );
-      }
-      if (appliedSearchFilters.city) {
-        const cityFilter = appliedSearchFilters.city.toLowerCase();
-        results = results.filter(
-          (post) =>
-            post.location?.toLowerCase().includes(cityFilter) ||
-            post.locationAr?.toLowerCase().includes(cityFilter),
-        );
-      }
-
-      if (appliedSearchFilters.minPrice != null) {
-        results = results.filter(
-          (p) => p.price >= (appliedSearchFilters.minPrice ?? 0),
-        );
-      }
-      if (appliedSearchFilters.maxPrice != null) {
-        results = results.filter(
-          (p) => p.price <= (appliedSearchFilters.maxPrice ?? Infinity),
-        );
-      }
-      if (query) {
-        results = rankMarketplacePosts(results, query);
-      }
-
-      // Apply sorting
-      if (appliedSearchFilters.sortBy) {
-        const order = appliedSearchFilters.sortOrder === "asc" ? 1 : -1;
-        results = [...results].sort((a, b) => {
-          if (appliedSearchFilters.sortBy === "price") {
-            return (a.price - b.price) * order;
-          }
-          if (appliedSearchFilters.sortBy === "views") {
-            return ((a.views ?? 0) - (b.views ?? 0)) * order;
-          }
-          // date
-          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-          return (dateA - dateB) * order;
-        });
-      }
-
-      return results;
+      return filterAndSortMarketplacePosts(activePosts, appliedSearchFilters, {
+        query,
+      });
     },
     [appliedSearchFilters],
   );
@@ -158,20 +118,13 @@ export function SearchResultsPage({
     transformRemotePosts,
   });
 
-  useEffect(() => {
-    setDraftSearchFilters(appliedSearchFilters);
-  }, [appliedSearchFilters]);
-
-  const applySearchFilters = useCallback(() => {
-    setAppliedSearchFilters(draftSearchFilters);
-    setShowFilters(false);
-  }, [draftSearchFilters, setAppliedSearchFilters]);
-
-  useEffect(() => {
-    if (!isSearching && !searchError && page > pagination.totalPages) {
-      setPage(pagination.totalPages);
-    }
-  }, [isSearching, page, pagination.totalPages, searchError, setPage]);
+  useMarketplacePageBounds({
+    isLoading: isSearching,
+    error: searchError,
+    page,
+    totalPages: pagination.totalPages,
+    setPage,
+  });
 
   return (
     <PageShell>
@@ -233,20 +186,12 @@ export function SearchResultsPage({
                     language={language}
                     filters={draftSearchFilters}
                     onFiltersChange={setDraftSearchFilters}
-                    onApply={applySearchFilters}
-                    onClear={() => {
-                      const defaultSort = {
-                        sortBy: "views" as const,
-                        sortOrder: "desc" as const,
-                      };
-                      setDraftSearchFilters(defaultSort);
-                      clearFilters();
-                      setShowFilters(false);
-                    }}
+                    onApply={applyDraftFilters}
+                    onClear={clearMobileFilters}
                     showCategory
                   />
                 ),
-                onToggle: () => setShowFilters(!showFilters),
+                onToggle: toggleFilters,
               }}
             />
 

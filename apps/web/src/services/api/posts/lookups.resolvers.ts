@@ -4,10 +4,11 @@ import {
   hasLikelyAdminSession,
   hasLikelyAuthenticatedSession,
 } from "../client";
+import { categoriesApi } from "../categories";
 import { locationsApi } from "../locations";
 import { toPositiveIntegerId } from "../../../utils/idValidation";
 import { getUserDisplayName, getUserIdentifier } from "./mappers";
-import { RawCategory, RawPost, RawUserLookup } from "./types";
+import { RawPost, RawUserLookup } from "./types";
 
 let categoriesCache: Record<string, string> | null = null;
 let categoryIdByNameCache: Record<string, number> | null = null;
@@ -37,7 +38,6 @@ const OPTIONAL_RATINGS_WAIT_MS = 750;
 // resource before the first response arrives, they all share one Promise
 // instead of each firing a separate HTTP request (which causes 429 bursts).
 // ---------------------------------------------------------------------------
-let _categoriesInflight: Promise<Record<string, string>> | null = null;
 let _citiesInflight: Promise<Record<string, { en: string; ar: string }>> | null = null;
 // Ratings inflight key: sorted comma-separated user IDs (cache key for the batch)
 const _ratingsInflight: Map<string, Promise<void>> = new Map();
@@ -175,47 +175,32 @@ async function ensureCategoriesCache(
     return categoriesCache;
   }
 
-  // Deduplicate: if another caller is already fetching, return the same promise.
-  if (!forceRefresh && _categoriesInflight) {
-    return _categoriesInflight;
-  }
+  const categoriesResponse = await categoriesApi.getCategories();
 
-  _categoriesInflight = (async () => {
-    const categoriesResponse = await apiRequest<RawCategory[]>("/categories", {
-      method: "GET",
+  if (categoriesResponse.success) {
+    const nextCategoriesCache: Record<string, string> = {};
+    const nextCategoryIdByNameCache: Record<string, number> = {};
+
+    categoriesResponse.categories.forEach((category) => {
+      const categoryId = toPositiveIntegerId(category.id);
+      const categoryName = category.name.trim();
+
+      if (categoryId && categoryName.length > 0) {
+        nextCategoriesCache[String(categoryId)] = categoryName;
+        nextCategoryIdByNameCache[normalizeCategoryNameKey(categoryName)] =
+          categoryId;
+      }
     });
 
-    if (categoriesResponse.success && Array.isArray(categoriesResponse.data)) {
-      const nextCategoriesCache: Record<string, string> = {};
-      const nextCategoryIdByNameCache: Record<string, number> = {};
+    categoriesCache = nextCategoriesCache;
+    categoryIdByNameCache = nextCategoryIdByNameCache;
+    categoriesCacheUpdatedAt = Date.now();
+  } else {
+    categoriesCache ||= {};
+    categoryIdByNameCache ||= {};
+  }
 
-      categoriesResponse.data.forEach((category) => {
-        const categoryId = toPositiveIntegerId(
-          category?.CategoryID ?? category?.categoryID ?? category?.id,
-        );
-        const rawCategoryName =
-          category?.CategoryName ?? category?.categoryName ?? category?.name;
-        const categoryName =
-          typeof rawCategoryName === "string" ? rawCategoryName.trim() : "";
-
-        if (categoryId && categoryName.length > 0) {
-          nextCategoriesCache[String(categoryId)] = categoryName;
-          nextCategoryIdByNameCache[normalizeCategoryNameKey(categoryName)] =
-            categoryId;
-        }
-      });
-
-      categoriesCache = nextCategoriesCache;
-      categoryIdByNameCache = nextCategoryIdByNameCache;
-      categoriesCacheUpdatedAt = Date.now();
-    } else {
-      categoriesCache ||= {};
-      categoryIdByNameCache ||= {};
-    }
-    return categoriesCache!;
-  })().finally(() => { _categoriesInflight = null; });
-
-  return _categoriesInflight;
+  return categoriesCache;
 }
 
 async function ensureUsersCache(

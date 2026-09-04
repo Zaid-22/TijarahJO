@@ -7,7 +7,6 @@ const {
   buildPostMapDestination,
   formatDistance,
   formatDuration,
-  formatRouteMetrics,
 } = require("../../.unit-dist/features/post-details/postLocationMapUtils.js");
 
 test("buildPostMapDestination prefers post area and city for Google query", () => {
@@ -66,19 +65,6 @@ test("Google Maps URLs encode destination and origin correctly", () => {
 test("distance and duration labels format in English and Arabic", () => {
   assert.equal(formatDistance(8400, "en"), "8.4 km");
   assert.equal(formatDuration(1080, "en"), "18 min");
-  assert.equal(
-    formatRouteMetrics(
-      { distanceMeters: 8400, durationSeconds: 1080 },
-      "en",
-    ),
-    "About 8.4 km away · 18 min by car",
-  );
-
-  const arabicLabel = formatRouteMetrics(
-    { distanceMeters: 8400, durationSeconds: 1080 },
-    "ar",
-  );
-  assert.match(arabicLabel, /يبعد حوالي/);
-  assert.match(arabicLabel, /كم/);
-  assert.match(arabicLabel, /دقيقة/);
+  assert.match(formatDistance(8400, "ar"), /كم/);
+  assert.match(formatDuration(1080, "ar"), /دقيقة/);
 });

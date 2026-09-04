@@ -6,15 +6,9 @@ import { useCatalogCategories } from "../../../shared/hooks/useCatalogCategories
 import { useLocationOptions } from "../../../shared/hooks/useLocationOptions";
 import { resolveCategoryName } from "../../../shared/lib/categoryVisuals";
 import type { Language } from "../../../types";
+import type { SearchFilters } from "./searchFilterTypes";
 
-export interface SearchFilters {
-  category?: string;
-  city?: string;
-  minPrice?: number;
-  maxPrice?: number;
-  sortBy?: "date" | "price" | "views";
-  sortOrder?: "asc" | "desc";
-}
+export type { SearchFilters } from "./searchFilterTypes";
 
 interface AdvancedSearchFiltersProps {
   language: Language;

@@ -1,11 +1,15 @@
 import { APP_CONFIG } from "../../../constants/appConfig";
 import {
   isActivePost,
-  rankPostsBySearch,
 } from "../../../lib/searchRanking";
 import { api } from "../../../services/api";
 import { Post } from "../../../types";
 import { runSearchPipeline, type SearchPipelineResult } from "./searchPipeline";
+
+export {
+  filterAndSortMarketplacePosts,
+  rankMarketplacePosts,
+} from "./marketplacePostFiltering";
 
 export type MarketplaceSearchPreset =
   | "home"
@@ -121,11 +125,4 @@ export async function runMarketplaceSearchPipeline({
         : activePosts;
     },
   });
-}
-
-export function rankMarketplacePosts(
-  posts: Post[],
-  query: string,
-): Post[] {
-  return rankPostsBySearch(posts.filter(isActivePost), query);
 }

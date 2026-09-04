@@ -79,21 +79,6 @@ function resolveImageUrl(value: string): string {
   return `${backendHost}${absolutePath}`;
 }
 
-export function serializeChatImageMessage(
-  imageUrl: string,
-  caption?: string,
-): string {
-  const normalizedImageUrl = imageUrl.trim();
-  const normalizedCaption = caption?.trim() ?? "";
-  if (!normalizedImageUrl) {
-    return normalizedCaption;
-  }
-
-  return normalizedCaption
-    ? `${CHAT_IMAGE_PREFIX} ${normalizedImageUrl}\n${normalizedCaption}`
-    : `${CHAT_IMAGE_PREFIX} ${normalizedImageUrl}`;
-}
-
 export function parseChatMessageContent(content: string): ParsedChatMessageContent {
   const trimmed = content.trim();
   if (!trimmed) {

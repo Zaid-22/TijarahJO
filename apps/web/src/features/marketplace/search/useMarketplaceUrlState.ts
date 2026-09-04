@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { SearchFilters } from "../components/AdvancedSearchFilters";
+import type { SearchFilters } from "../components/searchFilterTypes";
 
 type SortBy = NonNullable<SearchFilters["sortBy"]>;
 type SortOrder = NonNullable<SearchFilters["sortOrder"]>;

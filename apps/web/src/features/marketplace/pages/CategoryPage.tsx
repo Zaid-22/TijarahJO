@@ -10,16 +10,18 @@ import {
 } from "../../../shared/lib/categoryVisuals";
 import {
   AdvancedSearchFilters,
-  type SearchFilters,
 } from "../components/AdvancedSearchFilters";
 import { MarketplaceDiscoveryControls } from "../components/MarketplaceDiscoveryControls";
 import { MarketplaceQueryStatus } from "../components/MarketplaceQueryStatus";
 import { MarketplaceResultsPagination } from "../components/MarketplaceResultsPagination";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { ArrowLeft } from "lucide-react";
+import { filterAndSortMarketplacePosts } from "../search/marketplaceSearch";
 import { useMarketplaceSearchResults } from "../search/useMarketplaceSearchResults";
-import { useMarketplaceUrlState } from "../search/useMarketplaceUrlState";
-import { useMarketplacePaginationNavigation } from "../search/useMarketplacePaginationNavigation";
+import {
+  useMarketplacePageBounds,
+  useMarketplaceResultsPageState,
+} from "../search/useMarketplaceResultsPageState";
 
 interface CategoryPageProps {
   categoryName: string;
@@ -87,19 +89,18 @@ export function CategoryPage({
     setPage,
     applyFilters: setAppliedSearchFilters,
     clearFilters,
-  } = useMarketplaceUrlState({
+    draftFilters: draftSearchFilters,
+    setDraftFilters: setDraftSearchFilters,
+    showFilters,
+    applyDraftFilters,
+    clearMobileFilters,
+    toggleFilters,
+    navigateToPage,
+    resultsHeadingRef,
+  } = useMarketplaceResultsPageState({
     defaultSortBy: "views",
     defaultSortOrder: "desc",
   });
-  const [draftSearchFilters, setDraftSearchFilters] =
-    useState<SearchFilters>(appliedSearchFilters);
-  const [showFilters, setShowFilters] = useState(false);
-  const { navigateToPage, resultsHeadingRef } =
-    useMarketplacePaginationNavigation(setPage);
-
-  useEffect(() => {
-    setDraftSearchFilters(appliedSearchFilters);
-  }, [appliedSearchFilters]);
 
   const currentCategory = categories.find(
     (category) => categoryMatchesRequest(category.name, categoryName),
@@ -110,43 +111,12 @@ export function CategoryPage({
     : categoryName;
 
   const buildFallbackPosts = useCallback(
-    ({ activePosts }: { activePosts: Post[] }) => {
-      let results = activePosts.filter((post) =>
-        categoryMatchesRequest(post.category, resolvedCategoryName),
-      );
-
-      if (appliedSearchFilters.city) {
-        const cityFilter = appliedSearchFilters.city.toLowerCase();
-        results = results.filter(
-          (post) =>
-            post.location?.toLowerCase().includes(cityFilter) ||
-            post.locationAr?.toLowerCase().includes(cityFilter),
-        );
-      }
-      if (appliedSearchFilters.minPrice != null) {
-        results = results.filter(
-          (post) => post.price >= (appliedSearchFilters.minPrice ?? 0),
-        );
-      }
-      if (appliedSearchFilters.maxPrice != null) {
-        results = results.filter(
-          (post) => post.price <= (appliedSearchFilters.maxPrice ?? Infinity),
-        );
-      }
-
-      const order = appliedSearchFilters.sortOrder === "asc" ? 1 : -1;
-      return [...results].sort((a, b) => {
-        if (appliedSearchFilters.sortBy === "price") {
-          return (a.price - b.price) * order;
-        }
-        if (appliedSearchFilters.sortBy === "views") {
-          return ((a.views ?? 0) - (b.views ?? 0)) * order;
-        }
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return (dateA - dateB) * order;
-      });
-    },
+    ({ activePosts }: { activePosts: Post[] }) =>
+      filterAndSortMarketplacePosts(activePosts, appliedSearchFilters, {
+        matchesCategory: (postCategory) =>
+          categoryMatchesRequest(postCategory, resolvedCategoryName),
+        applySelectedCategory: false,
+      }),
     [appliedSearchFilters, resolvedCategoryName],
   );
 
@@ -177,11 +147,13 @@ export function CategoryPage({
     buildFallbackPosts,
   });
 
-  useEffect(() => {
-    if (!isSearching && !searchError && page > pagination.totalPages) {
-      setPage(pagination.totalPages);
-    }
-  }, [isSearching, page, pagination.totalPages, searchError, setPage]);
+  useMarketplacePageBounds({
+    isLoading: isSearching,
+    error: searchError,
+    page,
+    totalPages: pagination.totalPages,
+    setPage,
+  });
 
   const showLoading =
     displayedPosts.length === 0 &&
@@ -252,17 +224,11 @@ export function CategoryPage({
                     language={language}
                     filters={draftSearchFilters}
                     onFiltersChange={setDraftSearchFilters}
-                    onApply={() => {
-                      setAppliedSearchFilters(draftSearchFilters);
-                      setShowFilters(false);
-                    }}
-                    onClear={() => {
-                      clearFilters();
-                      setShowFilters(false);
-                    }}
+                    onApply={applyDraftFilters}
+                    onClear={clearMobileFilters}
                   />
                 ),
-                onToggle: () => setShowFilters(!showFilters),
+                onToggle: toggleFilters,
               }}
             />
 

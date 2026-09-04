@@ -157,19 +157,3 @@ export function formatDuration(durationSeconds: number, language: Language): str
     ? `${hourLabel} ${formatNumber(minutes, language)} دقيقة`
     : `${hourLabel} ${formatNumber(minutes, language)} min`;
 }
-
-export function formatRouteMetrics(
-  metrics: RouteMetrics,
-  language: Language,
-): string {
-  const distance = formatDistance(metrics.distanceMeters, language);
-  const duration = formatDuration(metrics.durationSeconds, language);
-
-  if (!distance || !duration) {
-    return "";
-  }
-
-  return language === "ar"
-    ? `يبعد حوالي ${distance} · ${duration} بالسيارة`
-    : `About ${distance} away · ${duration} by car`;
-}

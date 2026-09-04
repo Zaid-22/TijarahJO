@@ -6,43 +6,8 @@ import { PostCarouselSkeleton } from "../components/PostCarouselSkeleton";
 import { usePrefersReducedMotion } from "../../../shared/hooks/usePrefersReducedMotion";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { useCatalogCategories } from "../../../shared/hooks/useCatalogCategories";
+import { lazyImportWithRetry } from "../../../shared/lib/lazyImportWithRetry";
 import type { Category } from "../../../types/api";
-
-function lazyImportWithRetry<TModule>(
-  load: () => Promise<TModule>,
-  retryKey: string,
-) {
-  return async () => {
-    try {
-      const module = await load();
-      if (typeof window !== "undefined") {
-        window.sessionStorage.removeItem(retryKey);
-      }
-      return module;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const isRecoverableImportError =
-        /Failed to fetch dynamically imported module|Importing a module script failed/i.test(
-          message,
-        );
-
-      if (
-        typeof window !== "undefined" &&
-        isRecoverableImportError &&
-        !window.sessionStorage.getItem(retryKey)
-      ) {
-        window.sessionStorage.setItem(retryKey, "1");
-        window.location.reload();
-
-        return new Promise<never>(() => {
-          // Keep React.lazy pending while the page reload is in flight.
-        });
-      }
-
-      throw error;
-    }
-  };
-}
 
 const HomeDeferredSections = lazy(
   lazyImportWithRetry(

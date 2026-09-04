@@ -21,24 +21,6 @@ interface PasswordStrength {
   };
 }
 
-type UnknownRecord = Record<string, unknown>;
-
-function asRecord(value: unknown): UnknownRecord | null {
-  if (typeof value === "object" && value !== null) {
-    return value as UnknownRecord;
-  }
-  return null;
-}
-
-function asNonEmptyString(value: unknown): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
 const isValidEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
@@ -121,57 +103,4 @@ export const calculatePasswordStrength = (
     color: "rgb(16 185 129)",
     requirements,
   };
-};
-
-export const extractApiMessage = (payload: unknown): string | null => {
-  const payloadRecord = asRecord(payload);
-  if (!payloadRecord) {
-    return null;
-  }
-
-  const directMessage =
-    asNonEmptyString(payloadRecord.message) ??
-    asNonEmptyString(payloadRecord.Message);
-  if (directMessage) {
-    return directMessage;
-  }
-
-  const errorValue = payloadRecord.error;
-  const directErrorString = asNonEmptyString(errorValue);
-  if (directErrorString) {
-    return directErrorString;
-  }
-
-  const errorRecord = asRecord(errorValue);
-  if (!errorRecord) {
-    return null;
-  }
-
-  return (
-    asNonEmptyString(errorRecord.message) ??
-    asNonEmptyString(errorRecord.Message)
-  );
-};
-
-export const extractApiCode = (payload: unknown): string | null => {
-  const payloadRecord = asRecord(payload);
-  if (!payloadRecord) {
-    return null;
-  }
-
-  const directCode =
-    asNonEmptyString(payloadRecord.code) ??
-    asNonEmptyString(payloadRecord.Code);
-  if (directCode) {
-    return directCode;
-  }
-
-  const errorRecord = asRecord(payloadRecord.error);
-  if (!errorRecord) {
-    return null;
-  }
-
-  return (
-    asNonEmptyString(errorRecord.code) ?? asNonEmptyString(errorRecord.Code)
-  );
 };

@@ -15,15 +15,6 @@ export interface RawPostImage {
   isDeleted?: unknown;
 }
 
-export interface RawCategory {
-  CategoryID?: unknown;
-  categoryID?: unknown;
-  id?: unknown;
-  CategoryName?: unknown;
-  categoryName?: unknown;
-  name?: unknown;
-}
-
 export interface RawUserLookup {
   UserID?: unknown;
   userID?: unknown;

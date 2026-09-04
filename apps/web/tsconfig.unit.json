@@ -45,6 +45,7 @@
     "src/shared/pwa/cacheHygiene.ts",
     "src/lib/searchRanking.ts",
     "src/features/marketplace/search/searchPipeline.ts",
+    "src/features/marketplace/search/marketplacePostFiltering.ts",
     "src/types/index.ts",
     "src/constants/index.ts",
     "src/features/home/components/heroBannerData.ts"

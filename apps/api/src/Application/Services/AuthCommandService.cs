@@ -188,7 +188,8 @@ public sealed class AuthCommandService(
 
         if (command.CityId.HasValue || command.AreaId.HasValue)
         {
-            (bool isValid, string validationMessage) = await ValidateLocationSelectionAsync(
+            (bool isValid, string validationMessage) = await ValidationHelpers.ValidateLocationAsync(
+                _locations,
                 command.CityId,
                 command.AreaId,
                 cancellationToken);
@@ -791,48 +792,6 @@ public sealed class AuthCommandService(
         return isPhoneOnlySignup
             ? "An account with this phone number already exists. Please use a different phone number or try logging in."
             : "An account with this information already exists. Please check your details and try again.";
-    }
-
-    private async Task<(bool IsValid, string Message)> ValidateLocationSelectionAsync(
-        int? cityId,
-        int? areaId,
-        CancellationToken cancellationToken)
-    {
-        if (!cityId.HasValue)
-        {
-            return (true, string.Empty);
-        }
-
-        if (cityId.Value < 1)
-        {
-            return (false, "CityId must be a positive integer.");
-        }
-
-        IReadOnlyList<CityLookupResult> cities = await _locations.GetCitiesAsync(cancellationToken);
-        bool cityExists = cities.Any(city => city.CityId == cityId.Value);
-        if (!cityExists)
-        {
-            return (false, "Selected city is invalid.");
-        }
-
-        if (!areaId.HasValue)
-        {
-            return (true, string.Empty);
-        }
-
-        if (areaId.Value < 1)
-        {
-            return (false, "AreaId must be a positive integer.");
-        }
-
-        IReadOnlyList<AreaLookupResult> areas = await _locations.GetAreasByCityAsync(cityId.Value, cancellationToken);
-        bool areaBelongsToCity = areas.Any(area => area.AreaId == areaId.Value);
-        if (!areaBelongsToCity)
-        {
-            return (false, "Selected area does not belong to the selected city.");
-        }
-
-        return (true, string.Empty);
     }
 
     private static string FormatLockoutRemaining(DateTime? lockedUntilUtc)
