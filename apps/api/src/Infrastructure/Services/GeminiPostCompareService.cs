@@ -12,6 +12,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TijarahJo.Application.Abstractions.Services;
+using TijarahJo.Application.Common;
 using TijarahJo.Infrastructure;
 
 namespace TijarahJo.Infrastructure.Services;
@@ -130,7 +131,7 @@ public sealed class GeminiPostCompareService(
             {
                 Success = false,
                 FailureReason = CompareFailureReason.AiServiceError,
-                Message = $"AI service error: {ex.Message}"
+                Message = "The AI comparison service is temporarily unavailable."
             };
         }
 
@@ -177,12 +178,14 @@ public sealed class GeminiPostCompareService(
                 (SELECT TOP 1 pi.PostImageUrl
                  FROM PostImages pi
                  WHERE pi.PostID = p.PostID
+                   AND pi.IsDeleted = 0
                  ORDER BY pi.PostImageID) AS ImageUrl
             FROM Posts p
             LEFT JOIN Categories c ON c.CategoryID = p.CategoryID
             LEFT JOIN Cities ci ON ci.CityID = p.CityID
             WHERE p.PostID IN ({inClause})
-              AND p.IsDeleted = 0;";
+              AND p.IsDeleted = 0
+              AND p.Status IN (@activeStatus, @soldStatus);";
 
         await using var connection = new SqlConnection(_dbConn.Value);
         await connection.OpenAsync(cancellationToken);
@@ -193,6 +196,8 @@ public sealed class GeminiPostCompareService(
         {
             command.Parameters.AddWithValue(paramNames[i], postIds[i]);
         }
+        command.Parameters.AddWithValue("@activeStatus", PostStatusPolicy.Active);
+        command.Parameters.AddWithValue("@soldStatus", PostStatusPolicy.Sold);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
