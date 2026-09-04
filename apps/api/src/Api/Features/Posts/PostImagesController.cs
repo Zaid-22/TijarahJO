@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Api.Common.Configuration;
+using TijarahJo.Api.Common.Authorization;
 using TijarahJo.Api.Common.Services;
 using TijarahJo.Api.Common.Utils;
 using TijarahJo.Api.Contracts.Requests;
@@ -26,6 +27,7 @@ public class PostImagesController(
     private readonly FileStorageOptions _fileStorageOptions = fileStorageOptions.Value;
 
     [HttpGet("")]
+    [Authorize(Policy = AuthorizationPolicies.PostsView)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IEnumerable<PostImageResponseDTO>>> GetAllPostImages(
@@ -57,6 +59,7 @@ public class PostImagesController(
     }
 
     [HttpGet("post/{postId:int}")]
+    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -78,6 +81,7 @@ public class PostImagesController(
     }
 
     [HttpGet("{id:int}")]
+    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -327,6 +331,7 @@ public class PostImagesController(
     }
 
     [HttpGet("Exists/{id:int}")]
+    [Authorize(Policy = AuthorizationPolicies.PostsView)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<bool>> DoesPostImageExist(int id)

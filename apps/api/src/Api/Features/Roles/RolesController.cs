@@ -15,6 +15,7 @@ namespace TijarahJo.Api.Features.Roles;
 public class RolesController(IRoleQueryHandler roleQueries, IRoleCommandService roleCommands) : ControllerBase
 {
     [HttpGet("")]
+    [Authorize(Policy = AuthorizationPolicies.AdminAccess)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IEnumerable<RoleResponseDTO>>> GetAllRoles()
@@ -37,6 +38,7 @@ public class RolesController(IRoleQueryHandler roleQueries, IRoleCommandService 
     }
 
     [HttpGet("{id:int}")]
+    [Authorize(Policy = AuthorizationPolicies.AdminAccess)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -117,6 +119,7 @@ public class RolesController(IRoleQueryHandler roleQueries, IRoleCommandService 
     }
 
     [HttpGet("Exists/{id:int}")]
+    [Authorize(Policy = AuthorizationPolicies.AdminAccess)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<bool>> DoesRoleExist(int id)
