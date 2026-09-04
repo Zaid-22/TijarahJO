@@ -1,8 +1,8 @@
 /// <reference types="vite/client" />
-import { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "sonner";
 import { AuthProvider } from "../contexts/AuthContext";
 import { serverQueryClient } from "../shared/query/queryClient";
 import { ErrorBoundary } from "../shared/ui/error-boundary";
@@ -54,14 +54,6 @@ if (typeof window !== "undefined") {
     true // Capture phase to intercept script loading errors
   );
 }
-// Use the real sonner Toaster so all `import { toast } from "sonner"` calls
-// throughout the codebase are wired to the mounted Toaster instance.
-// Previously the app mounted a custom Toaster clone while all feature code used
-// the real sonner API — the two were disconnected, causing toasts to flash and vanish.
-const Toaster = lazy(() =>
-  import("sonner").then((m) => ({ default: m.Toaster })),
-);
-
 const rootElement = document.getElementById("root");
 
 if (!rootElement) {
@@ -76,9 +68,7 @@ const appTree = (
       <AuthProvider>
         <BrowserRouter>
           <App />
-          <Suspense fallback={null}>
-            <Toaster position="top-center" richColors expand={true} />
-          </Suspense>
+          <Toaster position="top-center" richColors expand={true} />
         </BrowserRouter>
       </AuthProvider>
     </QueryClientProvider>
