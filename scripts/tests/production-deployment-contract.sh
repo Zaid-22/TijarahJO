@@ -25,6 +25,7 @@ compose_json="$(docker compose --env-file infra/.env.example \
 jq -e '
   (.services.sqlserver.ports == null) and
   (.services.api.environment.ASPNETCORE_ENVIRONMENT == "Production") and
+  (.services.api.environment.FeatureFlags__EnableRateLimiting == "true") and
   (.services.api.environment.EmailVerification__Enabled == "true") and
   (.services.api.environment.EmailVerification__ResendApiKey | length > 0) and
   (.services.api.environment.FileStorage__PrivateRootPath == "/var/lib/tijarahjo/private-uploads") and

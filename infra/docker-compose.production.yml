@@ -83,7 +83,7 @@ services:
       FileStorage__PublicBasePath: /uploads
       FeatureFlags__EnableAiComparison: "true"
       FeatureFlags__RequireRedis: "true"
-      FeatureFlags__EnableRateLimiting: ${FeatureFlags__EnableRateLimiting:-false}
+      FeatureFlags__EnableRateLimiting: ${FeatureFlags__EnableRateLimiting:-true}
       GOOGLE_AUTH_ENABLED: ${GOOGLE_AUTH_ENABLED:-true}
       GOOGLE_AUTH_CLIENT_ID: ${GOOGLE_AUTH_CLIENT_ID:?Set GOOGLE_AUTH_CLIENT_ID}
       GOOGLE_AUTH_CLIENT_SECRET: ${GOOGLE_AUTH_CLIENT_SECRET:?Set GOOGLE_AUTH_CLIENT_SECRET}
