@@ -129,8 +129,8 @@ public sealed class PasswordResetServiceTests
             service.ConfirmResetAsync(user.Email, sender.LastCode, "FirstPassword1!"),
             service.ConfirmResetAsync(user.Email, sender.LastCode, "SecondPassword1!"));
 
-        Assert.Single(results.Where(result => result.Success));
-        PasswordResetConfirmationResult rejected = Assert.Single(results.Where(result => !result.Success));
+        Assert.Single(results, result => result.Success);
+        PasswordResetConfirmationResult rejected = Assert.Single(results, result => !result.Success);
         Assert.Equal(
             PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
             rejected.FailureReason);
