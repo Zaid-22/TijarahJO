@@ -70,6 +70,11 @@ public static class PostStatusPolicy
         return (PostStatus)dbStatus == PostStatus.Blocked;
     }
 
+    public static bool IsPubliclyVisible(int dbStatus, bool isDeleted)
+    {
+        return !isDeleted && dbStatus is Active or Sold;
+    }
+
     public static bool IsAllowedPersistedStatus(int dbStatus)
     {
         return Enum.IsDefined(typeof(PostStatus), dbStatus);

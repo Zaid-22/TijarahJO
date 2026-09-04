@@ -10,11 +10,11 @@ namespace TijarahJo.Application.Services;
 
 public sealed class PostCommentService(
     IPostCommentDataAccess commentDataAccess,
-    IPostDataAccess postDataAccess,
+    IPostReadService postReads,
     ILogger<PostCommentService> logger) : IPostCommentService
 {
     private readonly IPostCommentDataAccess _commentDataAccess = commentDataAccess;
-    private readonly IPostDataAccess _postDataAccess = postDataAccess;
+    private readonly IPostReadService _postReads = postReads;
     private readonly ILogger<PostCommentService> _logger = logger;
 
     // Rate limit: max 5 comments per user per minute
@@ -47,9 +47,8 @@ public sealed class PostCommentService(
             };
         }
 
-        // Verify post exists
-        bool postExists = await _postDataAccess.DoesPostExistAsync(postId, cancellationToken);
-        if (!postExists)
+        PostReadResult postResult = await _postReads.GetByIdAsync(postId, cancellationToken);
+        if (!postResult.Success || postResult.Post == null)
         {
             return new PostCommentResult
             {
@@ -135,7 +134,7 @@ public sealed class PostCommentService(
             {
                 Success = false,
                 FailureReason = PostCommentFailureReason.PersistenceFailed,
-                Message = $"Failed to save comment: {ex.Message} | Inner: {ex.InnerException?.Message}"
+                Message = "Failed to save comment."
             };
         }
     }
@@ -150,6 +149,17 @@ public sealed class PostCommentService(
                 Success = false,
                 FailureReason = PostCommentFailureReason.InvalidRequest,
                 Message = "Invalid post ID."
+            };
+        }
+
+        PostReadResult postResult = await _postReads.GetByIdAsync(postId, cancellationToken);
+        if (!postResult.Success || postResult.Post == null)
+        {
+            return new PostCommentListResult
+            {
+                Success = false,
+                FailureReason = PostCommentFailureReason.PostNotFound,
+                Message = "Post not found."
             };
         }
 
@@ -177,6 +187,17 @@ public sealed class PostCommentService(
                 Success = false,
                 FailureReason = PostCommentFailureReason.InvalidRequest,
                 Message = "Invalid parent comment ID."
+            };
+        }
+
+        PostReadResult postResult = await _postReads.GetByIdAsync(postId, cancellationToken);
+        if (!postResult.Success || postResult.Post == null)
+        {
+            return new PostCommentListResult
+            {
+                Success = false,
+                FailureReason = PostCommentFailureReason.PostNotFound,
+                Message = "Post not found."
             };
         }
 

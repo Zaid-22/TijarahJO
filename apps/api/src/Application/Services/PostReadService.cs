@@ -26,7 +26,7 @@ public sealed class PostReadService : IPostReadService
         }
 
         Post? post = await _posts.FindAsync(postId, cancellationToken);
-        if (post == null || post.IsDeleted || PostStatusPolicy.IsModerationState(post.Status))
+        if (post == null || !PostStatusPolicy.IsPubliclyVisible(post.Status, post.IsDeleted))
         {
             return new PostReadResult
             {
@@ -55,11 +55,11 @@ public sealed class PostReadService : IPostReadService
             };
         }
 
-        bool exists = await _posts.DoesPostExistAsync(postId, cancellationToken);
+        Post? post = await _posts.FindAsync(postId, cancellationToken);
         return new PostExistsResult
         {
             Success = true,
-            Exists = exists
+            Exists = post != null && PostStatusPolicy.IsPubliclyVisible(post.Status, post.IsDeleted)
         };
     }
 
@@ -123,10 +123,8 @@ public sealed class PostReadService : IPostReadService
             };
         }
 
-        // Use DoesPostExistAsync instead of FindAsync — avoids loading the full entity
-        // just to check existence before incrementing the view counter.
-        bool exists = await _posts.DoesPostExistAsync(postId, cancellationToken);
-        if (!exists)
+        Post? post = await _posts.FindAsync(postId, cancellationToken);
+        if (post == null || !PostStatusPolicy.IsPubliclyVisible(post.Status, post.IsDeleted))
         {
             return new PostViewIncrementResult
             {
@@ -155,16 +153,6 @@ public sealed class PostReadService : IPostReadService
 
     private static bool IsPubliclyVisible(PostModel post)
     {
-        if (post.IsDeleted)
-        {
-            return false;
-        }
-
-        if (post.Status == PostStatusPolicy.Blocked)
-        {
-            return false;
-        }
-
-        return post.Status == PostStatusPolicy.Active || post.Status == PostStatusPolicy.Sold;
+        return PostStatusPolicy.IsPubliclyVisible(post.Status, post.IsDeleted);
     }
 }

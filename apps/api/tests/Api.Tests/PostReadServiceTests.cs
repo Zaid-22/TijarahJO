@@ -17,7 +17,7 @@ public sealed class PostReadServiceTests
 
         Assert.False(result.Success);
         Assert.Equal(PostReadFailureReason.InvalidRequest, result.FailureReason);
-        Assert.Equal(0, posts.DoesPostExistAsyncCalls);
+        Assert.Equal(0, posts.FindAsyncCalls);
     }
 
     [Fact]
@@ -70,13 +70,42 @@ public sealed class PostReadServiceTests
     }
 
     [Fact]
+    public async Task ExistsAsync_ReturnsFalse_WhenPostIsBlocked()
+    {
+        var blockedPost = new Post(
+            BuildPost(postId: 88, userId: 3, isDeleted: false, status: PostStatusPolicy.Blocked),
+            Post.ModeType.Update);
+        var service = new PostReadService(new FakePostService { FindAsyncResult = blockedPost });
+
+        PostExistsResult result = await service.ExistsAsync(88);
+
+        Assert.True(result.Success);
+        Assert.False(result.Exists);
+    }
+
+    [Fact]
+    public async Task IncrementViewsAsync_ReturnsNotFound_WhenPostIsBlocked()
+    {
+        var blockedPost = new Post(
+            BuildPost(postId: 88, userId: 3, isDeleted: false, status: PostStatusPolicy.Blocked),
+            Post.ModeType.Update);
+        var posts = new FakePostService { FindAsyncResult = blockedPost };
+        var service = new PostReadService(posts);
+
+        PostViewIncrementResult result = await service.IncrementViewsAsync(88);
+
+        Assert.False(result.Success);
+        Assert.Equal(PostReadFailureReason.NotFound, result.FailureReason);
+        Assert.Equal(0, posts.IncrementViewsAsyncCalls);
+    }
+
+    [Fact]
     public async Task IncrementViewsAsync_ReturnsPersistenceFailed_WhenStoreUpdateFails()
     {
         var activePost = new Post(BuildPost(postId: 9, userId: 4, isDeleted: false), Post.ModeType.Update);
         var posts = new FakePostService
         {
             FindAsyncResult = activePost,
-            DoesPostExistAsyncResult = true, // Simulate database existence check passing
             IncrementViewsAsyncResult = false
         };
         var service = new PostReadService(posts);
@@ -106,14 +135,17 @@ public sealed class PostReadServiceTests
     private sealed class FakePostService : IPostService
     {
         public Post? FindAsyncResult { get; set; }
-        public bool DoesPostExistAsyncResult { get; set; }
         public IReadOnlyList<PostModel> UserPosts { get; set; } = Array.Empty<PostModel>();
         public IReadOnlyList<PostModel> CategoryPosts { get; set; } = Array.Empty<PostModel>();
         public bool IncrementViewsAsyncResult { get; set; } = true;
-        public int DoesPostExistAsyncCalls { get; private set; }
+        public int FindAsyncCalls { get; private set; }
+        public int IncrementViewsAsyncCalls { get; private set; }
 
         public Task<Post?> FindAsync(int? postId, CancellationToken cancellationToken = default)
-            => Task.FromResult(FindAsyncResult);
+        {
+            FindAsyncCalls++;
+            return Task.FromResult(FindAsyncResult);
+        }
 
         public Post Create(PostModel model)
             => new(model);
@@ -125,13 +157,13 @@ public sealed class PostReadServiceTests
             => Task.FromResult(true);
 
         public Task<bool> DoesPostExistAsync(int? postId, CancellationToken cancellationToken = default)
-        {
-            DoesPostExistAsyncCalls++;
-            return Task.FromResult(DoesPostExistAsyncResult);
-        }
+            => throw new NotSupportedException();
 
         public Task<bool> IncrementViewsAsync(int? postId, CancellationToken cancellationToken = default)
-            => Task.FromResult(IncrementViewsAsyncResult);
+        {
+            IncrementViewsAsyncCalls++;
+            return Task.FromResult(IncrementViewsAsyncResult);
+        }
 
         public Task<IReadOnlyList<PostModel>> GetPostsByUserIdAsync(int userId, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<PostModel>>(UserPosts.Where(p => !p.IsDeleted).ToList());
