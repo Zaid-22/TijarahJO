@@ -143,7 +143,9 @@ export function ListingDetailModal({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => window.open(`/post/${post.postID}`, "_blank")}
+              onClick={() =>
+                window.open(`/post/${post.postID}`, "_blank", "noopener,noreferrer")
+              }
             >
               <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> View Public
             </Button>
