@@ -253,31 +253,18 @@ async function searchForPost(page, title) {
     name: /search in tijarahjo/i,
   });
   await searchInput.fill(title);
-  await page.evaluate((query) => {
-    window.localStorage.setItem("tijarahjo_search_query", JSON.stringify(query));
-    window.localStorage.setItem(
-      "tijarahjo_active_search_query",
-      JSON.stringify(query),
-    );
-  }, title);
   await searchInput.press("Enter");
 
-  const navigatedToSearchPage = await page
-    .waitForURL(/\/search$/, { timeout: 5_000 })
-    .then(() => true)
-    .catch(() => false);
-
-  if (!navigatedToSearchPage) {
-    await page.goto("/search");
-    await page.waitForURL(/\/search$/, { timeout: 10_000 });
-  }
+  await page.waitForURL(
+    (url) =>
+      url.pathname === "/search" && url.searchParams.get("q") === title,
+    { timeout: 10_000 },
+  );
 
   const resultTitle = page.getByRole("heading", {
     name: new RegExp(`^${escapeForRegex(title)}$`, "i"),
   });
-  await expect(resultTitle.first()).toBeVisible({
-    timeout: navigatedToSearchPage ? 20_000 : 20_000,
-  });
+  await expect(resultTitle.first()).toBeVisible({ timeout: 20_000 });
 }
 
 async function openSearchResult(page, title) {
@@ -305,13 +292,6 @@ async function openSearchResult(page, title) {
 
 async function expectPostAbsentInSearch(page, title) {
   await page.goto("/");
-  await page.evaluate((query) => {
-    window.localStorage.setItem("tijarahjo_search_query", JSON.stringify(query));
-    window.localStorage.setItem(
-      "tijarahjo_active_search_query",
-      JSON.stringify(query),
-    );
-  }, title);
   await page.goto("/search");
   await page.waitForURL(/\/search$/, { timeout: 10_000 });
   const apiBaseUrl = normalizeApiBaseUrl(process.env.VITE_API_BASE_URL);
