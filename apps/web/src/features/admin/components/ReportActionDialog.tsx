@@ -299,6 +299,7 @@ export function ReportActionDialog({
                         <Link
                           to={`/post/${report.targetID}`}
                           target="_blank"
+                          rel="noopener noreferrer"
                           className="text-xs text-primary hover:underline flex items-center gap-1 sm:hidden"
                         >
                           View <ExternalLink className="w-3 h-3" />
@@ -312,6 +313,7 @@ export function ReportActionDialog({
                       <Link
                         to={`/post/${report.targetID}`}
                         target="_blank"
+                        rel="noopener noreferrer"
                         className="text-xs text-primary hover:underline hidden sm:flex items-center gap-1"
                       >
                         View Post <ExternalLink className="w-3 h-3" />
