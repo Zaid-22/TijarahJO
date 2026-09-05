@@ -3,6 +3,7 @@
 set -uo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:5033}"
+BACKEND_LOG_FILE="${BACKEND_LOG_FILE:-/tmp/tijarahjo_bootstrap_backend.log}"
 ADMIN_TOKEN="${ADMIN_TOKEN:-}"
 CURL_CONNECT_TIMEOUT_SECONDS="${CURL_CONNECT_TIMEOUT_SECONDS:-5}"
 CURL_MAX_TIME_SECONDS="${CURL_MAX_TIME_SECONDS:-30}"
@@ -99,6 +100,35 @@ extract_jwt_cookie() {
     | tr -d '\r' \
     | sed -n 's/^Set-Cookie: jwt=\([^;]*\).*/\1/p' \
     | head -n 1
+}
+
+wait_for_email_verification_token() {
+  local email="$1"
+  local token=""
+  local attempt=0
+
+  while [ "$attempt" -lt 50 ]; do
+    if [ -f "$BACKEND_LOG_FILE" ]; then
+      token="$(awk -v recipient="Recipient=${email} " '
+        index($0, recipient) { matching_line = $0 }
+        END {
+          if (match(matching_line, /[?&]token=[^&[:space:]]+/)) {
+            print substr(matching_line, RSTART + 7, RLENGTH - 7)
+          }
+        }
+      ' "$BACKEND_LOG_FILE")"
+    fi
+
+    if [ -n "$token" ]; then
+      printf "%s" "$token"
+      return 0
+    fi
+
+    sleep 0.1
+    attempt=$((attempt + 1))
+  done
+
+  return 1
 }
 
 assert_jq() {
@@ -235,6 +265,24 @@ abort_verification() {
   exit 1
 }
 
+verify_signup_email() {
+  local name="$1"
+  local email="$2"
+  local verification_token
+  local verification_payload
+
+  VERIFIED_JWT=""
+  verification_token="$(wait_for_email_verification_token "$email" || true)"
+  require_non_empty "$verification_token" "$name.verification-token"
+  log_ok "$name.verification-token.logged"
+
+  verification_payload="$(jq -nc --arg token "$verification_token" '{Token:$token}')"
+  require_api "$name.verify-email" "POST" "/api/v1/auth/verify-email" "200" "$verification_payload"
+  VERIFIED_JWT="$(extract_jwt_cookie)"
+  require_non_empty "$VERIFIED_JWT" "$name.jwt-cookie"
+  log_ok "$name.jwt-cookie.present"
+}
+
 echo "Running full API verification against $BASE_URL"
 echo "curl timeouts: connect=${CURL_CONNECT_TIMEOUT_SECONDS}s total=${CURL_MAX_TIME_SECONDS}s"
 if [ -n "$ADMIN_TOKEN" ]; then
@@ -318,6 +366,12 @@ require_api "auth.signup.user1" "POST" "/api/v1/auth/signup" "201" "$signup1_pay
 token1=""
 user1_id="$(printf "%s" "$LAST_BODY" | jq -r '.User.Id // .User.UserID // .User.id // empty')"
 assert_jq_or_abort "auth.signup.user1.token.absent" '(.Token // null) == null'
+assert_jq_or_abort "auth.signup.user1.requires-verification" '(.RequiresEmailVerification // .requiresEmailVerification // false) == true'
+if [ -n "$(extract_jwt_cookie)" ]; then
+  abort_verification "auth.signup.user1.jwt-cookie.absent" "Signup issued a JWT before email verification."
+fi
+log_ok "auth.signup.user1.jwt-cookie.absent"
+verify_signup_email "auth.user1" "$email1"
 
 if is_positive_int "$location_city_id" && is_positive_int "$location_area_id"; then
   signup2_payload="$(jq -nc --arg e "$email2" --arg ph "$phone2" --argjson city "$location_city_id" --argjson area "$location_area_id" '{Email:$e,Password:"P@ssw0rd123",FirstName:"API",LastName:"User2",Phone:$ph,CityId:$city,AreaId:$area}')"
@@ -330,6 +384,12 @@ require_api "auth.signup.user2" "POST" "/api/v1/auth/signup" "201" "$signup2_pay
 token2=""
 user2_id="$(printf "%s" "$LAST_BODY" | jq -r '.User.Id // .User.UserID // .User.id // empty')"
 assert_jq_or_abort "auth.signup.user2.token.absent" '(.Token // null) == null'
+assert_jq_or_abort "auth.signup.user2.requires-verification" '(.RequiresEmailVerification // .requiresEmailVerification // false) == true'
+if [ -n "$(extract_jwt_cookie)" ]; then
+  abort_verification "auth.signup.user2.jwt-cookie.absent" "Signup issued a JWT before email verification."
+fi
+log_ok "auth.signup.user2.jwt-cookie.absent"
+verify_signup_email "auth.user2" "$email2"
 
 login1_payload="$(jq -nc --arg l "$email1" '{Login:$l,Password:"P@ssw0rd123"}')"
 require_api "auth.login.user1" "POST" "/api/v1/auth/login" "200" "$login1_payload"
@@ -425,15 +485,19 @@ require_api "categories.byid" "GET" "/api/v1/categories/$first_category_id" "200
 require_api "categories.exists" "GET" "/api/v1/categories/Exists/$first_category_id" "200"
 assert_jq_or_abort "categories.exists.true" '. == true'
 
-require_api "roles.all" "GET" "/api/v1/roles" "200"
-assert_jq_or_abort "roles.all.array" 'type=="array"'
-first_role_id="$(printf "%s" "$LAST_BODY" | jq -r '.[0].RoleID // empty')"
-if is_positive_int "$first_role_id"; then
-  require_api "roles.byid" "GET" "/api/v1/roles/$first_role_id" "200"
-  require_api "roles.exists" "GET" "/api/v1/roles/Exists/$first_role_id" "200"
-  assert_jq_or_abort "roles.exists.true" '. == true'
+if [ -n "$ADMIN_TOKEN" ]; then
+  require_api "roles.all.admin" "GET" "/api/v1/roles" "200" "" "$ADMIN_TOKEN"
+  assert_jq_or_abort "roles.all.admin.array" 'type=="array"'
+  first_role_id="$(printf "%s" "$LAST_BODY" | jq -r '.[0].RoleID // empty')"
+  if is_positive_int "$first_role_id"; then
+    require_api "roles.byid.admin" "GET" "/api/v1/roles/$first_role_id" "200" "" "$ADMIN_TOKEN"
+    require_api "roles.exists.admin" "GET" "/api/v1/roles/Exists/$first_role_id" "200" "" "$ADMIN_TOKEN"
+    assert_jq_or_abort "roles.exists.admin.true" '. == true'
+  else
+    log_skip "roles.byid / roles.exists (no roles returned)"
+  fi
 else
-  log_skip "roles.byid / roles.exists (no roles returned)"
+  require_api "roles.all.restricted" "GET" "/api/v1/roles" "401,403"
 fi
 
 require_api "posts.all.gone" "GET" "/api/v1/posts/All" "404,410"
@@ -469,8 +533,12 @@ assert_jq_or_abort "sellers.top.array" 'type=="array"'
 require_api "sellers.profile.user1" "GET" "/api/v1/sellers/$user1_id" "200"
 assert_jq_or_abort "sellers.profile.user1.shape" '.success==true and (.seller.id != null) and (.posts|type=="array")'
 
-require_api "postimages.all" "GET" "/api/v1/post-images" "200"
-assert_jq "postimages.all.array" 'type=="array"'
+if [ -n "$ADMIN_TOKEN" ]; then
+  require_api "postimages.all.admin" "GET" "/api/v1/post-images" "200" "" "$ADMIN_TOKEN"
+  assert_jq "postimages.all.admin.array" 'type=="array"'
+else
+  require_api "postimages.all.restricted" "GET" "/api/v1/post-images" "403" "" "$token1"
+fi
 if is_positive_int "$first_post_id"; then
   require_api "postimages.by_post" "GET" "/api/v1/post-images/post/$first_post_id" "200"
   assert_jq "postimages.by_post.array" 'type=="array"'
@@ -550,7 +618,7 @@ else
   new_post_payload="$(jq -nc --argjson uid "$user2_id" --argjson cid "$first_category_id" --arg t "$now_iso" '{PostID:null,UserID:$uid,CategoryID:$cid,PostTitle:"API test post",PostDescription:"Created by verify_all_apis.sh",Price:123.45,Status:0,CreatedAt:$t,IsDeleted:false,Views:0,Images:["https://example.com/a.jpg"]}')"
 fi
 require_api "posts.create" "POST" "/api/v1/posts" "201" "$new_post_payload" "$token2"
-new_post_id="$(printf "%s" "$LAST_BODY" | jq -r '.PostID // empty')"
+new_post_id="$(printf "%s" "$LAST_BODY" | jq -r '.PostID // .postID // .postId // empty')"
 if ! is_positive_int "$new_post_id"; then
   abort_verification "posts.create.id" "Invalid PostID in response: '$new_post_id'"
 else
@@ -640,14 +708,14 @@ else
 fi
 require_api "auth.signup.user3" "POST" "/api/v1/auth/signup" "201" "$signup3_payload"
 assert_jq_or_abort "auth.signup.user3.token.absent" '(.Token // null) == null'
-token3="$(extract_jwt_cookie)"
-user3_id="$(printf "%s" "$LAST_BODY" | jq -r '.User.Id // .User.UserID // .User.id // empty')"
-if [ -z "$token3" ]; then
-  login3_payload="$(jq -nc --arg l "$email3" '{Login:$l,Password:"P@ssw0rd123"}')"
-  require_api "auth.login.user3" "POST" "/api/v1/auth/login" "200" "$login3_payload"
-  token3="$(printf "%s" "$LAST_BODY" | jq -r '.Token // empty')"
-  if [ -z "$token3" ]; then token3="$(extract_jwt_cookie)"; fi
+assert_jq_or_abort "auth.signup.user3.requires-verification" '(.RequiresEmailVerification // .requiresEmailVerification // false) == true'
+if [ -n "$(extract_jwt_cookie)" ]; then
+  abort_verification "auth.signup.user3.jwt-cookie.absent" "Signup issued a JWT before email verification."
 fi
+log_ok "auth.signup.user3.jwt-cookie.absent"
+verify_signup_email "auth.user3" "$email3"
+token3="$VERIFIED_JWT"
+user3_id="$(printf "%s" "$LAST_BODY" | jq -r '.User.Id // .User.UserID // .User.id // empty')"
 require_non_empty "$token3" "auth.signup.user3.token"
 require_positive_int "$user3_id" "auth.signup.user3.id"
 require_api "users.delete.user3" "DELETE" "/api/v1/users/$user3_id" "200,204" "" "$token3"

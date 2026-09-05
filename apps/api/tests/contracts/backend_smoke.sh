@@ -3,6 +3,7 @@
 set -uo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:5033}"
+BACKEND_LOG_FILE="${BACKEND_LOG_FILE:-/tmp/tijarahjo_bootstrap_backend.log}"
 CURL_CONNECT_TIMEOUT_SECONDS="${CURL_CONNECT_TIMEOUT_SECONDS:-5}"
 CURL_MAX_TIME_SECONDS="${CURL_MAX_TIME_SECONDS:-30}"
 TMP_DIR="$(mktemp -d)"
@@ -115,6 +116,35 @@ extract_jwt_cookie() {
     | head -n 1
 }
 
+wait_for_email_verification_token() {
+  local email="$1"
+  local token=""
+  local attempt=0
+
+  while [ "$attempt" -lt 50 ]; do
+    if [ -f "$BACKEND_LOG_FILE" ]; then
+      token="$(awk -v recipient="Recipient=${email} " '
+        index($0, recipient) { matching_line = $0 }
+        END {
+          if (match(matching_line, /[?&]token=[^&[:space:]]+/)) {
+            print substr(matching_line, RSTART + 7, RLENGTH - 7)
+          }
+        }
+      ' "$BACKEND_LOG_FILE")"
+    fi
+
+    if [ -n "$token" ]; then
+      printf "%s" "$token"
+      return 0
+    fi
+
+    sleep 0.1
+    attempt=$((attempt + 1))
+  done
+
+  return 1
+}
+
 print_summary() {
   echo
   echo "========================================="
@@ -135,8 +165,7 @@ call_api "preflight.swagger" "GET" "/swagger/index.html" "200"
 call_api "categories.all" "GET" "/api/v1/categories" "200"
 assert_jq "categories.all.array" 'type=="array"'
 
-call_api "roles.all" "GET" "/api/v1/roles" "200"
-assert_jq "roles.all.array" 'type=="array"'
+call_api "roles.all.restricted" "GET" "/api/v1/roles" "401,403"
 
 call_api "posts.feed" "GET" "/api/v1/posts/feed?page=1&limit=5&includeDeleted=false" "200"
 assert_jq "posts.feed.shape" '.success==true and (.posts|type=="array") and (.pagination|type=="object")'
@@ -157,8 +186,26 @@ if ! [[ "$smoke_area_id" =~ ^[0-9]+$ ]]; then smoke_area_id="1"; fi
 
 signup_payload="$(jq -nc --arg e "$email" --arg p "+962702${timestamp: -6}" --argjson city "$smoke_city_id" --argjson area "$smoke_area_id" '{Email:$e,Password:"P@ssw0rd123",FirstName:"Smoke",LastName:"Test",Phone:$p,CityId:$city,AreaId:$area}')"
 call_api "auth.signup" "POST" "/api/v1/auth/signup" "201" "$signup_payload"
-token="$(extract_jwt_cookie)"
 assert_jq "auth.signup.token.absent" '(.Token // null) == null'
+assert_jq "auth.signup.requires-verification" '(.RequiresEmailVerification // .requiresEmailVerification // false) == true'
+
+signup_token="$(extract_jwt_cookie)"
+if [ -z "$signup_token" ]; then
+  log_pass "auth.signup.jwt-cookie.absent"
+else
+  log_fail "auth.signup.jwt-cookie.absent" "Signup issued a JWT before email verification."
+fi
+
+verification_token="$(wait_for_email_verification_token "$email" || true)"
+token=""
+if [ -n "$verification_token" ]; then
+  log_pass "auth.signup.verification-token.logged"
+  verification_payload="$(jq -nc --arg token "$verification_token" '{Token:$token}')"
+  call_api "auth.verify-email" "POST" "/api/v1/auth/verify-email" "200" "$verification_payload"
+  token="$(extract_jwt_cookie)"
+else
+  log_fail "auth.signup.verification-token.logged" "No verification token found for $email in $BACKEND_LOG_FILE."
+fi
 
 if [ -n "$token" ]; then
   call_api "auth.me" "GET" "/api/v1/auth/me" "200" "" "$token"

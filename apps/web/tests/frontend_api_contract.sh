@@ -95,7 +95,7 @@ if [ -n "$first_post_id" ]; then
   log_pass "posts.feed.first.id.present ($first_post_id)"
   assert_jq "posts.feed.first.shape" '.posts[0] | has("name") and has("price") and has("status") and has("images")'
   call_api "posts.by-id" "GET" "/api/v1/posts/${first_post_id}" "200"
-  assert_jq "posts.by-id.contract" '.PostID != null and .CategoryID != null and .PostTitle != null'
+  assert_jq "posts.by-id.contract" '(.PostID // .postId) != null and (.CategoryID // .categoryId) != null and (.PostTitle // .postTitle) != null'
 else
   log_fail "posts.feed.first.id.present" "No posts returned from /api/v1/posts/feed"
 fi
