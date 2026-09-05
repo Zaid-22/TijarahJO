@@ -27,7 +27,10 @@ public sealed class SellerReadService(TijarahJoDbContext dbContext, IMemoryCache
             from city in cityJoin.DefaultIfEmpty()
             join area in dbContext.Areas.AsNoTracking() on user.AreaID equals area.AreaID into areaJoin
             from area in areaJoin.DefaultIfEmpty()
-            where !user.IsDeleted && !post.IsDeleted
+            where !user.IsDeleted &&
+                  user.Status == UserStatusPolicy.Active &&
+                  !post.IsDeleted &&
+                  (post.Status == PostStatusPolicy.Active || post.Status == PostStatusPolicy.Sold)
             group post by new
             {
                 user.UserID,
@@ -50,9 +53,7 @@ public sealed class SellerReadService(TijarahJoDbContext dbContext, IMemoryCache
                 grouped.Key.JoinDate,
                 grouped.Key.CityName,
                 grouped.Key.AreaName,
-                ActiveListingsCount = grouped.Count(post =>
-                    post.Status == PostStatusPolicy.Active ||
-                    post.Status == PostStatusPolicy.Sold),
+                ActiveListingsCount = grouped.Count(),
                 TotalSalesCount = grouped.Count(post => post.Status == PostStatusPolicy.Sold),
                 TotalViews = grouped.Sum(post => (long?)post.Views) ?? 0L
             }
