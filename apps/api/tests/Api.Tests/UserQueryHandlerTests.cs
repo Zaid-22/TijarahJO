@@ -44,6 +44,68 @@ public sealed class UserQueryHandlerTests
         Assert.Equal("User with ID 42 not found.", result.Message);
     }
 
+    [Theory]
+    [InlineData(UserStatusPolicy.Banned)]
+    [InlineData(UserStatusPolicy.Inactive)]
+    public async Task GetByIdAsync_ReturnsNotFound_ForNonActivePublicProfile(int status)
+    {
+        var users = new FakeUserDataAccess
+        {
+            NextFindUser = CreateUserModel(userId: 42) with { Status = status }
+        };
+        var handler = new UserQueryHandler(users);
+
+        UserByIdQueryResult result = await handler.GetByIdAsync(new UserByIdQuery
+        {
+            TargetUserId = 42,
+            RequesterUserId = 7,
+            RequesterIsAdmin = false
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal(404, result.StatusCode);
+        Assert.Null(result.User);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ReturnsNotFound_ForDeletedPublicProfile()
+    {
+        var users = new FakeUserDataAccess
+        {
+            NextFindUser = CreateUserModel(userId: 42) with { IsDeleted = true }
+        };
+        var handler = new UserQueryHandler(users);
+
+        UserByIdQueryResult result = await handler.GetByIdAsync(new UserByIdQuery
+        {
+            TargetUserId = 42,
+            RequesterUserId = null,
+            RequesterIsAdmin = false
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal(404, result.StatusCode);
+        Assert.Null(result.User);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_AllowsAdminToViewNonActiveProfile()
+    {
+        UserModel model = CreateUserModel(userId: 42) with { Status = UserStatusPolicy.Banned };
+        var users = new FakeUserDataAccess { NextFindUser = model };
+        var handler = new UserQueryHandler(users);
+
+        UserByIdQueryResult result = await handler.GetByIdAsync(new UserByIdQuery
+        {
+            TargetUserId = 42,
+            RequesterUserId = 1,
+            RequesterIsAdmin = true
+        });
+
+        Assert.True(result.Success);
+        Assert.Equal(UserStatusPolicy.Banned, result.User?.Status);
+    }
+
     [Fact]
     public async Task GetByIdAsync_RedactsSensitiveFields_ForNonOwnerNonAdmin()
     {
@@ -160,7 +222,7 @@ public sealed class UserQueryHandlerTests
             joindate: DateTime.UtcNow,
             status: 1,
             roleid: 2,
-            isdeleted: true
+            isdeleted: false
         );
     }
 
