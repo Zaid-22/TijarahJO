@@ -140,23 +140,23 @@ public class PostImagesController(
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
-    public async Task<ActionResult> ValidatePostImage([FromForm] IFormFile file)
+    public async Task<ActionResult> ValidatePostImage([FromForm] ValidatePostImageRequest request)
     {
-        if (file == null)
+        if (request.File == null)
         {
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Image file is required.");
         }
 
         try
         {
-            postImageStorage.ValidateFileOrThrow(file);
+            postImageStorage.ValidateFileOrThrow(request.File);
         }
         catch (ArgumentException ex)
         {
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: ex.Message);
         }
 
-        ModerationResult moderationResult = await imageModeration.CheckImageAsync(file);
+        ModerationResult moderationResult = await imageModeration.CheckImageAsync(request.File);
         if (moderationResult.IsUnavailable)
         {
             return Problem(
