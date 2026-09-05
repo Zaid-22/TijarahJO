@@ -181,7 +181,12 @@ public sealed class PostDataAccessAdapter(TijarahJoDbContext dbContext) : IPostD
     {
         List<PostEntity> entities = await dbContext.Posts
             .AsNoTracking()
-            .Where(item => item.UserID == userId && !item.IsDeleted)
+            .Where(item => item.UserID == userId &&
+                           !item.IsDeleted &&
+                           dbContext.Users.Any(user =>
+                               user.UserID == item.UserID &&
+                               !user.IsDeleted &&
+                               user.Status == UserStatusPolicy.Active))
             .OrderByDescending(item => item.CreatedAt)
             .ThenByDescending(item => item.PostID)
             .Skip((Math.Max(pageNumber, 1) - 1) * Math.Clamp(pageSize, 1, 100))
@@ -195,7 +200,12 @@ public sealed class PostDataAccessAdapter(TijarahJoDbContext dbContext) : IPostD
     {
         List<PostEntity> entities = await dbContext.Posts
             .AsNoTracking()
-            .Where(item => item.CategoryID == categoryId && !item.IsDeleted)
+            .Where(item => item.CategoryID == categoryId &&
+                           !item.IsDeleted &&
+                           dbContext.Users.Any(user =>
+                               user.UserID == item.UserID &&
+                               !user.IsDeleted &&
+                               user.Status == UserStatusPolicy.Active))
             .OrderByDescending(item => item.CreatedAt)
             .ThenByDescending(item => item.PostID)
             .Skip((Math.Max(pageNumber, 1) - 1) * Math.Clamp(pageSize, 1, 100))

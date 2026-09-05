@@ -36,6 +36,7 @@ public sealed class PostListingQueryService(DatabaseConnectionString connectionS
 
         AddIntParameter(command.Parameters, "@ActiveStatus", PostStatusPolicy.Active);
         AddIntParameter(command.Parameters, "@SoldStatus", PostStatusPolicy.Sold);
+        AddIntParameter(command.Parameters, "@ActiveUserStatus", UserStatusPolicy.Active);
 
         if (!string.IsNullOrWhiteSpace(query.SearchTerm))
         {
@@ -129,6 +130,13 @@ a.AreaName LIKE @SearchPrefix ESCAPE '\'
             default:
                 filters.Add("p.IsDeleted = 0 AND p.Status IN (@ActiveStatus, @SoldStatus)");
                 break;
+        }
+
+        if (query.Visibility is PostListingVisibilityMode.PublicVisible or
+            PostListingVisibilityMode.ActiveOnly or
+            PostListingVisibilityMode.SoldOnly)
+        {
+            filters.Add("u.IsDeleted = 0 AND u.Status = @ActiveUserStatus");
         }
 
         string orderByClause = BuildOrderByClause(query.SortField, query.SortAscending);
