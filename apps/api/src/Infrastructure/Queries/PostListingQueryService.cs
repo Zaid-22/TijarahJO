@@ -25,7 +25,7 @@ public sealed class PostListingQueryService(DatabaseConnectionString connectionS
             limit = MaxPageSize;
         }
 
-        int offset = (page - 1) * limit;
+        int offset = (int)Math.Min((long)(page - 1) * limit, int.MaxValue);
         var filters = new List<string>();
 
         using var connection = new SqlConnection(_connectionString);
