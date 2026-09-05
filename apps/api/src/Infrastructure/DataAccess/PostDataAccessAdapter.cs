@@ -183,6 +183,7 @@ public sealed class PostDataAccessAdapter(TijarahJoDbContext dbContext) : IPostD
             .AsNoTracking()
             .Where(item => item.UserID == userId &&
                            !item.IsDeleted &&
+                           (item.Status == PostStatusPolicy.Active || item.Status == PostStatusPolicy.Sold) &&
                            dbContext.Users.Any(user =>
                                user.UserID == item.UserID &&
                                !user.IsDeleted &&
@@ -202,6 +203,7 @@ public sealed class PostDataAccessAdapter(TijarahJoDbContext dbContext) : IPostD
             .AsNoTracking()
             .Where(item => item.CategoryID == categoryId &&
                            !item.IsDeleted &&
+                           (item.Status == PostStatusPolicy.Active || item.Status == PostStatusPolicy.Sold) &&
                            dbContext.Users.Any(user =>
                                user.UserID == item.UserID &&
                                !user.IsDeleted &&
