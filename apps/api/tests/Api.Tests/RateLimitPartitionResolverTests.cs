@@ -67,4 +67,34 @@ public sealed class RateLimitPartitionResolverTests
 
         Assert.Equal("ip:198.51.100.9", partition);
     }
+
+    [Fact]
+    public void Resolve_UsesXForwardedFor_WhenRemoteIpIsPrivateProxyAddress()
+    {
+        var context = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity())
+        };
+        context.Connection.RemoteIpAddress = IPAddress.Parse("172.20.0.3");
+        context.Request.Headers["X-Forwarded-For"] = "203.0.113.44, 172.20.0.3";
+
+        string partition = RateLimitPartitionResolver.Resolve(context);
+
+        Assert.Equal("ip:203.0.113.44", partition);
+    }
+
+    [Fact]
+    public void Resolve_UsesXRealIp_WhenRemoteIpIsPrivateProxyAddress()
+    {
+        var context = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity())
+        };
+        context.Connection.RemoteIpAddress = IPAddress.Parse("172.20.0.3");
+        context.Request.Headers["X-Real-IP"] = "198.51.100.22";
+
+        string partition = RateLimitPartitionResolver.Resolve(context);
+
+        Assert.Equal("ip:198.51.100.22", partition);
+    }
 }

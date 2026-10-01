@@ -113,14 +113,18 @@ export function HeaderMobileMenuSheet({
         <Button
           variant="ghost"
           size="sm"
-          className="p-1 text-primary hover:bg-muted sm:p-2 md:hidden"
-          aria-label={language === "ar" ? "فتح القائمة" : "Open menu"}
+          className={cn(
+            "p-1 text-primary hover:bg-muted sm:p-2 md:hidden transition-all duration-300 z-60",
+            isOpen && "relative bg-muted rounded-lg"
+          )}
+          aria-label={language === "ar" ? "القائمة" : "Menu"}
         >
-          <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
+          <Menu className="w-5 h-5 sm:w-6 sm:h-6 transition-all duration-300" />
         </Button>
       </SheetTrigger>
       <SheetContent
         side={isRTL ? "right" : "left"}
+        hideCloseButton
         className="w-80 overflow-y-auto border-border bg-background"
       >
         <SheetHeader>
@@ -165,26 +169,7 @@ export function HeaderMobileMenuSheet({
                     onClick={() => closeAndRun(onShowAdminDashboard)}
                   />
                 )}
-                <div className="my-2 h-px bg-border" />
-                <MobileActionRow
-                  icon={LogOut}
-                  label={language === "ar" ? "تسجيل الخروج" : "Logout"}
-                  onClick={() => closeAndRun(onLogout)}
-                  danger
-                />
               </div>
-            </div>
-          ) : !authLoading ? (
-            <div className="space-y-2">
-              <Button
-                onClick={() => closeAndRun(onShowProfile)}
-                className="h-auto w-full justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-primary-foreground hover:bg-primary/90"
-              >
-                <User className="w-5 h-5" />
-                <span className="font-medium">
-                  {language === "ar" ? "تسجيل الدخول" : "Sign In"}
-                </span>
-              </Button>
             </div>
           ) : null}
 
@@ -209,6 +194,17 @@ export function HeaderMobileMenuSheet({
               })}
             </div>
           </div>
+
+          {!authLoading && isAuthenticated && (
+            <div className="mt-6 pt-4 border-t border-border">
+              <MobileActionRow
+                icon={LogOut}
+                label={language === "ar" ? "تسجيل الخروج" : "Logout"}
+                onClick={() => closeAndRun(onLogout)}
+                danger
+              />
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>

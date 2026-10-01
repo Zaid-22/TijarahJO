@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Api.Common.Authorization;
 
@@ -10,14 +11,13 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin")]
 [Authorize(Policy = AuthorizationPolicies.AdminAccess)]
-public class AdminDashboardController : ControllerBase
+public class AdminDashboardController(
+    IAdminQueryHandler adminQueries,
+    IMemoryCache cache) : ControllerBase
 {
-    private readonly IAdminQueryHandler _adminQueries;
-
-    public AdminDashboardController(IAdminQueryHandler adminQueries)
-    {
-        _adminQueries = adminQueries;
-    }
+    /// <summary>Cache TTL for dashboard stats — avoids redundant DB load on rapid admin refreshes.</summary>
+    private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(2);
+    private const string CacheKey = "admin:dashboard:stats";
 
     [HttpGet("stats")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -26,7 +26,12 @@ public class AdminDashboardController : ControllerBase
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<DashboardStatsResponse>> GetDashboardStats()
     {
-        var result = await _adminQueries.GetDashboardStatsAsync(HttpContext.RequestAborted);
+        if (cache.TryGetValue(CacheKey, out object? cached) && cached is not null)
+        {
+            return Ok(cached);
+        }
+
+        var result = await adminQueries.GetDashboardStatsAsync(HttpContext.RequestAborted);
         if (!result.Success || result.Stats == null)
         {
             return Problem(
@@ -35,6 +40,11 @@ public class AdminDashboardController : ControllerBase
                 detail: result.Message
             );
         }
+
+        cache.Set(CacheKey, result.Stats, new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = CacheDuration
+        });
 
         return Ok(result.Stats);
     }

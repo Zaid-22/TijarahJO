@@ -1,5 +1,5 @@
 import { APP_CONFIG } from "../../constants/appConfig";
-import { categoryNameToArabic } from "../../data/categoryTranslations";
+
 import { Language, Post, UserProfile } from "../../types";
 import type { PostImageInput } from "../../types/api";
 import { matchPath } from "react-router-dom";
@@ -20,6 +20,11 @@ export type CreatePostInput = {
   images?: PostImageInput[];
 };
 
+export type UpdatePostInput = CreatePostInput & {
+  id: string;
+  status: string;
+};
+
 function isFileInput(value: unknown): value is File {
   return typeof File !== "undefined" && value instanceof File;
 }
@@ -30,8 +35,33 @@ interface LoginUserData {
   lastName: string;
   email: string;
   phone?: string;
+  city?: string;
+  area?: string;
+  cityId?: number;
+  areaId?: number;
   avatar?: string;
   joinedDate?: string;
+}
+
+function normalizeIdentityValue(value: string | undefined): string {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isSameAuthenticatedUser(
+  userProfile: UserProfile,
+  userData: LoginUserData,
+): boolean {
+  const nextUserId = normalizeIdentityValue(userData.id);
+  const currentUserId = normalizeIdentityValue(userProfile.id);
+
+  if (nextUserId && currentUserId) {
+    return nextUserId === currentUserId;
+  }
+
+  const nextEmail = normalizeIdentityValue(userData.email);
+  const currentEmail = normalizeIdentityValue(userProfile.email);
+
+  return Boolean(nextEmail && currentEmail && nextEmail === currentEmail);
 }
 
 function normalizePathname(pathname: string): string {
@@ -77,12 +107,17 @@ export function shouldLoadFavoritesForPath(pathname: string): boolean {
 export const getCategoryTranslation = (
   category: string,
   language: Language,
+  categories: { name: string; nameAr: string }[] = [],
 ): string => {
-  if (language === "ar" && categoryNameToArabic[category]) {
-    return categoryNameToArabic[category];
+  if (language !== "ar" || categories.length === 0) {
+    return category;
   }
 
-  return category;
+  const match = categories.find(
+    (c) => c.name.trim().toLowerCase() === category.trim().toLowerCase(),
+  );
+
+  return match?.nameAr?.trim() || category;
 };
 
 export const decodeCategoryParam = (
@@ -109,6 +144,25 @@ export const resolveCurrentUserId = (
   }
   return null;
 };
+
+export const shouldRouteToProfileCompletion = ({
+  isAuthenticated,
+  isAuthLoading,
+  isProfileLoading,
+  isProfileComplete,
+  hasProfileError,
+}: {
+  isAuthenticated: boolean;
+  isAuthLoading: boolean;
+  isProfileLoading: boolean;
+  isProfileComplete: boolean;
+  hasProfileError: boolean;
+}): boolean =>
+  isAuthenticated &&
+  !isAuthLoading &&
+  !isProfileLoading &&
+  !hasProfileError &&
+  !isProfileComplete;
 
 const resolvePostCity = (
   userProfile: UserProfile,
@@ -161,17 +215,27 @@ export const isOwnPostForUser = (
     return false;
   }
 
-  const normalizedSellerName = String(post.seller || "")
-    .trim()
-    .toLowerCase();
-  const normalizedCurrentUserDisplayName = String(userProfile.name || "")
-    .trim()
-    .toLowerCase();
+  const normalizedSellerId = normalizeIdentityValue(post.sellerId);
+  const normalizedCurrentUserId = normalizeIdentityValue(userProfile.id);
 
-  return (
-    post.sellerId === userProfile.id ||
-    (normalizedSellerName.length > 0 &&
-      normalizedSellerName === normalizedCurrentUserDisplayName)
+  // An available stable identifier is authoritative. Display names are not
+  // unique and must never override an ID mismatch or a one-sided missing ID.
+  if (normalizedSellerId || normalizedCurrentUserId) {
+    return Boolean(
+      normalizedSellerId &&
+        normalizedCurrentUserId &&
+        normalizedSellerId === normalizedCurrentUserId,
+    );
+  }
+
+  const normalizedSellerName = normalizeIdentityValue(post.seller);
+  const normalizedCurrentUserDisplayName = normalizeIdentityValue(
+    userProfile.name,
+  );
+
+  return Boolean(
+    normalizedSellerName &&
+      normalizedSellerName === normalizedCurrentUserDisplayName,
   );
 };
 
@@ -198,7 +262,6 @@ export const toEditProfileFormProfile = (
   id: userProfile.id,
   name: userProfile.name,
   firstName: userProfile.firstName || "",
-  middleName: userProfile.middleName || "",
   lastName: userProfile.lastName || "",
   email: userProfile.email,
   phone: userProfile.phone,
@@ -207,7 +270,6 @@ export const toEditProfileFormProfile = (
   location: userProfile.location,
   bio: userProfile.bio,
   avatar: userProfile.avatar || undefined,
-  joinedDate: userProfile.joinedDate,
 });
 
 export const applyLoginUserDataToProfile = (
@@ -216,6 +278,16 @@ export const applyLoginUserDataToProfile = (
 ): UserProfile => {
   const resolvedName =
     `${userData.firstName} ${userData.lastName}`.trim() || userData.email;
+  const preserveExistingFields = isSameAuthenticatedUser(userProfile, userData);
+  const city = String(
+    userData.city || (preserveExistingFields ? userProfile.city : "") || "",
+  );
+  const area = String(
+    userData.area || (preserveExistingFields ? userProfile.area : "") || "",
+  );
+
+  const cityId = userData.cityId ?? (preserveExistingFields ? userProfile.cityId : undefined);
+  const areaId = userData.areaId ?? (preserveExistingFields ? userProfile.areaId : undefined);
 
   return {
     ...userProfile,
@@ -224,8 +296,78 @@ export const applyLoginUserDataToProfile = (
     firstName: userData.firstName,
     lastName: userData.lastName,
     email: userData.email,
-    phone: userData.phone || userProfile.phone,
-    avatar: userData.avatar || userProfile.avatar,
-    joinedDate: userData.joinedDate || userProfile.joinedDate,
+    phone: userData.phone || (preserveExistingFields ? userProfile.phone : ""),
+    city,
+    area,
+    cityId,
+    areaId,
+    location: city && area ? `${city}, ${area}` : city,
+    avatar: userData.avatar || (preserveExistingFields ? userProfile.avatar : null),
+    joinedDate:
+      userData.joinedDate || (preserveExistingFields ? userProfile.joinedDate : ""),
   };
+};
+
+export const isProfileCompleteForRouting = (
+  userProfile: {
+    phone?: string;
+    city?: string;
+    area?: string;
+    cityId?: number;
+    areaId?: number;
+  },
+): boolean =>
+  Boolean(
+    userProfile.phone?.trim() &&
+      (
+        (userProfile.city?.trim() && userProfile.area?.trim()) ||
+        (
+          Number.isInteger(userProfile.cityId) &&
+          Number(userProfile.cityId) > 0 &&
+          Number.isInteger(userProfile.areaId) &&
+          Number(userProfile.areaId) > 0
+        )
+      ),
+  );
+
+export const resolveProfileCompletionReturnPath = ({
+  pathname,
+  search = "",
+  fromPath,
+}: {
+  pathname: string;
+  search?: string;
+  fromPath?: unknown;
+}): string => {
+  const normalizeInternalPath = (value: unknown): string => {
+    if (typeof value !== "string") {
+      return "";
+    }
+
+    const normalized = value.trim();
+    return normalized.startsWith("/") &&
+      !normalized.startsWith("//") &&
+      !normalized.includes("\\")
+      ? normalized
+      : "";
+  };
+
+  const normalizedPathname = normalizeInternalPath(pathname) || "/";
+  const currentPath = `${normalizedPathname}${search}`;
+  const currentPathname = (
+    normalizedPathname.split(/[?#]/, 1)[0].replace(/\/+$/, "") || "/"
+  ).toLowerCase();
+  const statePath = normalizeInternalPath(fromPath);
+  const candidate =
+    currentPathname === "/login" || currentPathname === "/complete-profile"
+      ? statePath || "/"
+      : currentPath;
+  const candidatePathname = (
+    candidate.split(/[?#]/, 1)[0].replace(/\/+$/, "") || "/"
+  ).toLowerCase();
+
+  return candidatePathname === "/login" ||
+    candidatePathname === "/complete-profile"
+    ? "/"
+    : candidate;
 };

@@ -16,26 +16,18 @@ public sealed class ProblemDetailsResultFilter : IAsyncAlwaysRunResultFilter
         await next();
     }
 
-    private static IActionResult ConvertIfNeeded(ResultExecutingContext context, IActionResult result)
+    private static IActionResult ConvertIfNeeded(ResultExecutingContext context, IActionResult result) => result switch
     {
-        switch (result)
-        {
-            case ObjectResult objectResult:
-                return ConvertObjectResult(context, objectResult);
+        ObjectResult objectResult => ConvertObjectResult(context, objectResult),
+        StatusCodeResult statusCodeResult when statusCodeResult.StatusCode >= 400 => CreateProblemObjectResult(
+            context.HttpContext,
+            statusCodeResult.StatusCode,
+            detail: null
+        ),
+        _ => result
+    };
 
-            case StatusCodeResult statusCodeResult when statusCodeResult.StatusCode >= 400:
-                return CreateProblemObjectResult(
-                    context.HttpContext,
-                    statusCodeResult.StatusCode,
-                    detail: null
-                );
-
-            default:
-                return result;
-        }
-    }
-
-    private static IActionResult ConvertObjectResult(ResultExecutingContext context, ObjectResult objectResult)
+    private static ObjectResult ConvertObjectResult(ResultExecutingContext context, ObjectResult objectResult)
     {
         int statusCode = objectResult.StatusCode ?? context.HttpContext.Response.StatusCode;
         if (statusCode < 400)

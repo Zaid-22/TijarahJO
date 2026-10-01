@@ -14,12 +14,10 @@ public static class AuthorizationPolicies
     public const string ReviewsModerate = "ReviewsModerate";
     public const string ReportsView = "ReportsView";
     public const string ReportsResolve = "ReportsResolve";
-    public const string ChatView = "ChatView";
     public const string LocationsManage = "LocationsManage";
     public const string BannersManage = "BannersManage";
     public const string SettingsManage = "SettingsManage";
     public const string AuditView = "AuditView";
-    public const string FraudView = "FraudView";
     public const string RolesManage = "RolesManage";
     public const string CategoriesManage = "CategoriesManage";
 }

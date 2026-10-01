@@ -8,7 +8,7 @@ PORT=${1:-5033}
 
 echo "🔍 Checking for processes on port $PORT..."
 
-PID=$(lsof -ti:$PORT)
+PID=$(lsof -nP -tiTCP:$PORT -sTCP:LISTEN)
 
 if [ -z "$PID" ]; then
     echo "✅ Port $PORT is free - no process found"

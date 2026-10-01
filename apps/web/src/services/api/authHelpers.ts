@@ -6,6 +6,7 @@ import {
 } from "./client";
 import { asRecord, readString, toBoolean } from "./normalizers";
 import { parseAuthEnvelope, type ParsedAuthUser } from "./schemas/authSchema";
+import { normalizeSignupConstraintMessage } from "./signupErrorMessages";
 
 export type AuthApiError = {
   code: string;
@@ -29,6 +30,7 @@ export type AuthApiResponse = {
   message?: string;
   requiresTwoFactor?: boolean;
   twoFactorToken?: string;
+  requiresEmailVerification?: boolean;
   error?: AuthApiError;
 };
 
@@ -106,28 +108,6 @@ function extractMessageFromErrorDetails(details: unknown): string {
       detailsRecord.Detail ??
       detailsRecord.detail,
   );
-}
-
-function isUniqueConstraintError(message: string): boolean {
-  return (
-    message.includes("UNIQUE KEY constraint") || message.includes("UQ_TbUsers")
-  );
-}
-
-function mapSignupConstraintMessage(message: string): string {
-  if (!isUniqueConstraintError(message)) {
-    return message;
-  }
-
-  if (
-    message.includes("UQ_TbUsers_E") ||
-    message.includes("UQ_TbUsers_Email") ||
-    message.includes("Email")
-  ) {
-    return "An account with this email address already exists. Please use a different email or try logging in.";
-  }
-
-  return "An account with this information already exists. Please check your details and try again.";
 }
 
 export function resolveMessageFromPayload(payload: unknown, fallback: string): string {
@@ -221,7 +201,7 @@ export function resolveAuthFailureMessage<T>(
   }
 
   if (normalizeSignupConstraint) {
-    return mapSignupConstraintMessage(baseMessage);
+    return normalizeSignupConstraintMessage(baseMessage);
   }
 
   return baseMessage;
@@ -262,6 +242,16 @@ export function handleAuthSuccessPayload(
       message:
         parsedPayload.message ||
         "Two-factor verification is required to complete sign in.",
+    };
+  }
+
+  if (parsedPayload.requiresEmailVerification) {
+    return {
+      success: true,
+      requiresEmailVerification: true,
+      message:
+        parsedPayload.message ||
+        "Please verify your email address.",
     };
   }
 

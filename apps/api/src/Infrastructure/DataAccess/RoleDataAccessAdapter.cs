@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using TijarahJo.Domain.Models;
 using TijarahJo.Application.Abstractions.DataAccess;
 using TijarahJo.Application.Common;
@@ -8,15 +8,10 @@ using TijarahJo.Infrastructure.Persistence;
 
 namespace TijarahJo.Infrastructure.DataAccess;
 
-
-public sealed class RoleDataAccessAdapter : IRoleDataAccess
+public sealed class RoleDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<RoleDataAccessAdapter> logger) : IRoleDataAccess
 {
-    private readonly TijarahJoDbContext _dbContext;
-
-    public RoleDataAccessAdapter(TijarahJoDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
+    private readonly TijarahJoDbContext _dbContext = dbContext;
+    private readonly ILogger<RoleDataAccessAdapter> _logger = logger;
 
     public RoleModel GetRoleByID(int? roleId)
     {
@@ -55,8 +50,16 @@ public sealed class RoleDataAccessAdapter : IRoleDataAccess
 
         _dbContext.Roles.Add(entity);
         _dbContext.AuditActorUserId = null; // system operation
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        return entity.RoleID;
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return entity.RoleID;
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Failed to add role {RoleName}", role.RoleName);
+            return 0;
+        }
     }
 
     public async Task<bool> UpdateRoleAsync(RoleModel role, CancellationToken cancellationToken = default)
@@ -78,8 +81,16 @@ public sealed class RoleDataAccessAdapter : IRoleDataAccess
         entity.IsDeleted = role.IsDeleted;
 
         _dbContext.AuditActorUserId = null;
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        return true;
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Failed to update role {RoleId}", role.RoleID);
+            return false;
+        }
     }
 
     public async Task<bool> DeleteRoleAsync(int? roleId, CancellationToken cancellationToken = default)
@@ -103,7 +114,15 @@ public sealed class RoleDataAccessAdapter : IRoleDataAccess
 
         entity.IsDeleted = true;
         _dbContext.AuditActorUserId = null;
-        return await _dbContext.SaveChangesAsync(cancellationToken) > 0;
+        try
+        {
+            return await _dbContext.SaveChangesAsync(cancellationToken) > 0;
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Failed to delete role {RoleId}", roleId);
+            return false;
+        }
     }
 
     public bool DoesRoleExist(int? roleId)
@@ -122,14 +141,35 @@ public sealed class RoleDataAccessAdapter : IRoleDataAccess
                    .AnyAsync(item => item.RoleID == roleId.Value, cancellationToken);
     }
 
+    public async Task<bool> IsRoleNameTakenAsync(
+        string roleName,
+        int? excludeRoleId = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(roleName))
+        {
+            return false;
+        }
+
+        string normalizedRoleName = roleName.Trim();
+        return await _dbContext.Roles
+            .AsNoTracking()
+            .AnyAsync(
+                item => !item.IsDeleted
+                        && item.RoleName == normalizedRoleName
+                        && (!excludeRoleId.HasValue || item.RoleID != excludeRoleId.Value),
+                cancellationToken);
+    }
+
     public IReadOnlyList<RoleModel> GetAllRoles()
     {
-        return _dbContext.Roles
+        var roles = _dbContext.Roles
             .AsNoTracking()
             .Where(item => !item.IsDeleted)
             .OrderBy(item => item.RoleID)
-            .Select(ToModel)
-            .ToList();
+            .Select(ToModel);
+
+        return [.. roles];
     }
 
     public async Task<IReadOnlyList<RoleModel>> GetAllRolesAsync(CancellationToken cancellationToken = default)
@@ -140,7 +180,7 @@ public sealed class RoleDataAccessAdapter : IRoleDataAccess
             .OrderBy(item => item.RoleID)
             .ToListAsync(cancellationToken);
 
-        return entities.Select(ToModel).ToList();
+        return [.. entities.Select(ToModel)];
     }
 
     private static RoleModel ToModel(RoleEntity entity)

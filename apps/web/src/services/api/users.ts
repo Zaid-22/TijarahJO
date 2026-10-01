@@ -2,81 +2,19 @@ import { toPositiveIntegerId } from "../../utils/idValidation";
 import { apiRequest, debugError, debugLog } from "./client";
 import { locationsApi } from "./locations";
 import { readString, toIntegerOrDefault, toRecord } from "./normalizers";
-import { parseUserSchema, parseUsersCollection } from "./schemas/userSchema";
+import { parseUsersCollection } from "./schemas/userSchema";
 import { resolveCityId, resolveAreaId } from "./posts/lookups";
+import {
+  type AdminUserRecord,
+  type MutableUserFields,
+  type RawUser,
+  type UserProfileRecord,
+  normalizeAdminUser,
+  normalizeUserProfile,
+  resolveMutableUserFields,
+} from "./users.shared";
 
-type RawUser = {
-  Id?: unknown;
-  id?: unknown;
-  UserID?: unknown;
-  userID?: unknown;
-  Email?: unknown;
-  email?: unknown;
-  FirstName?: unknown;
-  firstName?: unknown;
-  LastName?: unknown;
-  lastName?: unknown;
-  Phone?: unknown;
-  phone?: unknown;
-  City?: unknown;
-  city?: unknown;
-  Area?: unknown;
-  area?: unknown;
-  Bio?: unknown;
-  bio?: unknown;
-  Avatar?: unknown;
-  avatar?: unknown;
-  JoinedDate?: unknown;
-  joinedDate?: unknown;
-  JoinDate?: unknown;
-  joinDate?: unknown;
-  Status?: unknown;
-  status?: unknown;
-  RoleID?: unknown;
-  roleID?: unknown;
-  IsDeleted?: unknown;
-  isDeleted?: unknown;
-  CityId?: unknown;
-  cityId?: unknown;
-  AreaId?: unknown;
-  areaId?: unknown;
-};
-
-type UserProfileRecord = {
-  id: string;
-  userId?: number;
-  email: string;
-  firstName: string;
-  lastName: string;
-  phone: string;
-  city: string;
-  area: string;
-  bio: string;
-  avatar?: string;
-  joinedAt: string;
-  status: number;
-  roleId: number;
-  isDeleted: boolean;
-  name: string;
-};
-
-export type AdminUserRecord = {
-  rawStatus: number;
-  isDeleted: boolean;
-  id: string;
-  name: string;
-  email: string;
-  role: "admin" | "user";
-  status: "active" | "banned";
-  joinedDate: string;
-  joinedAt: string;
-  firstName: string;
-  lastName: string;
-  phone: string;
-  city: string;
-  avatar?: string;
-  raw: RawUser;
-};
+export type { AdminUserRecord } from "./users.shared";
 
 type DeleteUserResponse = {
   message?: unknown;
@@ -90,86 +28,14 @@ function normalizeUserId(userId: string): number | undefined {
   return toPositiveIntegerId(userId);
 }
 
-function normalizeUserProfile(
+function hasMatchingUserIdentity(
   user: RawUser,
-  fallbackUserId: string,
-): UserProfileRecord | null {
-  const parsedUser = parseUserSchema(user, fallbackUserId);
-  if (!parsedUser) {
-    return null;
-  }
-
-  return {
-    id: parsedUser.id,
-    userId: parsedUser.userId,
-    email: parsedUser.email,
-    firstName: parsedUser.firstName,
-    lastName: parsedUser.lastName,
-    phone: parsedUser.phone,
-    city: parsedUser.city,
-    area: parsedUser.area,
-    bio: parsedUser.bio,
-    avatar: parsedUser.avatar,
-    joinedAt: parsedUser.joinedAt,
-    status: parsedUser.status,
-    roleId: parsedUser.roleId,
-    isDeleted: parsedUser.isDeleted,
-    name: `${parsedUser.firstName} ${parsedUser.lastName}`.trim(),
-  };
-}
-
-function normalizeAdminUser(user: RawUser): AdminUserRecord | null {
-  const parsedUser = parseUserSchema(user);
-  if (!parsedUser) {
-    return null;
-  }
-
-  return {
-    rawStatus: parsedUser.status,
-    isDeleted: parsedUser.isDeleted,
-    id: parsedUser.id,
-    name: `${parsedUser.firstName} ${parsedUser.lastName}`.trim(),
-    email: parsedUser.email,
-    role: parsedUser.roleId === 1 ? "admin" : "user",
-    status:
-      parsedUser.status === 1 && !parsedUser.isDeleted ? "active" : "banned",
-    joinedDate: parsedUser.joinedDate,
-    joinedAt: parsedUser.joinedAt,
-    firstName: parsedUser.firstName,
-    lastName: parsedUser.lastName,
-    phone: parsedUser.phone,
-    city: parsedUser.city,
-    avatar: parsedUser.avatar,
-    raw: parsedUser.raw as RawUser,
-  };
-}
-
-type MutableUserFields = {
-  email: string;
-  firstName: string;
-  lastName: string;
-  isDeleted: boolean;
-};
-
-function resolveMutableUserFields(
-  user: UserProfileRecord | null,
-): MutableUserFields | null {
-  if (!user) {
-    return null;
-  }
-
-  const email = user.email;
-  const firstName = user.firstName;
-  if (!email || !firstName) {
-    return null;
-  }
-
-  return {
-    email,
-    firstName,
-    lastName: user.lastName || "",
-    isDeleted: user.isDeleted,
-  };
+  expectedUserId: number,
+): boolean {
+  const responseUserId = toPositiveIntegerId(
+    user.Id ?? user.id ?? user.UserID ?? user.userID,
+  );
+  return responseUserId === expectedUserId;
 }
 
 async function updateUserWithAdminPatch(
@@ -200,6 +66,9 @@ async function updateUserWithAdminPatch(
   }
 }
 
+// In-flight deduplication — prevents concurrent duplicate requests to the user profile endpoint
+const _userInflight: Map<number, Promise<UserProfileRecord | null>> = new Map();
+
 export const usersApi = {
   /**
    * Get user profile by ID
@@ -207,44 +76,75 @@ export const usersApi = {
   getUser: async (userId: string) => {
     const normalizedUserId = normalizeUserId(userId);
     if (!normalizedUserId) {
-      return null;
+      throw new Error("Invalid user ID");
     }
 
-    const response = await apiRequest<RawUser>(`/users/${normalizedUserId}`, {
-      method: "GET",
-    });
+    let inflight = _userInflight.get(normalizedUserId);
+    if (inflight) {
+      return inflight;
+    }
 
-    if (response.success && response.data) {
-      const rawUser = response.data;
-      
-      // Resolve City and Area IDs to names if they are present but names are missing
-      const cityId = rawUser.CityId ?? rawUser.cityId;
-      const areaId = rawUser.AreaId ?? rawUser.areaId;
-      
-      if (typeof cityId === 'number' && typeof rawUser.City !== 'string') {
-        try {
-          const cities = await locationsApi.getCities();
-          const city = cities.find((c) => c.cityId === cityId);
-          if (city) {
-            rawUser.City = city.cityName;
-            
-            if (typeof areaId === 'number' && typeof rawUser.Area !== 'string') {
-              const areas = await locationsApi.getAreasByCity(cityId);
-              const area = areas.find((a) => a.areaId === areaId);
-              if (area) {
-                rawUser.Area = area.areaName;
+    inflight = (async () => {
+      const response = await apiRequest<RawUser>(`/users/${normalizedUserId}`, {
+        method: "GET",
+      });
+
+      if (response.success && response.data) {
+        const rawUser = response.data;
+        if (!hasMatchingUserIdentity(rawUser, normalizedUserId)) {
+          throw new Error("Invalid user profile response");
+        }
+        
+        // Resolve City and Area IDs to names if they are present but names are missing
+        const cityId = rawUser.CityId ?? rawUser.cityId;
+        const areaId = rawUser.AreaId ?? rawUser.areaId;
+        
+        if (typeof cityId === 'number' && typeof rawUser.City !== 'string') {
+          try {
+            const cities = await locationsApi.getCities();
+            const city = cities.find((c) => c.cityId === cityId);
+            if (city) {
+              rawUser.City = city.cityName;
+              
+              if (typeof areaId === 'number' && typeof rawUser.Area !== 'string') {
+                const areas = await locationsApi.getAreasByCity(cityId);
+                const area = areas.find((a) => a.areaId === areaId);
+                if (area) {
+                  rawUser.Area = area.areaName;
+                }
               }
             }
+          } catch (err) {
+            debugError("[getUser] Failed to resolve location names:", err);
           }
-        } catch (err) {
-          debugError("[getUser] Failed to resolve location names:", err);
         }
+
+        const normalizedUser = normalizeUserProfile(
+          rawUser,
+          String(normalizedUserId),
+        );
+        if (!normalizedUser) {
+          throw new Error("Invalid user profile response");
+        }
+
+        return normalizedUser;
       }
 
-      return normalizeUserProfile(rawUser, String(normalizedUserId));
-    }
+      if (!response.success && response.error.code === "HTTP_404") {
+        return null;
+      }
 
-    return null;
+      throw new Error(
+        response.success
+          ? "Invalid user profile response"
+          : response.error.message || "Failed to load user profile",
+      );
+    })().finally(() => {
+      _userInflight.delete(normalizedUserId);
+    });
+
+    _userInflight.set(normalizedUserId, inflight);
+    return inflight;
   },
 
   /**
@@ -291,6 +191,17 @@ export const usersApi = {
       throw new Error("Invalid user ID");
     }
 
+    // Validate client-side before uploading to avoid a silent Nginx 413 rejection.
+    const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5 MB
+    if (file.size > MAX_AVATAR_BYTES) {
+      throw new Error(
+        `Avatar image is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Maximum allowed size is 5 MB.`,
+      );
+    }
+    if (!file.type.startsWith("image/")) {
+      throw new Error("Only image files are allowed (JPG, PNG, WebP, GIF).");
+    }
+
     const formData = new FormData();
     formData.append("File", file);
 
@@ -320,7 +231,7 @@ export const usersApi = {
     success: boolean;
     users: AdminUserRecord[];
   }> => {
-    const response = await apiRequest<RawUser[]>("/users", {
+    const response = await apiRequest<RawUser[]>("/users?page=1&pageSize=1000", {
       method: "GET",
     });
 
@@ -465,7 +376,7 @@ export const usersApi = {
   exists: async (userId: string): Promise<boolean> => {
     const normalizedUserId = normalizeUserId(userId);
     if (!normalizedUserId) {
-      return false;
+      throw new Error("Invalid user ID");
     }
 
     const response = await apiRequest<boolean>(
@@ -474,7 +385,15 @@ export const usersApi = {
         method: "GET",
       },
     );
-    return response.success ? Boolean(response.data) : false;
+    if (!response.success) {
+      throw new Error(response.error.message || "Failed to verify user");
+    }
+
+    if (typeof response.data !== "boolean") {
+      throw new Error("Invalid user existence response");
+    }
+
+    return response.data;
   },
 
   /**
@@ -497,6 +416,7 @@ export const usersApi = {
       {
         Status: nextStatus,
         IsDeleted: status === "active" ? false : mutableFields.isDeleted,
+        ClearSuspension: status === "active" ? true : undefined,
       },
       "update user status",
       mutableFields,
@@ -508,12 +428,16 @@ export const usersApi = {
    */
   updateUserRole: async (
     userId: string,
-    role: "admin" | "user",
+    roleId: number,
   ): Promise<boolean> => {
-    const nextRole = role === "admin" ? 1 : 2;
+    if (!Number.isInteger(roleId) || roleId < 1) {
+      debugError("Failed to update user role: invalid role ID", roleId);
+      return false;
+    }
+
     return updateUserWithAdminPatch(
       userId,
-      { RoleID: nextRole },
+      { RoleID: roleId },
       "update user role",
     );
   },

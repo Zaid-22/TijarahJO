@@ -15,7 +15,7 @@ public sealed class DashboardStatsModel
     public int TotalReviews { get; init; }
     public double AverageRating { get; init; }
     public int SoldPosts { get; init; }
-    public System.Collections.Generic.IReadOnlyList<RecentAdminAction> RecentActions { get; init; } = System.Array.Empty<RecentAdminAction>();
+    public System.Collections.Generic.IReadOnlyList<RecentAdminAction> RecentActions { get; init; } = [];
 }
 
 public sealed class RecentAdminAction
@@ -49,15 +49,15 @@ public sealed class AdminPostItem
 
 public sealed class AdminPostListResult
 {
-    public System.Collections.Generic.IReadOnlyList<AdminPostItem> Posts { get; init; } = System.Array.Empty<AdminPostItem>();
+    public System.Collections.Generic.IReadOnlyList<AdminPostItem> Posts { get; init; } = [];
     public int TotalCount { get; init; }
 }
 
 public sealed class AdminUserDetails
 {
     public AdminUserProfile? User { get; init; }
-    public System.Collections.Generic.IReadOnlyList<AdminPostItem> RecentPosts { get; init; } = System.Array.Empty<AdminPostItem>();
-    public System.Collections.Generic.IReadOnlyList<TijarahJo.Domain.Models.ReviewModel> RecentReviews { get; init; } = System.Array.Empty<TijarahJo.Domain.Models.ReviewModel>();
+    public System.Collections.Generic.IReadOnlyList<AdminPostItem> RecentPosts { get; init; } = [];
+    public System.Collections.Generic.IReadOnlyList<TijarahJo.Domain.Models.ReviewModel> RecentReviews { get; init; } = [];
 }
 
 public sealed class AdminUserProfile
@@ -73,6 +73,7 @@ public sealed class AdminUserProfile
     public string? Avatar { get; init; }
     public System.DateTime JoinDate { get; init; }
     public int Status { get; init; }
+    public System.DateTime? SuspendedUntil { get; init; }
     public int RoleID { get; init; }
     public bool IsDeleted { get; init; }
     public bool TwoFactorEnabled { get; init; }
@@ -94,7 +95,7 @@ public sealed class AdminReviewItem
 
 public sealed class AdminReviewListResult
 {
-    public System.Collections.Generic.IReadOnlyList<AdminReviewItem> Reviews { get; init; } = System.Array.Empty<AdminReviewItem>();
+    public System.Collections.Generic.IReadOnlyList<AdminReviewItem> Reviews { get; init; } = [];
     public int TotalCount { get; init; }
 }
 
@@ -106,7 +107,7 @@ public sealed class AdminPostCommentItem
     public int UserID { get; init; }
     public string AuthorName { get; init; } = string.Empty;
     public int? ParentCommentID { get; init; }
-    public int ReplyCount { get; init; }
+    public int ReplyCount { get; set; }
     public string Content { get; init; } = string.Empty;
     public System.DateTime CreatedAt { get; init; }
     public System.DateTime UpdatedAt { get; init; }
@@ -114,7 +115,7 @@ public sealed class AdminPostCommentItem
 
 public sealed class AdminPostCommentListResult
 {
-    public System.Collections.Generic.IReadOnlyList<AdminPostCommentItem> Comments { get; init; } = System.Array.Empty<AdminPostCommentItem>();
+    public System.Collections.Generic.IReadOnlyList<AdminPostCommentItem> Comments { get; init; } = [];
     public int TotalCount { get; init; }
 }
 
@@ -135,11 +136,28 @@ public sealed class AdminAuditLogItem
 
 public sealed class AdminAuditLogResult
 {
-    public System.Collections.Generic.IReadOnlyList<AdminAuditLogItem> Entries { get; init; } = System.Array.Empty<AdminAuditLogItem>();
+    public System.Collections.Generic.IReadOnlyList<AdminAuditLogItem> Entries { get; init; } = [];
     public int TotalCount { get; init; }
 }
 
-public interface IAdminDataAccess
+public interface IAdminLocationDataAccess
+{
+    Task<System.Collections.Generic.IReadOnlyList<AdminCityItem>> GetCitiesWithAreasAsync(CancellationToken cancellationToken = default);
+    Task<int> CreateCityAsync(string cityName, string cityNameAr, CancellationToken cancellationToken = default);
+    Task<bool> UpdateCityAsync(int cityId, string cityName, string cityNameAr, CancellationToken cancellationToken = default);
+    Task<bool> DeleteCityAsync(int cityId, CancellationToken cancellationToken = default);
+    Task<int> CreateAreaAsync(int cityId, string areaName, string areaNameAr, CancellationToken cancellationToken = default);
+    Task<bool> UpdateAreaAsync(int areaId, string areaName, string areaNameAr, CancellationToken cancellationToken = default);
+    Task<bool> DeleteAreaAsync(int areaId, CancellationToken cancellationToken = default);
+}
+
+public interface IAdminReportDataAccess
+{
+    Task<AdminReportListResult> GetReportsAsync(int? status = null, string? reportType = null, string? search = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
+    Task<bool> UpdateReportStatusAsync(int reportId, int newStatus, int adminUserId, string? resolutionNotes = null, CancellationToken cancellationToken = default);
+}
+
+public interface IAdminDataAccess : IAdminLocationDataAccess, IAdminReportDataAccess
 {
     Task<DashboardStatsModel> GetDashboardStatsAsync(CancellationToken cancellationToken = default);
     Task<AdminPostListResult> GetAdminPostsAsync(AdminPostFilter filter, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
@@ -149,28 +167,16 @@ public interface IAdminDataAccess
     // Phase 2
     Task<AdminReviewListResult> GetAdminReviewsAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
     Task<bool> SoftDeleteReviewAsync(int reviewId, int adminUserId, CancellationToken cancellationToken = default);
-    Task<AdminPostCommentListResult> GetAdminPostCommentsAsync(string? search = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
+    Task<AdminPostCommentListResult> GetAdminPostCommentsAsync(string? search = null, int? userId = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
     Task<bool> SoftDeletePostCommentAsync(int commentId, int adminUserId, CancellationToken cancellationToken = default);
+    Task<bool> SoftDeletePostAsync(int postId, int adminUserId, CancellationToken cancellationToken = default);
     Task<AdminAuditLogResult> GetAuditLogsAsync(string? tableName = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
 
     // Phase 3
     Task<System.Collections.Generic.IReadOnlyList<SystemSettingItem>> GetAllSettingsAsync(CancellationToken cancellationToken = default);
     Task<bool> UpdateSettingAsync(string key, string value, CancellationToken cancellationToken = default);
-    Task<AdminConversationListResult> GetConversationsAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
-    Task<AdminConversationDetail?> GetConversationMessagesAsync(int conversationId, CancellationToken cancellationToken = default);
-
-    // Locations CRUD
-    Task<System.Collections.Generic.IReadOnlyList<AdminCityItem>> GetCitiesWithAreasAsync(CancellationToken cancellationToken = default);
-    Task<int> CreateCityAsync(string cityName, string cityNameAr, CancellationToken cancellationToken = default);
-    Task<bool> UpdateCityAsync(int cityId, string cityName, string cityNameAr, CancellationToken cancellationToken = default);
-    Task<bool> DeleteCityAsync(int cityId, CancellationToken cancellationToken = default);
-    Task<int> CreateAreaAsync(int cityId, string areaName, string areaNameAr, CancellationToken cancellationToken = default);
-    Task<bool> UpdateAreaAsync(int areaId, string areaName, string areaNameAr, CancellationToken cancellationToken = default);
-    Task<bool> DeleteAreaAsync(int areaId, CancellationToken cancellationToken = default);
-
-    // Reports
-    Task<AdminReportListResult> GetReportsAsync(int? status = null, string? reportType = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
-    Task<bool> UpdateReportStatusAsync(int reportId, int newStatus, int adminUserId, string? resolutionNotes = null, CancellationToken cancellationToken = default);
+    // User Suspension
+    Task<bool> SuspendUserAsync(int userId, System.DateTime? suspendedUntil, int adminUserId, CancellationToken cancellationToken = default);
 }
 
 // ── Phase 3: System Settings ──
@@ -184,42 +190,6 @@ public sealed class SystemSettingItem
     public string ValueType { get; init; } = "bool";
     public string? Description { get; init; }
     public System.DateTime UpdatedAt { get; init; }
-}
-
-// ── Phase 3: Chat Inspection ──
-
-public sealed class AdminConversationItem
-{
-    public int ConversationID { get; init; }
-    public int User1ID { get; init; }
-    public string User1Name { get; init; } = string.Empty;
-    public int User2ID { get; init; }
-    public string User2Name { get; init; } = string.Empty;
-    public int? PostID { get; init; }
-    public System.DateTime? LastMessageAt { get; init; }
-    public int MessageCount { get; init; }
-}
-
-public sealed class AdminConversationListResult
-{
-    public System.Collections.Generic.IReadOnlyList<AdminConversationItem> Conversations { get; init; } = System.Array.Empty<AdminConversationItem>();
-    public int TotalCount { get; init; }
-}
-
-public sealed class AdminMessageItem
-{
-    public int MessageID { get; init; }
-    public int SenderID { get; init; }
-    public string SenderName { get; init; } = string.Empty;
-    public string Content { get; init; } = string.Empty;
-    public System.DateTime CreatedAt { get; init; }
-    public bool IsRead { get; init; }
-}
-
-public sealed class AdminConversationDetail
-{
-    public AdminConversationItem Conversation { get; init; } = new();
-    public System.Collections.Generic.IReadOnlyList<AdminMessageItem> Messages { get; init; } = System.Array.Empty<AdminMessageItem>();
 }
 
 // ── Locations ──
@@ -237,7 +207,7 @@ public sealed class AdminCityItem
     public int CityID { get; init; }
     public string CityName { get; init; } = string.Empty;
     public string CityNameAr { get; init; } = string.Empty;
-    public System.Collections.Generic.IReadOnlyList<AdminAreaItem> Areas { get; init; } = System.Array.Empty<AdminAreaItem>();
+    public System.Collections.Generic.IReadOnlyList<AdminAreaItem> Areas { get; init; } = [];
 }
 
 // ── Reports ──
@@ -250,8 +220,14 @@ public sealed class AdminReportItem
     public string? TargetLabel { get; init; }
     public string Reason { get; init; } = string.Empty;
     public string? Description { get; init; }
+    public string? ImageUrl { get; set; }
     public int ReporterUserID { get; init; }
     public string ReporterName { get; init; } = string.Empty;
+    public string ReporterEmail { get; init; } = string.Empty;
+    public int? TargetUserID { get; init; }
+    public string? TargetUserName { get; init; }
+    public int? TargetUserStatus { get; init; }
+    public System.DateTime? TargetUserSuspendedUntil { get; init; }
     public int Status { get; init; }
     public string StatusLabel { get; init; } = string.Empty;
     public int? ResolvedByUserID { get; init; }
@@ -263,6 +239,6 @@ public sealed class AdminReportItem
 
 public sealed class AdminReportListResult
 {
-    public System.Collections.Generic.IReadOnlyList<AdminReportItem> Reports { get; init; } = System.Array.Empty<AdminReportItem>();
+    public System.Collections.Generic.IReadOnlyList<AdminReportItem> Reports { get; init; } = [];
     public int TotalCount { get; init; }
 }

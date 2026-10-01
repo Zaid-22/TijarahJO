@@ -48,6 +48,7 @@ export function renderMarketplaceRouteGroup({
   } as const;
   const sharedPostRouteProps = {
     availablePosts: routeState.availablePosts,
+    isLoadingPosts: routeState.isLoadingPostsFromRouteData,
     favoriteIds: routeState.favoriteIds,
     onFavoriteToggle: routeState.toggleFavorite,
   } as const;

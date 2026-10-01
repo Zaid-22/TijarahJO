@@ -6,6 +6,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 API_BASE_URL="${API_BASE_URL:-http://localhost:5033}"
 DB_CONTAINER_NAME="${DB_CONTAINER_NAME:-tijarahjo-db}"
 SQLCMD_IN_CONTAINER="${SQLCMD_IN_CONTAINER:-/opt/mssql-tools18/bin/sqlcmd}"
+SQLCMD_UTF8_FLAGS=(-f 65001)
 MSSQL_SA_PASSWORD="${MSSQL_SA_PASSWORD:-}"
 
 ADMIN_EMAIL=""
@@ -218,7 +219,7 @@ WHERE u.Email = N'$escaped_email'
 ORDER BY u.UserID DESC;
 SQL
 
-printf "%s\n" "$promote_sql" | docker exec -i "$DB_CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" \
+printf "%s\n" "$promote_sql" | docker exec -i "$DB_CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" "${SQLCMD_UTF8_FLAGS[@]}" \
   -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -b -W -s "|"
 
 echo

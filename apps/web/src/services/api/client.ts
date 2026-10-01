@@ -2,6 +2,12 @@ import { APP_CONFIG } from "../../constants/appConfig";
 import { ApiResponse } from "../../types/api";
 import { logger } from "../../shared/lib/logger";
 import { shouldPrimeCsrfForEndpoint } from "./csrfPolicy";
+import {
+  AUTH_LOGOUT_KEY,
+  AUTH_SESSION_HINT_KEY,
+  AUTH_ADMIN_ACCESS_HINT_KEY,
+  AUTH_LEGACY_KEYS,
+} from "../../shared/constants/authStorageKeys";
 
 // Vite uses import.meta.env instead of process.env
 const API_BASE_URL = APP_CONFIG.apiBaseUrl;
@@ -9,25 +15,16 @@ const REQUEST_TIMEOUT_MS = APP_CONFIG.requestTimeoutMs;
 const DEBUG_API =
   Boolean(import.meta.env.DEV) && import.meta.env.VITE_DEBUG_API === "true";
 
-const BACKEND_URL_HINT = APP_CONFIG.backendHostUrl;
-const BACKEND_RUN_COMMAND = APP_CONFIG.backendRunCommand;
-const BACKEND_TIMEOUT_MESSAGE = `Request timed out. Please check if the backend is running on ${BACKEND_URL_HINT}`;
-const BACKEND_CONNECTION_MESSAGE = `Cannot connect to backend. Please make sure the backend is running on ${BACKEND_URL_HINT}. Start it with: ${BACKEND_RUN_COMMAND}`;
-export const BACKEND_CONNECTION_SHORT_MESSAGE = `Cannot connect to backend. Please make sure the backend is running on ${BACKEND_URL_HINT}`;
+const BACKEND_TIMEOUT_MESSAGE = "Request timed out. Please try again later.";
+const BACKEND_CONNECTION_MESSAGE = "Unable to connect to the server. Please try again later.";
+export const BACKEND_CONNECTION_SHORT_MESSAGE = "Unable to connect to the server.";
 
 export type ApiRequestOptions = RequestInit & {
   timeoutMs?: number;
   throwOnAbort?: boolean;
 };
 
-const AUTH_LOGOUT_KEY = "tijarahjo_logged_out";
-const AUTH_SESSION_HINT_KEY = "tijarahjo_has_authenticated";
-const AUTH_ADMIN_ACCESS_HINT_KEY = "tijarahjo_has_admin_access";
-const AUTH_LEGACY_KEYS = [
-  "tijarahjo_token",
-  "tijarahjo_auth",
-  "tijarahjo_user",
-];
+
 
 function getCookieValue(name: string): string | null {
   if (typeof document === "undefined") {
@@ -54,6 +51,20 @@ function isUnsafeMethod(method: string): boolean {
     normalized === "OPTIONS" ||
     normalized === "TRACE"
   );
+}
+
+function isSafeMethod(method: string): boolean {
+  return !isUnsafeMethod(method);
+}
+
+function isRetryableTransientStatus(status: number): boolean {
+  return status === 502 || status === 503 || status === 504;
+}
+
+async function delay(ms: number): Promise<void> {
+  await new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
 }
 
 function hasAuthorizationHeader(headers?: HeadersInit): boolean {
@@ -154,8 +165,11 @@ const AUTH_ENDPOINTS_NO_RETRY = [
   "/auth/me",
   "/auth/logout",
   "/auth/forgot-password/request",
+  "/auth/forgot-password/verify",
   "/auth/forgot-password/confirm",
   "/auth/2fa/verify-login",
+  "/auth/verify-email",
+  "/auth/verify-email/resend",
 ];
 
 function shouldAttemptRefresh(
@@ -191,7 +205,21 @@ async function attemptTokenRefresh(): Promise<boolean> {
         credentials: "include",
         headers,
       });
-      return response.ok;
+
+      if (response.ok) {
+        return true;
+      }
+
+      // Refresh failed (401/403) — the session cookie is invalid or expired.
+      // Clear the localStorage hint immediately so shouldAttemptRefresh() returns
+      // false for all subsequent requests, breaking the infinite 401-retry loop.
+      try {
+        localStorage.removeItem(AUTH_SESSION_HINT_KEY);
+        localStorage.removeItem(AUTH_ADMIN_ACCESS_HINT_KEY);
+      } catch {
+        // localStorage may be unavailable (private mode, storage quota, etc.) — ignore.
+      }
+      return false;
     } catch {
       return false;
     } finally {
@@ -236,7 +264,7 @@ export async function apiRequest<T>(
   let didTimeout = false;
   const syncAbortFromCaller = () => {
     if (!controller.signal.aborted) {
-      controller.abort();
+      controller.abort(callerSignal?.reason ?? "Request cancelled by caller");
     }
   };
   if (callerSignal) {
@@ -251,7 +279,7 @@ export async function apiRequest<T>(
   const timeoutId = setTimeout(() => {
     didTimeout = true;
     if (!controller.signal.aborted) {
-      controller.abort();
+      controller.abort("Request timed out");
     }
   }, timeoutMs);
 
@@ -294,6 +322,20 @@ export async function apiRequest<T>(
       headers: requestHeaders,
     });
 
+    if (
+      isSafeMethod(method) &&
+      isRetryableTransientStatus(response.status) &&
+      !callerSignal?.aborted
+    ) {
+      await delay(250);
+      response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...requestOptions,
+        credentials: requestOptions.credentials ?? "include",
+        signal: controller.signal,
+        headers: requestHeaders,
+      });
+    }
+
     // Auto-retry on 401 by refreshing the JWT cookie (one attempt only).
     if (
       response.status === 401 &&
@@ -322,10 +364,14 @@ export async function apiRequest<T>(
 
     // Cookie-authenticated unsafe requests can fail with 403 if the antiforgery
     // token pair is stale or missing. Force-refresh the CSRF token and retry once.
+    // Skip for auth login/signup endpoints where 403 means "email not verified",
+    // not a stale CSRF token.
     if (
       response.status === 403 &&
       isUnsafeMethod(method) &&
-      !hasAuthorizationHeader(requestOptions.headers)
+      !hasAuthorizationHeader(requestOptions.headers) &&
+      !endpoint.startsWith("/auth/login") &&
+      !endpoint.startsWith("/auth/signup")
     ) {
       const freshCsrfToken = await resolveCsrfToken(
         endpoint,
@@ -492,5 +538,6 @@ export async function apiRequest<T>(
     if (callerSignal) {
       callerSignal.removeEventListener("abort", syncAbortFromCaller);
     }
+  // eslint-disable-next-line max-lines
   }
 }

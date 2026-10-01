@@ -65,5 +65,6 @@ export interface UserResponse {
   joinDate: string;
   roleID: number;
   status: number;
+  suspendedUntil?: string | null;
   isDeleted: boolean;
 }

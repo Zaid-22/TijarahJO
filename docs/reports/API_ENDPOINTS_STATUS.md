@@ -1,15 +1,16 @@
 # API Endpoints Status Report
 
 **Base URL:** `http://localhost:5033`
-**Reviewed:** 2026-04-02
+**Reviewed:** 2026-05-30
 **Last live verification source:** `./scripts/verify_all_apis.sh` + CI backend checks
-**Last live verification date:** 2026-03-24
+**Last live verification date:** 2026-04-21
+**Latest static route/docs refresh:** 2026-05-30
 
 ## Summary
 
 - Canonical API version is exposed under:
-  - `/api/*`
   - `/api/v1/*`
+- The frontend Docker build may use `VITE_API_BASE_URL=/api`; the frontend runtime normalizes that to `/api/v1`.
 - Legacy `Tb*` route namespaces are **not** part of the active runtime API.
 - Legacy `/All` and `/pagination` post routes are **removed** from canonical API.
 
@@ -17,14 +18,14 @@
 
 ## Canonical Route Groups
 
-### Auth (`/api/auth`)
+### Auth (`/api/v1/auth`)
 
-- `POST /api/auth/login`
-- `POST /api/auth/signup`
-- `POST /api/auth/logout` (`[Authorize]`)
-- `GET /api/auth/me` (`[Authorize]`)
-- `POST /api/auth/refresh` (`[Authorize]`)
-- `GET /api/auth/google/start`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/signup`
+- `POST /api/v1/auth/logout` (`[Authorize]`)
+- `GET /api/v1/auth/me` (`[Authorize]`)
+- `POST /api/v1/auth/refresh` (`[Authorize]`)
+- `GET /api/v1/auth/google/start`
 - `GET /api/v1/auth/google/callback`
 
 ### Two-Factor Authentication (`/api/v1/auth/2fa`)
@@ -38,58 +39,59 @@
 ### Password Reset (`/api/v1/auth/forgot-password`)
 
 - `POST /api/v1/auth/forgot-password/request` — request reset code via email
-- `POST /api/v1/auth/forgot-password/confirm` — verify code and set new password
+- `POST /api/v1/auth/forgot-password/verify` — verify reset code before collecting a new password
+- `POST /api/v1/auth/forgot-password/confirm` — verify code again and set new password
 
-### Users (`/api/users`)
+### Users (`/api/v1/users`)
 
-- `GET /api/users` (admin only)
-- `GET /api/users/{id}`
-- `POST /api/users` (admin only)
-- `PUT /api/users/{id}` (`[Authorize]`, ownership/admin enforced)
-- `DELETE /api/users/{id}` (`[Authorize]`, ownership/admin enforced)
-- `GET /api/users/{id}/exists` (`[Authorize]`)
+- `GET /api/v1/users` (admin only)
+- `GET /api/v1/users/{id}`
+- `POST /api/v1/users` (admin only)
+- `PUT /api/v1/users/{id}` (`[Authorize]`, ownership/admin enforced)
+- `DELETE /api/v1/users/{id}` (`[Authorize]`, ownership/admin enforced)
+- `GET /api/v1/users/{id}/exists` (`[Authorize]`)
 
-### Posts (`/api/posts`)
+### Posts (`/api/v1/posts`)
 
-- `GET /api/posts/feed`
-- `GET /api/posts/{id}`
-- `GET /api/posts/Exists/{id}`
-- `POST /api/posts/{id}/views`
-- `GET /api/posts/user/{userId}`
-- `GET /api/posts/category/{categoryId}`
-- `POST /api/posts` (`[Authorize]`)
-- `PUT /api/posts/{id}` (`[Authorize]`, ownership/admin enforced)
-- `DELETE /api/posts/{id}` (`[Authorize]`, ownership/admin enforced)
-- `PATCH /api/posts/{id}/status` (`[Authorize]`, ownership/admin enforced)
+- `GET /api/v1/posts/feed`
+- `GET /api/v1/posts/{id}`
+- `GET /api/v1/posts/Exists/{id}`
+- `POST /api/v1/posts/{id}/views`
+- `GET /api/v1/posts/user/{userId}`
+- `GET /api/v1/posts/category/{categoryId}`
+- `POST /api/v1/posts` (`[Authorize]`)
+- `PUT /api/v1/posts/{id}` (`[Authorize]`, ownership/admin enforced)
+- `DELETE /api/v1/posts/{id}` (`[Authorize]`, ownership/admin enforced)
+- `PATCH /api/v1/posts/{id}/status` (`[Authorize]`, ownership/admin enforced)
 
-### Post Images (`/api/post-images`)
+### Post Images (`/api/v1/post-images`)
 
-- `GET /api/post-images`
-- `GET /api/post-images/{id}`
-- `GET /api/post-images/post/{postId}`
-- `GET /api/post-images/Exists/{id}`
-- `POST /api/post-images` (`[Authorize]`)
-- `PUT /api/post-images/{id}` (`[Authorize]`, ownership/admin enforced)
-- `DELETE /api/post-images/{id}` (`[Authorize]`, ownership/admin enforced)
-- `POST /api/post-images/upload` (`[Authorize]`, multipart file upload)
+- `GET /api/v1/post-images`
+- `GET /api/v1/post-images/{id}`
+- `GET /api/v1/post-images/post/{postId}`
+- `GET /api/v1/post-images/Exists/{id}`
+- `POST /api/v1/post-images` (`[Authorize]`)
+- `PUT /api/v1/post-images/{id}` (`[Authorize]`, ownership/admin enforced)
+- `DELETE /api/v1/post-images/{id}` (`[Authorize]`, ownership/admin enforced)
+- `POST /api/v1/post-images/upload` (`[Authorize]`, multipart file upload)
 
-### Categories (`/api/categories`)
+### Categories (`/api/v1/categories`)
 
-- `GET /api/categories`
-- `GET /api/categories/{id}`
-- `GET /api/categories/Exists/{id}`
-- `POST /api/categories` (admin only)
-- `PUT /api/categories/{id}` (admin only)
-- `DELETE /api/categories/{id}` (admin only)
+- `GET /api/v1/categories`
+- `GET /api/v1/categories/{id}`
+- `GET /api/v1/categories/Exists/{id}`
+- `POST /api/v1/categories` (admin only)
+- `PUT /api/v1/categories/{id}` (admin only)
+- `DELETE /api/v1/categories/{id}` (admin only)
 
-### Roles (`/api/roles`)
+### Roles (`/api/v1/roles`)
 
-- `GET /api/roles`
-- `GET /api/roles/{id}`
-- `GET /api/roles/Exists/{id}`
-- `POST /api/roles` (admin only)
-- `PUT /api/roles/{id}` (admin only)
-- `DELETE /api/roles/{id}` (admin only)
+- `GET /api/v1/roles`
+- `GET /api/v1/roles/{id}`
+- `GET /api/v1/roles/Exists/{id}`
+- `POST /api/v1/roles` (admin only)
+- `PUT /api/v1/roles/{id}` (admin only)
+- `DELETE /api/v1/roles/{id}` (admin only)
 
 ### Favorites (`/api/v1/favorites`)
 
@@ -103,22 +105,43 @@
 - `GET /api/v1/chat/history/{otherUserId}` (`[Authorize]`)
 - `GET /api/v1/chat/presence/{otherUserId}` (`[Authorize]`)
 - `POST /api/v1/chat/send` (`[Authorize]`)
-- `POST /api/v1/chat/upload-image` (`[Authorize]`, multipart file upload)
+- `POST /api/v1/chat/send-image` (`[Authorize]`, atomic multipart upload and message send)
 - Realtime hub: `/chatHub`
 
-### Search (`/api/search`)
+### Search (`/api/v1/search`)
 
-- `GET /api/search`
+- `GET /api/v1/search`
 
-### Sellers (`/api/sellers`)
+### Compare (`/api/v1/compare`)
 
-- `GET /api/sellers/{sellerId}`
-- `GET /api/sellers/top`
+- `POST /api/v1/compare` (`[Authorize]`, supports optional `Language` payload parameter)
+- `POST /api/v1/compare/videos` (`[Authorize]`, YouTube video recommendations for compared posts)
+
+### Sellers (`/api/v1/sellers`)
+
+- `GET /api/v1/sellers/{sellerId}`
+- `GET /api/v1/sellers/top`
 
 ### Reviews (`/api/v1/reviews`)
 
 - `GET /api/v1/reviews/user/{userId}`
 - `POST /api/v1/reviews` (`[Authorize]`)
+
+### Post Comments (`/api/v1/posts/{postId}/comments`)
+
+- `GET /api/v1/posts/{postId}/comments`
+- `GET /api/v1/posts/{postId}/comments/{commentId}/replies`
+- `POST /api/v1/posts/{postId}/comments` (`[Authorize]`)
+- `PUT /api/v1/posts/{postId}/comments/{commentId}` (`[Authorize]`, ownership enforced)
+- `DELETE /api/v1/posts/{postId}/comments/{commentId}` (`[Authorize]`, ownership/admin enforced)
+
+### Reports (`/api/v1/reports`)
+
+- `POST /api/v1/reports` (`[Authorize]`) — submit abuse/content report
+
+### Banners (`/api/v1/banners`)
+
+- `GET /api/v1/banners` — list active hero banners (public)
 
 ### Notifications (`/api/v1/notifications`)
 
@@ -126,71 +149,80 @@
 - `GET /api/v1/notifications/unread-count` (`[Authorize]`)
 - `PUT /api/v1/notifications/{notificationId}/read` (`[Authorize]`)
 - `PUT /api/v1/notifications/read-all` (`[Authorize]`)
-- `GET /api/v1/notifications/push-config` (`[AllowAnonymous]`)
-- `POST /api/v1/notifications/push-subscriptions` (`[Authorize]`)
-- `DELETE /api/v1/notifications/push-subscriptions` (`[Authorize]`)
 
-### Locations (`/api/v1/locations`)
+### Locations
 
-- `GET /api/v1/locations` — list available locations
-- `GET /api/v1/locations/{id}` — get location details
+- `GET /api/v1/cities` — list available cities
+- `GET /api/v1/cities/{cityId}/areas` — list areas for a city
 
 ### Admin (`/api/v1/admin`)
 
 #### Dashboard & Analytics
-- `GET /api/v1/admin/dashboard` — KPI summary
-- `GET /api/v1/admin/analytics/overview` — analytics overview
-- `GET /api/v1/admin/analytics/revenue` — revenue metrics
-- `GET /api/v1/admin/analytics/users` — user growth
-- `GET /api/v1/admin/analytics/posts` — post activity
+- `GET /api/v1/admin/dashboard/stats` — KPI summary
+- `GET /api/v1/admin/analytics` — analytics overview
 
 #### User Management
-- `GET /api/v1/admin/users` — list all users
-- `GET /api/v1/admin/users/{id}` — user details
-- `PUT /api/v1/admin/users/{id}/status` — block/unblock user
-- `PUT /api/v1/admin/users/{id}/role` — change user role
-- `DELETE /api/v1/admin/users/{id}` — delete user
+- `GET /api/v1/admin/users/{id}/details` — user details
+- `PUT /api/v1/admin/users/bulk-status` — bulk update user status
+- `POST /api/v1/admin/users/{id}/suspend` — suspend user with reason and duration
 
 #### Post Management
 - `GET /api/v1/admin/posts` — list all posts
-- `PUT /api/v1/admin/posts/{id}/status` — change post status
+- `PATCH /api/v1/admin/posts/{id}/status` — change post status
 - `DELETE /api/v1/admin/posts/{id}` — delete post
+
+#### Post Comments Moderation
+- `GET /api/v1/admin/post-comments` — list post comments
+- `DELETE /api/v1/admin/post-comments/{id}` — delete comment
 
 #### Reports & Moderation
 - `GET /api/v1/admin/reports` — reports queue
-- `PUT /api/v1/admin/reports/{id}/resolve` — resolve report
-
-#### Conversations
-- `GET /api/v1/admin/conversations` — list conversations
+- `PUT /api/v1/admin/reports/{id}/status` — update report status
 
 #### Reviews
 - `GET /api/v1/admin/reviews` — list reviews
 - `DELETE /api/v1/admin/reviews/{id}` — delete review
 
-#### Fraud Detection
-- `GET /api/v1/admin/fraud/suspicious-users` — flagged users
-- `GET /api/v1/admin/fraud/suspicious-posts` — flagged posts
-
 #### Audit Log
-- `GET /api/v1/admin/audit-log` — list audit entries
+- `GET /api/v1/admin/audit-logs` — list audit entries
 
 #### Permissions & Roles
 - `GET /api/v1/admin/permissions` — list permissions
-- `PUT /api/v1/admin/permissions/{id}` — update permission
+- `GET /api/v1/admin/permissions/role/{roleId}` — get role permissions
+- `PUT /api/v1/admin/permissions/role/{roleId}` — update role permissions
 
 #### Settings
 - `GET /api/v1/admin/settings` — system settings
-- `PUT /api/v1/admin/settings` — update settings
+- `PUT /api/v1/admin/settings/{key}` — update setting by key
 
 #### Search
-- `GET /api/v1/admin/search/users` — search users
-- `GET /api/v1/admin/search/posts` — search posts
+- `GET /api/v1/admin/search` — search users and posts
 
 #### Locations (Admin)
-- `GET /api/v1/admin/locations` — manage locations
-- `POST /api/v1/admin/locations` — create location
-- `PUT /api/v1/admin/locations/{id}` — update location
-- `DELETE /api/v1/admin/locations/{id}` — delete location
+- `GET /api/v1/admin/locations/cities` — list cities
+- `POST /api/v1/admin/locations/cities` — create city
+- `PUT /api/v1/admin/locations/cities/{id}` — update city
+- `DELETE /api/v1/admin/locations/cities/{id}` — delete city
+- `POST /api/v1/admin/locations/areas` — create area
+- `PUT /api/v1/admin/locations/areas/{id}` — update area
+- `DELETE /api/v1/admin/locations/areas/{id}` — delete area
+
+#### Banners
+- `GET /api/v1/admin/banners` — list banners
+- `POST /api/v1/admin/banners` — create banner
+- `PUT /api/v1/admin/banners/{id}` — update banner
+- `DELETE /api/v1/admin/banners/{id}` — delete banner
+- `PATCH /api/v1/admin/banners/{id}/toggle` — toggle banner active status
+- `POST /api/v1/admin/banners/upload-image` — upload banner image
+
+#### Data Hygiene
+- `GET /api/v1/admin/data-hygiene/report` — data hygiene report
+- `GET /api/v1/admin/data-hygiene/history` — cleanup history
+- `POST /api/v1/admin/data-hygiene/scan` — trigger scan
+- `POST /api/v1/admin/data-hygiene/approve/{cycleId}` — approve cleanup cycle
+
+#### Image Optimization
+- `POST /api/v1/admin/images/optimize-existing` — optimize existing images
 
 ### Health (`/health`)
 

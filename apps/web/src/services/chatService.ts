@@ -25,12 +25,16 @@ const HUB_URL = `${APP_CONFIG.backendHostUrl}/chatHub`;
 class ChatService {
   private connection: HubConnection | null = null;
   private currentUserId: number | null = null;
+  private requestedUserId: number | null = null;
+  private lastKnownUserId: number | null = null;
+  private intentionalDisconnect = false;
   private messageCallbacks: ((message: Message) => void)[] = [];
   private readReceiptCallbacks: ((receipt: ChatReadReceipt) => void)[] = [];
   private notificationCallbacks: ((notification: AppNotification) => void)[] = [];
   private disconnectCallbacks: (() => void)[] = [];
   private reconnectAttempt = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private connectionTransition: Promise<void> = Promise.resolve();
 
   private mapRealtimePayload(args: unknown[]): RawChatMessage | null {
     if (args.length === 0) {
@@ -153,12 +157,34 @@ class ChatService {
     };
   }
 
-  public async connect(currentUserId: number) {
+  public connect(currentUserId: number): Promise<void> {
     const normalizedCurrentUserId = toPositiveIntegerId(currentUserId);
     if (!normalizedCurrentUserId) {
-      throw new Error("Invalid current user ID");
+      return Promise.reject(new Error("Invalid current user ID"));
     }
-    this.currentUserId = normalizedCurrentUserId;
+
+    if (this.requestedUserId !== normalizedCurrentUserId && this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
+    // Change send eligibility immediately. A queued identity transition must
+    // never leave the previous account able to send while it waits to run.
+    this.requestedUserId = normalizedCurrentUserId;
+
+    const transition = this.connectionTransition.then(() =>
+      this.connectInternal(normalizedCurrentUserId),
+    );
+    this.connectionTransition = transition.catch(() => undefined);
+    return transition;
+  }
+
+  private async connectInternal(normalizedCurrentUserId: number): Promise<void> {
+    if (this.requestedUserId !== normalizedCurrentUserId) {
+      return;
+    }
+
+    const connectionBelongsToRequestedUser = this.currentUserId === normalizedCurrentUserId;
 
     if (this.connection) {
       const isActiveState =
@@ -166,17 +192,35 @@ class ChatService {
         this.connection.state === HubConnectionState.Connecting ||
         this.connection.state === HubConnectionState.Reconnecting;
 
-      if (isActiveState) {
+      if (isActiveState && connectionBelongsToRequestedUser) {
         return;
       }
 
+      const previousConnection = this.connection;
+      this.intentionalDisconnect = true;
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
+      this.detachRealtimeHandlers(previousConnection);
+      this.connection = null;
+      this.currentUserId = null;
+      this.lastKnownUserId = null;
       try {
-        await this.connection.stop();
+        await previousConnection.stop();
       } catch (stopError) {
         logger.warn("SignalR stop before reconnect failed:", stopError);
+        throw new Error("Could not disconnect the previous chat session.");
       }
-      this.connection = null;
     }
+
+    if (this.requestedUserId !== normalizedCurrentUserId) {
+      return;
+    }
+
+    this.currentUserId = normalizedCurrentUserId;
+    this.lastKnownUserId = normalizedCurrentUserId;
+    this.intentionalDisconnect = false;
 
     const connection = new HubConnectionBuilder()
       .withAutomaticReconnect()
@@ -187,6 +231,9 @@ class ChatService {
       .build();
 
     connection.on("ReceiveMessage", (...args: unknown[]) => {
+      if (!this.isActiveConnection(connection, normalizedCurrentUserId)) {
+        return;
+      }
       const payload = this.mapRealtimePayload(args);
       const normalizedMessage = normalizeChatMessage(payload);
       if (normalizedMessage) {
@@ -197,6 +244,9 @@ class ChatService {
     // Confirmation sent back to the caller after a successful SendMessage invocation.
     // Without this handler SignalR logs a "No client method with the name 'messagesent' found" warning.
     connection.on("MessageSent", (...args: unknown[]) => {
+      if (!this.isActiveConnection(connection, normalizedCurrentUserId)) {
+        return;
+      }
       const payload = this.mapRealtimePayload(args);
       const normalizedMessage = normalizeChatMessage(payload);
       if (normalizedMessage) {
@@ -205,6 +255,9 @@ class ChatService {
     });
 
     connection.on("ReceiveNotification", (...args: unknown[]) => {
+      if (!this.isActiveConnection(connection, normalizedCurrentUserId)) {
+        return;
+      }
       const notification = this.mapNotificationPayload(args);
       if (notification) {
         this.notifyNotificationListeners(notification);
@@ -212,6 +265,9 @@ class ChatService {
     });
 
     connection.on("MessagesRead", (...args: unknown[]) => {
+      if (!this.isActiveConnection(connection, normalizedCurrentUserId)) {
+        return;
+      }
       const receipt = this.mapReadReceiptPayload(args);
       if (receipt) {
         this.notifyReadReceiptListeners(receipt);
@@ -219,32 +275,69 @@ class ChatService {
     });
 
     connection.onclose((error) => {
+      if (this.connection !== connection) {
+        return;
+      }
       debugChatLog("SignalR connection closed", error ? `Error: ${error}` : "cleanly");
       this.connection = null;
       this.currentUserId = null;
       this.notifyDisconnectListeners();
       // Attempt automatic reconnection with exponential backoff
-      this.scheduleReconnect();
+      if (!this.intentionalDisconnect && this.lastKnownUserId) {
+        this.scheduleReconnect();
+      }
     });
 
     this.connection = connection;
 
     try {
       await connection.start();
+      if (this.requestedUserId !== normalizedCurrentUserId) {
+        return;
+      }
+      this.reconnectAttempt = 0;
       debugChatLog("SignalR Connected");
     } catch (err) {
       logger.error("SignalR Connection Error: ", err);
-      this.connection = null;
+      if (this.connection === connection) {
+        this.connection = null;
+        this.currentUserId = null;
+      }
       throw err;
     }
   }
 
-  public async disconnect() {
+  public disconnect(): Promise<void> {
+    // Disable all sends immediately, even if another transition is in flight.
+    this.requestedUserId = null;
+    this.intentionalDisconnect = true;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    const transition = this.connectionTransition.then(() =>
+      this.disconnectInternal(),
+    );
+    this.connectionTransition = transition.catch(() => undefined);
+    return transition;
+  }
+
+  private async disconnectInternal(): Promise<void> {
+    this.intentionalDisconnect = true;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     if (this.connection) {
-      await this.connection.stop();
+      const previousConnection = this.connection;
+      this.detachRealtimeHandlers(previousConnection);
       this.connection = null;
+      this.currentUserId = null;
+      this.lastKnownUserId = null;
+      await previousConnection.stop();
     }
     this.currentUserId = null;
+    this.lastKnownUserId = null;
   }
 
   public async sendMessage(
@@ -265,9 +358,10 @@ class ChatService {
     const normalizedPostId =
       postId === undefined ? undefined : toPositiveIntegerId(postId);
 
-    if (!this.currentUserId) {
+    if (!this.currentUserId || this.currentUserId !== this.requestedUserId) {
       throw new Error("Current user is not connected");
     }
+    const sendingUserId = this.currentUserId;
 
     if (
       !this.connection ||
@@ -297,6 +391,9 @@ class ChatService {
       return null;
     } catch (err) {
       logger.warn("SendMessage Error. Falling back to REST:", err);
+      if (this.currentUserId !== sendingUserId || this.requestedUserId !== sendingUserId) {
+        throw new Error("The active account changed before the message was sent.");
+      }
       const fallbackMessage = await chatApi.sendMessage(
         normalizedReceiverId,
         trimmedContent,
@@ -363,25 +460,52 @@ class ChatService {
     this.disconnectCallbacks.forEach((cb) => cb());
   }
 
+  private isActiveConnection(
+    connection: HubConnection,
+    connectionUserId: number,
+  ): boolean {
+    return (
+      this.connection === connection &&
+      this.currentUserId === connectionUserId &&
+      this.requestedUserId === connectionUserId
+    );
+  }
+
+  private detachRealtimeHandlers(connection: HubConnection) {
+    connection.off("ReceiveMessage");
+    connection.off("MessageSent");
+    connection.off("ReceiveNotification");
+    connection.off("MessagesRead");
+  }
+
   private scheduleReconnect() {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
     }
+    if (this.intentionalDisconnect) {
+      debugChatLog("Reconnect skipped — intentional disconnect.");
+      return;
+    }
     if (this.reconnectAttempt >= 5) {
       debugChatLog("Max reconnection attempts reached, giving up.");
+      return;
+    }
+    const userId = this.lastKnownUserId;
+    if (!userId || this.requestedUserId !== userId) {
+      debugChatLog("Reconnect skipped — no previous user context.");
       return;
     }
     const delayMs = Math.min(1000 * Math.pow(2, this.reconnectAttempt), 30000);
     this.reconnectAttempt++;
     debugChatLog(`Scheduling reconnect attempt ${this.reconnectAttempt} in ${delayMs}ms`);
     this.reconnectTimer = setTimeout(async () => {
+      if (this.intentionalDisconnect || this.requestedUserId !== userId) {
+        return;
+      }
       try {
-        if (this.connection === null && this.currentUserId === null) {
-          debugChatLog("Reconnect skipped — no previous user context.");
-          return;
-        }
         debugChatLog("Attempting SignalR reconnection...");
-        // Reconnection requires the caller to call connect() again with userId
+        await this.connect(userId);
+        debugChatLog("SignalR reconnection succeeded.");
       } catch (err) {
         debugChatLog("Reconnection failed:", err);
         this.scheduleReconnect();

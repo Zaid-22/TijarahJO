@@ -1,6 +1,7 @@
 import { AppNotification } from "../../types";
 import { toPositiveIntegerId } from "../../utils/idValidation";
 import { apiRequest } from "./client";
+import { createOwnerScopedRequestDeduper } from "./ownerScopedRequestDeduper";
 
 type RawNotification = {
   NotificationId?: unknown;
@@ -37,19 +38,9 @@ type MarkAllReadPayload = {
   updatedCount?: unknown;
 };
 
-type PushConfigPayload = {
-  Enabled?: unknown;
-  enabled?: unknown;
-  PublicKey?: unknown;
-  publicKey?: unknown;
-};
-
-type PushSubscriptionJson = {
-  endpoint?: string;
-  keys?: {
-    p256dh?: string;
-    auth?: string;
-  };
+type UnreadCountResult = {
+  unreadCount: number;
+  serviceUnavailable: boolean;
 };
 
 function toIsoTimestamp(value: unknown): string | undefined {
@@ -95,6 +86,9 @@ function normalizeNotification(payload: RawNotification | null | undefined): App
   };
 }
 
+const dedupeUnreadCountRequest =
+  createOwnerScopedRequestDeduper<UnreadCountResult>();
+
 export const notificationsApi = {
   getNotifications: async (params?: {
     take?: number;
@@ -109,8 +103,11 @@ export const notificationsApi = {
       },
     );
 
-    if (!response.success || !Array.isArray(response.data)) {
-      return [];
+    if (!response.success) {
+      throw new Error(response.error?.message || "Failed to load notifications.");
+    }
+    if (!Array.isArray(response.data)) {
+      throw new Error("Failed to load notifications because the response was invalid.");
     }
 
     return response.data
@@ -118,17 +115,35 @@ export const notificationsApi = {
       .filter((notification): notification is AppNotification => notification !== null);
   },
 
-  getUnreadCount: async (): Promise<number> => {
-    const response = await apiRequest<UnreadCountPayload>("/notifications/unread-count", {
-      method: "GET",
-    });
+  getUnreadCountResult: (ownerId = ""): Promise<UnreadCountResult> =>
+    dedupeUnreadCountRequest(ownerId, async () => {
+      const response = await apiRequest<UnreadCountPayload>("/notifications/unread-count", {
+        method: "GET",
+      });
 
-    if (!response.success || !response.data) {
-      return 0;
-    }
+      if (!response.success || !response.data) {
+        const serviceUnavailable =
+          !response.success &&
+          "error" in response &&
+          response.error.code === "HTTP_503";
 
-    const unreadCount = Number(response.data.UnreadCount ?? response.data.unreadCount ?? 0);
-    return Number.isFinite(unreadCount) && unreadCount > 0 ? Math.floor(unreadCount) : 0;
+        return {
+          unreadCount: 0,
+          serviceUnavailable,
+        };
+      }
+
+      const unreadCount = Number(response.data.UnreadCount ?? response.data.unreadCount ?? 0);
+      return {
+        unreadCount:
+          Number.isFinite(unreadCount) && unreadCount > 0 ? Math.floor(unreadCount) : 0,
+        serviceUnavailable: false,
+      };
+    }),
+
+  getUnreadCount: async (ownerId = ""): Promise<number> => {
+    const result = await notificationsApi.getUnreadCountResult(ownerId);
+    return result.unreadCount;
   },
 
   markAsRead: async (notificationId: number): Promise<boolean> => {
@@ -157,84 +172,14 @@ export const notificationsApi = {
     });
 
     if (!response.success || !response.data) {
-      return 0;
+      throw new Error(
+        !response.success
+          ? response.error?.message || "Failed to mark notifications as read."
+          : "Failed to mark notifications as read.",
+      );
     }
 
     const updatedCount = Number(response.data.UpdatedCount ?? response.data.updatedCount ?? 0);
     return Number.isFinite(updatedCount) && updatedCount > 0 ? Math.floor(updatedCount) : 0;
-  },
-
-  getPushConfig: async (): Promise<{ enabled: boolean; publicKey: string }> => {
-    const response = await apiRequest<PushConfigPayload>("/notifications/push-config", {
-      method: "GET",
-    });
-
-    if (!response.success || !response.data) {
-      return {
-        enabled: false,
-        publicKey: "",
-      };
-    }
-
-    return {
-      enabled: Boolean(response.data.Enabled ?? response.data.enabled ?? false),
-      publicKey: String(response.data.PublicKey ?? response.data.publicKey ?? ""),
-    };
-  },
-
-  upsertPushSubscription: async (
-    subscription: PushSubscriptionJson,
-    userAgent?: string,
-  ): Promise<boolean> => {
-    const endpoint = subscription.endpoint?.trim() ?? "";
-    const p256dh = subscription.keys?.p256dh?.trim() ?? "";
-    const auth = subscription.keys?.auth?.trim() ?? "";
-    if (!endpoint || !p256dh || !auth) {
-      return false;
-    }
-
-    const response = await apiRequest<{ success?: boolean; Success?: boolean }>(
-      "/notifications/push-subscriptions",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          Endpoint: endpoint,
-          Keys: {
-            P256dh: p256dh,
-            Auth: auth,
-          },
-          UserAgent: userAgent ?? "",
-        }),
-      },
-    );
-
-    if (!response.success) {
-      return false;
-    }
-
-    return Boolean(response.data?.success ?? response.data?.Success ?? false);
-  },
-
-  removePushSubscription: async (endpoint: string): Promise<boolean> => {
-    const normalizedEndpoint = endpoint.trim();
-    if (!normalizedEndpoint) {
-      return false;
-    }
-
-    const response = await apiRequest<{ success?: boolean; Success?: boolean }>(
-      "/notifications/push-subscriptions",
-      {
-        method: "DELETE",
-        body: JSON.stringify({
-          Endpoint: normalizedEndpoint,
-        }),
-      },
-    );
-
-    if (!response.success) {
-      return false;
-    }
-
-    return Boolean(response.data?.success ?? response.data?.Success ?? false);
   },
 };

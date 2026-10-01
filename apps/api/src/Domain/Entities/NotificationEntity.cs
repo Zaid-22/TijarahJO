@@ -17,5 +17,6 @@ namespace TijarahJo.Domain.Entities
         public DateTime CreatedAt { get; set; }
         public DateTime? ReadAt { get; set; }
         public string? PayloadJson { get; set; }
+        public bool IsDeleted { get; set; }
     }
 }

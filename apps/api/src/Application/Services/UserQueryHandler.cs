@@ -40,7 +40,11 @@ public sealed class UserQueryHandler : IUserQueryHandler
         }
 
         UserModel? user = await _users.GetUserByIDAsync(query.TargetUserId, cancellationToken);
-        if (user == null)
+        bool requesterCanViewHiddenAccount = query.RequesterIsAdmin ||
+            query.RequesterUserId == query.TargetUserId;
+        if (user == null ||
+            (!requesterCanViewHiddenAccount &&
+             (user.IsDeleted || user.Status != UserStatusPolicy.Active)))
         {
             return new UserByIdQueryResult
             {
@@ -101,7 +105,6 @@ public sealed class UserQueryHandler : IUserQueryHandler
             Email = string.Empty,
             Phone = null,
             Bio = null,
-            Avatar = null,
             Status = 0,
             RoleID = 0,
             IsDeleted = false
@@ -128,7 +131,9 @@ public sealed class UserQueryHandler : IUserQueryHandler
             source.IsDeleted,
             source.TwoFactorEnabled,
             source.TwoFactorSecret,
-            source.TwoFactorPendingSecret
+            source.TwoFactorPendingSecret,
+            source.SuspendedUntil,
+            source.IsEmailVerified
         );
     }
 }

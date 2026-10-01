@@ -36,6 +36,8 @@ export interface LoginFormErrors {
 export interface LoginValidationMessages {
   identifierRequired: string;
   identifierInvalid: string;
+  emailRequired: string;
+  emailInvalid: string;
   passwordRequired: string;
   passwordMinLength: string;
   passwordUppercase: string;
@@ -66,6 +68,8 @@ export const createEmptyLoginErrors = (): LoginFormErrors => ({
 const DEFAULT_LOGIN_VALIDATION_MESSAGES: LoginValidationMessages = {
   identifierRequired: "Email or phone is required",
   identifierInvalid: "Enter a valid email or Jordanian phone number",
+  emailRequired: "Email address is required",
+  emailInvalid: "Enter a valid email address",
   passwordRequired: "Password is required",
   passwordMinLength: "Password must be at least 8 characters",
   passwordUppercase: "Password must contain at least one uppercase letter",
@@ -89,7 +93,7 @@ function validateIdentifier(
   messages: LoginValidationMessages,
 ): string {
   if (!value.trim()) {
-    return messages.identifierRequired;
+    return isSignUp ? messages.emailRequired : messages.identifierRequired;
   }
 
   if (!isSignUp) {
@@ -97,8 +101,8 @@ function validateIdentifier(
   }
 
   const parsedIdentifier = parseAuthIdentifier(value);
-  if (!parsedIdentifier.email && !parsedIdentifier.phone) {
-    return messages.identifierInvalid;
+  if (!parsedIdentifier.email) {
+    return messages.emailInvalid;
   }
 
   return "";

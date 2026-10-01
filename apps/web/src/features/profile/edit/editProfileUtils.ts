@@ -9,10 +9,9 @@ const MAX_JORDAN_PHONE_DIGITS = 9;
 
 function composeName(
   firstName: string,
-  middleName: string | undefined,
   lastName: string,
 ): string {
-  return `${firstName} ${middleName || ""} ${lastName}`.replace(/\s+/g, " ").trim();
+  return `${firstName} ${lastName}`.replace(/\s+/g, " ").trim();
 }
 
 function composeLocation(city: string, area: string): string {
@@ -26,19 +25,17 @@ export function createInitialEditProfileForm(
 ): EditProfileFormProfile {
   const firstName = profile.firstName || "";
   const lastName = profile.lastName || "";
-  const middleName = profile.middleName || "";
   const city = profile.city || "";
   const area = profile.area || "";
 
   return {
     ...profile,
     firstName,
-    middleName,
     lastName,
     phone: profile.phone || "+962",
     city,
     area,
-    name: composeName(firstName, middleName, lastName),
+    name: composeName(firstName, lastName),
     location: composeLocation(city, area),
   };
 }
@@ -53,10 +50,9 @@ export function applyProfileFieldChange(
     [field]: value,
   };
 
-  if (field === "firstName" || field === "middleName" || field === "lastName") {
+  if (field === "firstName" || field === "lastName") {
     nextFormData.name = composeName(
       field === "firstName" ? value : formData.firstName,
-      field === "middleName" ? value : formData.middleName,
       field === "lastName" ? value : formData.lastName,
     );
   }
@@ -72,6 +68,15 @@ export function applyProfileFieldChange(
 }
 
 export function normalizeJordanPhoneInput(value: string): string {
+  if (!value || "+962".startsWith(value)) {
+    return "+962";
+  }
+
+  if (value.startsWith("+962")) {
+    const localPart = value.slice(4).replace(/\D/g, "");
+    return `+962${localPart.slice(0, MAX_JORDAN_PHONE_DIGITS)}`;
+  }
+
   const digitsOnly = value.replace(/\D/g, "");
   const hasPrefix = digitsOnly.startsWith(JORDAN_DIALING_PREFIX);
   const localNumber = hasPrefix

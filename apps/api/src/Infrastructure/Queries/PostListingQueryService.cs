@@ -4,22 +4,17 @@ using System.Data;
 using System.Text;
 using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Application.Common;
-using TijarahJo.Infrastructure.DataAccess;
+using TijarahJo.Infrastructure;
 
 namespace TijarahJo.Infrastructure.Queries;
 
-public sealed class PostListingQueryService : IPostListingQueryService
+public sealed class PostListingQueryService(DatabaseConnectionString connectionString) : IPostListingQueryService
 {
     private const char ImageSeparator = '\u001F';
     private const int MaxPageSize = 200;
     private static readonly ConcurrentDictionary<string, bool> FullTextCapabilityCache = new(StringComparer.OrdinalIgnoreCase);
 
-    private readonly string _connectionString;
-
-    public PostListingQueryService(DatabaseConnectionString connectionString)
-    {
-        _connectionString = connectionString.Value;
-    }
+    private readonly string _connectionString = connectionString.Value;
 
     public async Task<PostListingPageResult> QueryAsync(PostListingQuery query, CancellationToken cancellationToken = default)
     {
@@ -30,7 +25,7 @@ public sealed class PostListingQueryService : IPostListingQueryService
             limit = MaxPageSize;
         }
 
-        int offset = (page - 1) * limit;
+        int offset = (int)Math.Min((long)(page - 1) * limit, int.MaxValue);
         var filters = new List<string>();
 
         using var connection = new SqlConnection(_connectionString);
@@ -41,6 +36,7 @@ public sealed class PostListingQueryService : IPostListingQueryService
 
         AddIntParameter(command.Parameters, "@ActiveStatus", PostStatusPolicy.Active);
         AddIntParameter(command.Parameters, "@SoldStatus", PostStatusPolicy.Sold);
+        AddIntParameter(command.Parameters, "@ActiveUserStatus", UserStatusPolicy.Active);
 
         if (!string.IsNullOrWhiteSpace(query.SearchTerm))
         {
@@ -136,6 +132,13 @@ a.AreaName LIKE @SearchPrefix ESCAPE '\'
                 break;
         }
 
+        if (query.Visibility is PostListingVisibilityMode.PublicVisible or
+            PostListingVisibilityMode.ActiveOnly or
+            PostListingVisibilityMode.SoldOnly)
+        {
+            filters.Add("u.IsDeleted = 0 AND u.Status = @ActiveUserStatus");
+        }
+
         string orderByClause = BuildOrderByClause(query.SortField, query.SortAscending);
 
         AddIntParameter(command.Parameters, "@Offset", offset);
@@ -152,7 +155,10 @@ WITH FilteredPosts AS
         ISNULL(p.PostDescription, '') AS PostDescription,
         ISNULL(p.Price, 0) AS Price,
         ISNULL(ct.CityName, '') AS City,
+        ISNULL(ct.CityNameAr, '') AS CityAr,
         ISNULL(a.AreaName, '') AS Area,
+        ISNULL(a.AreaNameAr, '') AS AreaAr,
+        ISNULL(u.Phone, '') AS Phone,
         p.CreatedAt,
         p.UpdatedAt,
         ISNULL(p.Views, 0) AS Views,
@@ -187,8 +193,11 @@ SELECT
     fp.PostDescription,
     fp.Price,
     fp.City,
+    fp.CityAr,
     fp.Area,
+    fp.AreaAr,
     fp.SellerName,
+    fp.Phone,
     fp.CategoryName,
     fp.CreatedAt,
     fp.UpdatedAt,
@@ -222,8 +231,11 @@ OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY;";
                 PostDescription = reader.GetString(reader.GetOrdinal("PostDescription")),
                 Price = reader.GetDecimal(reader.GetOrdinal("Price")),
                 City = reader.GetString(reader.GetOrdinal("City")),
+                CityAr = reader.GetString(reader.GetOrdinal("CityAr")),
                 Area = reader.GetString(reader.GetOrdinal("Area")),
+                AreaAr = reader.GetString(reader.GetOrdinal("AreaAr")),
                 SellerName = reader.GetString(reader.GetOrdinal("SellerName")),
+                Phone = reader.GetString(reader.GetOrdinal("Phone")),
                 CategoryName = reader.GetString(reader.GetOrdinal("CategoryName")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
                 UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UpdatedAt")),
@@ -282,7 +294,7 @@ OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY;";
     {
         if (string.IsNullOrWhiteSpace(imagePayload))
         {
-            return new List<string>();
+            return [];
         }
 
         string[] parsedSegments = imagePayload.Contains(ImageSeparator)
@@ -315,7 +327,7 @@ OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY;";
         string[] rawSegments = imagePayload.Split(',', StringSplitOptions.RemoveEmptyEntries);
         if (rawSegments.Length == 0)
         {
-            return Array.Empty<string>();
+            return [];
         }
 
         var mergedSegments = new List<string>(rawSegments.Length);
@@ -350,7 +362,7 @@ OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY;";
             mergedSegments.Add(current);
         }
 
-        return mergedSegments.ToArray();
+        return [.. mergedSegments];
     }
 
     private static string BuildPrefixPattern(string rawValue)

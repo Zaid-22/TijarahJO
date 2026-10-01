@@ -1,8 +1,13 @@
 import { type ReactElement } from "react";
 import { type NavigateFunction } from "react-router-dom";
 import { Language, Post, UserProfile, ViewMode } from "../../types";
+import type { ProfileOwnerTransition } from "../../features/auth/profileState";
 import { CreatePostInput } from "./appRoutesUtils";
-import type { UpdatePostInput, UpdatePostStatusInput } from "./usePostActions";
+import type {
+  UpdatePostInput,
+  UpdatePostResult,
+  UpdatePostStatusInput,
+} from "./usePostActions";
 import type { EditProfileFormProfile } from "../../features/profile/types";
 
 export interface BaseAppRouteProps {
@@ -13,8 +18,13 @@ export interface BaseAppRouteProps {
   setDarkMode: (enabled: boolean) => void;
   toggleLanguage: () => void;
   logout: () => Promise<void>;
-  setUserProfile: (profile: UserProfile) => void;
+  loginAsGuest: () => Promise<void>;
+  setUserProfile: (
+    profile: UserProfile,
+    ownerTransition?: ProfileOwnerTransition,
+  ) => boolean;
   currentUserDisplayName: string;
+  registrationEnabled: boolean;
 }
 
 export interface MarketplaceRouteState {
@@ -31,6 +41,7 @@ export interface MarketplaceRouteState {
   isLoading: boolean;
   goToNextPage: () => void;
   goToPreviousPage: () => void;
+  fetchPostsFromBackend: () => Promise<void>;
   t: Record<string, string>;
   isRTL: boolean;
   translateCategory: (category: string) => string;
@@ -39,7 +50,7 @@ export interface MarketplaceRouteState {
 
 export interface PostActions {
   createPost: (post: CreatePostInput) => Promise<unknown>;
-  updatePost: (post: UpdatePostInput) => Promise<void>;
+  updatePost: (post: UpdatePostInput) => Promise<UpdatePostResult>;
   updatePostStatus: (statusData: UpdatePostStatusInput) => Promise<void>;
   deletePost: (postId: string) => Promise<void>;
 }
@@ -52,8 +63,13 @@ export interface AppRouteElementsParams {
   setDarkMode: (enabled: boolean) => void;
   toggleLanguage: () => void;
   logout: () => Promise<void>;
-  setUserProfile: (profile: UserProfile) => void;
+  loginAsGuest: () => Promise<void>;
+  setUserProfile: (
+    profile: UserProfile,
+    ownerTransition?: ProfileOwnerTransition,
+  ) => boolean;
   currentUserDisplayName: string;
+  registrationEnabled: boolean;
   routeState: MarketplaceRouteState;
   postActions: PostActions;
   saveProfile: (profile: EditProfileFormProfile) => Promise<void> | void;

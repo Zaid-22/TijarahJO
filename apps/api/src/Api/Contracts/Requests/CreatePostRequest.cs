@@ -12,14 +12,19 @@ public sealed class CreatePostRequest
     [MaxLength(200)]
     public string PostTitle { get; set; } = string.Empty;
 
-    [MaxLength(10000)]
+    [MaxLength(1200)]
     public string? PostDescription { get; set; }
 
     [Range(typeof(decimal), "0", "79228162514264337593543950335")]
     public decimal? Price { get; set; }
 
-    public int? CityId { get; set; }
-    public int? AreaId { get; set; }
+    [Required]
+    [Range(1, int.MaxValue)]
+    public int CityId { get; set; }
+
+    [Required]
+    [Range(1, int.MaxValue)]
+    public int AreaId { get; set; }
 
     public List<string>? Images { get; set; }
 }

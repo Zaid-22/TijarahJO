@@ -40,6 +40,16 @@ public sealed class FavoriteCommandServiceTests
     }
 
     [Fact]
+    public async Task AddAsync_ReturnsPostNotFound_WhenPostIsBlocked()
+    {
+        var svc = BuildService(postStatus: PostStatusPolicy.Blocked);
+        var result = await svc.AddAsync(1, 1);
+
+        Assert.False(result.Success);
+        Assert.Equal(FavoriteMutationFailureReason.PostNotFound, result.FailureReason);
+    }
+
+    [Fact]
     public async Task AddAsync_ReturnsPersistenceFailed_WhenSaveFails()
     {
         var svc = BuildService(addFails: true);
@@ -100,11 +110,12 @@ public sealed class FavoriteCommandServiceTests
     private static FavoriteCommandService BuildService(
         bool postExists = true,
         bool addFails = false,
-        bool removeFails = false)
+        bool removeFails = false,
+        int postStatus = PostStatusPolicy.Active)
     {
         return new FavoriteCommandService(
             new FakeFavoriteService(addFails, removeFails),
-            new FakePostService(postExists)
+            new FakePostReadService(postExists, postStatus)
         );
     }
 
@@ -136,21 +147,37 @@ public sealed class FavoriteCommandServiceTests
             => Task.FromResult(false);
     }
 
-    private sealed class FakePostService : IPostService
+    private sealed class FakePostReadService : IPostReadService
     {
         private readonly bool _exists;
-        public FakePostService(bool exists) => _exists = exists;
+        private readonly int _status;
 
-        public Task<bool> DoesPostExistAsync(int? postId, CancellationToken ct = default)
-            => Task.FromResult(_exists);
+        public FakePostReadService(bool exists, int status)
+        {
+            _exists = exists;
+            _status = status;
+        }
 
-        // Not used by FavoriteCommandService
-        public Task<Post?> FindAsync(int? postId, CancellationToken ct = default) => throw new NotImplementedException();
-        public Post Create(PostModel model) => throw new NotImplementedException();
-        public Task<bool> SaveAsync(Post post, CancellationToken ct = default) => throw new NotImplementedException();
-        public Task<bool> DeletePostAsync(int? postId, int actorUserId, CancellationToken ct = default) => throw new NotImplementedException();
-        public Task<bool> IncrementViewsAsync(int? postId, CancellationToken ct = default) => throw new NotImplementedException();
-        public Task<IReadOnlyList<PostModel>> GetPostsByUserIdAsync(int userId, int page = 1, int size = 50, CancellationToken ct = default) => throw new NotImplementedException();
-        public Task<IReadOnlyList<PostModel>> GetPostsByCategoryIdAsync(int catId, int page = 1, int size = 50, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<PostReadResult> GetByIdAsync(int postId, CancellationToken ct = default)
+        {
+            if (!_exists || !PostStatusPolicy.IsPubliclyVisible(_status, isDeleted: false))
+            {
+                return Task.FromResult(new PostReadResult
+                {
+                    Success = false,
+                    FailureReason = PostReadFailureReason.NotFound
+                });
+            }
+
+            var post = new Post(
+                new PostModel(postId, 1, 1, "Post", "Description", 1m, _status, DateTime.UtcNow, false, 0, null, null),
+                Post.ModeType.Update);
+            return Task.FromResult(new PostReadResult { Success = true, Post = post });
+        }
+
+        public Task<PostExistsResult> ExistsAsync(int postId, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<PostReadCollectionResult> GetByUserIdAsync(int userId, int page = 1, int size = 50, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<PostReadCollectionResult> GetByCategoryIdAsync(int categoryId, int page = 1, int size = 50, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<PostViewIncrementResult> IncrementViewsAsync(int postId, CancellationToken ct = default) => throw new NotSupportedException();
     }
 }

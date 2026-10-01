@@ -18,12 +18,11 @@ using TijarahJo.Api.Common.Configuration;
 using TijarahJo.Api.Common.Filters;
 using TijarahJo.Api.Common.Health;
 using TijarahJo.Api.Common.Services;
+using TijarahJo.Api.Common.Utils;
 using TijarahJo.Api.Startup;
+using TijarahJo.Infrastructure.Services;
 
-Console.WriteLine("--> STARTING PROGRAM.CS");
 var builder = WebApplication.CreateBuilder(args);
-Console.WriteLine("--> WebApplication.CreateBuilder FINISHED");
-
 
 // ---------------------------------------------------------------------------
 // Feature flags
@@ -37,14 +36,39 @@ builder.Services.AddSingleton(featureFlags);
 // ---------------------------------------------------------------------------
 // Options binding
 // ---------------------------------------------------------------------------
-builder.Services.Configure<WebPushOptions>(builder.Configuration.GetSection("WebPush"));
 builder.Services.Configure<GoogleAuthOptions>(builder.Configuration.GetSection("GoogleAuth"));
 builder.Services.Configure<FileStorageOptions>(builder.Configuration.GetSection("FileStorage"));
 builder.Services.Configure<PasswordResetOptions>(builder.Configuration.GetSection("PasswordReset"));
 builder.Services.Configure<PasswordResetEmailOptions>(builder.Configuration.GetSection("PasswordResetEmail"));
 builder.Services.Configure<TwoFactorOptions>(builder.Configuration.GetSection("TwoFactor"));
 builder.Services.Configure<EmailTwoFactorOptions>(builder.Configuration.GetSection("EmailTwoFactor"));
+builder.Services.AddOptions<EmailVerificationOptions>()
+    .Bind(builder.Configuration.GetSection("EmailVerification"))
+    .ValidateOnStart();
+builder.Services.AddSingleton<IValidateOptions<EmailVerificationOptions>>(
+    new EmailVerificationOptionsValidator(builder.Environment.IsProduction()));
+builder.Services.Configure<AccountLockoutOptions>(builder.Configuration.GetSection("AccountLockout"));
+builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
+builder.Services.Configure<YouTubeSettings>(builder.Configuration.GetSection("YouTube"));
+builder.Services.Configure<ImageModerationOptions>(builder.Configuration.GetSection("ImageModeration"));
 builder.Services.AddHttpClient<GoogleAuthService>();
+builder.Services.AddHttpClient<IPostCompareService, GeminiPostCompareService>();
+builder.Services.AddHttpClient<ICompareVideoRecommendationService, YouTubeCompareVideoRecommendationService>((serviceProvider, client) =>
+{
+    var youtubeSettings = serviceProvider.GetRequiredService<IOptions<YouTubeSettings>>().Value;
+    string referer = youtubeSettings.Referer?.Trim() ?? string.Empty;
+    if (string.IsNullOrWhiteSpace(referer))
+    {
+        return;
+    }
+
+    if (!Uri.TryCreate(referer, UriKind.Absolute, out var refererUri))
+    {
+        throw new InvalidOperationException("YouTube:Referer must be an absolute URL when configured.");
+    }
+
+    client.DefaultRequestHeaders.Referrer = refererUri;
+});
 
 // ---------------------------------------------------------------------------
 // Forwarded headers (proxy support)
@@ -204,7 +228,7 @@ if (enableRateLimiting)
             string partition = RateLimitPartitionResolver.Resolve(httpContext);
             return RateLimitPartition.GetFixedWindowLimiter(partition, _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 120,
+                PermitLimit = 240,
                 Window = TimeSpan.FromMinutes(1),
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit = 0
@@ -218,6 +242,25 @@ if (enableRateLimiting)
             return RateLimitPartition.GetFixedWindowLimiter($"auth:{partition}", _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            });
+        });
+
+        // AI comparison rate limit — admins are exempt for testing
+        options.AddPolicy("compare", httpContext =>
+        {
+            // Exempt admin users from rate limiting
+            if (ApiControllerHelpers.IsAdminUser(httpContext.User))
+            {
+                return RateLimitPartition.GetNoLimiter("admin:compare");
+            }
+
+            string partition = RateLimitPartitionResolver.Resolve(httpContext);
+            return RateLimitPartition.GetFixedWindowLimiter($"compare:{partition}", _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
                 Window = TimeSpan.FromMinutes(1),
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit = 0
@@ -241,6 +284,8 @@ builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
 builder.Services.AddScoped<IPasswordResetEmailSender, PasswordResetEmailSender>();
 builder.Services.AddScoped<IEmailTwoFactorSender, EmailTwoFactorSender>();
 builder.Services.AddScoped<TwoFactorService>();
+builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
+builder.Services.AddScoped<IAccountLockoutService, AccountLockoutService>();
 builder.Services.AddSingleton<IPostImageFileStorageService, LocalPostImageFileStorageService>();
 builder.Services.AddSingleton<IImageModerationService, ImageModerationService>();
 builder.Services.AddSingleton<InMemoryChatPresenceService>();
@@ -264,30 +309,61 @@ if (!featureFlags.EnableInMemoryCaching)
 
 app.LogRedisStartupStatus(redisResult);
 
-bool shouldUseForwardedHeaders = app.Environment.IsDevelopment() || hasExplicitForwardedHeaderTrust;
-if (shouldUseForwardedHeaders)
-    app.UseForwardedHeaders();
-else
-    app.Logger.LogWarning("Forwarded headers middleware is disabled. Configure ForwardedHeaders:KnownProxies or ForwardedHeaders:KnownNetworks.");
+// Always enable forwarded headers. In production behind a reverse proxy (nginx),
+// X-Forwarded-Proto must be processed so Request.IsHttps is correct for OAuth
+// state cookies, CSRF, and HSTS. The KnownProxies/KnownNetworks options already
+// limit which proxies are trusted; the middleware itself should always be active.
+app.UseForwardedHeaders();
+if (!app.Environment.IsDevelopment() && !hasExplicitForwardedHeaderTrust)
+    app.Logger.LogWarning("Forwarded headers middleware is active but no KnownProxies or KnownNetworks are configured. Configure ForwardedHeaders:KnownProxies or ForwardedHeaders:KnownNetworks for production.");
 
 if (!app.Environment.IsDevelopment())
     app.UseHsts();
 
+app.UseTijarahJoSecurityHeaders();
+
 // CORS must be registered before static files so uploaded images get
 // Access-Control-Allow-Origin headers (static files short-circuit the pipeline).
-app.UseCors("AllowAll");
+app.UseCors("TijarahJoCors");
 
-// Static files (uploads root: post images, chat images, user avatars)
+// Static files (uploads root: category images, post images, chat images, user avatars)
 var fileStorageOptions = app.Services.GetRequiredService<IOptions<FileStorageOptions>>().Value;
 string uploadsRootPath = LocalPostImageFileStorageService.ResolveAbsoluteUploadsRootPath(
     app.Environment.ContentRootPath, fileStorageOptions);
 Directory.CreateDirectory(uploadsRootPath);
+BundledUploadInitializer.CopyBundledUploadDirectory(
+    app.Environment.ContentRootPath, uploadsRootPath, "category-images", app.Logger);
+BundledUploadInitializer.CopyBundledUploadDirectory(
+    app.Environment.ContentRootPath, uploadsRootPath, "post-images", app.Logger);
+await BundledUploadInitializer.EnsureMissingThumbnailsAsync(
+    uploadsRootPath, fileStorageOptions, app.Logger);
+
+string uploadsRequestPath = LocalPostImageFileStorageService.NormalizeRequestPath(fileStorageOptions.PublicBasePath);
+app.UseUploadThumbnailFallback(uploadsRootPath, uploadsRequestPath);
+app.Use(async (context, next) =>
+{
+    // Chat attachments and report evidence used to share the public uploads root.
+    // Deny those legacy locations before static files so historical media is protected too.
+    string chatPath = $"{uploadsRequestPath}/{fileStorageOptions.ChatImagesPath.Trim().Trim('/')}";
+    string reportPath = $"{uploadsRequestPath}/{fileStorageOptions.ReportImagesPath.Trim().Trim('/')}";
+    if (context.Request.Path.StartsWithSegments(chatPath, StringComparison.OrdinalIgnoreCase) ||
+        context.Request.Path.StartsWithSegments(reportPath, StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    await next();
+});
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(uploadsRootPath),
     RequestPath = LocalPostImageFileStorageService.NormalizeRequestPath(fileStorageOptions.PublicBasePath),
     OnPrepareResponse = ctx =>
     {
+        // SECURITY NOTE: Wildcard origin is intentional for uploaded images.
+        // These are public, content-addressed files (unique filenames) and do not
+        // require origin-restricted access. This avoids CORS preflight for <img> tags.
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
         ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
         // Cache uploaded images for 30 days; files are content-addressed by unique names

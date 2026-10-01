@@ -1,11 +1,16 @@
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { SearchX } from "lucide-react";
 import { PostDetailsPage } from "../../features/post-details/pages/PostDetailsPage";
 import { Language, Post, UserProfile } from "../../types";
 import { deferredToast } from "../../utils/toast";
 import { resolveCurrentUserId } from "./appRoutesUtils";
 import { PageShell } from "../../shared/ui/page-shell";
 import { usePostDetailsRouteData } from "./usePostDetailsRouteData";
-import { UpdatePostInput, UpdatePostStatusInput } from "./usePostActions";
+import type {
+  UpdatePostInput,
+  UpdatePostResult,
+  UpdatePostStatusInput,
+} from "./usePostActions";
 import { Button } from "../../shared/ui/button";
 import {
   buildCurrentPath,
@@ -20,16 +25,15 @@ interface PostDetailsRouteWrapperProps {
   isAuthenticated: boolean;
   userProfile: UserProfile;
   favoriteIds: string[];
-  currentUserDisplayName: string;
   onFavoriteToggle: (postId: string) => void;
   onOpenPost: (postId: string) => void;
   onNavigateHome: () => void;
+  onNavigateCategory: (categoryName: string, fromPath?: string) => void;
   onNavigateProfile: () => void;
   onNavigateSeller: (sellerId: string, fromPath?: string) => void;
-  onNavigateChat: (sellerId: string, fromPath?: string) => void;
-  onNavigateLogin: () => void;
+  onNavigateChat: (sellerId: string, fromPath?: string, postTitle?: string) => void;
   onRequireAuth?: () => void;
-  onUpdatePost: (updatedPost: UpdatePostInput) => Promise<void>;
+  onUpdatePost: (updatedPost: UpdatePostInput) => Promise<UpdatePostResult>;
   onUpdatePostStatus: (statusData: UpdatePostStatusInput) => Promise<void>;
   onDeletePost: (postId: string) => Promise<void>;
 }
@@ -41,14 +45,13 @@ export function PostDetailsRouteWrapper({
   isAuthenticated,
   userProfile,
   favoriteIds,
-  currentUserDisplayName,
   onFavoriteToggle,
   onOpenPost,
   onNavigateHome,
+  onNavigateCategory,
   onNavigateProfile,
   onNavigateSeller,
   onNavigateChat,
-  onNavigateLogin,
   onRequireAuth,
   onUpdatePost,
   onUpdatePostStatus,
@@ -57,18 +60,30 @@ export function PostDetailsRouteWrapper({
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { resolvedPost, isLoadingRoutePost, isOwnPost } =
-    usePostDetailsRouteData({
-      id,
-      availablePosts,
-      isLoadingPosts,
-      isAuthenticated,
-      userProfile,
-    });
+  const {
+    resolvedPost,
+    isLoadingRoutePost,
+    routePostError,
+    retryRoutePost,
+    isOwnPost,
+    mutateRoutePost,
+    replaceRoutePost,
+  } = usePostDetailsRouteData({
+    id,
+    availablePosts,
+    isLoadingPosts,
+    isAuthenticated,
+    userProfile,
+  });
   const labels = {
     loadingPost:
       language === "ar" ? "جارٍ تحميل المنشور..." : "Loading post...",
     postNotFound: language === "ar" ? "المنشور غير موجود." : "Post not found.",
+    postLoadFailed:
+      language === "ar"
+        ? "تعذر تحميل المنشور. تحقق من اتصالك وحاول مرة أخرى."
+        : "We couldn't load this post. Check your connection and try again.",
+    tryAgain: language === "ar" ? "إعادة المحاولة" : "Try Again",
     goHome: language === "ar" ? "العودة للرئيسية" : "Go Home",
     sellerProfileUnavailable:
       language === "ar" ? "ملف البائع غير متاح" : "Seller profile unavailable",
@@ -111,17 +126,56 @@ export function PostDetailsRouteWrapper({
   }
 
   if (!resolvedPost) {
+    if (routePostError) {
+      return (
+        <PageShell>
+          <div className="flex h-[70vh] w-full flex-col items-center justify-center px-4">
+            <div className="flex max-w-sm flex-col items-center text-center">
+              <h2 className="mb-2 text-2xl font-semibold tracking-tight text-foreground">
+                {labels.postLoadFailed}
+              </h2>
+              <p className="mb-8 text-sm leading-relaxed text-muted-foreground">
+                {routePostError}
+              </p>
+              <div className="flex flex-wrap justify-center gap-3">
+                <Button size="lg" onClick={retryRoutePost}>
+                  {labels.tryAgain}
+                </Button>
+                <Button size="lg" variant="outline" onClick={onNavigateHome}>
+                  {labels.goHome}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </PageShell>
+      );
+    }
+
     return (
-      <div className="p-10 text-center text-muted-foreground">
-        {labels.postNotFound}{" "}
-        <Button
-          variant="link"
-          onClick={onNavigateHome}
-          className="text-primary"
-        >
-          {labels.goHome}
-        </Button>
-      </div>
+      <PageShell>
+        <div className="flex h-[70vh] w-full flex-col items-center justify-center px-4">
+          <div className="flex flex-col items-center max-w-sm text-center">
+            <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-muted/50 ring-8 ring-muted/20">
+              <SearchX className="h-10 w-10 text-muted-foreground/60" />
+            </div>
+            <h2 className="mb-2 text-2xl font-semibold tracking-tight text-foreground">
+              {labels.postNotFound}
+            </h2>
+            <p className="mb-8 text-sm text-muted-foreground leading-relaxed">
+              {language === "ar" 
+                ? "عذراً، هذا المنشور غير متوفر. قد يكون تم حذفه أو أنك لا تملك صلاحية للوصول إليه." 
+                : "Sorry, this post is unavailable. It may have been deleted, or you might not have permission to view it."}
+            </p>
+            <Button
+              size="lg"
+              onClick={onNavigateHome}
+              className="px-8 rounded-full shadow-sm hover:shadow-md transition-all"
+            >
+              {labels.goHome}
+            </Button>
+          </div>
+        </div>
+      </PageShell>
     );
   }
 
@@ -132,6 +186,9 @@ export function PostDetailsRouteWrapper({
       allPosts={availablePosts}
       language={language}
       onPostClick={onOpenPost}
+      onCategoryClick={(categoryName) =>
+        onNavigateCategory(categoryName, currentPath)
+      }
       onSellerClick={() => {
         if (isOwnPost) {
           onNavigateProfile();
@@ -154,7 +211,7 @@ export function PostDetailsRouteWrapper({
         }
 
         if (!isAuthenticated) {
-          onNavigateLogin();
+          onRequireAuth?.();
           return;
         }
 
@@ -164,23 +221,34 @@ export function PostDetailsRouteWrapper({
           return;
         }
 
-        onNavigateChat(targetSellerId, currentPath);
+        onNavigateChat(targetSellerId, currentPath, resolvedPost.name);
       }}
       isOwnPost={isOwnPost}
       onUpdatePost={async (updatedPost) => {
         try {
-          await onUpdatePost(updatedPost);
+          const result = await onUpdatePost(updatedPost);
+          replaceRoutePost(result.post);
           deferredToast.success(labels.postUpdated);
-        } catch {
-          deferredToast.error(labels.updateError);
+          if (result.message?.trim()) {
+            deferredToast.error(result.message);
+          }
+        } catch (error) {
+          deferredToast.error(
+            error instanceof Error ? error.message : labels.updateError,
+          );
+          throw error;
         }
       }}
       onUpdatePostStatus={async (statusData) => {
         try {
           await onUpdatePostStatus(statusData);
+          mutateRoutePost({ status: statusData.status as "ACTIVE" | "SOLD" | "DELETED" });
           deferredToast.success(labels.postUpdated);
-        } catch {
-          deferredToast.error(labels.updateError);
+        } catch (error) {
+          deferredToast.error(
+            error instanceof Error ? error.message : labels.updateError,
+          );
+          throw error;
         }
       }}
       onDeletePost={async (postId) => {
@@ -188,14 +256,16 @@ export function PostDetailsRouteWrapper({
           await onDeletePost(postId);
           deferredToast.success(labels.postDeleted);
           onNavigateHome();
-        } catch {
-          deferredToast.error(labels.deleteError);
+        } catch (error) {
+          deferredToast.error(
+            error instanceof Error ? error.message : labels.deleteError,
+          );
+          throw error;
         }
       }}
       favoriteIds={favoriteIds}
       onFavoriteToggle={onFavoriteToggle}
       isAuthenticated={isAuthenticated}
-      currentUserDisplayName={currentUserDisplayName}
       onRequireAuth={onRequireAuth}
     />
   );

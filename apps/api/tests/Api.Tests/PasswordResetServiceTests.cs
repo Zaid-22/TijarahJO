@@ -41,6 +41,103 @@ public sealed class PasswordResetServiceTests
     }
 
     [Fact]
+    public async Task VerifyCodeAsync_RejectsInvalidVerificationCode()
+    {
+        var user = CreateUser("verify-invalid@example.com");
+        var users = new FakeUserDataAccess(user);
+        var sender = new CapturingPasswordResetEmailSender();
+        var service = BuildService(users, sender, new PasswordResetOptions
+        {
+            Enabled = true,
+            CodeLength = 6,
+            CodeLifetimeMinutes = 15,
+            MaxAttempts = 3,
+            RequestCooldownSeconds = 0
+        });
+
+        await service.RequestResetAsync(user.Email);
+
+        PasswordResetConfirmationResult result = await service.VerifyCodeAsync(
+            user.Email,
+            sender.LastCode == "000000" ? "111111" : "000000"
+        );
+
+        Assert.False(result.Success);
+        Assert.Equal(
+            PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
+            result.FailureReason
+        );
+        Assert.False(users.UpdateCalled);
+    }
+
+    [Fact]
+    public async Task VerifyCodeAsync_DoesNotConsumeValidVerificationCode()
+    {
+        var user = CreateUser("verify-valid@example.com");
+        var users = new FakeUserDataAccess(user);
+        var sender = new CapturingPasswordResetEmailSender();
+        var service = BuildService(users, sender, new PasswordResetOptions
+        {
+            Enabled = true,
+            CodeLength = 6,
+            CodeLifetimeMinutes = 15,
+            MaxAttempts = 3,
+            RequestCooldownSeconds = 0
+        });
+
+        await service.RequestResetAsync(user.Email);
+        Assert.False(string.IsNullOrWhiteSpace(sender.LastCode));
+
+        PasswordResetConfirmationResult verifyResult = await service.VerifyCodeAsync(
+            user.Email,
+            sender.LastCode
+        );
+
+        Assert.True(verifyResult.Success);
+        Assert.False(users.UpdateCalled);
+
+        PasswordResetConfirmationResult confirmResult = await service.ConfirmResetAsync(
+            user.Email,
+            sender.LastCode,
+            "NewPassword1!"
+        );
+
+        Assert.True(confirmResult.Success);
+        Assert.True(users.UpdateCalled);
+    }
+
+    [Fact]
+    public async Task ConfirmResetAsync_ConsumesCodeExactlyOnce_WhenRequestsRace()
+    {
+        var user = CreateUser("consume-once@example.com");
+        var users = new FakeUserDataAccess(user);
+        var sender = new CapturingPasswordResetEmailSender();
+        var challenges = new FakeVerificationChallengeDataAccess();
+        var service = BuildService(users, sender, new PasswordResetOptions
+        {
+            Enabled = true,
+            CodeLength = 6,
+            CodeLifetimeMinutes = 15,
+            MaxAttempts = 3,
+            RequestCooldownSeconds = 0
+        }, challenges);
+
+        Assert.True(await service.RequestResetAsync(user.Email));
+        challenges.SynchronizeNextReads(2);
+
+        PasswordResetConfirmationResult[] results = await Task.WhenAll(
+            service.ConfirmResetAsync(user.Email, sender.LastCode, "FirstPassword1!"),
+            service.ConfirmResetAsync(user.Email, sender.LastCode, "SecondPassword1!"));
+
+        Assert.Single(results, result => result.Success);
+        PasswordResetConfirmationResult rejected = Assert.Single(results, result => !result.Success);
+        Assert.Equal(
+            PasswordResetConfirmationFailureReason.InvalidOrExpiredCode,
+            rejected.FailureReason);
+        Assert.Equal(1, users.UpdateCalls);
+    }
+
+    [Fact]
     public async Task ConfirmResetAsync_ReturnsTooManyAttempts_AfterRepeatedInvalidCodes()
     {
         var user = CreateUser("user2@example.com");
@@ -81,14 +178,35 @@ public sealed class PasswordResetServiceTests
         );
     }
 
+    [Fact]
+    public async Task RequestResetAsync_ReturnsFalse_WhenEmailTransportNotConfigured()
+    {
+        var user = CreateUser("transport-off@example.com");
+        var users = new FakeUserDataAccess(user);
+        var sender = new DisabledTransportEmailSender();
+        var service = BuildService(users, sender, new PasswordResetOptions
+        {
+            Enabled = true,
+            CodeLength = 6,
+            CodeLifetimeMinutes = 15,
+            MaxAttempts = 3,
+            RequestCooldownSeconds = 0
+        });
+
+        bool result = await service.RequestResetAsync(user.Email);
+
+        Assert.False(result);
+    }
+
     private static PasswordResetService BuildService(
         IUserDataAccess users,
         IPasswordResetEmailSender sender,
-        PasswordResetOptions options)
+        PasswordResetOptions options,
+        IVerificationChallengeDataAccess? challenges = null)
     {
         return new PasswordResetService(
             users,
-            new FakeVerificationChallengeDataAccess(),
+            challenges ?? new FakeVerificationChallengeDataAccess(),
             sender,
             Options.Create(options),
             NullLogger<PasswordResetService>.Instance,
@@ -146,12 +264,30 @@ public sealed class PasswordResetServiceTests
             LastCode = code;
             return Task.CompletedTask;
         }
+
+        // Mock always reports the transport as ready so existing tests are unaffected.
+        public bool IsTransportConfigured() => true;
+    }
+
+    private sealed class DisabledTransportEmailSender : IPasswordResetEmailSender
+    {
+        public Task SendPasswordResetCodeAsync(
+            string recipientEmail,
+            string? recipientFirstName,
+            string code,
+            TimeSpan ttl,
+            CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        // Simulates email transport not being configured (no API key, disabled, etc.)
+        public bool IsTransportConfigured() => false;
     }
 
     private sealed class FakeUserDataAccess(UserModel storedUser) : IUserDataAccess
     {
         public UserModel StoredUser { get; private set; } = storedUser;
-        public bool UpdateCalled { get; private set; }
+        public int UpdateCalls { get; private set; }
+        public bool UpdateCalled => UpdateCalls > 0;
 
         public Task<UserModel?> GetUserByIDAsync(int? userId, CancellationToken cancellationToken = default)
         {
@@ -166,10 +302,17 @@ public sealed class PasswordResetServiceTests
         public Task<int> AddUserAsync(UserModel user, CancellationToken cancellationToken = default)
             => Task.FromResult(1);
 
-        public Task<bool> UpdateUserAsync(UserModel user, int actorUserId, CancellationToken cancellationToken = default)
+        public Task<bool> UpdateUserFieldsAsync(
+            UserModel user,
+            int actorUserId,
+            UserUpdateFields fields,
+            CancellationToken cancellationToken = default)
         {
-            UpdateCalled = true;
-            StoredUser = user;
+            lock (this)
+            {
+                UpdateCalls++;
+                StoredUser = user;
+            }
             return Task.FromResult(true);
         }
 
@@ -205,27 +348,112 @@ public sealed class PasswordResetServiceTests
     private sealed class FakeVerificationChallengeDataAccess : IVerificationChallengeDataAccess
     {
         private sealed record Challenge(string StateJson, DateTime ExpiresAt);
+        private readonly object _gate = new();
         private readonly Dictionary<(int, string), Challenge> _challenges = [];
+        private int _readsToSynchronize;
+        private int _synchronizedReads;
+        private TaskCompletionSource<bool>? _readBarrier;
 
-        public Task<string?> GetChallengeStateAsync(int userId, string challengeType, CancellationToken cancellationToken = default)
+        public void SynchronizeNextReads(int count)
         {
-             if (_challenges.TryGetValue((userId, challengeType), out var c) && c.ExpiresAt > DateTime.UtcNow)
-             {
-                 return Task.FromResult<string?>(c.StateJson);
-             }
-             return Task.FromResult<string?>(null);
+            lock (_gate)
+            {
+                _readsToSynchronize = count;
+                _synchronizedReads = 0;
+                _readBarrier = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            }
+        }
+
+        public async Task<string?> GetChallengeStateAsync(int userId, string challengeType, CancellationToken cancellationToken = default)
+        {
+            string? result;
+            Task? waitForPeers = null;
+            lock (_gate)
+            {
+                result = _challenges.TryGetValue((userId, challengeType), out Challenge? challenge) &&
+                         challenge.ExpiresAt > DateTime.UtcNow
+                    ? challenge.StateJson
+                    : null;
+
+                if (_readBarrier is not null && _readsToSynchronize > 0)
+                {
+                    _synchronizedReads++;
+                    waitForPeers = _readBarrier.Task;
+                    if (_synchronizedReads >= _readsToSynchronize)
+                    {
+                        _readBarrier.TrySetResult(true);
+                        _readBarrier = null;
+                    }
+                }
+            }
+
+            if (waitForPeers is not null)
+            {
+                await waitForPeers.WaitAsync(cancellationToken);
+            }
+
+            return result;
         }
 
         public Task UpsertChallengeStateAsync(int userId, string challengeType, string stateJson, DateTime expiresAt, CancellationToken cancellationToken = default)
         {
-             _challenges[(userId, challengeType)] = new Challenge(stateJson, expiresAt);
-             return Task.CompletedTask;
+            lock (_gate)
+            {
+                _challenges[(userId, challengeType)] = new Challenge(stateJson, expiresAt);
+            }
+            return Task.CompletedTask;
         }
 
         public Task DeleteChallengeStateAsync(int userId, string challengeType, CancellationToken cancellationToken = default)
         {
-             _challenges.Remove((userId, challengeType));
-             return Task.CompletedTask;
+            lock (_gate)
+            {
+                _challenges.Remove((userId, challengeType));
+            }
+            return Task.CompletedTask;
+        }
+
+        public Task<bool> TryReplaceChallengeStateAsync(
+            int userId,
+            string challengeType,
+            string? expectedStateJson,
+            string stateJson,
+            DateTime expiresAt,
+            CancellationToken cancellationToken = default)
+        {
+            lock (_gate)
+            {
+                bool exists = _challenges.TryGetValue((userId, challengeType), out Challenge? current);
+                bool matches = expectedStateJson is null
+                    ? !exists
+                    : exists && string.Equals(current!.StateJson, expectedStateJson, StringComparison.Ordinal);
+                if (!matches)
+                {
+                    return Task.FromResult(false);
+                }
+
+                _challenges[(userId, challengeType)] = new Challenge(stateJson, expiresAt);
+                return Task.FromResult(true);
+            }
+        }
+
+        public Task<bool> TryDeleteChallengeStateAsync(
+            int userId,
+            string challengeType,
+            string expectedStateJson,
+            CancellationToken cancellationToken = default)
+        {
+            lock (_gate)
+            {
+                if (!_challenges.TryGetValue((userId, challengeType), out Challenge? current) ||
+                    !string.Equals(current.StateJson, expectedStateJson, StringComparison.Ordinal))
+                {
+                    return Task.FromResult(false);
+                }
+
+                _challenges.Remove((userId, challengeType));
+                return Task.FromResult(true);
+            }
         }
     }
 }

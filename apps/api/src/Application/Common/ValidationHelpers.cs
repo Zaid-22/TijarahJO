@@ -7,6 +7,35 @@ namespace TijarahJo.Application.Common;
 /// </summary>
 public static class ValidationHelpers
 {
+    public static bool IsMissingOrInvalidAvatar(string? avatar)
+    {
+        string trimmed = avatar?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            return true;
+        }
+
+        return !IsValidAvatarUrl(trimmed);
+    }
+
+    public static bool IsStoredUploadAvatar(string? avatar)
+    {
+        string trimmed = avatar?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            return false;
+        }
+
+        if (trimmed.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.StartsWith("uploads/", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri) &&
+               uri.AbsolutePath.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>
     /// Returns true if <paramref name="avatar"/> is a valid avatar URL.
     /// Accepts absolute http/https URLs (e.g. Google avatar) and
@@ -17,7 +46,8 @@ public static class ValidationHelpers
         string trimmed = avatar.Trim();
 
         // Accept relative upload paths (local file storage)
-        if (trimmed.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+        if (trimmed.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.StartsWith("uploads/", StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }

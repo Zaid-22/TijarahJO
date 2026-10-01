@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using TijarahJo.Domain.Models;
 using TijarahJo.Application.Abstractions.DataAccess;
 using TijarahJo.Application.Abstractions.Services;
@@ -107,6 +108,62 @@ public sealed class AuthCommandServiceTests
         Assert.True(result.Success);
         Assert.NotNull(result.User);
         Assert.Equal("User", result.RoleName);
+    }
+
+    [Fact]
+    public async Task LoginAsync_ClearsOnlyLockoutStateObservedBeforePasswordVerification()
+    {
+        const string stateToken = "observed-lockout-state";
+        var lockout = new FakeAccountLockoutService { StateTokenToReturn = stateToken };
+        var hash = PasswordHelper.HashPassword("Test1234!");
+        var service = BuildService(hashedPassword: hash, accountLockout: lockout);
+
+        AuthCommandResult result = await service.LoginAsync(new LoginCommand
+        {
+            Login = "user@example.com",
+            Password = "Test1234!"
+        });
+
+        Assert.True(result.Success);
+        Assert.Equal(stateToken, lockout.ClearedStateToken);
+    }
+
+    [Fact]
+    public async Task LoginAsync_CredentialRehashPreservesConcurrentUserStateChanges()
+    {
+        const string password = "Test1234!";
+        var account = CreateDefaultUser(hashedPassword: CreateLowIterationPbkdf2Hash(password));
+        DateTime suspendedUntil = DateTime.UtcNow.AddDays(3);
+        UserModel concurrentState = account with
+        {
+            Status = 2,
+            RoleID = 9,
+            IsDeleted = true,
+            TwoFactorEnabled = true,
+            TwoFactorSecret = "concurrent-secret",
+            TwoFactorPendingSecret = "concurrent-pending-secret",
+            SuspendedUntil = suspendedUntil
+        };
+        var (service, users) = BuildServiceWithAccount(account);
+        users.ConcurrentUserAtRehash = concurrentState;
+
+        AuthCommandResult result = await service.LoginAsync(new LoginCommand
+        {
+            Login = account.Email,
+            Password = password
+        });
+
+        Assert.True(result.Success);
+        Assert.NotNull(users.RehashUpdatedUser);
+        UserModel updated = users.RehashUpdatedUser!;
+        Assert.NotEqual(account.HashedPassword, updated.HashedPassword);
+        Assert.Equal(concurrentState.Status, updated.Status);
+        Assert.Equal(concurrentState.RoleID, updated.RoleID);
+        Assert.Equal(concurrentState.IsDeleted, updated.IsDeleted);
+        Assert.Equal(concurrentState.TwoFactorEnabled, updated.TwoFactorEnabled);
+        Assert.Equal(concurrentState.TwoFactorSecret, updated.TwoFactorSecret);
+        Assert.Equal(concurrentState.TwoFactorPendingSecret, updated.TwoFactorPendingSecret);
+        Assert.Equal(concurrentState.SuspendedUntil, updated.SuspendedUntil);
     }
 
     // -------------------------------------------------------------------------
@@ -233,17 +290,140 @@ public sealed class AuthCommandServiceTests
         Assert.Equal("User", result.RoleName);
     }
 
+    [Fact]
+    public async Task SignupAsync_ReturnsRegistrationDisabled_WhenRegistrationIsDisabled()
+    {
+        var service = BuildService(registrationEnabled: false);
+
+        AuthCommandResult result = await service.SignupAsync(new SignupCommand
+        {
+            Password = "Test1234!",
+            FirstName = "Test",
+            Email = "newuser@example.com"
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal(AuthCommandFailureReason.RegistrationDisabled, result.FailureReason);
+    }
+
+    // -------------------------------------------------------------------------
+    // GoogleAuthAsync
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task GoogleAuthAsync_RefreshesExternalAvatar_WhenGooglePictureChanges()
+    {
+        var account = CreateDefaultUser(avatar: "https://lh3.googleusercontent.com/old-photo");
+        var (service, users) = BuildServiceWithAccount(account);
+
+        AuthCommandResult result = await service.GoogleAuthAsync(new GoogleAuthCommand
+        {
+            Subject = "google-subject-1",
+            Email = "user@example.com",
+            FirstName = "Test",
+            LastName = "User",
+            Avatar = "https://lh3.googleusercontent.com/new-photo"
+        });
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.User);
+        Assert.Equal("https://lh3.googleusercontent.com/new-photo", result.User.Avatar);
+        Assert.NotNull(users.UpdatedUser);
+        Assert.Equal("https://lh3.googleusercontent.com/new-photo", users.UpdatedUser.Avatar);
+    }
+
+    [Fact]
+    public async Task GoogleAuthAsync_KeepsUploadedAvatar_WhenGooglePictureChanges()
+    {
+        var account = CreateDefaultUser(avatar: "/uploads/user-avatars/custom.webp");
+        var (service, users) = BuildServiceWithAccount(account);
+
+        AuthCommandResult result = await service.GoogleAuthAsync(new GoogleAuthCommand
+        {
+            Subject = "google-subject-1",
+            Email = "user@example.com",
+            FirstName = "Test",
+            LastName = "User",
+            Avatar = "https://lh3.googleusercontent.com/new-photo"
+        });
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.User);
+        Assert.Equal("/uploads/user-avatars/custom.webp", result.User.Avatar);
+        Assert.Null(users.UpdatedUser);
+    }
+
+    [Fact]
+    public async Task GoogleAuthAsync_KeepsUploadAvatarWithoutLeadingSlash_WhenGooglePictureChanges()
+    {
+        var account = CreateDefaultUser(avatar: "uploads/user-avatars/custom.webp");
+        var (service, users) = BuildServiceWithAccount(account);
+
+        AuthCommandResult result = await service.GoogleAuthAsync(new GoogleAuthCommand
+        {
+            Subject = "google-subject-1",
+            Email = "user@example.com",
+            FirstName = "Test",
+            LastName = "User",
+            Avatar = "https://lh3.googleusercontent.com/new-photo"
+        });
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.User);
+        Assert.Equal("uploads/user-avatars/custom.webp", result.User.Avatar);
+        Assert.Null(users.UpdatedUser);
+    }
+
+    [Fact]
+    public async Task GoogleAuthAsync_RejectsCurrentlySuspendedAccount()
+    {
+        var account = CreateDefaultUser(suspendedUntil: DateTime.UtcNow.AddHours(1));
+        var (service, _) = BuildServiceWithAccount(account);
+
+        AuthCommandResult result = await service.GoogleAuthAsync(new GoogleAuthCommand
+        {
+            Subject = "google-suspended-user",
+            Email = account.Email,
+            FirstName = account.FirstName,
+            LastName = account.LastName
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal(AuthCommandFailureReason.UserInactive, result.FailureReason);
+    }
+
+    [Fact]
+    public async Task GoogleAuthAsync_MarksProviderVerifiedEmailWithoutChangingLoginOutcome()
+    {
+        var account = CreateDefaultUser(isEmailVerified: false);
+        var (service, users) = BuildServiceWithAccount(account);
+
+        AuthCommandResult result = await service.GoogleAuthAsync(new GoogleAuthCommand
+        {
+            Subject = "google-first-login",
+            Email = account.Email,
+            FirstName = account.FirstName,
+            LastName = account.LastName
+        });
+
+        Assert.True(result.Success);
+        Assert.True(result.User!.IsEmailVerified);
+        Assert.True(users.UpdatedUser!.IsEmailVerified);
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
-    private static AuthCommandService BuildService(
-        UserModel? nextFindUser = null,
+    private static UserModel CreateDefaultUser(
         string? hashedPassword = null,
         bool isDeleted = false,
-        int status = 1 /* Active */)
+        int status = 1 /* Active */,
+        string? avatar = null,
+        DateTime? suspendedUntil = null,
+        bool isEmailVerified = true)
     {
-        var model = new UserModel(
+        return new UserModel(
             userid: 1,
             hashedpassword: hashedPassword ?? TijarahJo.Application.Common.PasswordHelper.HashPassword("Test1234!"),
             email: "user@example.com",
@@ -253,22 +433,64 @@ public sealed class AuthCommandServiceTests
             cityId: null,
             areaId: null,
             bio: null,
-            avatar: null,
+            avatar: avatar,
             joindate: DateTime.UtcNow,
             status: status,
             roleid: 1,
-            isdeleted: isDeleted
+            isdeleted: isDeleted,
+            suspendedUntil: suspendedUntil,
+            isEmailVerified: isEmailVerified
         );
+    }
+
+    private static string CreateLowIterationPbkdf2Hash(string password)
+    {
+        const int iterations = 1_000;
+        byte[] salt = Enumerable.Range(1, 16).Select(value => (byte)value).ToArray();
+        byte[] key = Rfc2898DeriveBytes.Pbkdf2(
+            password,
+            salt,
+            iterations,
+            HashAlgorithmName.SHA256,
+            32);
+        return $"PBKDF2_SHA256${iterations}${Convert.ToBase64String(salt)}${Convert.ToBase64String(key)}";
+    }
+
+    private static AuthCommandService BuildService(
+        UserModel? nextFindUser = null,
+        string? hashedPassword = null,
+        bool isDeleted = false,
+        int status = 1 /* Active */,
+        bool registrationEnabled = true,
+        IAccountLockoutService? accountLockout = null)
+    {
+        var model = CreateDefaultUser(
+            hashedPassword: hashedPassword,
+            isDeleted: isDeleted,
+            status: status);
 
         var account = nextFindUser ?? model;
 
+        return BuildServiceWithAccount(
+            account,
+            registrationEnabled: registrationEnabled,
+            accountLockout: accountLockout).Service;
+    }
+
+    private static (AuthCommandService Service, FakeUserDataAccess Users) BuildServiceWithAccount(
+        UserModel account,
+        bool registrationEnabled = true,
+        IAccountLockoutService? accountLockout = null)
+    {
         var users = new FakeUserDataAccess(account);
         var externalIdentities = new FakeExternalIdentityDataAccess();
         var roles = new FakeRoleService();
         var locations = new FakeLocationReadService();
+        IAccountLockoutService lockout = accountLockout ?? new FakeAccountLockoutService();
+        var systemSettings = new FakeSystemSettingsRuntimeService(registrationEnabled);
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<AuthCommandService>.Instance;
 
-        return new AuthCommandService(users, externalIdentities, roles, locations, logger);
+        return (new AuthCommandService(users, externalIdentities, roles, locations, lockout, systemSettings, logger), users);
     }
 
     // -------------------------------------------------------------------------
@@ -282,14 +504,22 @@ public sealed class AuthCommandServiceTests
 
         public FakeUserDataAccess(UserModel account) => _account = account;
 
+        public UserModel? UpdatedUser { get; private set; }
+        public UserModel? ConcurrentUserAtRehash { get; set; }
+        public UserModel? RehashUpdatedUser { get; private set; }
+
         public Task<UserModel?> GetUserByIDAsync(int? userId, CancellationToken ct = default)
-            => Task.FromResult<UserModel?>(_account);
+            => Task.FromResult<UserModel?>(userId == _account.UserID ? _account : null);
 
         public Task<UserModel?> GetUserByLoginAsync(string login, CancellationToken ct = default)
-            => Task.FromResult<UserModel?>(
-                _account.IsDeleted
-                    ? null
-                    : _account);
+        {
+            if (_account.IsDeleted) return Task.FromResult<UserModel?>(null);
+
+            bool matches = string.Equals(login, _account.Email, StringComparison.OrdinalIgnoreCase) ||
+                           (!string.IsNullOrWhiteSpace(_account.Phone) && string.Equals(login, _account.Phone, StringComparison.OrdinalIgnoreCase));
+
+            return Task.FromResult<UserModel?>(matches ? _account : null);
+        }
 
         public async Task<UserModel?> GetUserByLoginCandidatesAsync(IReadOnlyList<string> candidates, CancellationToken ct = default)
         {
@@ -304,8 +534,32 @@ public sealed class AuthCommandServiceTests
         public Task<int> AddUserAsync(UserModel user, CancellationToken ct = default)
             => Task.FromResult(_saveResult ? 1 : 0);
 
-        public Task<bool> UpdateUserAsync(UserModel user, int actorUserId, CancellationToken ct = default)
-            => Task.FromResult(_saveResult);
+        public Task<bool> UpdateUserFieldsAsync(
+            UserModel user,
+            int actorUserId,
+            UserUpdateFields fields,
+            CancellationToken ct = default)
+        {
+            UpdatedUser = user;
+            return Task.FromResult(_saveResult);
+        }
+
+        public Task<bool> UpdatePasswordHashForCredentialRehashAsync(
+            int userId,
+            string expectedHashedPassword,
+            string replacementHashedPassword,
+            CancellationToken cancellationToken = default)
+        {
+            UserModel current = ConcurrentUserAtRehash ?? _account;
+            if (current.UserID != userId ||
+                !string.Equals(current.HashedPassword, expectedHashedPassword, StringComparison.Ordinal))
+            {
+                return Task.FromResult(false);
+            }
+
+            RehashUpdatedUser = current with { HashedPassword = replacementHashedPassword };
+            return Task.FromResult(true);
+        }
 
         public Task<bool> DeleteUserAsync(int? userId, int actorUserId, CancellationToken ct = default)
             => Task.FromResult(true);
@@ -340,6 +594,14 @@ public sealed class AuthCommandServiceTests
                 LinkedUserId = userId
             });
         }
+
+        public Task DeleteIdentityLinkBySubjectAsync(
+            string provider,
+            string providerSubject,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeRoleService : IRoleService
@@ -362,6 +624,9 @@ public sealed class AuthCommandServiceTests
 
         public Task<bool> DoesRoleExistAsync(int? roleId, CancellationToken ct = default)
             => Task.FromResult(true);
+
+        public Task<bool> IsRoleNameTakenAsync(string roleName, int? excludeRoleId = null, CancellationToken ct = default)
+            => Task.FromResult(false);
     }
 
     private sealed class FakeLocationReadService : ILocationReadService
@@ -383,5 +648,45 @@ public sealed class AuthCommandServiceTests
 
         public Task<IReadOnlyList<AreaLookupResult>> GetAreasByCityAsync(int cityId, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<AreaLookupResult>>(Areas.Where(area => area.CityId == cityId).ToArray());
+    }
+
+    private sealed class FakeAccountLockoutService : IAccountLockoutService
+    {
+        public string? StateTokenToReturn { get; set; }
+        public string? ClearedStateToken { get; private set; }
+
+        public Task<AccountLockoutResult> IsLockedOutAsync(int userId, CancellationToken cancellationToken = default)
+            => Task.FromResult(new AccountLockoutResult(false, StateToken: StateTokenToReturn));
+
+        public Task<AccountLockoutResult> RecordFailedAttemptAsync(int userId, CancellationToken cancellationToken = default)
+            => Task.FromResult(new AccountLockoutResult(false));
+
+        public Task ClearLockoutAsync(
+            int userId,
+            string? expectedStateToken,
+            CancellationToken cancellationToken = default)
+        {
+            ClearedStateToken = expectedStateToken;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeSystemSettingsRuntimeService : ISystemSettingsRuntimeService
+    {
+        private readonly bool _registrationEnabled;
+
+        public FakeSystemSettingsRuntimeService(bool registrationEnabled = true)
+        {
+            _registrationEnabled = registrationEnabled;
+        }
+
+        public Task<bool> IsMaintenanceModeEnabledAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
+
+        public Task<PublicSystemStatus> GetPublicStatusAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(new PublicSystemStatus { MaintenanceMode = false, RegistrationEnabled = _registrationEnabled });
+
+        public Task<bool> IsRegistrationEnabledAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(_registrationEnabled);
     }
 }

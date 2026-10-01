@@ -61,6 +61,7 @@ export type AdminUserDetails = {
     joinedDate?: string;
     roleID?: number;
     status?: number;
+    suspendedUntil?: string | null;
     avatar?: string;
     [key: string]: unknown;
   };
@@ -133,36 +134,6 @@ export type SystemSettingItem = {
   updatedAt: string;
 };
 
-export type AdminConversationItem = {
-  conversationID: number;
-  user1ID: number;
-  user1Name: string;
-  user2ID: number;
-  user2Name: string;
-  postID: number | null;
-  lastMessageAt: string | null;
-  messageCount: number;
-};
-
-export type AdminConversationListResult = {
-  conversations: AdminConversationItem[];
-  totalCount: number;
-};
-
-export type AdminMessageItem = {
-  messageID: number;
-  senderID: number;
-  senderName: string;
-  content: string;
-  createdAt: string;
-  isRead: boolean;
-};
-
-export type AdminConversationDetail = {
-  conversation: AdminConversationItem;
-  messages: AdminMessageItem[];
-};
-
 export type AdminAreaItem = {
   areaID: number;
   cityID: number;
@@ -184,8 +155,14 @@ export type AdminReportItem = {
   targetLabel: string | null;
   reason: string;
   description: string | null;
+  imageUrl: string | null;
   reporterUserID: number;
   reporterName: string;
+  reporterEmail: string;
+  targetUserID: number | null;
+  targetUserName: string | null;
+  targetUserStatus: number | null;
+  targetUserSuspendedUntil: string | null;
   status: number;
   statusLabel: string;
   resolvedByUserID: number | null;
@@ -207,23 +184,4 @@ export type PermissionItem = {
   permissionKey: string;
   description: string;
   category: string;
-};
-
-// ── Fraud Detection Types ──
-
-export type FraudSignal = {
-  type: string;
-  severity: string;
-  count: number;
-  detail: string;
-};
-
-export type FraudSignalsResult = {
-  rapidRegistrations: boolean;
-  rapidRegistrationCount: number;
-  duplicateListings: number;
-  suspiciousPriceCount: number;
-  reviewBombingTargets: number;
-  checkedAt: string;
-  signals: FraudSignal[];
 };

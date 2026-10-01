@@ -87,16 +87,15 @@ export function resolveHasAdminAccessFromPayload(
   );
 }
 
-function mapRole(roleId: unknown, hasAdminAccess: boolean): "admin" | "user" {
-  if (hasAdminAccess) {
+function mapRole(roleName: unknown): "admin" | "user" {
+  if (
+    typeof roleName === "string" &&
+    roleName.trim().toLowerCase() === "admin"
+  ) {
     return "admin";
   }
 
-  if (
-    roleId === 1 ||
-    roleId === "1" ||
-    (typeof roleId === "string" && roleId.toLowerCase() === "admin")
-  ) {
+  if (roleName === 1 || roleName === "1") {
     return "admin";
   }
 
@@ -122,12 +121,12 @@ function toUserFromBackend(
     "";
 
   const hasAdminAccess = resolveHasAdminAccessFromPayload(backendUser);
-  const role = mapRole(undefined, hasAdminAccess);
   const permissions = resolvePermissions(backendUser);
   const roleName =
     backendUser.RoleName ??
     backendUser.roleName ??
     (typeof fallback.role === "string" ? fallback.role : undefined);
+  const role = mapRole(roleName);
 
   return {
     id: String(
@@ -173,7 +172,7 @@ export function resolveUserFromAuthPayload(
 ): User {
   const safeFallback = toFallbackUser(fallback);
   const backendUser = asBackendUser(payload);
-
+           
   if (!backendUser) {
     return safeFallback;
   }
@@ -207,6 +206,36 @@ export function userHasAdminPermission(
 
   return user.permissions.includes(permissionKey);
 }
+
+export const isAuthRejectionMessage = (message: string | undefined): boolean => {
+  const normalized = message?.trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  return (
+    normalized === "unauthorized" ||
+    normalized === "forbidden" ||
+    normalized.includes("401") ||
+    normalized.includes("403")
+  );
+};
+
+export const normalizeAuthRejectionMessage = (
+  error: { code?: string; message?: string } | undefined,
+  fallback: string,
+): string => {
+  if (
+    error?.code === "HTTP_401" ||
+    error?.code === "HTTP_403" ||
+    isAuthRejectionMessage(error?.message)
+  ) {
+    return fallback;
+  }
+
+  const trimmed = error?.message?.trim();
+  return trimmed ? trimmed : fallback;
+};
 
 export const shouldClearTokenForAuthError = (error: unknown): boolean => {
   const message = error instanceof Error ? error.message : String(error);

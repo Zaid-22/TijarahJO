@@ -23,9 +23,10 @@ public class AdminPostCommentsController(IAdminQueryHandler adminQueries) : Cont
     public async Task<ActionResult> GetAdminPostComments(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
-        [FromQuery] string? search = null)
+        [FromQuery] string? search = null,
+        [FromQuery] int? userId = null)
     {
-        var result = await _adminQueries.GetAdminPostCommentsAsync(search, page, pageSize, HttpContext.RequestAborted);
+        var result = await _adminQueries.GetAdminPostCommentsAsync(search, userId, page, pageSize, HttpContext.RequestAborted);
         if (!result.Success || result.Result == null)
         {
             return Problem(
@@ -44,7 +45,6 @@ public class AdminPostCommentsController(IAdminQueryHandler adminQueries) : Cont
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> DeletePostComment(int id, CancellationToken cancellationToken)
     {
         if (id < 1)

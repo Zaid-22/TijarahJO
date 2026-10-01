@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+/* eslint-disable max-lines */
+import { useEffect, useState, useCallback } from "react";
 import {
   Flag,
   AlertTriangle,
@@ -6,6 +7,7 @@ import {
   XCircle,
   Eye,
   Clock,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../../../shared/ui/button";
@@ -17,24 +19,19 @@ import {
   CardTitle,
 } from "../../../shared/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "../../../shared/ui/dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "../../../shared/ui/select";
-import { Textarea } from "../../../shared/ui/textarea";
 import { api } from "../../../services/api";
 import { AdminReportItem } from "../../../services/api/admin";
+import { resolveUploadUrl } from "../../../services/api/utils";
 import { formatCompactDateTime } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
+import { getReportActionFailureOutcome } from "../reportActionOutcome";
+import { ReportActionDialog } from "./ReportActionDialog";
 
 const STATUS_LABELS: Record<number, string> = {
   0: "Pending",
@@ -44,10 +41,10 @@ const STATUS_LABELS: Record<number, string> = {
 };
 
 const STATUS_COLORS: Record<number, string> = {
-  0: "bg-yellow-100 text-yellow-800",
-  1: "bg-blue-100 text-blue-800",
-  2: "bg-green-100 text-green-800",
-  3: "bg-gray-100 text-gray-800",
+  0: "bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20",
+  1: "bg-blue-500/10 text-blue-600 dark:text-blue-500 border border-blue-500/20",
+  2: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border border-emerald-500/20",
+  3: "bg-muted text-muted-foreground border border-border",
 };
 
 const STATUS_ICONS: Record<number, typeof Clock> = {
@@ -58,10 +55,10 @@ const STATUS_ICONS: Record<number, typeof Clock> = {
 };
 
 const REPORT_TYPE_COLORS: Record<string, string> = {
-  LISTING: "bg-violet-100 text-violet-800",
-  USER: "bg-blue-100 text-blue-800",
-  REVIEW: "bg-amber-100 text-amber-800",
-  CHAT: "bg-emerald-100 text-emerald-800",
+  LISTING: "bg-secondary text-secondary-foreground border border-border",
+  USER: "bg-secondary text-secondary-foreground border border-border",
+  REVIEW: "bg-secondary text-secondary-foreground border border-border",
+  COMMENT: "bg-secondary text-secondary-foreground border border-border",
 };
 
 function formatReportTargetLabel(report: AdminReportItem): string {
@@ -77,11 +74,45 @@ function formatReportTargetLabel(report: AdminReportItem): string {
       return `User #${report.targetID}`;
     case "REVIEW":
       return `Review #${report.targetID}`;
-    case "CHAT":
-      return `Conversation #${report.targetID}`;
+    case "COMMENT":
+      return `Comment #${report.targetID}`;
     default:
       return `Target #${report.targetID}`;
   }
+}
+
+function renderTargetUserStatus(
+  status: number | null | undefined,
+  suspendedUntil: string | null | undefined
+) {
+  if (status === undefined || status === null) return null;
+
+  const isTimedSuspended =
+    status === 1 &&
+    suspendedUntil &&
+    new Date(suspendedUntil).getTime() > Date.now();
+
+  let label = "Active";
+  let badgeClass =
+    "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border border-emerald-500/20";
+
+  if (status !== 1) {
+    label = "Banned";
+    badgeClass =
+      "bg-destructive/10 text-destructive border border-destructive/20";
+  } else if (isTimedSuspended) {
+    label = "Suspended";
+    badgeClass =
+      "bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20";
+  }
+
+  return (
+    <span
+      className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold ml-1.5 shadow-sm ${badgeClass}`}
+    >
+      User: {label}
+    </span>
+  );
 }
 
 export function ReportsQueue() {
@@ -91,6 +122,8 @@ export function ReportsQueue() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Action dialog
   const [selectedReport, setSelectedReport] = useState<AdminReportItem | null>(
@@ -100,9 +133,18 @@ export function ReportsQueue() {
   const [newStatus, setNewStatus] = useState(0);
   const [resolutionNotes, setResolutionNotes] = useState("");
 
+  // Block user state
+  const [selectedSuspensionHours, setSelectedSuspensionHours] =
+    useState<string>("24");
+  const [isSuspending, setIsSuspending] = useState(false);
+
+  // Block post state
+  const [isBlockingPost, setIsBlockingPost] = useState(false);
+  const [isDeletingComment, setIsDeletingComment] = useState(false);
+
   const pageSize = 25;
 
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     try {
       setIsLoading(true);
       const statusParam =
@@ -111,6 +153,7 @@ export function ReportsQueue() {
       const result = await api.admin.getReports(
         statusParam,
         typeParam,
+        searchQuery || undefined,
         page,
         pageSize,
       );
@@ -122,34 +165,218 @@ export function ReportsQueue() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [statusFilter, typeFilter, searchQuery, page]);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   useEffect(() => {
     void fetchReports();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, statusFilter, typeFilter]);
+  }, [fetchReports]);
 
   const openActionDialog = (report: AdminReportItem) => {
     setSelectedReport(report);
     setNewStatus(report.status);
     setResolutionNotes(report.resolutionNotes ?? "");
+    setSelectedSuspensionHours("24");
     setActionDialogOpen(true);
   };
 
   const handleUpdateStatus = async () => {
     if (!selectedReport) return;
     try {
-      await api.admin.updateReportStatus(
+      const success = await api.admin.updateReportStatus(
         selectedReport.reportID,
         newStatus,
         resolutionNotes || undefined,
       );
+      if (!success) {
+        toast.error("Failed to update report");
+        return;
+      }
       toast.success("Report updated");
       setActionDialogOpen(false);
       await fetchReports();
     } catch (error) {
       logger.warn("[ReportsQueue] Update failed", error);
       toast.error("Failed to update report");
+    }
+  };
+
+  const handleReportActionFailure = async ({
+    primaryActionSucceeded,
+    primaryFailureMessage,
+    resolutionFailureMessage,
+  }: {
+    primaryActionSucceeded: boolean;
+    primaryFailureMessage: string;
+    resolutionFailureMessage: string;
+  }) => {
+    const outcome = getReportActionFailureOutcome({
+      primaryActionSucceeded,
+      primaryFailureMessage,
+      resolutionFailureMessage,
+    });
+    toast.error(outcome.message);
+    if (outcome.shouldCloseDialog) {
+      setActionDialogOpen(false);
+    }
+    if (outcome.shouldRefreshReports) {
+      await fetchReports();
+    }
+  };
+
+  const handleBlockUser = async () => {
+    if (!selectedReport?.targetUserID) return;
+
+    const durationHours =
+      selectedSuspensionHours === "null"
+        ? null
+        : Number(selectedSuspensionHours);
+
+    setIsSuspending(true);
+    let primaryActionSucceeded = false;
+    try {
+      const result = await api.admin.suspendUser(
+        selectedReport.targetUserID,
+        durationHours,
+      );
+
+      if (result.success) {
+        primaryActionSucceeded = true;
+        // Auto-resolve the report
+        const reportResolved = await api.admin.updateReportStatus(
+          selectedReport.reportID,
+          2, // Resolved
+          `User #${selectedReport.targetUserID} ${durationHours === null ? "permanently banned" : `suspended for ${durationHours}h`} via report #${selectedReport.reportID}`,
+        );
+
+        if (!reportResolved) {
+          await handleReportActionFailure({
+            primaryActionSucceeded: true,
+            primaryFailureMessage: "Failed to block user",
+            resolutionFailureMessage:
+              "User blocked, but the report could not be resolved",
+          });
+          return;
+        }
+
+        toast.success(result.message ?? "User blocked successfully");
+        setActionDialogOpen(false);
+        await fetchReports();
+      } else {
+        toast.error(result.message ?? "Failed to block user");
+      }
+    } catch (error) {
+      logger.warn("[ReportsQueue] Block user failed", error);
+      await handleReportActionFailure({
+        primaryActionSucceeded,
+        primaryFailureMessage: "Failed to block user",
+        resolutionFailureMessage:
+          "User blocked, but the report could not be resolved",
+      });
+    } finally {
+      setIsSuspending(false);
+    }
+  };
+
+  const handleBlockPost = async () => {
+    if (!selectedReport || selectedReport.reportType !== "LISTING") return;
+
+    setIsBlockingPost(true);
+    let primaryActionSucceeded = false;
+    try {
+      const success = await api.admin.updatePostStatus(
+        selectedReport.targetID,
+        1, // 1 = BLOCKED according to updatePostStatus comments
+      );
+
+      if (success) {
+        primaryActionSucceeded = true;
+        // Auto-resolve the report
+        const reportResolved = await api.admin.updateReportStatus(
+          selectedReport.reportID,
+          2, // Resolved
+          `Post blocked via report #${selectedReport.reportID}`,
+        );
+
+        if (!reportResolved) {
+          await handleReportActionFailure({
+            primaryActionSucceeded: true,
+            primaryFailureMessage: "Failed to block post",
+            resolutionFailureMessage:
+              "Post blocked, but the report could not be resolved",
+          });
+          return;
+        }
+
+        toast.success("Post blocked successfully");
+        setActionDialogOpen(false);
+        await fetchReports();
+      } else {
+        toast.error("Failed to block post");
+      }
+    } catch (error) {
+      logger.warn("[ReportsQueue] Block post failed", error);
+      await handleReportActionFailure({
+        primaryActionSucceeded,
+        primaryFailureMessage: "Failed to block post",
+        resolutionFailureMessage:
+          "Post blocked, but the report could not be resolved",
+      });
+    } finally {
+      setIsBlockingPost(false);
+    }
+  };
+
+  const handleDeleteComment = async () => {
+    if (!selectedReport || selectedReport.reportType !== "COMMENT") return;
+
+    setIsDeletingComment(true);
+    let primaryActionSucceeded = false;
+    try {
+      const result = await api.admin.deletePostComment(selectedReport.targetID);
+
+      if (result.success) {
+        primaryActionSucceeded = true;
+        const reportResolved = await api.admin.updateReportStatus(
+          selectedReport.reportID,
+          2,
+          `Comment deleted via report #${selectedReport.reportID}`,
+        );
+
+        if (!reportResolved) {
+          await handleReportActionFailure({
+            primaryActionSucceeded: true,
+            primaryFailureMessage: "Failed to delete comment",
+            resolutionFailureMessage:
+              "Comment deleted, but the report could not be resolved",
+          });
+          return;
+        }
+
+        toast.success(result.message || "Comment deleted successfully");
+        setActionDialogOpen(false);
+        await fetchReports();
+      } else {
+        toast.error(result.message || "Failed to delete comment");
+      }
+    } catch (error) {
+      logger.warn("[ReportsQueue] Delete comment failed", error);
+      await handleReportActionFailure({
+        primaryActionSucceeded,
+        primaryFailureMessage: "Failed to delete comment",
+        resolutionFailureMessage:
+          "Comment deleted, but the report could not be resolved",
+      });
+    } finally {
+      setIsDeletingComment(false);
     }
   };
 
@@ -173,8 +400,18 @@ export function ReportsQueue() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3">
+      {/* Search + Filters */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="relative flex-1 min-w-50 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search by name, email, or phone..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
         <div className="w-40">
           <Select
             name="reportStatusFilter"
@@ -219,7 +456,7 @@ export function ReportsQueue() {
               <SelectItem value="LISTING">Listing</SelectItem>
               <SelectItem value="USER">User</SelectItem>
               <SelectItem value="REVIEW">Review</SelectItem>
-              <SelectItem value="CHAT">Chat</SelectItem>
+              <SelectItem value="COMMENT">Comment</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -244,23 +481,23 @@ export function ReportsQueue() {
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Badge
-                        className={
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wider ${
                           REPORT_TYPE_COLORS[report.reportType] ??
-                          "bg-gray-100 text-gray-800"
-                        }
+                          "bg-secondary text-secondary-foreground border border-border"
+                        }`}
                       >
                         {report.reportType}
-                      </Badge>
-                      <Badge
-                        className={
-                          STATUS_COLORS[report.status] ?? "bg-gray-100"
-                        }
+                      </span>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shadow-sm ${
+                          STATUS_COLORS[report.status] ?? "bg-muted text-muted-foreground border border-border"
+                        }`}
                       >
-                        <StatusIcon className="w-3 h-3 mr-1" />
+                        <StatusIcon className="w-3.5 h-3.5 mr-1.5" />
                         {STATUS_LABELS[report.status] ?? "Unknown"}
-                      </Badge>
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                      </span>
+                      <CardTitle className="text-sm font-medium text-muted-foreground/70 ml-1">
                         #{report.reportID}
                       </CardTitle>
                     </div>
@@ -284,6 +521,7 @@ export function ReportsQueue() {
                       <span className="font-medium">
                         {formatReportTargetLabel(report)}
                       </span>
+                      {renderTargetUserStatus(report.targetUserStatus, report.targetUserSuspendedUntil)}
                     </div>
                     <div>
                       <span className="text-muted-foreground">Reporter:</span>{" "}
@@ -294,6 +532,21 @@ export function ReportsQueue() {
                     <p className="mt-2 text-sm text-muted-foreground border-l-2 border-border pl-3">
                       {report.description}
                     </p>
+                  )}
+                  {report.imageUrl && (
+                    <a
+                      href={resolveUploadUrl(report.imageUrl)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 block w-fit"
+                      title="View evidence image"
+                    >
+                      <img
+                        src={resolveUploadUrl(report.imageUrl)}
+                        alt="Evidence"
+                        className="h-20 w-32 object-cover rounded border border-border hover:opacity-80 transition-opacity"
+                      />
+                    </a>
                   )}
                   <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
                     <span>
@@ -335,102 +588,24 @@ export function ReportsQueue() {
         </div>
       )}
 
-      {/* Review/Action Dialog */}
-      <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Review Report #{selectedReport?.reportID}</DialogTitle>
-          </DialogHeader>
-          {selectedReport && (
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Type:</span>{" "}
-                  <span className="font-medium">
-                    {selectedReport.reportType}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Target:</span>{" "}
-                  <span className="font-medium">
-                    {formatReportTargetLabel(selectedReport)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Reason:</span>{" "}
-                  <span className="font-medium">{selectedReport.reason}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Reporter:</span>{" "}
-                  <span className="font-medium">
-                    {selectedReport.reporterName}
-                  </span>
-                </div>
-              </div>
-              {selectedReport.description && (
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Description:</span>
-                  <p className="mt-1 border-l-2 border-border pl-3">
-                    {selectedReport.description}
-                  </p>
-                </div>
-              )}
-              <div>
-                <div
-                  id="report-status-update-label"
-                  className="text-sm font-medium text-foreground mb-1.5"
-                >
-                  Update Status
-                </div>
-                <Select
-                  name="reportStatusUpdate"
-                  value={String(newStatus)}
-                  onValueChange={(v) => setNewStatus(Number(v))}
-                >
-                  <SelectTrigger
-                    id="report-status-update"
-                    className="mt-1.5"
-                    aria-labelledby="report-status-update-label"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">Pending</SelectItem>
-                    <SelectItem value="1">Under Review</SelectItem>
-                    <SelectItem value="2">Resolved</SelectItem>
-                    <SelectItem value="3">Dismissed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label
-                  htmlFor="resolution-notes"
-                  className="text-sm font-medium text-foreground"
-                >
-                  Resolution Notes
-                </label>
-                <Textarea
-                  id="resolution-notes"
-                  className="mt-1.5"
-                  placeholder="Add notes about how this was resolved..."
-                  value={resolutionNotes}
-                  onChange={(e) => setResolutionNotes(e.target.value)}
-                  rows={3}
-                />
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setActionDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateStatus}>Save Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ReportActionDialog
+        open={actionDialogOpen}
+        onOpenChange={setActionDialogOpen}
+        report={selectedReport}
+        newStatus={newStatus}
+        onStatusChange={setNewStatus}
+        resolutionNotes={resolutionNotes}
+        onResolutionNotesChange={setResolutionNotes}
+        onSave={handleUpdateStatus}
+        isSuspending={isSuspending}
+        selectedSuspensionHours={selectedSuspensionHours}
+        onSuspensionHoursChange={setSelectedSuspensionHours}
+        onBlockUser={handleBlockUser}
+        isBlockingPost={isBlockingPost}
+        onBlockPost={handleBlockPost}
+        isDeletingComment={isDeletingComment}
+        onDeleteComment={handleDeleteComment}
+      />
     </div>
   );
 }

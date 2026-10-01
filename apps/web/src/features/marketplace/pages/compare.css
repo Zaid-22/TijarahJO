@@ -1,0 +1,172 @@
+/* Compare page animations & custom styles */
+
+/* ── Animations ── */
+
+/* Shimmer and pulse effects removed for static professional look */
+
+@keyframes compare-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes compare-section-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Card entrance animation ── */
+
+.compare-card {
+  animation: compare-fade-up 0.5s ease-out both;
+}
+
+.compare-card:nth-child(1) { animation-delay: 0.05s; }
+.compare-card:nth-child(2) { animation-delay: 0.1s; }
+.compare-card:nth-child(3) { animation-delay: 0.15s; }
+.compare-card:nth-child(4) { animation-delay: 0.2s; }
+.compare-card:nth-child(5) { animation-delay: 0.25s; }
+.compare-card:nth-child(6) { animation-delay: 0.3s; }
+
+.compare-section-enter {
+  animation: compare-section-enter 0.4s ease-out both;
+}
+
+/* ── Image containment (prevents oversized/cropped images) ── */
+
+.compare-image-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  max-height: 200px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.compare-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.compare-overview-image {
+  max-height: 150px;
+}
+
+@media (min-width: 640px) {
+  .compare-overview-image {
+    aspect-ratio: auto;
+    height: 100%;
+    max-height: none;
+    min-height: 140px;
+  }
+}
+
+/* On small screens, keep images even more compact */
+@media (max-width: 639px) {
+  .compare-image-container {
+    max-height: 160px;
+  }
+}
+
+/* ── Summary card ── */
+
+.compare-summary-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* ── AI Divider ── */
+
+.compare-ai-divider {
+  animation: compare-section-enter 0.5s ease-out both;
+  animation-delay: 0.1s;
+}
+
+/* ── Shimmering text effect ── */
+
+.compare-shine-text {
+  color: currentColor;
+}
+
+/* ── Final recommendation glow ── */
+
+/* ── Compare Panel thumbnail ── */
+
+.compare-panel-thumb-wrapper {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.compare-panel-thumb-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  object-fit: cover;
+  display: block;
+}
+
+.compare-remove-btn {
+  position: absolute;
+  top: -8px;
+  inset-inline-end: -8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid white;
+  background: #374151;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20;
+  padding: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  min-width: unset;
+  min-height: unset;
+}
+
+.compare-remove-btn:hover {
+  background: #ef4444;
+}
+
+.compare-remove-btn-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* ── Respect reduced motion ── */
+
+@media (prefers-reduced-motion: reduce) {
+  .compare-card,
+  .compare-section-enter,
+  .compare-ai-divider {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .compare-recommendation {
+    animation: none !important;
+  }
+
+  .compare-summary-card:hover {
+    transform: none;
+  }
+}

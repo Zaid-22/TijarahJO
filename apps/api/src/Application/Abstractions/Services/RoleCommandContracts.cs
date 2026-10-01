@@ -6,6 +6,7 @@ public enum RoleCommandFailureReason
 {
     InvalidRequest,
     NotFound,
+    Conflict,
     PersistenceFailed
 }
 

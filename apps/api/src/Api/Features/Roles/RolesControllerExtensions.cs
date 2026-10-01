@@ -32,6 +32,7 @@ internal static class RolesControllerExtensions
         {
             RoleCommandFailureReason.InvalidRequest    => StatusCodes.Status400BadRequest,
             RoleCommandFailureReason.NotFound          => StatusCodes.Status404NotFound,
+            RoleCommandFailureReason.Conflict          => StatusCodes.Status409Conflict,
             RoleCommandFailureReason.PersistenceFailed => StatusCodes.Status500InternalServerError,
             _ => StatusCodes.Status500InternalServerError
         };

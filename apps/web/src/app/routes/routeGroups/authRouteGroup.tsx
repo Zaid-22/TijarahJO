@@ -1,8 +1,12 @@
 import { lazy } from "react";
 import { Route, type NavigateFunction } from "react-router-dom";
-import { applyLoginUserDataToProfile } from "../appRoutesUtils";
+import {
+  applyLoginUserDataToProfile,
+  isProfileCompleteForRouting,
+} from "../appRoutesUtils";
 import type { BaseAppRouteProps } from "../AppRouteTypes";
 import { APP_ROUTE_PATHS } from "../routeConfig";
+import { userHasAdminAccess } from "../../../contexts/authUtils";
 import {
   buildCurrentPath,
   resolveBackPathFromHistoryState,
@@ -19,6 +23,11 @@ const ForgotPasswordPage = lazy(() =>
 const CompleteProfilePage = lazy(() =>
   import("../../../features/auth/pages/CompleteProfilePage").then((m) => ({
     default: m.CompleteProfilePage,
+  })),
+);
+const VerifyEmailPage = lazy(() =>
+  import("../../../features/auth/pages/VerifyEmailPage").then((m) => ({
+    default: m.VerifyEmailPage,
   })),
 );
 
@@ -38,14 +47,14 @@ export function renderAuthRouteGroup({
         element={
           <LoginPage
             onLogin={(userData) => {
-              appProps.setUserProfile(
-                applyLoginUserDataToProfile(appProps.userProfile, userData),
+              const previousOwnerId = appProps.userProfile.id;
+              const nextProfile = applyLoginUserDataToProfile(
+                appProps.userProfile,
+                userData,
               );
-              
-              if (userData.role === "admin") {
-                navigate(APP_ROUTE_PATHS.admin, { replace: true });
-                return;
-              }
+              appProps.setUserProfile(nextProfile, {
+                expectedPreviousOwnerId: previousOwnerId,
+              });
 
               const currentPath = buildCurrentPath(
                 window.location.pathname,
@@ -57,10 +66,43 @@ export function renderAuthRouteGroup({
                 fallbackPath: "/",
                 blockedPathnames: ["/login"],
               });
+              const intendedPath = userHasAdminAccess({
+                role: userData.role ?? "user",
+                hasAdminAccess: userData.hasAdminAccess,
+                permissions: userData.permissions,
+              })
+                ? APP_ROUTE_PATHS.admin
+                : safePath;
+
+              if (
+                !isProfileCompleteForRouting(userData)
+              ) {
+                navigate(APP_ROUTE_PATHS.completeProfile, {
+                  replace: true,
+                  state: { fromPath: intendedPath },
+                });
+                return;
+              }
+
+              if (
+                userHasAdminAccess({
+                  role: userData.role ?? "user",
+                  hasAdminAccess: userData.hasAdminAccess,
+                  permissions: userData.permissions,
+                })
+              ) {
+                navigate(APP_ROUTE_PATHS.admin, { replace: true });
+                return;
+              }
               navigate(safePath, { replace: true });
             }}
-            onContinueAsGuest={() => navigate(APP_ROUTE_PATHS.home)}
+            onContinueAsGuest={() => {
+              void appProps.loginAsGuest().finally(() => {
+                navigate(APP_ROUTE_PATHS.home, { replace: true });
+              });
+            }}
             language={appProps.language}
+            allowSignup={appProps.registrationEnabled}
           />
         }
       />
@@ -73,6 +115,22 @@ export function renderAuthRouteGroup({
       <Route
         path={APP_ROUTE_PATHS.completeProfile}
         element={<CompleteProfilePage />}
+      />
+
+      <Route
+        path={APP_ROUTE_PATHS.verifyEmail}
+        element={
+          <VerifyEmailPage
+            language={appProps.language}
+            onLogin={(userData) => {
+              const previousOwnerId = appProps.userProfile.id;
+              const nextProfile = applyLoginUserDataToProfile(appProps.userProfile, userData);
+              appProps.setUserProfile(nextProfile, {
+                expectedPreviousOwnerId: previousOwnerId,
+              });
+            }}
+          />
+        }
       />
     </>
   );

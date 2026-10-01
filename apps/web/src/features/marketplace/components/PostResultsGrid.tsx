@@ -22,8 +22,6 @@ interface PostResultsGridProps {
   emptyState: PostResultsEmptyState;
   isAuthenticated?: boolean;
   currentUserId?: string;
-  currentUserDisplayName?: string;
-  hideCategoryBadge?: boolean;
   animated?: boolean;
   className?: string;
   onRequireAuth?: () => void;
@@ -51,8 +49,6 @@ export function PostResultsGrid({
   emptyState,
   isAuthenticated = false,
   currentUserId,
-  currentUserDisplayName,
-  hideCategoryBadge = false,
   animated = false,
   className,
   onRequireAuth,
@@ -86,8 +82,6 @@ export function PostResultsGrid({
             onFavoriteToggle={onFavoriteToggle}
             isAuthenticated={isAuthenticated}
             currentUserId={isAuthenticated ? currentUserId : undefined}
-            currentUserDisplayName={isAuthenticated ? currentUserDisplayName : undefined}
-            hideCategoryBadge={hideCategoryBadge}
             language={language}
             onRequireAuth={onRequireAuth}
           />

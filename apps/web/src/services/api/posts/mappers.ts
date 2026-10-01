@@ -192,7 +192,7 @@ export function transformPostModelToPost(
         ? postModel.Location
         : typeof postModel.location === "string"
           ? postModel.location
-          : "Jordan";
+          : "";
   const area =
     typeof postModel.Area === "string"
       ? postModel.Area
@@ -271,8 +271,10 @@ export function transformPostModelToPost(
         : typeof postModel.price === "number"
           ? postModel.price
           : 0,
-    location: city || "Jordan",
+    location: city || "",
+    locationAr: typeof postModel.LocationAr === "string" ? postModel.LocationAr : typeof postModel.locationAr === "string" ? postModel.locationAr : "",
     area,
+    areaAr: typeof postModel.AreaAr === "string" ? postModel.AreaAr : typeof postModel.areaAr === "string" ? postModel.areaAr : undefined,
     seller,
     sellerId,
     phone,

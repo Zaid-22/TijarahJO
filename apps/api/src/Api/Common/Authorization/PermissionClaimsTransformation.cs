@@ -40,6 +40,12 @@ public sealed class PermissionClaimsTransformation(
         var extraIdentity = new ClaimsIdentity(authenticationType: "Permissions");
         extraIdentity.AddClaim(new Claim(PermissionClaimTypes.PermissionsLoaded, "true"));
 
+        string normalizedRoleName = AppRoles.NormalizeRoleName(snapshot.RoleName);
+        if (!string.IsNullOrWhiteSpace(normalizedRoleName))
+        {
+            extraIdentity.AddClaim(new Claim(PermissionClaimTypes.CurrentRole, normalizedRoleName));
+        }
+
         if (snapshot.HasAdminAccess)
         {
             extraIdentity.AddClaim(new Claim(PermissionClaimTypes.AdminAccess, "true"));

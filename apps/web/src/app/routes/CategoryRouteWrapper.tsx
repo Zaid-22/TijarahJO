@@ -6,9 +6,9 @@ import { decodeCategoryParam } from "./appRoutesUtils";
 interface CategoryRouteWrapperProps {
   language: Language;
   isAuthenticated: boolean;
-  currentUserDisplayName: string;
   currentUserId?: string;
   availablePosts: Post[];
+  isLoadingPosts: boolean;
   favoriteIds: string[];
   onFavoriteToggle: (postId: string) => void;
   onBack: () => void;
@@ -19,9 +19,9 @@ interface CategoryRouteWrapperProps {
 export function CategoryRouteWrapper({
   language,
   isAuthenticated,
-  currentUserDisplayName,
   currentUserId,
   availablePosts,
+  isLoadingPosts,
   favoriteIds,
   onFavoriteToggle,
   onBack,
@@ -45,10 +45,8 @@ export function CategoryRouteWrapper({
       onFavoriteToggle={onFavoriteToggle}
       language={language}
       isAuthenticated={isAuthenticated}
+      isLoading={isLoadingPosts}
       currentUserId={isAuthenticated ? currentUserId : undefined}
-      currentUserDisplayName={
-        isAuthenticated ? currentUserDisplayName : undefined
-      }
       onRequireAuth={onRequireAuth}
     />
   );

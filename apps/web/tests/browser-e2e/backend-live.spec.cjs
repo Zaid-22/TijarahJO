@@ -1,12 +1,16 @@
 const { test, expect } = require("@playwright/test");
+const { readFile } = require("node:fs/promises");
+const { join } = require("node:path");
 
 test.skip(
   process.env.E2E_BACKEND_LIVE !== "1",
   "Set E2E_BACKEND_LIVE=1 to run backend-connected browser journeys.",
 );
 
-const PNG_ONE_BY_ONE_BASE64 =
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO6pJ4kAAAAASUVORK5CYII=";
+const VALID_PNG_FIXTURE = join(
+  __dirname,
+  "../../public/icons/icon-192x192.png",
+);
 
 function escapeForRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -34,32 +38,75 @@ function normalizeApiBaseUrl(value) {
   return /\/api$/i.test(normalized) ? `${normalized}/v1` : normalized;
 }
 
+function extractVerificationToken(logContents, email) {
+  const recipient = escapeForRegex(email);
+  const matches = [
+    ...logContents.matchAll(
+      new RegExp(
+        `Recipient=${recipient}\\s+Link=(\\S*\\/verify-email\\?token=\\S+)`,
+        "g",
+      ),
+    ),
+  ];
+  const verificationLink = matches.at(-1)?.[1];
+  if (!verificationLink) {
+    return "";
+  }
+
+  try {
+    return new URL(verificationLink).searchParams.get("token") || "";
+  } catch {
+    return "";
+  }
+}
+
+async function waitForVerificationToken(email) {
+  const backendLogFile =
+    process.env.E2E_BACKEND_LOG_FILE ||
+    process.env.BACKEND_LOG_FILE ||
+    "/tmp/tijarahjo_bootstrap_backend.log";
+
+  let token = "";
+  await expect
+    .poll(
+      async () => {
+        try {
+          const logContents = await readFile(backendLogFile, "utf8");
+          token = extractVerificationToken(logContents, email);
+          return token;
+        } catch (error) {
+          if (error?.code === "ENOENT") {
+            return "";
+          }
+          throw error;
+        }
+      },
+      {
+        message: `verification token for ${email} was not written to ${backendLogFile}`,
+        timeout: 30_000,
+        intervals: [100, 250, 500, 1_000],
+      },
+    )
+    .not.toBe("");
+
+  return token;
+}
+
 async function forceEnglishUi(page) {
   await page.addInitScript(() => {
     window.localStorage.setItem("tijarahjo_language", JSON.stringify("en"));
   });
 }
 
-async function primeLocationLookups(page, cityName, areaName) {
+async function resolveLiveLocation(page) {
   const apiBaseUrl = normalizeApiBaseUrl(process.env.VITE_API_BASE_URL);
   const lookupState = await page.evaluate(
-    async ({ resolvedApiBaseUrl, targetCityName, targetAreaName }) => {
+    async ({ resolvedApiBaseUrl }) => {
       const citiesResponse = await fetch(`${resolvedApiBaseUrl}/cities`, {
         credentials: "include",
       });
       const citiesPayload = citiesResponse.ok ? await citiesResponse.json() : [];
-      const normalizedCityName = targetCityName.trim().toLowerCase();
-      const city = Array.isArray(citiesPayload)
-        ? citiesPayload.find((item) => {
-            const cityName = String(item?.cityName ?? item?.CityName ?? "")
-              .trim()
-              .toLowerCase();
-            return cityName === normalizedCityName;
-          })
-        : null;
-
-      const cityId = Number(city?.cityId ?? city?.CityId ?? 0);
-      if (!citiesResponse.ok || !Number.isFinite(cityId) || cityId < 1) {
+      if (!citiesResponse.ok || !Array.isArray(citiesPayload)) {
         return {
           citiesOk: citiesResponse.ok,
           cityResolved: false,
@@ -67,45 +114,67 @@ async function primeLocationLookups(page, cityName, areaName) {
         };
       }
 
-      const areasResponse = await fetch(
-        `${resolvedApiBaseUrl}/cities/${cityId}/areas`,
-        {
-          credentials: "include",
-        },
-      );
-      const areasPayload = areasResponse.ok ? await areasResponse.json() : [];
-      const normalizedAreaName = targetAreaName.trim().toLowerCase();
-      const areaResolved = Array.isArray(areasPayload)
-        ? areasPayload.some((item) => {
-            const areaName = String(item?.areaName ?? item?.AreaName ?? "")
-              .trim()
-              .toLowerCase();
-            return areaName === normalizedAreaName;
-          })
-        : false;
+      for (const cityCandidate of citiesPayload) {
+        const cityId = Number(cityCandidate?.cityId ?? cityCandidate?.CityId ?? 0);
+        const cityName = String(
+          cityCandidate?.cityName ?? cityCandidate?.CityName ?? "",
+        ).trim();
+        if (!Number.isFinite(cityId) || cityId < 1 || !cityName) {
+          continue;
+        }
+
+        const areasResponse = await fetch(
+          `${resolvedApiBaseUrl}/cities/${cityId}/areas`,
+          {
+            credentials: "include",
+          },
+        );
+        const areasPayload = areasResponse.ok ? await areasResponse.json() : [];
+        const area = Array.isArray(areasPayload)
+          ? areasPayload.find((item) => {
+              const areaName = String(item?.areaName ?? item?.AreaName ?? "")
+                .trim()
+                .toLowerCase();
+              return areaName === "sweifieh";
+            })
+          : null;
+
+        const areaName = String(area?.areaName ?? area?.AreaName ?? "").trim();
+        if (areaName) {
+          return {
+            citiesOk: true,
+            cityResolved: true,
+            areaResolved: true,
+            cityName,
+            areaName,
+          };
+        }
+      }
 
       return {
-        citiesOk: citiesResponse.ok,
-        cityResolved: true,
-        areaResolved,
+        citiesOk: true,
+        cityResolved: false,
+        areaResolved: false,
       };
     },
     {
       resolvedApiBaseUrl: apiBaseUrl,
-      targetCityName: cityName,
-      targetAreaName: areaName,
     },
   );
 
   expect(lookupState.citiesOk).toBeTruthy();
   expect(lookupState.cityResolved).toBeTruthy();
   expect(lookupState.areaResolved).toBeTruthy();
+  return {
+    cityName: lookupState.cityName,
+    areaName: lookupState.areaName,
+  };
 }
 
 async function registerUser(page, user) {
   await forceEnglishUi(page);
   await page.goto("/login");
-  await primeLocationLookups(page, "Amman", "Sweifieh");
+  const location = await resolveLiveLocation(page);
 
   const firstNameField = page.locator("#firstName");
   const isSignUpMode = await firstNameField.isVisible().catch(() => false);
@@ -118,16 +187,38 @@ async function registerUser(page, user) {
   await page.locator("#firstName").fill(user.firstName);
   await page.locator("#lastName").fill(user.lastName);
   await page.locator("#phone").fill(user.phone);
-  await page.locator("#city").selectOption("Amman");
+  await page.locator("#city").selectOption(location.cityName);
   await expect(page.locator("#area")).toBeEnabled({ timeout: 20_000 });
-  await page.locator("#area").selectOption("Sweifieh");
+  await page.locator("#area").selectOption(location.areaName);
   await page.locator("#authIdentifier").fill(user.email);
   await page.locator("#password").fill(user.password);
   await page.locator("#confirmPassword").fill(user.password);
 
+  const signupResponsePromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      /\/api(?:\/v[0-9]+)?\/auth\/signup$/i.test(response.url()),
+    { timeout: 30_000 },
+  );
   await page.getByRole("button", { name: /create account/i }).click();
+  const signupResponse = await signupResponsePromise;
+  expect(signupResponse.status()).toBe(201);
+  const signupPayload = await signupResponse.json();
+  expect(
+    signupPayload?.requiresEmailVerification ??
+      signupPayload?.RequiresEmailVerification,
+  ).toBe(true);
 
-  // After signup, expect home page OR the complete-profile page (race-condition safety net).
+  await expect(
+    page.getByRole("heading", { name: /check your email/i }),
+  ).toBeVisible({ timeout: 30_000 });
+
+  const verificationToken = await waitForVerificationToken(user.email);
+  await page.goto(
+    `/verify-email?token=${encodeURIComponent(verificationToken)}`,
+  );
+
+  // Verification auto-authenticates, then routes through profile completion if needed.
   await expect(page).toHaveURL(/\/(complete-profile)?$/, { timeout: 30_000 });
 
   if (page.url().includes("/complete-profile")) {
@@ -138,12 +229,12 @@ async function registerUser(page, user) {
     }
     const citySelect = page.locator("#city");
     if (await citySelect.inputValue().then((v) => !v.trim()).catch(() => true)) {
-      await citySelect.selectOption("Amman");
+      await citySelect.selectOption(location.cityName);
     }
     const areaSelect = page.locator("#area");
     await expect(areaSelect).toBeEnabled({ timeout: 20_000 });
     if (await areaSelect.inputValue().then((v) => !v.trim()).catch(() => true)) {
-      await areaSelect.selectOption("Sweifieh");
+      await areaSelect.selectOption(location.areaName);
     }
     await page.getByRole("button", { name: /save and continue/i }).click();
     await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
@@ -162,31 +253,18 @@ async function searchForPost(page, title) {
     name: /search in tijarahjo/i,
   });
   await searchInput.fill(title);
-  await page.evaluate((query) => {
-    window.localStorage.setItem("tijarahjo_search_query", JSON.stringify(query));
-    window.localStorage.setItem(
-      "tijarahjo_active_search_query",
-      JSON.stringify(query),
-    );
-  }, title);
   await searchInput.press("Enter");
 
-  const navigatedToSearchPage = await page
-    .waitForURL(/\/search$/, { timeout: 5_000 })
-    .then(() => true)
-    .catch(() => false);
-
-  if (!navigatedToSearchPage) {
-    await page.goto("/search");
-    await page.waitForURL(/\/search$/, { timeout: 10_000 });
-  }
+  await page.waitForURL(
+    (url) =>
+      url.pathname === "/search" && url.searchParams.get("q") === title,
+    { timeout: 10_000 },
+  );
 
   const resultTitle = page.getByRole("heading", {
     name: new RegExp(`^${escapeForRegex(title)}$`, "i"),
   });
-  await expect(resultTitle.first()).toBeVisible({
-    timeout: navigatedToSearchPage ? 20_000 : 20_000,
-  });
+  await expect(resultTitle.first()).toBeVisible({ timeout: 20_000 });
 }
 
 async function openSearchResult(page, title) {
@@ -214,13 +292,6 @@ async function openSearchResult(page, title) {
 
 async function expectPostAbsentInSearch(page, title) {
   await page.goto("/");
-  await page.evaluate((query) => {
-    window.localStorage.setItem("tijarahjo_search_query", JSON.stringify(query));
-    window.localStorage.setItem(
-      "tijarahjo_active_search_query",
-      JSON.stringify(query),
-    );
-  }, title);
   await page.goto("/search");
   await page.waitForURL(/\/search$/, { timeout: 10_000 });
   const apiBaseUrl = normalizeApiBaseUrl(process.env.VITE_API_BASE_URL);
@@ -280,30 +351,50 @@ test("backend live journey: auth, search, favorites, and post CRUD", async ({
   };
 
   test.setTimeout(300_000);
+  const validPng = await readFile(VALID_PNG_FIXTURE);
 
   await registerUser(page, userOne);
+  const listingLocation = await resolveLiveLocation(page);
 
   await page.goto("/sell");
   await page.locator("#title").fill(createdPostTitle);
   await page.locator("#price").fill("777");
   await selectRadixOption(page, "#category", "Electronics");
-  await selectRadixOption(page, "#location", "Amman");
+  await selectRadixOption(page, "#location", listingLocation.cityName);
   await page.locator("#description").fill("Playwright backend live post creation");
   
   // Wait a small moment to ensure the "Area" fetch resulting from "Amman" doesn't clobber the input
   await page.waitForTimeout(1000);
   
+  const createImageValidationPromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      /\/api(?:\/v[0-9]+)?\/post-images\/validate$/i.test(response.url()),
+    { timeout: 30_000 },
+  );
   await page.setInputFiles("#image-upload", {
     name: "post.png",
     mimeType: "image/png",
-    buffer: Buffer.from(PNG_ONE_BY_ONE_BASE64, "base64"),
+    buffer: validPng,
   });
-  
+  expect((await createImageValidationPromise).ok()).toBe(true);
+
   await expect(page.getByText(/1\/5 images uploaded/i)).toBeVisible({
     timeout: 15_000,
   });
+  await expect(page.getByText(/^verifying\.\.\.$/i)).toBeHidden({
+    timeout: 30_000,
+  });
+  const createPostResponsePromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      /\/api(?:\/v[0-9]+)?\/posts$/i.test(response.url()),
+    { timeout: 30_000 },
+  );
   await page.getByRole("button", { name: /publish post/i }).click();
-  await expect(page).toHaveURL(/\/$/);
+  const createPostResponse = await createPostResponsePromise;
+  expect(createPostResponse.ok()).toBe(true);
+  await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
 
   await searchForPost(page, createdPostTitle);
   await openSearchResult(page, createdPostTitle);
@@ -366,7 +457,27 @@ test("backend live journey: auth, search, favorites, and post CRUD", async ({
   await openSearchResult(page, createdPostTitle);
 
   await page.getByRole("button", { name: /edit post/i }).first().click();
-  await page.locator("#edit-name").fill(updatedPostTitle);
+  await page.locator("#title").fill(updatedPostTitle);
+  
+  const editImageValidationPromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      /\/api(?:\/v[0-9]+)?\/post-images\/validate$/i.test(response.url()),
+    { timeout: 30_000 },
+  );
+  await page.setInputFiles("#image-upload", {
+    name: "updated.png",
+    mimeType: "image/png",
+    buffer: validPng,
+  });
+  expect((await editImageValidationPromise).ok()).toBe(true);
+  await expect(page.getByRole("img", { name: "Upload 2" })).toBeVisible({
+    timeout: 10_000,
+  });
+  await expect(page.getByText(/^verifying\.\.\.$/i)).toBeHidden({
+    timeout: 30_000,
+  });
+
   await Promise.all([
     page.waitForResponse(
       (response) =>

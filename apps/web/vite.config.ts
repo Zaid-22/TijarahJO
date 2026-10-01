@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
 
 const DEV_DEFAULT_API_BASE_URL = "http://localhost:5033/api/v1";
@@ -104,6 +105,9 @@ function buildConnectSources(isProduction: boolean): string {
     connectSources.add("ws:");
     connectSources.add("wss:");
   }
+  connectSources.add("https://maps.googleapis.com");
+  connectSources.add("https://maps.gstatic.com");
+  connectSources.add("https://routes.googleapis.com");
   if (apiOrigin) {
     connectSources.add(apiOrigin);
     addLoopbackOriginAliases(connectSources, apiOrigin);
@@ -126,10 +130,24 @@ function buildConnectSources(isProduction: boolean): string {
 
 function buildStyleSrcDirective(isProduction: boolean): string {
   if (isProduction) {
-    return "style-src 'self' https://fonts.googleapis.com";
+    return "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com";
   }
 
   return "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com";
+}
+
+function buildScriptSrcDirective(): string {
+  return [
+    "script-src",
+    "'self'",
+    "'sha256-SLOKmWvKYj1okn6TfCw3PMmRTrhS4oK78YwwL9JigrM='",
+    "https://maps.googleapis.com",
+    "https://maps.gstatic.com",
+  ].join(" ");
+}
+
+function buildFrameSrcDirective(): string {
+  return "frame-src 'self' https://www.google.com https://www.youtube-nocookie.com";
 }
 
 function buildImgSrcDirective(isProduction: boolean): string {
@@ -153,17 +171,21 @@ function buildImgSrcDirective(isProduction: boolean): string {
 function buildCspPolicy(isProduction: boolean): string {
   const connectSrc = buildConnectSources(isProduction);
   const styleSrc = buildStyleSrcDirective(isProduction);
+  const scriptSrc = buildScriptSrcDirective();
+  const frameSrc = buildFrameSrcDirective();
   const imgSrc = buildImgSrcDirective(isProduction);
 
   return [
     "default-src 'self'",
     "base-uri 'self'",
     "object-src 'none'",
-    "script-src 'self' 'sha256-O1bNQKJh8URhQqcUBWRAukbQDDV3EluEojBj0bb7ApA='",
+    scriptSrc,
     styleSrc,
     imgSrc,
     "font-src 'self' data: https://fonts.gstatic.com",
     connectSrc,
+    frameSrc,
+    "worker-src 'self'",
     "form-action 'self'",
   ].join("; ");
 }
@@ -175,6 +197,14 @@ function injectCspPolicy(mode: string, env: Record<string, string>) {
   return {
     name: "inject-csp-policy",
     transformIndexHtml(html: string) {
+      if (mode !== "production") {
+        return html.replace(
+          `    <meta http-equiv="Content-Security-Policy" content="__CSP_POLICY__" />
+`,
+          ""
+        );
+      }
+
       return html.replace("__CSP_POLICY__", cspPolicy);
     },
   };
@@ -185,10 +215,133 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, "");
 
   return {
-    plugins: [tailwindcss(), react(), injectCspPolicy(mode, env)],
+    plugins: [
+      tailwindcss(),
+      react(),
+      VitePWA({
+        registerType: "autoUpdate",
+        includeAssets: ["favicon.svg", "icons/*.png"],
+        manifest: {
+          name: "TijarahJO — سوق الأردن",
+          short_name: "TijarahJO",
+          description:
+            "Jordan's trusted marketplace for buying and selling new and used items.",
+          theme_color: "#0A4ABF",
+          background_color: "#ffffff",
+          display: "standalone",
+          scope: "/",
+          start_url: "/",
+          dir: "rtl",
+          lang: "ar",
+          icons: [
+            {
+              src: "/icons/icon-192x192.png",
+              sizes: "192x192",
+              type: "image/png",
+            },
+            {
+              src: "/icons/icon-512x512.png",
+              sizes: "512x512",
+              type: "image/png",
+            },
+            {
+              src: "/icons/icon-512x512.png",
+              sizes: "512x512",
+              type: "image/png",
+              purpose: "maskable",
+            },
+          ],
+        },
+        workbox: {
+          // Precache only the installable app shell. Route chunks are cached on
+          // first use below instead of making every deploy download the whole app.
+          globPatterns: [
+            "index.html",
+            "assets/app-shell-*.js",
+            "assets/index-*.css",
+            "assets/react-vendor-*.js",
+            "assets/router-vendor-*.js",
+            "assets/query-vendor-*.js",
+            "assets/ui-utils-vendor-*.js",
+            "assets/icons-vendor-*.js",
+          ],
+          importScripts: ["notifications-sw.js"],
+          cleanupOutdatedCaches: true,
+          navigateFallbackDenylist: [/^\/api\//, /^\/chatHub/, /^\/uploads\//],
+          runtimeCaching: [
+            {
+              urlPattern: ({ request, sameOrigin, url }) =>
+                sameOrigin &&
+                url.pathname.startsWith("/assets/") &&
+                (request.destination === "script" ||
+                  request.destination === "style"),
+              handler: "StaleWhileRevalidate",
+              options: {
+                cacheName: "route-assets-v1",
+                expiration: {
+                  maxEntries: 120,
+                  maxAgeSeconds: 30 * 24 * 60 * 60,
+                },
+              },
+            },
+            {
+              urlPattern: /\/uploads\/(?:post-images|user-avatars|category-images)\//,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "public-image-cache-v2",
+                expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "google-fonts",
+                expiration: { maxEntries: 20, maxAgeSeconds: 365 * 24 * 60 * 60 },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/images\.unsplash\.com\/.*/,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "unsplash-images",
+                expiration: { maxEntries: 50, maxAgeSeconds: 30 * 24 * 60 * 60 },
+              },
+            },
+          ],
+        },
+        devOptions: {
+          enabled: true,
+          type: "module",
+        },
+      }),
+      injectCspPolicy(mode, env),
+    ],
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "src"),
+        sonner: path.resolve(__dirname, "src/shared/ui/sonner.tsx"),
+      },
+    },
     build: {
+      manifest: true,
+      modulePreload: {
+        resolveDependencies(_filename, deps, context) {
+          if (context.hostType !== "html") {
+            return deps;
+          }
+
+          // Keep chart code deferred until the admin dashboard requests it.
+          return deps.filter(
+            (dep) =>
+              !dep.includes("recharts-vendor-") &&
+              !dep.includes("victory-vendor-"),
+          );
+        },
+      },
       rollupOptions: {
         output: {
+          entryFileNames: "assets/app-shell-[hash].js",
           manualChunks(id) {
             const normalizedId = id.replace(/\\/g, "/");
 
@@ -200,8 +353,13 @@ export default defineConfig(({ mode }) => {
               return "signalr-vendor";
             }
 
+            if (normalizedId.includes("/node_modules/recharts/")) {
+              return "recharts-vendor";
+            }
 
-
+            if (normalizedId.includes("/node_modules/victory-vendor/")) {
+              return "victory-vendor";
+            }
 
             if (
               normalizedId.includes("/node_modules/react-router/") ||
@@ -258,11 +416,6 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
-    resolve: {
-      alias: {
-        "@": path.resolve(__dirname, "./src"),
-      },
-    },
     server: {
       host: "localhost",
       port: 5173,
@@ -273,6 +426,18 @@ export default defineConfig(({ mode }) => {
         "Cache-Control": "no-store",
         "Content-Security-Policy": "frame-ancestors 'none';",
       },
+      proxy: {
+        // Forward uploaded-file requests to the backend so images
+        // (post, chat, avatar, report evidence) resolve correctly in dev.
+        "/uploads": {
+          target:
+            env.VITE_API_BASE_URL?.trim()
+              ? parseApiOrigin(env.VITE_API_BASE_URL.trim()) ??
+                "http://localhost:5033"
+              : "http://localhost:5033",
+          changeOrigin: true,
+        },
+      },
       // open: true, // commented out to prevent dev server from hanging
       hmr: {
         // Prevent full page reloads on HMR errors
@@ -281,9 +446,6 @@ export default defineConfig(({ mode }) => {
     },
     // Optimize HMR to prevent unnecessary reloads
     optimizeDeps: {
-      // Force a fresh prebundle on each dev-server start so browsers do not
-      // keep using stale dependency wrapper files with old internal chunk names.
-      force: true,
       exclude: [],
     },
   };

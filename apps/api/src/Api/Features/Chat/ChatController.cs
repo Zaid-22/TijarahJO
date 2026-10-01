@@ -115,10 +115,11 @@ public class ChatController(
         List<MessageResponseDTO> response = [.. result.Value
             .Select(item => DTOMapper.ToMessageResponseDTO(item.Message, item.ReceiverId, item.PostId))];
 
-        if (response.Count > 0)
+        foreach (IGrouping<int, MessageResponseDTO> conversation in response
+                     .Where(message => message.ConversationId > 0)
+                     .GroupBy(message => message.ConversationId))
         {
-            int conversationId = response[0].ConversationId;
-            int lastReadMessageId = response
+            int lastReadMessageId = conversation
                 .Where(message =>
                     message.SenderId == otherUserId &&
                     message.ReceiverId == currentUserId &&
@@ -127,11 +128,11 @@ public class ChatController(
                 .DefaultIfEmpty(0)
                 .Max();
 
-            if (conversationId > 0 && lastReadMessageId > 0)
+            if (lastReadMessageId > 0)
             {
                 await _realtimeDelivery.DeliverReadReceiptAsync(
                     otherUserId,
-                    conversationId,
+                    conversation.Key,
                     currentUserId,
                     lastReadMessageId,
                     cancellationToken);
@@ -231,11 +232,13 @@ public class ChatController(
         return Ok(dto);
     }
 
-    [HttpPost("upload-image")]
+    [HttpPost("send-image")]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<ChatImageUploadResponseDTO>> UploadImage(
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<ActionResult<MessageResponseDTO>> SendImage(
         [FromForm] UploadChatImageRequest request,
         CancellationToken cancellationToken)
     {
@@ -302,26 +305,93 @@ public class ChatController(
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: ex.Message);
         }
 
-        return Ok(new ChatImageUploadResponseDTO
+        bool messagePersisted = false;
+        try
         {
-            Url = BuildChatImageDownloadUrl(storedFile.PublicUrl, conversationId.Value)
-        });
+            string imageUrl = BuildChatImageDownloadUrl(storedFile.PublicUrl, conversationId.Value);
+            string caption = request.Caption?.Trim() ?? string.Empty;
+            string content = string.IsNullOrEmpty(caption)
+                ? $"[chat-image] {imageUrl}"
+                : $"[chat-image] {imageUrl}\n{caption}";
+
+            ChatServiceResult<SendChatMessageOutcome> result = await _chat.SendMessageAsync(
+                new SendChatMessageCommand
+                {
+                    SenderUserId = currentUserId,
+                    ConversationId = conversationId.Value,
+                    ReceiverId = request.ReceiverId.Value,
+                    PostId = request.PostId,
+                    Content = content
+                },
+                cancellationToken);
+
+            if (!result.Success || result.Value == null)
+            {
+                return this.ToChatProblem(result, "Chat image could not be sent.");
+            }
+
+            messagePersisted = true;
+            SendChatMessageOutcome outcome = result.Value;
+            MessageResponseDTO dto = DTOMapper.ToMessageResponseDTO(
+                outcome.Message.Message, outcome.ReceiverId, outcome.PostId);
+            NotificationResponseDTO? notificationPayload = outcome.Notification is null
+                ? null
+                : DTOMapper.ToNotificationResponseDTO(outcome.Notification);
+
+            try
+            {
+                await _realtimeDelivery.DeliverToReceiverAsync(
+                    outcome.ReceiverId,
+                    dto,
+                    notificationPayload,
+                    cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Chat image message {MessageId} was persisted but realtime delivery to user {ReceiverId} failed.",
+                    dto.MessageId,
+                    outcome.ReceiverId);
+            }
+
+            return Ok(dto);
+        }
+        finally
+        {
+            if (!messagePersisted)
+            {
+                await _postImageStorage.DeleteByPublicUrlAsync(
+                    storedFile.PublicUrl, CancellationToken.None);
+            }
+        }
     }
 
     [HttpGet("download-image")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [AllowAnonymous]
-    public IActionResult DownloadImage(
+    public async Task<IActionResult> DownloadImage(
         [FromQuery] int conversationId,
         [FromQuery] string url,
-        [FromQuery] string sig)
+        [FromQuery] string sig,
+        CancellationToken cancellationToken)
     {
+        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int currentUserId, out ActionResult? failureResult))
+        {
+            return failureResult!;
+        }
+
         if (conversationId < 1 || string.IsNullOrWhiteSpace(url))
         {
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Conversation ID and URL are required.");
+        }
+
+        if (!await _messages.CanAccessConversationAsync(currentUserId, conversationId, cancellationToken))
+        {
+            return Forbid();
         }
 
         try
@@ -343,14 +413,20 @@ public class ChatController(
 
             candidatePath = NormalizeChatImageRequestPath(candidatePath);
 
+            string normalizedPrivateBasePath = LocalPostImageFileStorageService.NormalizeRequestPath(_fileStorageOptions.PrivateBasePath);
             string normalizedPublicBasePath = LocalPostImageFileStorageService.NormalizeRequestPath(_fileStorageOptions.PublicBasePath);
             string normalizedChatSegment = string.IsNullOrWhiteSpace(_fileStorageOptions.ChatImagesPath)
                 ? "chat-images"
                 : _fileStorageOptions.ChatImagesPath.Trim().Replace("\\", "/", StringComparison.Ordinal).Trim('/');
-            string normalizedChatPrefix = $"{normalizedPublicBasePath}/{normalizedChatSegment}";
-            bool isUnderChatPrefix =
-                candidatePath.Equals(normalizedChatPrefix, StringComparison.OrdinalIgnoreCase) ||
-                candidatePath.StartsWith($"{normalizedChatPrefix}/", StringComparison.OrdinalIgnoreCase);
+            string privateChatPrefix = $"{normalizedPrivateBasePath}/{normalizedChatSegment}";
+            string legacyChatPrefix = $"{normalizedPublicBasePath}/{normalizedChatSegment}";
+            bool isPrivateChatPath =
+                candidatePath.Equals(privateChatPrefix, StringComparison.OrdinalIgnoreCase) ||
+                candidatePath.StartsWith($"{privateChatPrefix}/", StringComparison.OrdinalIgnoreCase);
+            bool isLegacyChatPath =
+                candidatePath.Equals(legacyChatPrefix, StringComparison.OrdinalIgnoreCase) ||
+                candidatePath.StartsWith($"{legacyChatPrefix}/", StringComparison.OrdinalIgnoreCase);
+            bool isUnderChatPrefix = isPrivateChatPath || isLegacyChatPath;
             if (!isUnderChatPrefix)
             {
                 return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Unsupported image URL.");
@@ -361,16 +437,28 @@ public class ChatController(
                 return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid image signature.");
             }
 
-            string uploadsRoot = LocalPostImageFileStorageService.ResolveAbsoluteUploadsRootPath(
-                _environment.ContentRootPath,
-                _fileStorageOptions);
-            string relativePath = candidatePath[normalizedPublicBasePath.Length..]
-                .TrimStart('/')
-                .Replace("/", Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal);
-            string absoluteFilePath = Path.GetFullPath(Path.Combine(uploadsRoot, relativePath));
-            string chatRoot = LocalPostImageFileStorageService.ResolveAbsoluteChatImagesRootPath(
-                _environment.ContentRootPath,
-                _fileStorageOptions);
+            bool filePathResolved = isPrivateChatPath
+                ? LocalPostImageFileStorageService.TryResolveAbsolutePrivateStoredFilePath(
+                    candidatePath,
+                    _environment.ContentRootPath,
+                    _fileStorageOptions,
+                    out string absoluteFilePath)
+                : LocalPostImageFileStorageService.TryResolveAbsoluteStoredFilePath(
+                    candidatePath,
+                    _environment.ContentRootPath,
+                    _fileStorageOptions,
+                    out absoluteFilePath);
+            if (!filePathResolved)
+            {
+                return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Unsupported image URL.");
+            }
+            string chatRoot = isPrivateChatPath
+                ? LocalPostImageFileStorageService.ResolveAbsolutePrivateChatImagesRootPath(
+                    _environment.ContentRootPath,
+                    _fileStorageOptions)
+                : LocalPostImageFileStorageService.ResolveAbsoluteChatImagesRootPath(
+                    _environment.ContentRootPath,
+                    _fileStorageOptions);
             string relativeToChatRoot = Path.GetRelativePath(chatRoot, absoluteFilePath);
             if (Path.IsPathRooted(relativeToChatRoot) ||
                 relativeToChatRoot.StartsWith("..", OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))

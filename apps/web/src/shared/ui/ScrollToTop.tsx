@@ -1,7 +1,12 @@
 import { useState, useEffect } from "react";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
+import { cn } from "./utils";
 
-export function ScrollToTop() {
+interface ScrollToTopProps {
+  avoidBottomOverlay?: boolean;
+}
+
+export function ScrollToTop({ avoidBottomOverlay = false }: ScrollToTopProps) {
   const [isVisible, setIsVisible] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
 
@@ -20,10 +25,18 @@ export function ScrollToTop() {
   }, []);
 
   const scrollToTop = () => {
-    window.scrollTo({
+    const scrollTarget = document.documentElement || document.body;
+    scrollTarget.scrollTo({
       top: 0,
       behavior: prefersReducedMotion ? "auto" : "smooth",
     });
+    // Fallback for some browsers
+    if (window.scrollY !== 0) {
+      window.scrollTo({
+        top: 0,
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+      });
+    }
   };
 
   if (!isVisible) {
@@ -31,11 +44,16 @@ export function ScrollToTop() {
   }
 
   return (
-    <div className="fixed bottom-8 right-8 z-50">
+    <div
+      className={cn(
+        "fixed right-6 z-150 hidden transition-all duration-300 sm:block sm:right-8",
+        avoidBottomOverlay ? "bottom-72 sm:bottom-40 lg:bottom-32" : "bottom-24 sm:bottom-28",
+      )}
+    >
       <button
         onClick={scrollToTop}
         type="button"
-        className="rounded-full shadow-lg bg-primary hover:bg-primary/90 text-white transition-all duration-300 hover:-translate-y-1"
+        className="flex h-12 w-12 items-center justify-center rounded-full shadow-lg bg-primary hover:bg-primary/90 text-white transition-all duration-300 hover:-translate-y-1"
         aria-label="Scroll to top"
       >
         <svg

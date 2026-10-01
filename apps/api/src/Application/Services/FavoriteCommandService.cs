@@ -7,12 +7,12 @@ namespace TijarahJo.Application.Services;
 public sealed class FavoriteCommandService : IFavoriteCommandService
 {
     private readonly IFavoriteService _favorites;
-    private readonly IPostService _posts;
+    private readonly IPostReadService _postReads;
 
-    public FavoriteCommandService(IFavoriteService favorites, IPostService posts)
+    public FavoriteCommandService(IFavoriteService favorites, IPostReadService postReads)
     {
         _favorites = favorites;
-        _posts = posts;
+        _postReads = postReads;
     }
 
     public async Task<FavoriteMutationResult> AddAsync(
@@ -26,7 +26,8 @@ public sealed class FavoriteCommandService : IFavoriteCommandService
             return Failure(FavoriteMutationFailureReason.InvalidRequest, "Invalid user or post id.");
         }
 
-        if (!await _posts.DoesPostExistAsync(postId, cancellationToken))
+        PostReadResult postResult = await _postReads.GetByIdAsync(postId, cancellationToken);
+        if (!postResult.Success || postResult.Post == null)
         {
             return Failure(FavoriteMutationFailureReason.PostNotFound, $"Post with ID {postId} not found.");
         }

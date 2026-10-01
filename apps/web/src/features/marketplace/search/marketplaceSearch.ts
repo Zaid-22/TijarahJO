@@ -1,11 +1,15 @@
 import { APP_CONFIG } from "../../../constants/appConfig";
 import {
   isActivePost,
-  rankPostsBySearch,
 } from "../../../lib/searchRanking";
 import { api } from "../../../services/api";
 import { Post } from "../../../types";
 import { runSearchPipeline, type SearchPipelineResult } from "./searchPipeline";
+
+export {
+  filterAndSortMarketplacePosts,
+  rankMarketplacePosts,
+} from "./marketplacePostFiltering";
 
 export type MarketplaceSearchPreset =
   | "home"
@@ -16,6 +20,9 @@ interface MarketplaceSearchRequest {
   query: string;
   preset: MarketplaceSearchPreset;
   page?: number;
+  limit?: number;
+  category?: string;
+  city?: string;
   minPrice?: number;
   maxPrice?: number;
   sortBy?: "date" | "price" | "views";
@@ -38,7 +45,9 @@ interface RunMarketplaceSearchPipelineParams {
   signal?: AbortSignal;
 }
 
-function resolveLimit(preset: MarketplaceSearchPreset): number {
+export function resolveMarketplaceSearchLimit(
+  preset: MarketplaceSearchPreset,
+): number {
   switch (preset) {
     case "home":
       return APP_CONFIG.search.homeLimit;
@@ -55,6 +64,9 @@ function toSearchRequest({
   query,
   preset,
   page = 1,
+  limit,
+  category,
+  city,
   minPrice,
   maxPrice,
   sortBy = "date",
@@ -62,9 +74,11 @@ function toSearchRequest({
 }: MarketplaceSearchRequest) {
   return {
     query,
+    category,
+    city,
     status: "ACTIVE" as const,
     page,
-    limit: resolveLimit(preset),
+    limit: limit ?? resolveMarketplaceSearchLimit(preset),
     sortBy,
     sortOrder,
     minPrice,
@@ -88,6 +102,9 @@ export async function runMarketplaceSearchPipeline({
           query,
           preset: request.preset,
           page: request.page,
+          limit: request.limit,
+          category: request.category,
+          city: request.city,
           minPrice: request.minPrice,
           maxPrice: request.maxPrice,
           sortBy: request.sortBy,
@@ -108,11 +125,4 @@ export async function runMarketplaceSearchPipeline({
         : activePosts;
     },
   });
-}
-
-export function rankMarketplacePosts(
-  posts: Post[],
-  query: string,
-): Post[] {
-  return rankPostsBySearch(posts.filter(isActivePost), query);
 }

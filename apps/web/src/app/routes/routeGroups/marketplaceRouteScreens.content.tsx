@@ -40,7 +40,16 @@ function FaqMarketplaceRouteScreen() {
   });
 
   return (
-    <FAQPage language={appProps.language} onBack={() => navigate(backPath)} />
+    <FAQPage
+      language={appProps.language}
+      onBack={() => {
+        if (window.history.length > 2 && location.state && (location.state as { fromPath?: string }).fromPath) {
+          navigate(-1);
+        } else {
+          navigate(backPath);
+        }
+      }}
+    />
   );
 }
 
@@ -54,7 +63,16 @@ function TermsMarketplaceRouteScreen() {
   });
 
   return (
-    <TermsPage language={appProps.language} onBack={() => navigate(backPath)} />
+    <TermsPage
+      language={appProps.language}
+      onBack={() => {
+        if (window.history.length > 2 && location.state && (location.state as { fromPath?: string }).fromPath) {
+          navigate(-1);
+        } else {
+          navigate(backPath);
+        }
+      }}
+    />
   );
 }
 
@@ -70,7 +88,13 @@ function PrivacyMarketplaceRouteScreen() {
   return (
     <PrivacyPage
       language={appProps.language}
-      onBack={() => navigate(backPath)}
+      onBack={() => {
+        if (window.history.length > 2 && location.state && (location.state as { fromPath?: string }).fromPath) {
+          navigate(-1);
+        } else {
+          navigate(backPath);
+        }
+      }}
     />
   );
 }
@@ -87,7 +111,13 @@ function HelpMarketplaceRouteScreen() {
   return (
     <HelpCenterPage
       language={appProps.language}
-      onBack={() => navigate(backPath)}
+      onBack={() => {
+        if (window.history.length > 2 && location.state && (location.state as { fromPath?: string }).fromPath) {
+          navigate(-1);
+        } else {
+          navigate(backPath);
+        }
+      }}
     />
   );
 }
@@ -98,7 +128,13 @@ function NotificationsMarketplaceRouteScreen() {
   return (
     <NotificationsPage
       language={appProps.language}
-      onBack={() => navigate(APP_ROUTE_PATHS.home)}
+      onBack={() => {
+        if (window.history.length > 2) {
+          navigate(-1);
+        } else {
+          navigate(APP_ROUTE_PATHS.home);
+        }
+      }}
       onNavigate={(path) => navigate(path)}
     />
   );

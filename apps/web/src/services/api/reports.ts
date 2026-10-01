@@ -2,10 +2,12 @@ import { toPositiveIntegerId } from "../../utils/idValidation";
 import { apiRequest } from "./client";
 
 type SubmitReportPayload = {
-  reportType: "LISTING" | "USER" | "REVIEW" | "CHAT";
+  reportType: "LISTING" | "USER" | "REVIEW" | "COMMENT";
   targetId: number | string;
   reason: string;
   description?: string;
+  /** Optional evidence image file to attach to the report. */
+  image?: File | null;
 };
 
 type SubmitReportResult = {
@@ -50,14 +52,35 @@ export const reportsApi = {
       };
     }
 
+    // Use FormData so we can include the optional evidence image.
+    const formData = new FormData();
+    formData.append("ReportType", payload.reportType);
+    formData.append("TargetID", String(normalizedTargetId));
+    formData.append("Reason", normalizedReason);
+    if (payload.description?.trim()) {
+      formData.append("Description", payload.description.trim());
+    }
+    if (payload.image) {
+      // Validate evidence image client-side before upload.
+      const MAX_REPORT_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
+      if (payload.image.size > MAX_REPORT_IMAGE_BYTES) {
+        return {
+          success: false,
+          message: `Evidence image is too large (${(payload.image.size / (1024 * 1024)).toFixed(1)} MB). Maximum allowed size is 10 MB.`,
+        };
+      }
+      if (!payload.image.type.startsWith("image/")) {
+        return {
+          success: false,
+          message: "Only image files are allowed as evidence (JPG, PNG, WebP, GIF).",
+        };
+      }
+      formData.append("Image", payload.image, payload.image.name);
+    }
+
     const response = await apiRequest<unknown>("/reports", {
       method: "POST",
-      body: JSON.stringify({
-        ReportType: payload.reportType,
-        TargetID: normalizedTargetId,
-        Reason: normalizedReason,
-        Description: payload.description?.trim() || undefined,
-      }),
+      body: formData,
     });
 
     if (response.success) {

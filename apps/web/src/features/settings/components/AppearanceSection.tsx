@@ -1,6 +1,5 @@
 import { Moon, Globe } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
-import { Switch } from "../../../shared/ui/switch";
 import { Separator } from "../../../shared/ui/separator";
 import {
   Card,
@@ -44,11 +43,12 @@ export function AppearanceSection({
       <CardContent className="space-y-4">
         <SettingsActionRow
           icon={Moon}
+          controlId="settings-dark-mode"
           label={text.darkMode}
           description={text.darkModeDesc}
-          control={
-            <Switch checked={darkMode} onCheckedChange={onDarkModeChange} />
-          }
+          checked={darkMode}
+          onCheckedChange={onDarkModeChange ?? (() => {})}
+          disabled={!onDarkModeChange}
         />
         <Separator />
         <SettingsActionRow

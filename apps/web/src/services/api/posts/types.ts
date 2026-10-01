@@ -15,15 +15,6 @@ export interface RawPostImage {
   isDeleted?: unknown;
 }
 
-export interface RawCategory {
-  CategoryID?: unknown;
-  categoryID?: unknown;
-  id?: unknown;
-  CategoryName?: unknown;
-  categoryName?: unknown;
-  name?: unknown;
-}
-
 export interface RawUserLookup {
   UserID?: unknown;
   userID?: unknown;
@@ -42,10 +33,12 @@ export interface RawUserLookup {
 export interface RawPost {
   PostID?: unknown;
   postID?: unknown;
+  postId?: unknown;
   id?: unknown;
   UserID?: unknown;
   userID?: unknown;
   UserId?: unknown;
+  userId?: unknown;
   SellerID?: unknown;
   SellerId?: unknown;
   sellerId?: unknown;
@@ -58,19 +51,25 @@ export interface RawPost {
   Seller?: unknown;
   seller?: unknown;
   PostTitle?: unknown;
+  postTitle?: unknown;
   name?: unknown;
   PostDescription?: unknown;
+  postDescription?: unknown;
   description?: unknown;
   Price?: unknown;
   price?: unknown;
   Location?: unknown;
   location?: unknown;
+  LocationAr?: unknown;
+  locationAr?: unknown;
   City?: unknown;
   city?: unknown;
   CityId?: unknown;
   cityId?: unknown;
   Area?: unknown;
   area?: unknown;
+  AreaAr?: unknown;
+  areaAr?: unknown;
   Phone?: unknown;
   phone?: unknown;
   AreaId?: unknown;
@@ -96,6 +95,7 @@ export interface RawPost {
   Status?: unknown;
   status?: unknown;
   IsDeleted?: unknown;
+  isDeleted?: unknown;
 }
 
 export type PostStatus = NonNullable<Post["status"]>;

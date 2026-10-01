@@ -6,10 +6,12 @@ namespace TijarahJo.Application.Services;
 public sealed class PostImageQueryHandler : IPostImageQueryHandler
 {
     private readonly IPostImageService _postImages;
+    private readonly IPostReadService _postReads;
 
-    public PostImageQueryHandler(IPostImageService postImages)
+    public PostImageQueryHandler(IPostImageService postImages, IPostReadService postReads)
     {
         _postImages = postImages;
+        _postReads = postReads;
     }
 
     public async Task<PostImageListQueryResult> GetAllAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
@@ -36,6 +38,17 @@ public sealed class PostImageQueryHandler : IPostImageQueryHandler
                 Success = false,
                 StatusCode = 400,
                 Message = $"Invalid post ID {postId}"
+            };
+        }
+
+        PostReadResult postResult = await _postReads.GetByIdAsync(postId, cancellationToken);
+        if (!postResult.Success || postResult.Post == null)
+        {
+            return new PostImageListQueryResult
+            {
+                Success = false,
+                StatusCode = ToStatusCode(postResult.FailureReason),
+                Message = postResult.Message ?? $"Post with ID {postId} not found."
             };
         }
 
@@ -66,13 +79,23 @@ public sealed class PostImageQueryHandler : IPostImageQueryHandler
         }
 
         var postImage = await _postImages.FindAsync(postImageId, cancellationToken);
-        if (postImage == null)
+        if (postImage == null || postImage.IsDeleted)
         {
             return new PostImageByIdQueryResult
             {
                 Success = false,
                 StatusCode = 404,
                 Message = $"PostImage with ID {postImageId} not found."
+            };
+        }
+        PostReadResult postResult = await _postReads.GetByIdAsync(postImage.PostID, cancellationToken);
+        if (!postResult.Success || postResult.Post == null)
+        {
+            return new PostImageByIdQueryResult
+            {
+                Success = false,
+                StatusCode = ToStatusCode(postResult.FailureReason),
+                Message = postResult.Message ?? $"PostImage with ID {postImageId} not found."
             };
         }
 
@@ -104,4 +127,11 @@ public sealed class PostImageQueryHandler : IPostImageQueryHandler
             Exists = exists
         };
     }
+
+    private static int ToStatusCode(PostReadFailureReason? failureReason) => failureReason switch
+    {
+        PostReadFailureReason.InvalidRequest => 400,
+        PostReadFailureReason.NotFound => 404,
+        _ => 500
+    };
 }

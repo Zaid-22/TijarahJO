@@ -83,9 +83,12 @@ public static class DTOMapper
             Avatar = ResolveAssetUrl(request, userModel.Avatar),
             JoinedDate = userModel.JoinDate,
             Status = userModel.Status,
+            SuspendedUntil = userModel.SuspendedUntil,
+            RoleID = userModel.RoleID,
             RoleName = roleName,
             HasAdminAccess = hasAdminAccess,
-            AdminPermissions = adminPermissions ?? []
+            AdminPermissions = adminPermissions ?? [],
+            IsEmailVerified = userModel.IsEmailVerified
         };
     }
 
@@ -214,7 +217,9 @@ public static class DTOMapper
                 Name = post.Name,
                 Price = post.Price,
                 Location = post.Location,
+                LocationAr = post.LocationAr,
                 Area = post.Area,
+                AreaAr = post.AreaAr,
                 Seller = post.Seller,
                 SellerId = post.SellerId,
                 Category = post.Category,

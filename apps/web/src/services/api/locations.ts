@@ -74,18 +74,33 @@ function normalizeArea(payload: RawArea | null | undefined): LocationArea | null
   };
 }
 
+// In-flight deduplication — prevents concurrent duplicate requests to the locations endpoints
+let _citiesInflight: Promise<LocationCity[]> | null = null;
+const _areasInflight: Map<number, Promise<LocationArea[]>> = new Map();
+
 export const locationsApi = {
   getCities: async (): Promise<LocationCity[]> => {
-    const response = await apiRequest<RawCity[]>("/cities", {
-      method: "GET",
-    });
-    if (!response.success || !Array.isArray(response.data)) {
-      return [];
+    // Deduplicate: if another caller is already fetching all cities, share the promise.
+    if (_citiesInflight) {
+      return _citiesInflight;
     }
 
-    return response.data
-      .map((payload) => normalizeCity(payload))
-      .filter((city): city is LocationCity => city !== null);
+    _citiesInflight = (async () => {
+      const response = await apiRequest<RawCity[]>("/cities", {
+        method: "GET",
+      });
+      if (!response.success || !Array.isArray(response.data)) {
+        return [];
+      }
+
+      return response.data
+        .map((payload) => normalizeCity(payload))
+        .filter((city): city is LocationCity => city !== null);
+    })().finally(() => {
+      _citiesInflight = null;
+    });
+
+    return _citiesInflight;
   },
 
   getAreasByCity: async (cityId: number): Promise<LocationArea[]> => {
@@ -94,15 +109,28 @@ export const locationsApi = {
       return [];
     }
 
-    const response = await apiRequest<RawArea[]>(`/cities/${normalizedCityId}/areas`, {
-      method: "GET",
-    });
-    if (!response.success || !Array.isArray(response.data)) {
-      return [];
+    // Deduplicate: if another caller is already fetching areas for this city, share the promise.
+    let inflight = _areasInflight.get(normalizedCityId);
+    if (inflight) {
+      return inflight;
     }
 
-    return response.data
-      .map((payload) => normalizeArea(payload))
-      .filter((area): area is LocationArea => area !== null);
+    inflight = (async () => {
+      const response = await apiRequest<RawArea[]>(`/cities/${normalizedCityId}/areas`, {
+        method: "GET",
+      });
+      if (!response.success || !Array.isArray(response.data)) {
+        return [];
+      }
+
+      return response.data
+        .map((payload) => normalizeArea(payload))
+        .filter((area): area is LocationArea => area !== null);
+    })().finally(() => {
+      _areasInflight.delete(normalizedCityId);
+    });
+
+    _areasInflight.set(normalizedCityId, inflight);
+    return inflight;
   },
 };

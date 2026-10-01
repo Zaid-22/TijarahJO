@@ -33,12 +33,6 @@ BEGIN
         VALUES (N'ForceAdminTwoFactor', N'Force Admin Two-Factor', N'false', N'bool', N'Requires administrator accounts to enable two-factor authentication.');
     END;
 
-    IF NOT EXISTS (SELECT 1 FROM dbo.SystemSettings WHERE SettingKey = N'EnablePushNotifications')
-    BEGIN
-        INSERT INTO dbo.SystemSettings (SettingKey, Label, Value, ValueType, Description)
-        VALUES (N'EnablePushNotifications', N'Enable Push Notifications', N'true', N'bool', N'Allows browser push notification features for supported clients.');
-    END;
-
     IF NOT EXISTS (SELECT 1 FROM dbo.SystemSettings WHERE SettingKey = N'MaxHomepageHeroBanners')
     BEGIN
         INSERT INTO dbo.SystemSettings (SettingKey, Label, Value, ValueType, Description)

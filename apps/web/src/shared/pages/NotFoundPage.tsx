@@ -46,7 +46,7 @@ export function NotFoundPage({
         title={copy.title}
         showLogo={false}
       />
-      <main className="min-h-content-60vh flex items-center justify-center px-4 py-8">
+      <div className="min-h-content-60vh flex items-center justify-center px-4 py-8">
         <section className="max-w-xl w-full rounded-2xl border border-border bg-card p-6 sm:p-8 text-center shadow-sm">
           <div className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
             <AlertTriangle className="h-7 w-7" />
@@ -80,7 +80,7 @@ export function NotFoundPage({
             </Button>
           </div>
         </section>
-      </main>
+      </div>
     </PageShell>
   );
 }

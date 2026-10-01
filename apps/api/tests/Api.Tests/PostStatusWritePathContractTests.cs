@@ -54,7 +54,9 @@ public sealed class PostStatusWritePathContractTests
             CategoryId = 3,
             Title = "Test post",
             Description = "description",
-            Price = 99.5m
+            Price = 99.5m,
+            CityId = 1,
+            AreaId = 1
         });
 
         Assert.True(result.Success);
@@ -88,7 +90,9 @@ public sealed class PostStatusWritePathContractTests
             CategoryId = 9,
             Title = "New title",
             Description = "New description",
-            Price = 55m
+            Price = 55m,
+            CityId = 1,
+            AreaId = 1
         });
 
         Assert.True(result.Success);

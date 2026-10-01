@@ -10,14 +10,9 @@ namespace TijarahJo.Api.Features.Auth;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/auth/forgot-password")]
-public class PasswordResetController : ControllerBase
+public class PasswordResetController(IPasswordResetService passwordResetService) : ControllerBase
 {
-    private readonly IPasswordResetService _passwordResetService;
-
-    public PasswordResetController(IPasswordResetService passwordResetService)
-    {
-        _passwordResetService = passwordResetService;
-    }
+    private readonly IPasswordResetService _passwordResetService = passwordResetService;
 
     [HttpPost("request")]
     [AllowAnonymous]
@@ -27,11 +22,53 @@ public class PasswordResetController : ControllerBase
         [FromBody] ForgotPasswordRequest request,
         CancellationToken cancellationToken)
     {
-        await _passwordResetService.RequestResetAsync(request?.Email, cancellationToken);
+        _ = await _passwordResetService.RequestResetAsync(request?.Email, cancellationToken);
 
         return Ok(new ApiMessageResponse
         {
-            Message = "If an account exists for that email, a verification code has been sent."
+            Message = "If an eligible account exists, a verification code has been sent to its email address."
+        });
+    }
+
+    [HttpPost("verify")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    public async Task<ActionResult<ApiMessageResponse>> VerifyPasswordResetCode(
+        [FromBody] VerifyPasswordResetCodeRequest request,
+        CancellationToken cancellationToken)
+    {
+        PasswordResetConfirmationResult result = await _passwordResetService.VerifyCodeAsync(
+            request?.Email,
+            request?.Code,
+            cancellationToken
+        );
+
+        if (!result.Success)
+        {
+            return result.FailureReason switch
+            {
+                PasswordResetConfirmationFailureReason.TooManyAttempts => Problem(
+                    statusCode: StatusCodes.Status429TooManyRequests,
+                    detail: result.Message
+                ),
+                PasswordResetConfirmationFailureReason.InvalidRequest or
+                PasswordResetConfirmationFailureReason.InvalidOrExpiredCode or
+                PasswordResetConfirmationFailureReason.UserUnavailable => Problem(
+                    statusCode: StatusCodes.Status400BadRequest,
+                    detail: result.Message
+                ),
+                _ => Problem(
+                    statusCode: StatusCodes.Status500InternalServerError,
+                    detail: "Failed to verify password reset code."
+                )
+            };
+        }
+
+        return Ok(new ApiMessageResponse
+        {
+            Message = "Verification code confirmed."
         });
     }
 

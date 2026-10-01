@@ -39,13 +39,14 @@ Update `.env` with real values for at least:
 Important notes:
 
 - `DB_RUNTIME_PRINCIPAL=app` is the default and requires `DB_APP_PASSWORD`
+- `.env.example` includes local defaults for `JWT_ISSUER`, `JWT_AUDIENCE`, `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, and `ALLOWED_HOSTS`
 - `VITE_API_BASE_URL` should normally stay `http://localhost:5033/api/v1`
 - `GOOGLE_AUTH_*` values are optional for local setup
+- `PasswordResetEmail__ResendApiKey` and `EmailTwoFactor__ResendApiKey` are only needed when email delivery is enabled
 
 Reference templates:
 
 - `.env.example`
-- `docs/setup/ENV_TEMPLATE.txt`
 - `apps/api/src/Api/ENVIRONMENT_VARIABLES.md`
 
 ## Step 2: Bootstrap the Database
@@ -182,5 +183,5 @@ Check:
 - `docs/setup/BACKEND_SETUP_STEP_BY_STEP.md`
 - `apps/api/src/Api/ENVIRONMENT_VARIABLES.md`
 
-**Last Updated:** 2026-04-02
+**Last Updated:** 2026-05-22
 **Version:** 2.0

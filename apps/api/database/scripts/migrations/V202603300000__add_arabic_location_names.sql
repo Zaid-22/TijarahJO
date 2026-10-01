@@ -1,9 +1,18 @@
 SET XACT_ABORT ON;
+GO
+
 BEGIN TRY
     BEGIN TRANSACTION;
 
-    ALTER TABLE [dbo].[Cities] ADD [CityNameAr] NVARCHAR(100) NOT NULL DEFAULT N'';
-    ALTER TABLE [dbo].[Areas] ADD [AreaNameAr] NVARCHAR(100) NOT NULL DEFAULT N'';
+    IF COL_LENGTH(N'dbo.Cities', N'CityNameAr') IS NULL
+    BEGIN
+        ALTER TABLE [dbo].[Cities] ADD [CityNameAr] NVARCHAR(100) NOT NULL CONSTRAINT DF_Cities_CityNameAr DEFAULT N'';
+    END
+
+    IF COL_LENGTH(N'dbo.Areas', N'AreaNameAr') IS NULL
+    BEGIN
+        ALTER TABLE [dbo].[Areas] ADD [AreaNameAr] NVARCHAR(100) NOT NULL CONSTRAINT DF_Areas_AreaNameAr DEFAULT N'';
+    END
 
     COMMIT TRANSACTION;
 END TRY

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import type { ApiResponse, LoginRequest, SignUpRequest } from "../../types/api";
 import { APP_CONFIG } from "../../constants/appConfig";
 import { normalizeJordanPhone } from "../../utils/phone";
@@ -90,19 +91,41 @@ export const authApi = {
       );
     }
 
-    const errorMessage = resolveAuthFailureMessage(
-      response,
-      "Login failed. Please try again.",
-    );
+    if (!response.success) {
+      // Check if this is a 403 "email not verified" response
+      const errorDetails = response.error?.details as Record<string, unknown> | undefined;
+      if (
+        response.error?.code === "HTTP_403" &&
+        errorDetails &&
+        (errorDetails.RequiresEmailVerification === true ||
+          errorDetails.requiresEmailVerification === true)
+      ) {
+        const message =
+          String(errorDetails.Message ?? errorDetails.message ?? "") ||
+          "Please verify your email address before logging in.";
+        return {
+          success: false,
+          requiresEmailVerification: true,
+          message,
+        };
+      }
 
-    debugError(
-      "Login failed - response.success:",
-      response.success,
-      "response:",
-      response,
-    );
+      const errorMessage = resolveAuthFailureMessage(
+        response,
+        "Login failed. Please try again.",
+      );
 
-    return toAuthFailure("LOGIN_FAILED", errorMessage);
+      debugError(
+        "Login failed - response.success:",
+        response.success,
+        "response:",
+        response,
+      );
+
+      return toAuthFailure("LOGIN_FAILED", errorMessage);
+    }
+
+    return toAuthFailure("LOGIN_FAILED", "Login failed. Please try again.");
   },
 
   verifyTwoFactorLogin: async (
@@ -384,7 +407,7 @@ export const authApi = {
         success: true,
         message: resolveMessageFromPayload(
           response.data,
-          "If an account exists for that email, a verification code has been sent.",
+          "A verification code has been sent to your email.",
         ),
       };
     }
@@ -394,6 +417,41 @@ export const authApi = {
       "Unable to process password reset request.",
     );
     return toAuthFailure("PASSWORD_RESET_REQUEST_FAILED", errorMessage);
+  },
+
+  /**
+   * Verify a password reset email code before collecting a new password
+   */
+  verifyPasswordResetCode: async (
+    email: string,
+    code: string,
+  ): Promise<AuthApiResponse> => {
+    const response = await apiRequest<unknown>(
+      "/auth/forgot-password/verify",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          Email: email.trim().toLowerCase(),
+          Code: code.trim(),
+        }),
+      },
+    );
+
+    if (response.success) {
+      return {
+        success: true,
+        message: resolveMessageFromPayload(
+          response.data,
+          "Verification code confirmed.",
+        ),
+      };
+    }
+
+    const errorMessage = resolveAuthFailureMessage(
+      response,
+      "Invalid or expired verification code.",
+    );
+    return toAuthFailure("PASSWORD_RESET_VERIFY_FAILED", errorMessage);
   },
 
   /**
@@ -450,6 +508,59 @@ export const authApi = {
    */
   getCurrentUser: async (): Promise<ApiResponse<UnknownRecord>> => {
     return await apiRequest<UnknownRecord>("/auth/me", { method: "GET" });
+  },
+
+  /**
+   * Verify email address with the token from the verification link.
+   * On success the backend sets a JWT cookie and returns a full AuthResponse,
+   * so the frontend can log the user in immediately.
+   */
+  verifyEmail: async (token: string): Promise<AuthApiResponse> => {
+    const response = await apiRequest<unknown>("/auth/verify-email", {
+      method: "POST",
+      body: JSON.stringify({ Token: token.trim() }),
+    });
+
+    if (response.success && response.data) {
+      return handleAuthSuccessPayload(
+        response.data,
+        "EMAIL_VERIFY_FAILED",
+        "Email verification failed. The link may have expired.",
+        "Email verified successfully.",
+      );
+    }
+
+    const errorMessage = resolveAuthFailureMessage(
+      response,
+      "Email verification failed. The link may have expired.",
+    );
+    return toAuthFailure("EMAIL_VERIFY_FAILED", errorMessage);
+  },
+
+
+  /**
+   * Resend verification email
+   */
+  resendVerificationEmail: async (email: string): Promise<AuthApiResponse> => {
+    const response = await apiRequest<unknown>("/auth/verify-email/resend", {
+      method: "POST",
+      body: JSON.stringify({ Email: email.trim().toLowerCase() }),
+    });
+
+    if (response.success) {
+      return {
+        success: true,
+        message: resolveMessageFromPayload(
+          response.data,
+          "If an account exists with this email, a verification link has been sent.",
+        ),
+      };
+    }
+
+    return {
+      success: true,
+      message: "If an account exists with this email, a verification link has been sent.",
+    };
   },
 };
 

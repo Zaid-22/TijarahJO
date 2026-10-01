@@ -21,6 +21,8 @@ import { normalizeSellerDisplayName } from "../../../utils/sellerDisplayName";
 import { logger } from "../../../shared/lib/logger";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { Breadcrumbs } from "../../../shared/ui/breadcrumbs";
+import { useAuth } from "../../../contexts/AuthContext";
+
 import type {
   UpdatePostInput,
   UpdatePostStatusInput,
@@ -32,6 +34,7 @@ interface PostDetailsPageProps {
   allPosts?: Post[];
   language: Language;
   onPostClick?: (postId: string) => void;
+  onCategoryClick?: (categoryName: string) => void;
   onSellerClick?: () => void;
   onUpdatePost?: (post: UpdatePostInput) => void | Promise<void>;
   onUpdatePostStatus?: (
@@ -43,7 +46,6 @@ interface PostDetailsPageProps {
   favoriteIds?: string[];
   onFavoriteToggle?: (postId: string) => void;
   isAuthenticated?: boolean;
-  currentUserDisplayName?: string;
   onRequireAuth?: () => void;
 }
 
@@ -53,6 +55,7 @@ export function PostDetailsPage({
   allPosts,
   language,
   onPostClick,
+  onCategoryClick,
   onSellerClick,
   onUpdatePost,
   onUpdatePostStatus,
@@ -62,9 +65,9 @@ export function PostDetailsPage({
   favoriteIds = [],
   onFavoriteToggle,
   isAuthenticated = false,
-  currentUserDisplayName,
   onRequireAuth,
 }: PostDetailsPageProps) {
+  const { user: currentUser } = useAuth();
   type ActiveDialog = "delete" | "edit" | "phone" | "report" | "share" | null;
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
   const [sellerJoinDate, setSellerJoinDate] = useState<string | null>(null);
@@ -183,19 +186,11 @@ export function PostDetailsPage({
         }
 
         try {
-          const reviewList = await api.reviews.getUserReviews(String(post.sellerId));
-          if (!cancelled) {
-            const validRatings = reviewList
-              .map((review) => Number(review.Rating ?? review.rating ?? 0))
-              .filter((rating) => Number.isFinite(rating) && rating > 0);
-
-            if (validRatings.length > 0) {
-              const averageRating =
-                validRatings.reduce((sum, rating) => sum + rating, 0) /
-                validRatings.length;
-              setSellerAverageRating(averageRating);
-              setSellerReviewCount(validRatings.length);
-            }
+          // Use the aggregated batch endpoint — single DB round-trip, no raw review array.
+          const { averageRating, reviewCount } = await api.reviews.getSellerRating(String(post.sellerId));
+          if (!cancelled && reviewCount > 0) {
+            setSellerAverageRating(averageRating);
+            setSellerReviewCount(reviewCount);
           }
         } catch {
           // Rating is supplementary seller metadata; ignore if the reviews call fails.
@@ -207,6 +202,10 @@ export function PostDetailsPage({
           );
           const sellerProfile = sellerProfileResponse?.seller;
           if (sellerProfile) {
+            const sellerProfilePhone = String(sellerProfile.phone || "").trim();
+            if (!phone && sellerProfilePhone && !cancelled) {
+              setSellerPhone(sellerProfilePhone);
+            }
             if (!avatar && sellerProfile.avatar) {
               setSellerAvatar(String(sellerProfile.avatar));
             }
@@ -249,17 +248,19 @@ export function PostDetailsPage({
     String(post.sellerId || ""),
   );
 
-  const displayLocationLabel = useMemo(
-    () =>
-      resolveDisplayLocationLabel({
-        postArea: post.area,
-        postLocation: post.location,
-        sellerArea,
-        sellerCity,
-        jordanLabel: t.jordan,
-      }),
-    [post.area, post.location, sellerArea, sellerCity, t.jordan],
-  );
+  const displayLocationLabel = useMemo(() => {
+    const isArabic = language === "ar";
+    const resolvedPostLocation = isArabic ? (post.locationAr || post.location) : post.location;
+    const resolvedPostArea = isArabic ? (post.areaAr || post.area) : post.area;
+
+    return resolveDisplayLocationLabel({
+      postArea: resolvedPostArea,
+      postLocation: resolvedPostLocation,
+      sellerArea,
+      sellerCity,
+      jordanLabel: t.jordan || (isArabic ? "الأردن" : "Jordan"),
+    });
+  }, [post.area, post.areaAr, post.location, post.locationAr, sellerArea, sellerCity, t.jordan, language]);
 
   const clientSideActiveCount = useMemo(
     () => countActiveListings(allPosts, post),
@@ -305,13 +306,22 @@ export function PostDetailsPage({
               label: isRTL ? "الرئيسية" : "Home",
               onClick: onBack,
             },
-            ...(post.category ? [{ label: post.category }] : []),
+            ...(post.category
+              ? [
+                  {
+                    label: post.category,
+                    onClick: onCategoryClick
+                      ? () => onCategoryClick(post.category)
+                      : undefined,
+                  },
+                ]
+              : []),
             { label: post.name },
           ]}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid min-w-0 grid-cols-1 gap-6 sm:gap-8 lg:grid-cols-3">
+          <div className="min-w-0 space-y-6 lg:col-span-2">
             <PostImageGallery post={post} />
 
             <PostSummaryCard
@@ -320,39 +330,43 @@ export function PostDetailsPage({
               displayLocationLabel={displayLocationLabel}
               postedAgoLabel={postedAgoLabel}
               displayedViews={displayedViews}
-                labels={{
-                  descriptionTitle: t.descriptionTitle,
-                  soldOut: t.soldOut,
-                  views: t.views,
-                }}
-              />
+              labels={{
+                descriptionTitle: t.descriptionTitle,
+                readMore: t.readMore,
+                showLess: t.showLess,
+                soldOut: t.soldOut,
+                views: t.views,
+              }}
+            />
 
-              <PostCommentsSection
-                postId={post.id}
-                language={language}
-                postOwnerId={post.sellerId}
-                labels={{
-                  commentsTitle: t.commentsTitle,
-                  addComment: t.addComment,
-                  commentPlaceholder: t.commentPlaceholder,
-                  submitComment: t.submitComment,
-                  noComments: t.noComments,
-                  deleteComment: t.deleteComment,
-                  loadMoreComments: t.loadMoreComments,
-                  loginToComment: t.loginToComment,
-                  commentAdded: t.commentAdded,
-                  commentDeleted: t.commentDeleted,
-                  reply: t.reply,
-                  hideReplies: t.hideReplies,
-                  showReplies: t.showReplies,
-                  editComment: t.editComment,
-                  cancelEdit: t.cancelEdit,
-                  saveComment: t.saveComment,
-                  commentUpdated: t.commentUpdated,
-                  replies: t.replies,
-                }}
-              />
-            </div>
+            <PostCommentsSection
+              key={`${post.id}:${currentUser?.id || "signed-out"}`}
+              postId={post.id}
+              language={language}
+              postOwnerId={post.sellerId}
+              onRequireAuth={onRequireAuth}
+              labels={{
+                commentsTitle: t.commentsTitle,
+                addComment: t.addComment,
+                commentPlaceholder: t.commentPlaceholder,
+                submitComment: t.submitComment,
+                noComments: t.noComments,
+                deleteComment: t.deleteComment,
+                loadMoreComments: t.loadMoreComments,
+                loginToComment: t.loginToComment,
+                commentAdded: t.commentAdded,
+                commentDeleted: t.commentDeleted,
+                reply: t.reply,
+                hideReplies: t.hideReplies,
+                showReplies: t.showReplies,
+                editComment: t.editComment,
+                cancelEdit: t.cancelEdit,
+                saveComment: t.saveComment,
+                commentUpdated: t.commentUpdated,
+                replies: t.replies,
+              }}
+            />
+          </div>
 
           <PostSellerSidebar
             language={language}
@@ -367,7 +381,13 @@ export function PostDetailsPage({
             sellerReviewCount={sellerReviewCount}
             onSellerClick={onSellerClick}
             onChatWithSeller={onChatWithSeller}
-            onShowPhoneDialog={() => setActiveDialog("phone")}
+            onShowPhoneDialog={() => {
+              if (!isAuthenticated) {
+                onRequireAuth?.();
+                return;
+              }
+              setActiveDialog("phone");
+            }}
             onShowEditDialog={() => setActiveDialog("edit")}
             onShowDeleteDialog={() => setActiveDialog("delete")}
             hasOwnerActions={hasOwnerActions}
@@ -396,7 +416,6 @@ export function PostDetailsPage({
         allPosts={allPosts}
         language={language}
         isAuthenticated={isAuthenticated}
-        currentUserDisplayName={currentUserDisplayName}
         favoriteIds={favoriteIds}
         onFavoriteToggle={onFavoriteToggle}
         onPostClick={onPostClick}

@@ -1,20 +1,23 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "../../../shared/ui/dialog";
 import { Badge } from "../../../shared/ui/badge";
 import { Button } from "../../../shared/ui/button";
-import { Ban, CheckCircle, Eye, ExternalLink } from "lucide-react";
+import { Ban, CheckCircle, Eye, ExternalLink, Trash2 } from "lucide-react";
 import type { AdminPostItem } from "../../../services/api/admin.types";
 import { formatCompactDate } from "../../../shared/lib/dateTime";
+import { Link } from "react-router-dom";
 
 type ListingDetailModalProps = {
   post: AdminPostItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onBlock: (postId: number) => void;
+  onDelete: (postId: number) => void;
   onApprove: (postId: number) => void;
 };
 
@@ -29,6 +32,7 @@ export function ListingDetailModal({
   open,
   onOpenChange,
   onBlock,
+  onDelete,
   onApprove,
 }: ListingDetailModalProps) {
   if (!post) return null;
@@ -46,6 +50,10 @@ export function ListingDetailModal({
             <span className="truncate">{post.title}</span>
             <Badge className={status.color}>{status.label}</Badge>
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Listing details, moderation status, seller information, and available
+            admin actions for this post.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
@@ -75,7 +83,15 @@ export function ListingDetailModal({
             </div>
             <div>
               <span className="text-muted-foreground">Seller</span>
-              <p className="font-medium">{post.sellerName}</p>
+              <p className="font-medium">
+                <Link
+                  to={`/admin/users/${post.userID}`}
+                  className="text-primary hover:underline transition-colors"
+                  onClick={() => onOpenChange(false)}
+                >
+                  {post.sellerName}
+                </Link>
+              </p>
             </div>
             <div>
               <span className="text-muted-foreground">Posted</span>
@@ -87,6 +103,19 @@ export function ListingDetailModal({
 
           {/* Actions */}
           <div className="flex items-center gap-2 pt-2 border-t border-border">
+            {post.status === 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                onClick={() => {
+                  onDelete(post.postID);
+                  onOpenChange(false);
+                }}
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete
+              </Button>
+            )}
             {post.status !== 1 && (
               <Button
                 variant="destructive"
@@ -96,10 +125,10 @@ export function ListingDetailModal({
                   onOpenChange(false);
                 }}
               >
-                <Ban className="w-3.5 h-3.5 mr-1.5" /> Block Listing
+                <Ban className="w-3.5 h-3.5 mr-1.5" /> Block
               </Button>
             )}
-            {post.status === 1 && (
+            {post.status !== 0 && (
               <Button
                 variant="default"
                 size="sm"
@@ -108,13 +137,15 @@ export function ListingDetailModal({
                   onOpenChange(false);
                 }}
               >
-                <CheckCircle className="w-3.5 h-3.5 mr-1.5" /> Approve
+                <CheckCircle className="w-3.5 h-3.5 mr-1.5" /> Activate
               </Button>
             )}
             <Button
               variant="outline"
               size="sm"
-              onClick={() => window.open(`/post/${post.postID}`, "_blank")}
+              onClick={() =>
+                window.open(`/post/${post.postID}`, "_blank", "noopener,noreferrer")
+              }
             >
               <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> View Public
             </Button>

@@ -21,15 +21,7 @@ public static class ApiControllerHelpers
     }
 
     public static bool IsAdminUser(ClaimsPrincipal user)
-    {
-        if (user.HasClaim(PermissionClaimTypes.AdminAccess, "true"))
-        {
-            return true;
-        }
-
-        string? roleClaim = user.FindFirst(ClaimTypes.Role)?.Value;
-        return AppRoles.IsAdminRoleName(roleClaim);
-    }
+        => AuthorizationPrincipalHelpers.HasAdminAccess(user);
 
     public static bool TryParsePositiveId(string? rawId, out int id)
     {

@@ -98,9 +98,9 @@ export async function createPost(
     const fallbackImageUrls = sanitizedImageInputs.filter(
       (entry): entry is string => typeof entry === "string",
     );
-    const savedImageUrls = await createPostImages(postId, sanitizedImageInputs);
-    const expectedImageCount = sanitizedImageInputs.length;
-    const savedImageCount = savedImageUrls.length;
+    const uploadResult = await createPostImages(postId, sanitizedImageInputs);
+    const savedImageUrls = uploadResult.savedUrls;
+    const uploadErrors = uploadResult.errors;
 
     const enrichedPost = await enrichPostsWithCategoryAndSeller([createdPost]);
     const enrichedPostData = enrichedPost[0] || createdPost;
@@ -112,12 +112,12 @@ export async function createPost(
       enrichedPostData,
       savedImageUrls.length > 0 ? savedImageUrls : fallbackImageUrls,
     );
-    const imageUploadMessage =
-      expectedImageCount > 0 && savedImageCount === 0
-        ? "Post created, but the image upload did not finish. You can edit the listing to add images again."
-        : expectedImageCount > 0 && savedImageCount < expectedImageCount
-          ? "Post created, but some images did not finish uploading. You can edit the listing to add them again."
-          : undefined;
+
+    let imageUploadMessage: string | undefined = undefined;
+    if (uploadErrors.length > 0) {
+      const uniqueErrors = Array.from(new Set(uploadErrors));
+      imageUploadMessage = uniqueErrors.join("; ");
+    }
 
     return {
       success: true,
@@ -250,14 +250,24 @@ export async function updatePost(
       postData.images !== undefined
         ? sanitizeImageInputs(postData.images)
         : undefined;
-    const replacedImageUrls = sanitizedImageInputs
+    const uploadResult = sanitizedImageInputs
       ? await replacePostImages(normalizedPostId, sanitizedImageInputs)
       : undefined;
+    const replacedImageUrls = uploadResult?.savedUrls;
+    const uploadErrors = uploadResult?.errors || [];
 
     const post = transformPostModelToPost(updatedPost, replacedImageUrls || []);
+    
+    let imageUploadMessage: string | undefined = undefined;
+    if (uploadErrors.length > 0) {
+      const uniqueErrors = Array.from(new Set(uploadErrors));
+      imageUploadMessage = uniqueErrors.join("; ");
+    }
+
     return {
       success: true,
       post: post,
+      message: imageUploadMessage,
     };
   }
 

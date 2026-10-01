@@ -44,7 +44,7 @@ function extractPathname(value: string): string {
   }
 
   try {
-    return new URL(value, "https://tijarahjo.local").pathname || DEFAULT_FALLBACK_PATH;
+    return new URL(value, "https://tijarahjo.online").pathname || DEFAULT_FALLBACK_PATH;
   } catch {
     const [pathname] = value.split(/[?#]/, 1);
     return pathname || DEFAULT_FALLBACK_PATH;

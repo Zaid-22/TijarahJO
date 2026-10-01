@@ -9,6 +9,7 @@ GUARD_SCRIPT="$SCRIPT_DIR/guard_no_duplicate_procs.sh"
 RUNTIME_GUARD_SCRIPT="$SCRIPT_DIR/guard_runtime_proc_contract.sh"
 ATOMICITY_GUARD_SCRIPT="$SCRIPT_DIR/guard_migration_atomicity.sh"
 CHECKSUM_GUARD_SCRIPT="$SCRIPT_DIR/guard_migration_checksums.sh"
+BOOTSTRAP_OVERRIDE_CHECKSUM_GUARD_SCRIPT="$SCRIPT_DIR/guard_bootstrap_override_checksums.sh"
 
 BASE_SCHEMA_SOURCE="$DB_DIR/schema/BASE_SCHEMA.sql"
 
@@ -19,15 +20,36 @@ SEED_BASELINE_FILES=(
   "seeds/baseline/BASELINE_LOCATIONS.sql"
 )
 
+SEED_ADMIN_FILES=(
+  "seeds/bootstrap/BOOTSTRAP_ADMIN_USER.sql"
+)
+
 SEED_DEV_FILES=(
   "seeds/dev/INSERT_DEV_SEED_USER.sql"
-  "seeds/dev/INSERT_ADMIN_USER.sql"
+)
+
+SEED_SAMPLE_FILES=(
   "seeds/dev/INSERT_SAMPLE_POSTS.sql"
 )
 
 SEED_TEST_FILES=(
   "seeds/test/CREATE_TEST_USER.sql"
 )
+
+resolve_bundle_source_path() {
+  local relative_source="$1"
+
+  case "$relative_source" in
+    migrations/V202604080500__review_comment_max_length.sql|\
+    migrations/V202604081000__cap_nvarchar_max_columns.sql|\
+    migrations/V202604081400__postcomments_depth_guard.sql)
+      printf "%s/bootstrap_overrides/%s" "$SCRIPT_DIR" "$(basename "$relative_source")"
+      ;;
+    *)
+      printf "%s/%s" "$SCRIPT_DIR" "$relative_source"
+      ;;
+  esac
+}
 
 write_header() {
   local destination="$1"
@@ -132,14 +154,23 @@ validate_sources() {
     exit 1
   fi
 
+  if [[ ! -x "$BOOTSTRAP_OVERRIDE_CHECKSUM_GUARD_SCRIPT" ]]; then
+    echo "Missing or non-executable bootstrap override checksum guard script: $BOOTSTRAP_OVERRIDE_CHECKSUM_GUARD_SCRIPT" >&2
+    exit 1
+  fi
+
   local file=""
   for file in \
     "${MIGRATION_FILES[@]}" \
     "${SEED_BASELINE_FILES[@]}" \
+    "${SEED_ADMIN_FILES[@]}" \
     "${SEED_DEV_FILES[@]}" \
+    "${SEED_SAMPLE_FILES[@]}" \
     "${SEED_TEST_FILES[@]}"; do
-    if [[ ! -f "$SCRIPT_DIR/$file" ]]; then
-      echo "Missing SQL source: $SCRIPT_DIR/$file" >&2
+    local resolved_source
+    resolved_source="$(resolve_bundle_source_path "$file")"
+    if [[ ! -f "$resolved_source" ]]; then
+      echo "Missing SQL source: $resolved_source" >&2
       exit 1
     fi
   done
@@ -157,7 +188,7 @@ build_migrations_bundle() {
 
   local file=""
   for file in "${MIGRATION_FILES[@]}"; do
-    append_source_sql "$destination" "$SCRIPT_DIR/$file"
+    append_source_sql "$destination" "$(resolve_bundle_source_path "$file")"
   done
 }
 
@@ -179,11 +210,32 @@ EOT
   done
 }
 
+write_sqlcmd_session_preamble() {
+  local destination="$1"
+
+  cat >> "$destination" <<'EOT'
+-- sqlcmd defaults QUOTED_IDENTIFIER OFF; filtered indexes require ON for MERGE/DDL.
+SET QUOTED_IDENTIFIER ON;
+GO
+SET ANSI_NULLS ON;
+GO
+
+EOT
+}
+
 build_seed_bundle() {
   local destination="$BUNDLES_DIR/seed_data.sql"
   write_header "$destination" "Seed Data Bundle (Baseline)"
+  write_sqlcmd_session_preamble "$destination"
 
   append_seed_group "$destination" "Baseline Seeds" "${SEED_BASELINE_FILES[@]}"
+}
+
+build_seed_admin_bundle() {
+  local destination="$BUNDLES_DIR/seed_admin.sql"
+  write_header "$destination" "Seed Data Bundle (Admin Bootstrap)"
+
+  append_seed_group "$destination" "Admin Bootstrap Seeds" "${SEED_ADMIN_FILES[@]}"
 }
 
 build_seed_dev_bundle() {
@@ -191,6 +243,13 @@ build_seed_dev_bundle() {
   write_header "$destination" "Seed Data Bundle (Development)"
 
   append_seed_group "$destination" "Development Seeds" "${SEED_DEV_FILES[@]}"
+}
+
+build_seed_sample_bundle() {
+  local destination="$BUNDLES_DIR/seed_sample_posts.sql"
+  write_header "$destination" "Seed Data Bundle (Sample Posts)"
+
+  append_seed_group "$destination" "Sample Post Seeds" "${SEED_SAMPLE_FILES[@]}"
 }
 
 build_seed_test_bundle() {
@@ -208,7 +267,7 @@ build_master_bundle() {
 
   local file=""
   for file in "${MIGRATION_FILES[@]}"; do
-    append_source_sql "$destination" "$SCRIPT_DIR/$file"
+    append_source_sql "$destination" "$(resolve_bundle_source_path "$file")"
   done
 }
 
@@ -220,16 +279,20 @@ main() {
   "$GUARD_SCRIPT"
   "$RUNTIME_GUARD_SCRIPT"
   "$CHECKSUM_GUARD_SCRIPT"
+  "$BOOTSTRAP_OVERRIDE_CHECKSUM_GUARD_SCRIPT"
   "$ATOMICITY_GUARD_SCRIPT"
 
   rm -f "$BUNDLES_DIR/seed.sql" "$BUNDLES_DIR/views.sql" \
     "$BUNDLES_DIR/indexes.sql" "$BUNDLES_DIR/procedures.sql" \
-    "$BUNDLES_DIR/seed_dev.sql" "$BUNDLES_DIR/seed_test.sql"
+    "$BUNDLES_DIR/seed_admin.sql" "$BUNDLES_DIR/seed_dev.sql" \
+    "$BUNDLES_DIR/seed_sample_posts.sql" "$BUNDLES_DIR/seed_test.sql"
 
   build_schema_bundle
   build_migrations_bundle
   build_seed_bundle
+  build_seed_admin_bundle
   build_seed_dev_bundle
+  build_seed_sample_bundle
   build_seed_test_bundle
   build_master_bundle
 
@@ -237,7 +300,9 @@ main() {
   echo "  $BUNDLES_DIR/schema.sql"
   echo "  $BUNDLES_DIR/migrations.sql"
   echo "  $BUNDLES_DIR/seed_data.sql"
+  echo "  $BUNDLES_DIR/seed_admin.sql"
   echo "  $BUNDLES_DIR/seed_dev.sql"
+  echo "  $BUNDLES_DIR/seed_sample_posts.sql"
   echo "  $BUNDLES_DIR/seed_test.sql"
   echo "  $BUNDLES_DIR/master.sql"
 }

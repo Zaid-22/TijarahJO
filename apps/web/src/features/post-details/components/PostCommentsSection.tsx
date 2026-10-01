@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { MessageSquare, Send } from "lucide-react";
 import { api } from "../../../services/api";
 import { logger } from "../../../shared/lib/logger";
@@ -36,6 +35,7 @@ interface PostCommentsSectionProps {
     replies: string;
   };
   postOwnerId?: string;
+  onRequireAuth?: () => void;
 }
 
 export function PostCommentsSection({
@@ -43,9 +43,8 @@ export function PostCommentsSection({
   language,
   labels,
   postOwnerId,
+  onRequireAuth,
 }: PostCommentsSectionProps) {
-  const navigate = useNavigate();
-  const currentPathLocation = useLocation();
   const { user, isAuthenticated } = useAuth();
   const [comments, setComments] = useState<PostComment[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -54,14 +53,30 @@ export function PostCommentsSection({
   const [newComment, setNewComment] = useState("");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [nowTimestamp, setNowTimestamp] = useState(Date.now());
+  const activePostIdRef = useRef(postId);
+  const commentsRequestRunIdRef = useRef(0);
+  const loadMoreInFlightRef = useRef(false);
 
   const isRTL = language === "ar";
+  const requireAuthForComment = () => {
+    onRequireAuth?.();
+  };
 
   const fetchComments = useCallback(
     async (pageNum: number, append = false) => {
+      const requestedPostId = postId;
+      const runId = ++commentsRequestRunIdRef.current;
+      const isCurrentRequest = () =>
+        runId === commentsRequestRunIdRef.current &&
+        activePostIdRef.current === requestedPostId;
+
       try {
-        const response = await api.comments.getComments(postId, pageNum);
+        const response = await api.comments.getComments(requestedPostId, pageNum);
+        if (!isCurrentRequest()) {
+          return false;
+        }
         if (response.success && response.data) {
           const newComments = response.data.comments;
           const newTotalCount = response.data.totalCount;
@@ -76,23 +91,47 @@ export function PostCommentsSection({
             newComments.length === 20 &&
               pageNum * 20 < newTotalCount
           );
+          return true;
         } else if (!response.success) {
           toast.error(response.error.message || "Failed to load comments");
         }
       } catch (error) {
+        if (!isCurrentRequest()) {
+          return false;
+        }
         logger.error("Failed to fetch comments", error);
         toast.error("Failed to load comments");
       } finally {
-        setLoading(false);
+        if (isCurrentRequest()) {
+          setLoading(false);
+        }
       }
+      return false;
     },
     [postId]
   );
 
   useEffect(() => {
-    fetchComments(1);
+    activePostIdRef.current = postId;
+    commentsRequestRunIdRef.current += 1;
+    setComments([]);
+    setTotalCount(0);
+    setLoading(true);
+    setSubmitting(false);
+    setNewComment("");
+    setPage(1);
+    setHasMore(false);
+    setLoadingMore(false);
+    loadMoreInFlightRef.current = false;
     setNowTimestamp(Date.now());
-  }, [fetchComments]);
+    void fetchComments(1);
+
+    return () => {
+      commentsRequestRunIdRef.current += 1;
+      activePostIdRef.current = "";
+      loadMoreInFlightRef.current = false;
+    };
+  }, [fetchComments, postId]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -107,13 +146,17 @@ export function PostCommentsSection({
   const handleAddComment = async (parentCommentId?: number) => {
     if (!newComment.trim()) return;
 
+    const requestedPostId = postId;
     setSubmitting(true);
     try {
       const response = await api.comments.addComment(
-        postId,
+        requestedPostId,
         newComment,
         parentCommentId
       );
+      if (activePostIdRef.current !== requestedPostId) {
+        return;
+      }
       if (response.success && response.data) {
         toast.success(labels.commentAdded);
         setNewComment("");
@@ -124,15 +167,23 @@ export function PostCommentsSection({
         toast.error(response.error.message);
       }
     } catch (error) {
-      toast.error("Failed to post comment");
+      if (activePostIdRef.current === requestedPostId) {
+        toast.error("Failed to post comment");
+      }
     } finally {
-      setSubmitting(false);
+      if (activePostIdRef.current === requestedPostId) {
+        setSubmitting(false);
+      }
     }
   };
 
   const handleDeleteComment = async (commentId: number) => {
+    const requestedPostId = postId;
     try {
-      const response = await api.comments.deleteComment(postId, commentId);
+      const response = await api.comments.deleteComment(requestedPostId, commentId);
+      if (activePostIdRef.current !== requestedPostId) {
+        return false;
+      }
       if (response.success) {
         toast.success(labels.commentDeleted);
         setComments((prev) => prev.filter((c) => c.commentId !== commentId));
@@ -143,18 +194,24 @@ export function PostCommentsSection({
         return false;
       }
     } catch (error) {
-      toast.error("Failed to delete comment");
+      if (activePostIdRef.current === requestedPostId) {
+        toast.error("Failed to delete comment");
+      }
       return false;
     }
   };
 
   const handleUpdateComment = async (commentId: number, content: string) => {
+    const requestedPostId = postId;
     try {
       const response = await api.comments.updateComment(
-        postId,
+        requestedPostId,
         commentId,
         content
       );
+      if (activePostIdRef.current !== requestedPostId) {
+        return false;
+      }
       if (response.success) {
         toast.success(labels.commentUpdated);
         setComments((prev) =>
@@ -175,15 +232,32 @@ export function PostCommentsSection({
         return false;
       }
     } catch (error) {
-      toast.error("Failed to update comment");
+      if (activePostIdRef.current === requestedPostId) {
+        toast.error("Failed to update comment");
+      }
       return false;
     }
   };
 
-  const loadMore = () => {
+  const loadMore = async () => {
+    if (loadMoreInFlightRef.current || !hasMore) {
+      return;
+    }
+
+    loadMoreInFlightRef.current = true;
+    setLoadingMore(true);
     const nextPage = page + 1;
-    setPage(nextPage);
-    fetchComments(nextPage, true);
+    try {
+      const loaded = await fetchComments(nextPage, true);
+      if (loaded && activePostIdRef.current === postId) {
+        setPage(nextPage);
+      }
+    } finally {
+      if (activePostIdRef.current === postId) {
+        loadMoreInFlightRef.current = false;
+        setLoadingMore(false);
+      }
+    }
   };
 
   return (
@@ -195,22 +269,22 @@ export function PostCommentsSection({
         </h2>
       </div>
 
-      <Card className="border-primary/20 bg-primary/5 shadow-sm overflow-hidden mb-8">
+      <Card className="mb-8 overflow-hidden rounded-2xl border-border/70 bg-card/95 shadow-sm">
         <CardContent className="p-4">
           <Textarea
             placeholder={labels.commentPlaceholder}
-            className="mb-3 min-h-24 border-primary/20 focus-visible:ring-primary/40 text-base cursor-text"
+            className="mb-3 min-h-24 cursor-text border-border bg-background text-base focus-visible:ring-primary/30"
             value={newComment}
             onChange={(e) => {
               if (!isAuthenticated) {
-                navigate("/auth/login", { state: { from: currentPathLocation.pathname } });
+                requireAuthForComment();
                 return;
               }
               setNewComment(e.target.value);
             }}
             onClick={() => {
               if (!isAuthenticated) {
-                navigate("/auth/login", { state: { from: currentPathLocation.pathname } });
+                requireAuthForComment();
               }
             }}
             readOnly={!isAuthenticated}
@@ -219,7 +293,7 @@ export function PostCommentsSection({
             <Button
               onClick={() => {
                 if (!isAuthenticated) {
-                  navigate("/auth/login", { state: { from: currentPathLocation.pathname } });
+                  requireAuthForComment();
                   return;
                 }
                 handleAddComment();
@@ -271,6 +345,7 @@ export function PostCommentsSection({
                 postOwnerId={postOwnerId}
                 onDelete={handleDeleteComment}
                 onUpdate={handleUpdateComment}
+                onRequireAuth={onRequireAuth}
                 isRTL={isRTL}
                 nowTimestamp={nowTimestamp}
               />
@@ -289,7 +364,8 @@ export function PostCommentsSection({
           <div className="flex justify-center mt-6">
             <Button
               variant="ghost"
-              onClick={loadMore}
+              onClick={() => void loadMore()}
+              disabled={loadingMore}
               className="text-primary font-bold hover:bg-primary/5 px-8"
             >
               {labels.loadMoreComments}

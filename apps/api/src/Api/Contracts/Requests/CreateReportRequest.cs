@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
 namespace TijarahJo.Api.Contracts.Requests;
 
@@ -17,4 +18,7 @@ public sealed class CreateReportRequest
 
     [MaxLength(2000)]
     public string? Description { get; set; }
+
+    /// <summary>Optional evidence image (screenshot, photo, etc.).</summary>
+    public IFormFile? Image { get; set; }
 }

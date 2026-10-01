@@ -1,7 +1,7 @@
 import { useId } from "react";
 import type { Language } from "../../../types";
 import type { Category } from "../../../types/api";
-import { toThumbnailUrl } from "../../../shared/lib/thumbnail";
+import { getResponsiveImageProps } from "../../../shared/lib/thumbnail";
 
 type HomeCategoriesSectionProps = {
   language: Language;
@@ -28,7 +28,7 @@ export function HomeCategoriesSection({
     <section
       aria-labelledby={headingId}
       aria-describedby={descriptionId}
-      className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14"
+      className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 [content-visibility:auto] [contain-intrinsic-size:560px]"
     >
       {/* Section Header */}
       <div className="text-center mb-10">
@@ -52,7 +52,7 @@ export function HomeCategoriesSection({
           ? Array.from({ length: 10 }).map((_, i) => (
               <div
                 key={`cat-skeleton-${i}`}
-                className="group relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-border bg-card aspect-[4/3] animate-pulse"
+                className="group relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-border bg-card aspect-4/3 animate-pulse"
               >
                 <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-muted overflow-hidden flex items-center justify-center">
                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-muted-foreground/20" />
@@ -68,13 +68,15 @@ export function HomeCategoriesSection({
                   : category.name;
 
               const hasImage = category.image && category.image.trim().length > 0;
-
-              const delayClass = [
-                "animate-delay-[0ms]", "animate-delay-[50ms]", "animate-delay-[100ms]", 
-                "animate-delay-[150ms]", "animate-delay-[200ms]", "animate-delay-[250ms]", 
-                "animate-delay-[300ms]", "animate-delay-[350ms]", "animate-delay-[400ms]", 
-                "animate-delay-[450ms]", "animate-delay-[500ms]"
-              ][Math.min(index, 10)];
+              const prioritizeImage = index === 0;
+              const categoryImageProps = getResponsiveImageProps(category.image, {
+                width: 480,
+                aspectRatio: 4 / 3,
+                quality: 58,
+                widths: [220, 320, 400, 480],
+                sizes:
+                  "(max-width: 639px) 44vw, (max-width: 767px) 29vw, (max-width: 1023px) 22vw, (max-width: 1279px) 18vw, 15vw",
+              });
 
               return (
                 <button
@@ -82,31 +84,38 @@ export function HomeCategoriesSection({
                   type="button"
                   aria-label={categoryLabel}
                   onClick={() => setSelectedCategoryForPage(category.name)}
-                  className={`group relative overflow-hidden rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 animate-fade-in-up aspect-[4/3] ${delayClass}`}
+                  className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 aspect-4/3"
                 >
                   {hasImage ? (
                     /* Database image */
                     <>
                       <img
-                        src={toThumbnailUrl(category.image) || category.image}
+                        src={categoryImageProps.src || category.image}
+                        srcSet={categoryImageProps.srcSet}
                         alt=""
                         aria-hidden="true"
                         width={320}
                         height={240}
-                        loading="lazy"
+                        loading={prioritizeImage ? "eager" : "lazy"}
                         decoding="async"
-                        sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 20vw"
+                        {...{
+                          fetchpriority: prioritizeImage ? "high" : "auto",
+                        }}
+                        sizes={categoryImageProps.sizes}
                         className="absolute inset-0 block h-full min-h-full w-full min-w-full object-cover transition-transform duration-500 group-hover:scale-110"
                         onError={(e) => {
                           const img = e.currentTarget;
                           if (img.src !== category.image) {
+                            img.srcset = "";
                             img.src = category.image;
                           }
                         }}
                       />
-                      {/* Label over image */}
-                      <div className="absolute inset-x-0 bottom-3 z-10 flex justify-center px-3">
-                        <span className="max-w-full rounded-full bg-black/55 px-4 py-2 text-sm sm:text-base font-bold text-white text-center leading-tight shadow-lg backdrop-blur-[2px]">
+                      {/* Subtle bottom gradient scrim — only covers bottom ~35% */}
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-linear-to-t from-black/50 via-black/20 to-transparent" />
+                      {/* Compact label anchored bottom-left */}
+                      <div className="absolute inset-x-0 bottom-0 z-10 flex items-end px-3 pb-2.5 sm:px-3.5 sm:pb-3">
+                        <span className="text-xs font-semibold leading-snug tracking-wide text-white drop-shadow-md sm:text-sm">
                           {categoryLabel}
                         </span>
                       </div>
@@ -135,7 +144,7 @@ function CategoryIconFallback({
   label: string;
 }) {
   return (
-    <div className="flex h-full w-full items-end bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-4 sm:p-5">
+    <div className="flex h-full w-full items-end bg-linear-to-br from-primary/8 via-background to-secondary/8 p-4 sm:p-5">
       <span className="text-sm sm:text-base font-semibold text-foreground text-center line-clamp-2 leading-tight group-hover:text-primary transition-colors duration-200 w-full">
         {label}
       </span>

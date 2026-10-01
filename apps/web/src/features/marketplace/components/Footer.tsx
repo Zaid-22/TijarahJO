@@ -48,8 +48,8 @@ const footerCopyByLanguage: Record<FooterProps["language"], FooterCopy> = {
     allRightsReserved: "All rights reserved.",
     madeInJordan: "Made in Jordan",
     address: "Amman, Jordan",
-    email: "info@tijarahjo.com",
-    phone: "+962 7 9123 4567",
+    email: "info@tijarahjo.online",
+    phone: "+962788644260",
   },
   ar: {
     aboutText:
@@ -65,8 +65,8 @@ const footerCopyByLanguage: Record<FooterProps["language"], FooterCopy> = {
     allRightsReserved: "جميع الحقوق محفوظة.",
     madeInJordan: "صنع في الأردن",
     address: "عمان، الأردن",
-    email: "info@tijarahjo.com",
-    phone: "+962 7 9123 4567",
+    email: "info@tijarahjo.online",
+    phone: "+962788644260",
   },
 };
 
@@ -99,12 +99,13 @@ const socialLinks: SocialLink[] = [
 ];
 
 export function Footer({ language }: FooterProps) {
-  const { categories } = useCatalogCategories();
+  const { categories, isLoading } = useCatalogCategories();
   const location = useLocation();
   const isRTL = language === "ar";
   const currentPath = `${location.pathname}${location.search}`;
   const currentYear = new Date().getFullYear();
   const content = footerCopyByLanguage[language];
+  const topCategories = categories.slice(0, 5);
 
   return (
     <footer
@@ -112,7 +113,7 @@ export function Footer({ language }: FooterProps) {
       dir={isRTL ? "rtl" : "ltr"}
       className="relative border-t border-white/10 bg-slate-950 text-slate-100"
     >
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/75 to-transparent" />
+      <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-primary/60 via-55% to-secondary/40" />
 
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
         <div className="grid grid-cols-1 gap-10 border-b border-white/10 pb-10 md:grid-cols-2 lg:grid-cols-12 lg:gap-8">
@@ -198,16 +199,24 @@ export function Footer({ language }: FooterProps) {
               {content.categories}
             </h3>
             <ul className="space-y-3 text-sm">
-              {categories.slice(0, 5).map((category) => (
-                <li key={String(category.id || category.name)}>
-                  <Link
-                    to={`/category/${encodeURIComponent(category.name)}`}
-                    className="rounded-sm text-slate-300 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-                  >
-                    {resolveCategoryName(category, language)}
-                  </Link>
-                </li>
-              ))}
+              {isLoading
+                ? Array.from({ length: 5 }).map((_, index) => (
+                    <li
+                      key={`footer-category-skeleton-${index}`}
+                      aria-hidden="true"
+                      className="h-5 w-32 max-w-full animate-pulse rounded bg-white/10"
+                    />
+                  ))
+                : topCategories.map((category) => (
+                    <li key={String(category.id || category.name)}>
+                      <Link
+                        to={`/category/${encodeURIComponent(category.name)}`}
+                        className="rounded-sm text-slate-300 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                      >
+                        {resolveCategoryName(category, language)}
+                      </Link>
+                    </li>
+                  ))}
             </ul>
           </section>
 
@@ -231,20 +240,22 @@ export function Footer({ language }: FooterProps) {
               </li>
               <li className="flex items-start gap-3 rounded-lg border border-white/8 bg-white/5 px-3 py-2.5">
                 <Phone className="mt-0.5 h-4 w-4 shrink-0 text-primary/80" />
-                <span dir="ltr">{content.phone}</span>
+                <a
+                  href={`tel:${content.phone}`}
+                  className="rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                >
+                  <span dir="ltr">{content.phone}</span>
+                </a>
               </li>
             </ul>
           </section>
         </div>
 
-        <div className="mt-5 flex flex-col items-center gap-2 text-sm text-slate-400 sm:flex-row sm:justify-between">
+        <div className="mt-5 flex flex-col items-center gap-2 text-sm text-slate-300 sm:flex-row sm:justify-between">
           <p>
             {language === "ar"
               ? `© ${currentYear} تجارة جو. ${content.allRightsReserved}`
               : `© ${currentYear} TijarahJo. ${content.allRightsReserved}`}
-          </p>
-          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
-            {content.madeInJordan}
           </p>
         </div>
       </div>

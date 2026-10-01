@@ -15,7 +15,10 @@ public class UserResponseDTO
     public string? Avatar { get; set; }
     public DateTime JoinedDate { get; set; }
     public int Status { get; set; }
+    public DateTime? SuspendedUntil { get; set; }
+    public int RoleID { get; set; }
     public string RoleName { get; set; } = string.Empty;
     public bool HasAdminAccess { get; set; }
     public IReadOnlyList<string> AdminPermissions { get; set; } = [];
+    public bool IsEmailVerified { get; set; }
 }

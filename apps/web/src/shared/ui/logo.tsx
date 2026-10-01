@@ -72,9 +72,9 @@ export function Logo({
   const isLight = finalVariant === "light";
   const isIconOnly = finalVariant === "icon";
 
-  const brandColorClass = isLight ? "text-secondary" : "text-primary";
+  const brandColorClass = "text-primary";
   const textColorClass = isLight || isDarkMode ? "text-white" : "text-black";
-  const glyphColorClass = isDarkMode ? "text-secondary" : brandColorClass;
+  const glyphColorClass = "text-primary";
 
   if (isIconOnly) {
     return (
@@ -85,25 +85,15 @@ export function Logo({
           xmlns="http://www.w3.org/2000/svg"
           className={`h-full w-full ${brandColorClass}`}
         >
-          <rect x="20" y="32" width="60" height="56" rx="6" className="fill-current" />
+          <path d="M 28 26 H 72 V 46 H 60 V 72 H 40 V 46 H 28 Z" fill="white" />
           <path
-            d="M32 32V24C32 17.373 37.373 12 44 12H56C62.627 12 68 17.373 68 24V32"
-            className="stroke-current"
-            strokeWidth="6"
-            strokeLinecap="round"
-            fill="none"
+            fillRule="evenodd"
+            clipRule="evenodd"
+            d="M 50 12 L 82 30 L 82 70 L 50 88 L 18 70 L 18 30 Z M 28 26 H 72 V 46 H 60 V 72 H 40 V 46 H 28 Z"
+            className="fill-current stroke-current"
+            strokeWidth="8"
+            strokeLinejoin="round"
           />
-          <circle cx="50" cy="58" r="12" className={isDarkMode ? "fill-gray-900" : "fill-white"} />
-          <text
-            x="50"
-            y="64"
-            fontSize="18"
-            fontWeight="700"
-            className={`fill-current ${glyphColorClass}`}
-            textAnchor="middle"
-          >
-            T
-          </text>
         </svg>
       </div>
     );
@@ -120,25 +110,15 @@ export function Logo({
           xmlns="http://www.w3.org/2000/svg"
           className={`h-full w-full ${brandColorClass}`}
         >
-          <rect x="20" y="32" width="60" height="56" rx="6" className="fill-current" />
+          <path d="M 28 26 H 72 V 46 H 60 V 72 H 40 V 46 H 28 Z" fill="white" />
           <path
-            d="M32 32V24C32 17.373 37.373 12 44 12H56C62.627 12 68 17.373 68 24V32"
-            className="stroke-current"
-            strokeWidth="6"
-            strokeLinecap="round"
-            fill="none"
+            fillRule="evenodd"
+            clipRule="evenodd"
+            d="M 50 12 L 82 30 L 82 70 L 50 88 L 18 70 L 18 30 Z M 28 26 H 72 V 46 H 60 V 72 H 40 V 46 H 28 Z"
+            className="fill-current stroke-current"
+            strokeWidth="8"
+            strokeLinejoin="round"
           />
-          <circle cx="50" cy="58" r="12" className={isDarkMode ? "fill-gray-900" : "fill-white"} />
-          <text
-            x="50"
-            y="64"
-            fontSize="18"
-            fontWeight="700"
-            className={`fill-current ${glyphColorClass}`}
-            textAnchor="middle"
-          >
-            T
-          </text>
         </svg>
       </div>
 
@@ -146,9 +126,7 @@ export function Logo({
         <div className={`${currentSize.textClassName} leading-none`}>
           <div className={`${textColorClass} tracking-[-0.02em] font-bold`}>
             Tijarah
-            <span className={glyphColorClass}>
-              Jo
-            </span>
+            <span className={glyphColorClass}>Jo</span>
           </div>
         </div>
       )}

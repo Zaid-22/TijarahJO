@@ -4,9 +4,27 @@ import { type MarketplaceRouteDefinition } from "./marketplaceRouteDefinitions";
 import { useSearch } from "../../../contexts/SearchContext";
 import { APP_ROUTE_BUILDERS, APP_ROUTE_PATHS } from "../routeConfig";
 
-const HomePage = lazy(() =>
-  import("../../../features/home/pages/HomePage").then((m) => ({ default: m.HomePage })),
-);
+function normalizePathname(pathname: string): string {
+  const normalized = pathname.toLowerCase().replace(/\/+$/, "");
+  return normalized || "/";
+}
+
+function loadHomePage() {
+  return import("../../../features/home/pages/HomePage").then((m) => ({
+    default: m.HomePage,
+  }));
+}
+
+const shouldPreloadHomePage =
+  typeof window !== "undefined" &&
+  normalizePathname(window.location.pathname) === APP_ROUTE_PATHS.home;
+
+let homePageModulePromise = shouldPreloadHomePage ? loadHomePage() : null;
+
+const HomePage = lazy(() => {
+  homePageModulePromise ??= loadHomePage();
+  return homePageModulePromise;
+});
 
 function HomeMarketplaceRouteScreen() {
   const {
@@ -34,7 +52,7 @@ function HomeMarketplaceRouteScreen() {
         setActiveSearchQuery(query);
       }}
       setShowLoginPrompt={(show: boolean) => show && promptLoginModal()}
-      setShowSellItem={(show: boolean) => {
+      setShowCreatePost={(show: boolean) => {
         if (!show) {
           return;
         }
@@ -46,13 +64,20 @@ function HomeMarketplaceRouteScreen() {
 
         navigate(APP_ROUTE_PATHS.sell);
       }}
-      setShowAllPosts={(show: boolean) => show && navigate(APP_ROUTE_PATHS.posts)}
+      setShowAllPosts={(show: boolean, sortBy?: string) => {
+        if (!show) return;
+        const path = sortBy
+          ? `${APP_ROUTE_PATHS.posts}?sortBy=${sortBy}`
+          : APP_ROUTE_PATHS.posts;
+        navigate(path);
+      }}
       setSelectedCategoryForPage={(categoryName: string) =>
         categoryName &&
         navigate(APP_ROUTE_BUILDERS.category(categoryName))
       }
       isLoadingPosts={routeState.isLoadingPostsFromRouteData}
       postsError={routeState.postsError}
+      retryPosts={routeState.fetchPostsFromBackend}
       displayedPosts={routeState.displayedPosts}
       availablePosts={routeState.availablePosts}
       filteredPosts={routeState.filteredPosts}
@@ -60,7 +85,6 @@ function HomeMarketplaceRouteScreen() {
       favoriteIds={routeState.favoriteIds}
       toggleFavorite={routeState.toggleFavorite}
       currentUserId={sharedUserRouteProps.currentUserId}
-      currentUserDisplayName={sharedUserRouteProps.currentUserDisplayName}
       getCategoryTranslation={routeState.translateCategory}
       onNavigate={navigate}
     />

@@ -1,5 +1,6 @@
 /* eslint-disable max-lines */
-import { useState, useEffect, useRef, useCallback, type ChangeEvent } from "react";
+import { useState, useEffect, useRef, useCallback, type ChangeEvent, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { useChat } from "../hooks/useChat";
 import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
@@ -21,6 +22,48 @@ import { usePrefersReducedMotion } from "../../../shared/hooks/usePrefersReduced
 import { parseChatMessageContent } from "../chatMessageContent";
 import { resolveAvatarSrc, getAvatarInitial } from "../../../shared/lib/avatar";
 import { formatCompactTime } from "../../../shared/lib/dateTime";
+import { APP_CONFIG } from "../../../constants/appConfig";
+import { ReportPostDialog } from "../../marketplace/components/ReportPostDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "../../../shared/ui/dialog";
+
+/** Splits message text on URLs and renders clickable anchor links for each one. */
+function renderTextWithLinks(text: string, isMe: boolean) {
+  const URL_REGEX = /https?:\/\/[^\s<>"]+(?:[^\s<>".,;:!?)]|\([^\s<>"]*\))*/g;
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = URL_REGEX.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    const url = match[0];
+    parts.push(
+      <a
+        key={match.index}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={isMe ? "underline text-primary-foreground/90 hover:text-primary-foreground" : "underline text-primary hover:text-primary/80"}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {url}
+      </a>,
+    );
+    lastIndex = match.index + url.length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : [text];
+}
 
 interface ChatWindowProps {
   otherUserId: number;
@@ -30,6 +73,8 @@ interface ChatWindowProps {
   onBack: () => void;
   postId?: number; // Optional context
   language?: Language;
+  showBackButton?: boolean;
+  initialMessage?: string;
 }
 
 export function ChatWindow({
@@ -40,9 +85,12 @@ export function ChatWindow({
   onBack,
   postId,
   language = "en",
+  showBackButton = true,
+  initialMessage,
 }: ChatWindowProps) {
   const { messages, isLoading, error, sendMessage, sendImageMessage } = useChat(otherUserId);
   const [inputText, setInputText] = useState("");
+  const initialMessageAppliedRef = useRef(false);
   const [presence, setPresence] = useState<ChatPresence>({ isOnline: false });
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [selectedImagePreview, setSelectedImagePreview] = useState("");
@@ -77,15 +125,48 @@ export function ChatWindow({
       language === "ar" ? "تم الإرسال" : "Sent",
     seen:
       language === "ar" ? "تمت المشاهدة" : "Seen",
+    fullscreenImage:
+      language === "ar" ? "عرض الصورة بالحجم الكامل" : "Fullscreen image",
+    reportImage:
+      language === "ar" ? "الإبلاغ عن الصورة" : "Report image",
+    downloadImage:
+      language === "ar" ? "تنزيل الصورة" : "Download image",
+    closeFullscreen:
+      language === "ar" ? "إغلاق عرض الصورة" : "Close fullscreen image",
   };
   const dateTimeLocale = language === "ar" ? "ar-JO" : "en-US";
 
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  const fullscreenCloseButtonRef = useRef<HTMLButtonElement>(null);
   const [avatarError, setAvatarError] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
 
   useEffect(() => {
     setAvatarError(false);
   }, [otherUserAvatar]);
+
+  // Only pre-fill the greeting message once, and only when the chat history
+  // has finished loading and contains zero messages (i.e. brand-new conversation).
+  // We track whether isLoading has ever been true to avoid the race condition where
+  // isLoading starts as false before the fetch begins.
+  const hasSeenLoadingRef = useRef(false);
+  useEffect(() => {
+    if (isLoading) {
+      hasSeenLoadingRef.current = true;
+      return;
+    }
+
+    // Only act after we've seen at least one loading cycle complete
+    if (
+      initialMessage &&
+      hasSeenLoadingRef.current &&
+      messages.length === 0 &&
+      !initialMessageAppliedRef.current
+    ) {
+      initialMessageAppliedRef.current = true;
+      setInputText(initialMessage);
+    }
+  }, [initialMessage, isLoading, messages.length]);
 
   const clearSelectedImage = () => {
     if (selectedImagePreview.startsWith("blob:")) {
@@ -216,23 +297,28 @@ export function ChatWindow({
     <>
       <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-md backdrop-blur-sm relative z-10">
         {/* Header */}
-        <div className="flex items-center border-b border-border/60 bg-gradient-to-r from-muted/70 via-muted/50 to-transparent p-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onBack}
-            className={`md:hidden me-2`}
-            aria-label={labels.back}
-          >
-            ←
-          </Button>
-          <div
+        <div className="flex items-center border-b border-border/60 bg-linear-to-r from-muted/70 via-muted/50 to-transparent p-4">
+          {showBackButton ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onBack}
+              className="me-2"
+              aria-label={labels.back}
+            >
+              ←
+            </Button>
+          ) : null}
+          <Link
+            to={`/seller/${otherUserId}`}
             className={cn(
-              "flex h-11 w-11 items-center justify-center rounded-full border border-border/60 overflow-hidden",
+              "flex h-11 w-11 items-center justify-center rounded-full border border-border/60 overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all",
               resolveAvatarSrc(otherUserAvatar) && !avatarError
                 ? "bg-transparent text-foreground" 
-                : "bg-primary/10 text-primary font-medium text-lg",
-              "me-3",
+                : otherDisplayName
+                  ? "bg-primary/10 text-primary font-medium text-lg"
+                  : "bg-muted animate-pulse",
+              "me-3 shrink-0",
             )}
           >
             {resolveAvatarSrc(otherUserAvatar) && !avatarError ? (
@@ -244,14 +330,18 @@ export function ChatWindow({
                 className="h-full w-full object-cover" 
                 onError={() => setAvatarError(true)}
               />
-            ) : (
+            ) : otherDisplayName ? (
               getAvatarInitial(otherDisplayName)
-            )}
-          </div>
+            ) : null}
+          </Link>
           <div>
-            <h3 className="font-semibold text-foreground">
-              {otherDisplayName}
-            </h3>
+            <Link to={`/seller/${otherUserId}`} className="font-semibold text-foreground hover:text-primary transition-colors block">
+              {otherDisplayName ? (
+                otherDisplayName
+              ) : (
+                <span className="inline-block h-4 w-28 rounded bg-muted animate-pulse" />
+              )}
+            </Link>
             <p
               className={cn(
                 "flex items-center gap-2 text-sm",
@@ -300,7 +390,7 @@ export function ChatWindow({
                     <div
                       className={cn(
                         parsedContent.type === "image"
-                          ? "max-w-[17rem] sm:max-w-[21rem] rounded-[1.4rem] p-1.5 text-sm shadow-sm"
+                          ? "max-w-68 sm:max-w-84 rounded-[1.4rem] p-1.5 text-sm shadow-sm"
                           : "max-w-[78%] rounded-2xl px-3 py-2 text-sm shadow-sm",
                         isMe
                           ? "rounded-tr-md bg-primary text-primary-foreground"
@@ -331,7 +421,7 @@ export function ChatWindow({
                             )}
                           >
                             {parsedContent.caption ? (
-                              <p className="whitespace-pre-wrap break-words text-sm leading-5">
+                              <p className="whitespace-pre-wrap wrap-break-word text-sm leading-5">
                                 {parsedContent.caption}
                               </p>
                             ) : (
@@ -362,7 +452,7 @@ export function ChatWindow({
                         </div>
                       ) : (
                         <>
-                          <p className="whitespace-pre-wrap break-words">{parsedContent.text}</p>
+                          <p className="whitespace-pre-wrap wrap-break-word">{renderTextWithLinks(parsedContent.text, isMe)}</p>
                           <span
                             className={cn(
                               "mt-1 flex items-center justify-end gap-1.5 text-xs opacity-75",
@@ -394,7 +484,7 @@ export function ChatWindow({
         </div>
 
         {/* Input */}
-        <div className="border-t border-border/60 bg-gradient-to-r from-muted/70 via-muted/50 to-transparent p-4">
+        <div className="border-t border-border/60 bg-linear-to-r from-muted/70 via-muted/50 to-transparent p-4">
           {selectedImagePreview && (
             <div className="mb-3 flex items-start gap-3 rounded-xl border border-border/70 bg-background/80 p-2">
               <img
@@ -486,86 +576,112 @@ export function ChatWindow({
       </div>
 
       {/* Fullscreen Image Modal */}
-      {fullscreenImage && (
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
-          onClick={() => setFullscreenImage(null)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") setFullscreenImage(null);
-          }}
-          role="dialog"
-          aria-modal="true"
-          tabIndex={-1}
-        >
-          {/* Action Bar */}
-          <div
-            className="absolute top-4 right-16 flex items-center gap-3 rounded-full bg-black/50 px-4 py-2 text-white shadow-lg backdrop-blur-sm"
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-            role="presentation"
-          >
-            <button
-              type="button"
-              className="group flex items-center gap-2 text-sm font-medium transition-colors hover:text-white/80"
-              onClick={() => {
-                import("sonner").then(({ toast }) => {
-                  toast.success(
-                    language === "ar"
-                      ? "تم الإبلاغ عن هذه الصورة بنجاح. سنقوم بمراجعتها."
-                      : "Image reported successfully. We will review it.",
-                  );
-                  setFullscreenImage(null);
-                });
-              }}
-              title={language === "ar" ? "الإبلاغ عن الصورة" : "Report image"}
-            >
-              <Flag className="h-4 w-4 text-destructive group-hover:text-destructive/80" />
-              <span className="hidden sm:inline">{language === "ar" ? "إبلاغ" : "Report"}</span>
-            </button>
-            <div className="h-4 w-px bg-white/20" />
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  const downloadUrl = fullscreenImage.includes("/chat/download-image?")
-                    ? fullscreenImage
-                    : `${(await import("../../../constants/appConfig")).APP_CONFIG.apiBaseUrl}/chat/download-image?url=${encodeURIComponent(fullscreenImage)}`;
-                  window.location.href = downloadUrl;
-                } catch {
-                  window.open(fullscreenImage, "_blank");
-                }
-              }}
-              className="flex items-center gap-2 text-sm font-medium transition-colors hover:text-white/80"
-              title={language === "ar" ? "تنزيل الصورة" : "Download image"}
-            >
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">{language === "ar" ? "تنزيل" : "Download"}</span>
-            </button>
-          </div>
-
-          <button
-            type="button"
-            className="absolute top-4 right-4 rounded-full bg-black/50 p-2 text-white transition-colors hover:bg-black/70"
-            onClick={(e) => {
-              e.stopPropagation();
-              setFullscreenImage(null);
+      <Dialog
+        open={Boolean(fullscreenImage)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setFullscreenImage(null);
+          }
+        }}
+      >
+        {fullscreenImage && (
+          <DialogContent
+            hideCloseButton
+            dir={language === "ar" ? "rtl" : "ltr"}
+            className="inset-0 z-100 flex h-dvh w-screen max-w-none translate-x-0 translate-y-0 items-center justify-center overflow-hidden rounded-none border-0 bg-black/90 p-4 backdrop-blur-sm"
+            onOpenAutoFocus={(event) => {
+              event.preventDefault();
+              fullscreenCloseButtonRef.current?.focus();
             }}
-            aria-label="Close fullscreen image"
           >
-            <X className="h-6 w-6" />
-          </button>
-          
-          <img
-            src={fullscreenImage}
-            alt="Fullscreen view"
-            className="max-h-full max-w-full rounded-md object-contain shadow-2xl cursor-default"
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-            role="presentation"
-          />
-        </div>
-      )}
+            <DialogTitle className="sr-only">
+              {labels.fullscreenImage}
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              {labels.fullscreenImage}
+            </DialogDescription>
+
+            <div className="absolute end-16 top-4 flex items-center gap-3 rounded-full bg-black/50 px-4 py-2 text-white shadow-lg backdrop-blur-sm">
+              <button
+                type="button"
+                className="group flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium transition-colors hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                onClick={() => {
+                  setFullscreenImage(null);
+                  setShowReportDialog(true);
+                }}
+                aria-label={labels.reportImage}
+              >
+                <Flag className="h-4 w-4 text-destructive group-hover:text-destructive/80" />
+                <span className="hidden sm:inline">
+                  {language === "ar" ? "إبلاغ" : "Report"}
+                </span>
+              </button>
+              <div className="h-4 w-px bg-white/20" aria-hidden="true" />
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const downloadUrl = fullscreenImage.includes(
+                      "/chat/download-image?",
+                    )
+                      ? fullscreenImage
+                      : `${APP_CONFIG.apiBaseUrl}/chat/download-image?url=${encodeURIComponent(fullscreenImage)}`;
+                    const response = await fetch(downloadUrl, {
+                      credentials: "include",
+                    });
+                    const blob = await response.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+                    const anchor = document.createElement("a");
+                    anchor.href = blobUrl;
+                    anchor.download = `chat-image-${Date.now()}.jpg`;
+                    anchor.click();
+                    URL.revokeObjectURL(blobUrl);
+                  } catch {
+                    window.open(
+                      fullscreenImage,
+                      "_blank",
+                      "noopener,noreferrer",
+                    );
+                  }
+                }}
+                className="flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium transition-colors hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                aria-label={labels.downloadImage}
+              >
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">
+                  {language === "ar" ? "تنزيل" : "Download"}
+                </span>
+              </button>
+            </div>
+
+            <button
+              ref={fullscreenCloseButtonRef}
+              type="button"
+              className="absolute end-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-white transition-colors hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              onClick={() => setFullscreenImage(null)}
+              aria-label={labels.closeFullscreen}
+            >
+              <X className="h-6 w-6" />
+            </button>
+
+            <img
+              src={fullscreenImage}
+              alt={labels.fullscreenImage}
+              className="max-h-full max-w-full cursor-default rounded-md object-contain shadow-2xl"
+            />
+          </DialogContent>
+        )}
+      </Dialog>
+
+      {/* Report Dialog for chat images */}
+      <ReportPostDialog
+        open={showReportDialog}
+        onOpenChange={setShowReportDialog}
+        reportType="USER"
+        targetId={otherUserId}
+        targetTitle={otherDisplayName}
+        language={language}
+      />
     </>
   );
 }

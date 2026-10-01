@@ -7,10 +7,6 @@ This folder contains backend-specific documentation consolidated from the API pr
 - `QUICK_START.md`: bootstrap and startup quick path.
 - `OPERATIONS_RUNBOOK.md`: startup modes, health semantics, incident response flow.
 
-## Archived Docs
-
-- `archive/`: historical fix reports, troubleshooting notes, and one-off investigation documents.
-
 ## Source of Truth
 
 - Runtime configuration and environment notes: `apps/api/src/Api/ENVIRONMENT_VARIABLES.md`
@@ -19,13 +15,13 @@ This folder contains backend-specific documentation consolidated from the API pr
 ## API Contract Direction
 
 - Canonical public routes use `/api/v1/...`.
-- Selected compatibility aliases under `/api/...` remain active in runtime; use `docs/reports/API_ENDPOINTS_STATUS.md` as the endpoint inventory source of truth.
+- Unversioned `/api/...` routes are not part of the supported contract; use `docs/reports/API_ENDPOINTS_STATUS.md` as the endpoint inventory source of truth.
 - Query/header API version overrides are intentionally not part of the contract.
 
 ## Auth Runtime Notes
 
 - The backend uses cookie-backed JWT authentication with token blacklisting.
-- Session recovery is supported through `POST /api/auth/refresh` and `GET /api/auth/me`.
+- Session recovery is supported through `POST /api/v1/auth/refresh` and `GET /api/v1/auth/me`.
 - Frontend hard refresh behavior and session revalidation expectations are documented in `docs/frontend/AUTH_RUNTIME_QA_MATRIX.md`.
 
-Last Updated: 2026-04-02
+Last Updated: 2026-05-22

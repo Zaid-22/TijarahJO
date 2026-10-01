@@ -7,7 +7,15 @@ type SearchError = {
 type SearchResponse = {
   success: boolean;
   posts: Post[];
+  pagination?: SearchPagination;
   error?: SearchError;
+};
+
+export type SearchPagination = {
+  currentPage: number;
+  totalPages: number;
+  totalPosts: number;
+  postsPerPage: number;
 };
 
 type SearchPipelineParams = {
@@ -20,47 +28,8 @@ type SearchPipelineParams = {
 export type SearchPipelineResult = {
   posts: Post[];
   error: string | null;
+  pagination?: SearchPagination;
 };
-
-function getPostIdentity(post: Post, index: number): string {
-  const normalizedId = String(post.id || "").trim();
-  if (normalizedId) {
-    return `id:${normalizedId}`;
-  }
-
-  const normalizedName = String(post.name || "").trim().toLowerCase();
-  const normalizedSellerId = String(post.sellerId || "")
-    .trim()
-    .toLowerCase();
-  const normalizedCreatedAt = String(post.createdAt || "")
-    .trim()
-    .toLowerCase();
-
-  return `fallback:${normalizedName}:${normalizedSellerId}:${normalizedCreatedAt}:${index}`;
-}
-
-function mergeSearchPosts(remotePosts: Post[], fallbackPosts: Post[]): Post[] {
-  if (fallbackPosts.length === 0) {
-    return remotePosts;
-  }
-
-  const mergedPosts = [...remotePosts];
-  const seen = new Set(
-    remotePosts.map((post, index) => getPostIdentity(post, index)),
-  );
-
-  fallbackPosts.forEach((post, index) => {
-    const identity = getPostIdentity(post, index);
-    if (seen.has(identity)) {
-      return;
-    }
-
-    seen.add(identity);
-    mergedPosts.push(post);
-  });
-
-  return mergedPosts;
-}
 
 function resolveErrorMessage(error: unknown, fallbackMessage: string): string {
   return error instanceof Error && error.message
@@ -84,11 +53,12 @@ export async function runSearchPipeline({
       const remotePosts = transformRemotePosts
         ? transformRemotePosts(response.posts)
         : response.posts;
-      const fallbackPosts = buildFallbackPosts();
-
       return {
-        posts: mergeSearchPosts(remotePosts, fallbackPosts),
+        // A successful server response is authoritative. Mixing the local feed
+        // into a paginated page makes totals and page boundaries incorrect.
+        posts: remotePosts,
         error: null,
+        pagination: response.pagination,
       };
     }
 

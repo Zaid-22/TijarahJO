@@ -12,6 +12,7 @@ interface DiscoverySearchConfig {
   clearLabel: string;
   onChange: (value: string) => void;
   onSubmit?: (value: string) => void;
+  submitLabel: string;
 }
 
 interface DiscoveryMobileFiltersConfig {
@@ -26,7 +27,6 @@ interface MarketplaceDiscoveryControlsProps {
   search?: DiscoverySearchConfig;
   leftControls?: ReactNode;
   mobileFilters?: DiscoveryMobileFiltersConfig;
-  activeFilters?: ReactNode;
   className?: string;
   toolbarClassName?: string;
   leftSlotClassName?: string;
@@ -37,7 +37,6 @@ export function MarketplaceDiscoveryControls({
   search,
   leftControls,
   mobileFilters,
-  activeFilters,
   className,
   toolbarClassName,
   leftSlotClassName,
@@ -54,6 +53,7 @@ export function MarketplaceDiscoveryControls({
           clearLabel={search.clearLabel}
           onChange={search.onChange}
           onSubmit={search.onSubmit}
+          submitLabel={search.submitLabel}
           isRTL={isRTL}
         />
       ) : null}
@@ -93,7 +93,6 @@ export function MarketplaceDiscoveryControls({
         </div>
       ) : null}
 
-      {activeFilters}
     </div>
   );
 }

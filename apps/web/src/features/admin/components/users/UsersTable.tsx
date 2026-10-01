@@ -1,11 +1,10 @@
 import {
   MoreVertical,
-  Shield,
-  ShieldAlert,
   Trash2,
   UserCheck,
   UserX,
   Eye,
+  ShieldBan,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -24,13 +23,23 @@ import {
   TableRow,
 } from "../../../../shared/ui/table";
 import type { AdminUserRecord } from "../../../../services/api/users";
+import type { NormalizedRole } from "../../../../services/api/roles";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../../shared/ui/select";
 
 interface UsersTableProps {
   users: AdminUserRecord[];
-  onToggleRole: (userId: string, currentRole: "admin" | "user") => void;
+  roles: NormalizedRole[];
+  onChangeRole: (userId: string, nextRoleId: number) => void;
   onChangeStatus: (userId: string, nextStatus: "active" | "banned") => void;
   onDeleteRequest: (user: AdminUserRecord) => void;
   onViewDetails: (userId: string) => void;
+  onSuspendRequest: (user: AdminUserRecord) => void;
   formatJoinedDate: (value?: string) => string;
   selectedIds?: Set<string>;
   onSelectionChange?: (ids: Set<string>) => void;
@@ -38,10 +47,12 @@ interface UsersTableProps {
 
 export function UsersTable({
   users,
-  onToggleRole,
+  roles,
+  onChangeRole,
   onChangeStatus,
   onDeleteRequest,
   onViewDetails,
+  onSuspendRequest,
   formatJoinedDate,
   selectedIds,
   onSelectionChange,
@@ -138,24 +149,49 @@ export function UsersTable({
                   {formatJoinedDate(user.joinedDate || user.joinedAt)}
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant={user.role === "admin" ? "default" : "secondary"}
+                  <Select
+                    value={String(user.roleId)}
+                    onValueChange={(value) =>
+                      onChangeRole(user.id, Number(value))
+                    }
                   >
-                    {user.role}
-                  </Badge>
+                    <SelectTrigger
+                      className="w-[160px]"
+                      aria-label={`Change role for ${user.name || user.email}`}
+                    >
+                      <SelectValue placeholder={user.roleName} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map((role) => (
+                        <SelectItem
+                          key={role.RoleID}
+                          value={String(role.RoleID)}
+                        >
+                          {role.RoleName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </TableCell>
                 <TableCell>
                   <Badge
                     variant="outline"
+                    title={
+                      user.status === "suspended" && user.suspendedUntil
+                        ? `Suspended until ${new Date(user.suspendedUntil).toLocaleString()}`
+                        : undefined
+                    }
                     className={
                       user.status === "active"
                         ? "border-primary/30 bg-primary/10 text-primary"
-                        : user.status === "banned"
-                          ? "border-destructive/30 bg-destructive/10 text-destructive"
-                          : "border-border bg-muted text-muted-foreground"
+                        : user.status === "suspended"
+                          ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                          : user.status === "banned"
+                            ? "border-destructive/30 bg-destructive/10 text-destructive"
+                            : "border-border bg-muted text-muted-foreground"
                     }
                   >
-                    {user.status}
+                    {user.status === "suspended" ? "Suspended" : user.status}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
@@ -170,25 +206,20 @@ export function UsersTable({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => onToggleRole(user.id, user.role)}
-                      >
-                        {user.role === "admin" ? (
-                          <>
-                            <ShieldAlert className="w-4 h-4 mr-2" />
-                            Remove Admin
-                          </>
-                        ) : (
-                          <>
-                            <Shield className="w-4 h-4 mr-2" />
-                            Make Admin
-                          </>
-                        )}
-                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => onViewDetails(user.id)}>
                         <Eye className="w-4 h-4 mr-2" />
                         View User Details
                       </DropdownMenuItem>
+
+                      {user.status !== "banned" && (
+                        <DropdownMenuItem
+                          onClick={() => onSuspendRequest(user)}
+                          className="text-amber-600 focus:text-amber-600 focus:bg-amber-50 dark:focus:bg-amber-950/50"
+                        >
+                          <ShieldBan className="w-4 h-4 mr-2" />
+                          Suspend User...
+                        </DropdownMenuItem>
+                      )}
 
                       {user.status !== "banned" ? (
                         <DropdownMenuItem
@@ -196,7 +227,7 @@ export function UsersTable({
                           className="text-destructive focus:text-destructive"
                         >
                           <UserX className="w-4 h-4 mr-2" />
-                          Ban User
+                          Quick Ban
                         </DropdownMenuItem>
                       ) : (
                         <DropdownMenuItem

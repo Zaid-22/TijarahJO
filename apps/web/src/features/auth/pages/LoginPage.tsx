@@ -1,24 +1,21 @@
 /* eslint-disable max-lines */
 import { useEffect, useState, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { APP_CONFIG } from "../../../constants/appConfig";
 import { useAuth } from "../../../contexts/AuthContext";
-import { persistAuthSessionHint } from "../../../contexts/authContextUtils";
+import {
+  AUTH_LOGOUT_KEY,
+  persistAuthSessionHint,
+} from "../../../contexts/authContextUtils";
 import { api } from "../../../services/api";
 import { debugError } from "../../../services/api/client";
 import { normalizeJordanPhone } from "../../../utils/phone";
 import { getLoginCopy } from "../loginCopy";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { resolveHasAdminAccessFromPayload } from "../../../contexts/authUtils";
-import { SubpageHeader } from "../../../shared/ui/subpage-header";
+
 import { LoginForm } from "../LoginForm";
 import {
-  buildCurrentPath,
-  resolveBackPathFromLocationState,
-} from "../../../shared/lib/backNavigation";
-import {
-  extractApiCode,
-  extractApiMessage,
   formatJoinedDateLabel,
   parseAuthIdentifier,
 } from "../loginUtils";
@@ -32,6 +29,17 @@ import { useLoginReducer } from "../useLoginReducer";
 import type { Language } from "../../../types";
 import { useLocationOptions } from "../../../shared/hooks/useLocationOptions";
 
+import {
+  extractErrorMessage,
+  toExceptionMessage,
+  appendDuplicateAccountHint,
+  normalizeTwoFactorCode,
+  resolveLoginRole,
+  readAuthString,
+  readAuthPermissions,
+  readAuthPositiveInt,
+} from "./loginAuthHelpers";
+
 interface LoginPageProps {
   onLogin: (userData: {
     id?: string;
@@ -39,91 +47,22 @@ interface LoginPageProps {
     lastName: string;
     email: string;
     phone?: string;
+    city?: string;
+    area?: string;
+    cityId?: number;
+    areaId?: number;
     avatar?: string;
     joinedDate?: string;
     role?: "user" | "admin";
+    hasAdminAccess?: boolean;
+    permissions?: string[];
   }) => void;
   onContinueAsGuest: () => void;
   language: Language;
   isModal?: boolean;
   onSuccess?: () => void;
+  allowSignup?: boolean;
 }
-
-const extractErrorMessage = (
-  payload: unknown,
-  fallback: string,
-  backendConnectionMessage: string,
-): string => {
-  if (extractApiCode(payload) === "CONNECTION_REFUSED") {
-    return backendConnectionMessage;
-  }
-
-  return extractApiMessage(payload) || fallback;
-};
-
-const toExceptionMessage = (
-  error: unknown,
-  fallbackMessage: string,
-  backendConnectionMessage: string,
-): string => {
-  if (!(error instanceof Error)) {
-    return fallbackMessage;
-  }
-
-  if (
-    error.message.includes("Failed to fetch") ||
-    error.message.includes("ERR_CONNECTION_REFUSED")
-  ) {
-    return backendConnectionMessage;
-  }
-
-  return error.message;
-};
-
-const appendDuplicateAccountHint = (
-  message: string,
-  duplicateHintSuffix: string,
-): string => {
-  if (
-    message.includes("already exists") ||
-    message.includes("email address already")
-  ) {
-    return `${message} ${duplicateHintSuffix}`;
-  }
-
-  return message;
-};
-
-const normalizeTwoFactorCode = (value: string): string => {
-  return value.replace(/\D+/g, "");
-};
-
-const resolveLoginRole = (user: unknown): "admin" | "user" => {
-  const payload =
-    typeof user === "object" && user !== null
-      ? (user as Record<string, unknown>)
-      : null;
-
-  return resolveHasAdminAccessFromPayload(payload) ? "admin" : "user";
-};
-
-const readAuthString = (
-  payload: Record<string, unknown> | null,
-  ...keys: string[]
-): string => {
-  if (!payload) {
-    return "";
-  }
-
-  for (const key of keys) {
-    const value = payload[key];
-    if (typeof value === "string" && value.trim().length > 0) {
-      return value.trim();
-    }
-  }
-
-  return "";
-};
 
 export function LoginPage({
   onLogin,
@@ -131,33 +70,32 @@ export function LoginPage({
   language,
   isModal,
   onSuccess,
+  allowSignup = true,
 }: LoginPageProps) {
   const navigate = useNavigate();
-  const location = useLocation();
   const { setSession } = useAuth();
   const copy = getLoginCopy(language);
   const googleAuthEnabled = APP_CONFIG.googleAuthEnabled;
   const validationMessages = copy.validation;
-  const backendConnectionMessage = `${copy.errors.backendConnection} ${APP_CONFIG.backendHostUrl}`;
+  const backendConnectionMessage = copy.errors.backendConnection;
   const [state, dispatch] = useLoginReducer({
     phone: "",
   });
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [isResendingTwoFactor, setIsResendingTwoFactor] = useState(false);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const submitInFlightRef = useRef(false);
 
   const {
+    cityNames,
     areaNames,
+    isLoadingCities,
     isLoadingAreas,
   } = useLocationOptions(state.values.city, language);
-  const isRTL = language === "ar";
-  const currentPath = buildCurrentPath(location.pathname, location.search);
-  const backPath = resolveBackPathFromLocationState({
-    locationState: location.state,
-    currentPath,
-    fallbackPath: "/",
-    blockedPathnames: ["/login", "/forgot-password"],
-  });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -221,6 +159,42 @@ export function LoginPage({
     dispatch({ type: "SET_FIELD", field, value });
   };
 
+  // ─── Resend cooldown timer ────────────────────────────────────────────────
+  const startResendCooldown = (seconds = 60) => {
+    if (cooldownTimerRef.current) {
+      clearInterval(cooldownTimerRef.current);
+    }
+    setResendCooldown(seconds);
+    cooldownTimerRef.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(cooldownTimerRef.current!);
+          cooldownTimerRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  useEffect(() => {
+    if (state.step === "emailVerification") {
+      startResendCooldown(60);
+    } else {
+      if (cooldownTimerRef.current) {
+        clearInterval(cooldownTimerRef.current);
+        cooldownTimerRef.current = null;
+      }
+      setResendCooldown(0);
+    }
+    return () => {
+      if (cooldownTimerRef.current) {
+        clearInterval(cooldownTimerRef.current);
+      }
+    };
+  }, [state.step]);
+  // ─────────────────────────────────────────────────────────────────────────
+
   const handleFieldValueChange = (field: LoginField, value: string) => {
     setFieldValue(field, value);
 
@@ -269,6 +243,11 @@ export function LoginPage({
     return Object.values(validationErrors).every((value) => value === "");
   })();
 
+  const cityOptions = cityNames.map((cityName) => ({
+    value: cityName,
+    label: cityName,
+  }));
+
   const areaOptions = areaNames.map((areaName) => ({
     value: areaName,
     label: areaName,
@@ -280,26 +259,32 @@ export function LoginPage({
     lastName: string;
     email: string;
     phone?: string;
+    city?: string;
+    area?: string;
+    cityId?: number;
+    areaId?: number;
     avatar?: string;
     joinedDate?: string;
     role?: "user" | "admin";
+    hasAdminAccess?: boolean;
+    permissions?: string[];
   }) => {
-    localStorage.removeItem("tijarahjo_logged_out");
+    localStorage.removeItem(AUTH_LOGOUT_KEY);
     persistAuthSessionHint();
-    
+
     // We already have a valid session cookie from the login/signup response.
-    // Sync the context state immediately to prevent AuthRouteElements from unmounting 
+    // Sync the context state immediately to prevent AuthRouteElements from unmounting
     // us prematurely, and prevent race conditions with checkAuth.
     // Optionally fetch the extended user metadata if needed.
     let finalUser = fallbackUser;
-    
+
     try {
       const currentUserResponse = await api.auth.getCurrentUser();
       if (currentUserResponse.success && currentUserResponse.data) {
         const authenticatedUser = typeof currentUserResponse.data === "object" && currentUserResponse.data !== null
           ? (currentUserResponse.data as Record<string, unknown>)
           : null;
-          
+
         if (authenticatedUser) {
            finalUser = {
              ...fallbackUser,
@@ -308,12 +293,27 @@ export function LoginPage({
              lastName: readAuthString(authenticatedUser, "LastName", "lastName") || fallbackUser.lastName,
              email: readAuthString(authenticatedUser, "Email", "email") || fallbackUser.email,
              phone: readAuthString(authenticatedUser, "Phone", "phone") || fallbackUser.phone,
+             city: readAuthString(authenticatedUser, "City", "city") || fallbackUser.city,
+             area: readAuthString(authenticatedUser, "Area", "area") || fallbackUser.area,
+             cityId:
+               readAuthPositiveInt(authenticatedUser, "CityId", "cityId") ??
+               fallbackUser.cityId,
+             areaId:
+               readAuthPositiveInt(authenticatedUser, "AreaId", "areaId") ??
+               fallbackUser.areaId,
              avatar: readAuthString(authenticatedUser, "Avatar", "avatar") || fallbackUser.avatar,
              joinedDate: formatJoinedDateLabel(
                readAuthString(authenticatedUser, "JoinedDate", "joinedDate", "JoinDate", "joinDate") || fallbackUser.joinedDate,
                language,
              ),
              role: resolveLoginRole(authenticatedUser) || fallbackUser.role,
+             hasAdminAccess:
+               resolveHasAdminAccessFromPayload(authenticatedUser) ||
+               fallbackUser.hasAdminAccess,
+             permissions:
+               readAuthPermissions(authenticatedUser).length > 0
+                 ? readAuthPermissions(authenticatedUser)
+                 : (fallbackUser.permissions ?? []),
            };
         }
       }
@@ -329,6 +329,8 @@ export function LoginPage({
       lastName: finalUser.lastName,
       avatar: finalUser.avatar,
       role: finalUser.role || "user",
+      hasAdminAccess: finalUser.hasAdminAccess,
+      permissions: finalUser.permissions,
     });
 
     onLogin({
@@ -337,9 +339,15 @@ export function LoginPage({
       lastName: finalUser.lastName,
       email: finalUser.email,
       phone: finalUser.phone,
+      city: finalUser.city,
+      area: finalUser.area,
+      cityId: finalUser.cityId,
+      areaId: finalUser.areaId,
       avatar: finalUser.avatar,
       joinedDate: finalUser.joinedDate,
       role: finalUser.role,
+      hasAdminAccess: finalUser.hasAdminAccess,
+      permissions: finalUser.permissions,
     });
   };
 
@@ -349,11 +357,11 @@ export function LoginPage({
     const normalizedCity = state.values.city.trim();
     const normalizedArea = state.values.area.trim();
 
-    if (!parsedIdentifier.email && !parsedIdentifier.phone) {
-      setFieldError("identifier", validationMessages.identifierInvalid);
+    if (!parsedIdentifier.email) {
+      setFieldError("identifier", validationMessages.emailInvalid);
       dispatch({
         type: "SET_GENERAL_ERROR",
-        error: copy.errors.signUpInvalidIdentifierPrompt,
+        error: copy.errors.signUpIdentifierMustBeEmail,
       });
       return;
     }
@@ -402,12 +410,54 @@ export function LoginPage({
         copy.errors.registrationFailedFallback,
         backendConnectionMessage,
       );
+      const finalMessage = appendDuplicateAccountHint(
+        baseMessage,
+        copy.errors.duplicateHintSuffix,
+      );
+
+      // If the error is specifically about a duplicate phone number, highlight
+      // the phone field so the user immediately knows which field to correct.
+      const lowerMessage = finalMessage.toLowerCase();
+      if (
+        lowerMessage.includes("phone number") &&
+        (lowerMessage.includes("already exists") || lowerMessage.includes("already registered") || lowerMessage.includes("already in use"))
+      ) {
+        setFieldError(
+          "phone",
+          language === "ar"
+            ? "رقم الهاتف مستخدم بالفعل. يرجى استخدام رقم مختلف أو تسجيل الدخول."
+            : "This phone number is already registered. Please use a different number or sign in.",
+        );
+      }
+
       dispatch({
         type: "SET_GENERAL_ERROR",
-        error: appendDuplicateAccountHint(
-          baseMessage,
-          copy.errors.duplicateHintSuffix,
-        ),
+        error: finalMessage,
+      });
+      return;
+    }
+
+    // Signup succeeded but email verification is required — show verification panel.
+    // Persist the selected avatar (as a data URL) to sessionStorage so that
+    // VerifyEmailPage can upload it after the user clicks the verification link
+    // and is auto-logged in. Without this the avatar is lost when the user
+    // navigates away to check their email.
+    if (response.requiresEmailVerification) {
+      if (avatarFile && avatarPreview && avatarPreview.startsWith("data:")) {
+        try {
+          sessionStorage.setItem("pending_signup_avatar", avatarPreview);
+        } catch {
+          // sessionStorage may be full or unavailable — silently ignore.
+        }
+      } else {
+        sessionStorage.removeItem("pending_signup_avatar");
+      }
+      dispatch({
+        type: "ENTER_EMAIL_VERIFICATION",
+        email: parsedIdentifier.email || state.values.identifier.trim(),
+        message: response.message || (language === "ar"
+          ? "تم إنشاء حسابك. يرجى التحقق من بريدك الإلكتروني لتفعيل الحساب."
+          : "Account created. Please check your email to verify your account."),
       });
       return;
     }
@@ -429,9 +479,13 @@ export function LoginPage({
       email:
         user?.email || parsedIdentifier.email || state.values.identifier.trim(),
       phone: user?.phone || normalizedPhone,
+      city: user?.city || normalizedCity,
+      area: user?.area || normalizedArea,
       avatar: user?.avatar,
       joinedDate: user?.joinedDate,
       role: resolveLoginRole(user),
+      hasAdminAccess: resolveHasAdminAccessFromPayload(user),
+      permissions: readAuthPermissions(user),
     });
   };
 
@@ -442,6 +496,18 @@ export function LoginPage({
     });
 
     if (!response.success) {
+      // Check if login failed because email is not verified
+      if (response.requiresEmailVerification) {
+        dispatch({
+          type: "ENTER_EMAIL_VERIFICATION",
+          email: state.values.identifier.trim(),
+          message: response.message || (language === "ar"
+            ? "يرجى التحقق من بريدك الإلكتروني قبل تسجيل الدخول."
+            : "Please verify your email address before logging in."),
+        });
+        return;
+      }
+
       const message = extractErrorMessage(
         response,
         copy.errors.loginFailedFallback,
@@ -475,9 +541,13 @@ export function LoginPage({
       lastName: user?.lastName || "",
       email: user?.email || state.values.identifier.trim(),
       phone: user?.phone || "",
+      city: user?.city || "",
+      area: user?.area || "",
       avatar: user?.avatar,
       joinedDate: user?.joinedDate,
       role: resolveLoginRole(user),
+      hasAdminAccess: resolveHasAdminAccessFromPayload(user),
+      permissions: readAuthPermissions(user),
     });
   };
 
@@ -529,10 +599,89 @@ export function LoginPage({
       lastName: user?.lastName || "",
       email: user?.email || state.values.identifier.trim(),
       phone: user?.phone || "",
+      city: user?.city || "",
+      area: user?.area || "",
       avatar: user?.avatar,
       joinedDate: user?.joinedDate,
       role: resolveLoginRole(user),
+      hasAdminAccess: resolveHasAdminAccessFromPayload(user),
+      permissions: readAuthPermissions(user),
     });
+  };
+
+  const handleResendTwoFactor = async () => {
+    if (
+      state.isLoading ||
+      isResendingTwoFactor ||
+      !state.values.identifier.trim() ||
+      !state.values.password
+    ) {
+      return;
+    }
+
+    setIsResendingTwoFactor(true);
+    dispatch({ type: "SET_GENERAL_ERROR", error: "" });
+
+    try {
+      const response = await api.auth.login({
+        email: state.values.identifier.trim(),
+        password: state.values.password,
+      });
+
+      if (!response.success) {
+        const message = extractErrorMessage(
+          response,
+          copy.errors.loginFailedFallback,
+          backendConnectionMessage,
+        );
+        dispatch({ type: "SET_GENERAL_ERROR", error: message });
+        return;
+      }
+
+      if (response.requiresTwoFactor) {
+        if (!response.twoFactorToken) {
+          dispatch({
+            type: "SET_GENERAL_ERROR",
+            error: copy.errors.twoFactorSessionExpired,
+          });
+          return;
+        }
+
+        dispatch({
+          type: "ENTER_TWO_FACTOR",
+          token: response.twoFactorToken,
+          message: response.message || copy.errors.twoFactorRequiredPrompt,
+        });
+        return;
+      }
+
+      const user = response.user;
+      await finalizeAuthenticatedLogin({
+        id: user?.id,
+        firstName: user?.firstName || "",
+        lastName: user?.lastName || "",
+        email: user?.email || state.values.identifier.trim(),
+        phone: user?.phone || "",
+        city: user?.city || "",
+        area: user?.area || "",
+        avatar: user?.avatar,
+        joinedDate: user?.joinedDate,
+        role: resolveLoginRole(user),
+        hasAdminAccess: resolveHasAdminAccessFromPayload(user),
+        permissions: readAuthPermissions(user),
+      });
+    } catch (error) {
+      dispatch({
+        type: "SET_GENERAL_ERROR",
+        error: toExceptionMessage(
+          error,
+          copy.errors.unexpected,
+          backendConnectionMessage,
+        ),
+      });
+    } finally {
+      setIsResendingTwoFactor(false);
+    }
   };
 
   const handleGoogleAuth = () => {
@@ -547,19 +696,23 @@ export function LoginPage({
     dispatch({ type: "SET_GENERAL_ERROR", error: "" });
     // Clear the logged-out flag so checkAuth will detect the new JWT
     // session when Google OAuth redirects back to the frontend.
-    localStorage.removeItem("tijarahjo_logged_out");
+    localStorage.removeItem(AUTH_LOGOUT_KEY);
     // Ensure the frontend probes the backend for the session upon return
-    localStorage.setItem("tijarahjo_has_authenticated", "true");
-    
+    persistAuthSessionHint();
+
     const authModeStr = state.mode === "signUp" ? "signup" : "login";
     window.location.assign(api.auth.getGoogleAuthStartUrl(authModeStr));
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    dispatch({ type: "SET_GENERAL_ERROR", error: "" });
+
+    if (state.isLoading || submitInFlightRef.current) {
+      return;
+    }
 
     if (state.step === "twoFactor") {
+      submitInFlightRef.current = true;
       dispatch({ type: "START_LOADING" });
       try {
         await handleTwoFactorVerification();
@@ -573,6 +726,7 @@ export function LoginPage({
           ),
         });
       } finally {
+        submitInFlightRef.current = false;
         dispatch({ type: "STOP_LOADING" });
       }
       return;
@@ -586,9 +740,11 @@ export function LoginPage({
     );
 
     if (hasValidationErrors) {
+      dispatch({ type: "SET_GENERAL_ERROR", error: "" });
       return;
     }
 
+    submitInFlightRef.current = true;
     dispatch({ type: "START_LOADING" });
     try {
       if (state.mode === "signUp") {
@@ -606,11 +762,15 @@ export function LoginPage({
         ),
       });
     } finally {
+      submitInFlightRef.current = false;
       dispatch({ type: "STOP_LOADING" });
     }
   };
 
   const toggleAuthMode = () => {
+    if (!allowSignup && state.mode === "signIn") {
+      return;
+    }
     dispatch({
       type: "SET_MODE",
       mode: state.mode === "signUp" ? "signIn" : "signUp",
@@ -634,6 +794,42 @@ export function LoginPage({
     dispatch({ type: "CANCEL_TWO_FACTOR" });
   };
 
+  const handleCancelEmailVerification = () => {
+    dispatch({ type: "CANCEL_EMAIL_VERIFICATION" });
+  };
+
+  const handleResendVerification = async () => {
+    if (isResendingVerification || resendCooldown > 0 || !state.emailVerificationEmail) {
+      return;
+    }
+
+    setIsResendingVerification(true);
+    dispatch({ type: "SET_GENERAL_ERROR", error: "" });
+
+    try {
+      const result = await api.auth.resendVerificationEmail(
+        state.emailVerificationEmail,
+      );
+      dispatch({
+        type: "SET_GENERAL_ERROR",
+        error: result.message || (language === "ar"
+          ? "تم إرسال رابط التحقق إلى بريدك الإلكتروني."
+          : "A verification link has been sent to your email."),
+      });
+      // Restart the 60-second cooldown after a successful resend
+      startResendCooldown(60);
+    } catch {
+      dispatch({
+        type: "SET_GENERAL_ERROR",
+        error: language === "ar"
+          ? "تعذر إرسال بريد التحقق. حاول مرة أخرى."
+          : "Failed to resend verification email. Please try again.",
+      });
+    } finally {
+      setIsResendingVerification(false);
+    }
+  };
+
   const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -641,8 +837,8 @@ export function LoginPage({
     if (file.size > 10 * 1024 * 1024) {
       dispatch({
         type: "SET_GENERAL_ERROR",
-        error: language === "ar" 
-          ? "حجم الملف كبير جداً. الحد الأقصى هو 10 ميغابايت." 
+        error: language === "ar"
+          ? "حجم الملف كبير جداً. الحد الأقصى هو 10 ميغابايت."
           : "File size too large. Maximum size is 10MB.",
       });
       return;
@@ -687,6 +883,8 @@ export function LoginPage({
       canSubmit={canSubmit}
         values={state.values}
         errors={state.errors}
+        cityOptions={cityOptions}
+        isLoadingCities={isLoadingCities}
         areaOptions={areaOptions}
         isAreaDisabled={!state.values.city || isLoadingAreas || areaOptions.length === 0}
         copy={copy}
@@ -706,6 +904,8 @@ export function LoginPage({
       onContinueWithGoogle={handleGoogleAuth}
       onContinueAsGuest={onContinueAsGuest}
       onCancelTwoFactor={handleCancelTwoFactor}
+      onResendTwoFactor={handleResendTwoFactor}
+      isResendingTwoFactor={isResendingTwoFactor}
       onTwoFactorCodeChange={(value) =>
         dispatch({
           type: "SET_TWO_FACTOR_CODE",
@@ -722,6 +922,13 @@ export function LoginPage({
       avatarPreview={avatarPreview}
       onAvatarClick={() => fileInputRef.current?.click()}
       isModal={isModal}
+      isEmailVerificationStep={state.step === "emailVerification"}
+      emailVerificationEmail={state.emailVerificationEmail}
+      onCancelEmailVerification={handleCancelEmailVerification}
+      onResendVerificationEmail={handleResendVerification}
+      isResendingVerification={isResendingVerification}
+      resendCooldown={resendCooldown}
+      allowSignup={allowSignup}
     />
     </>
   );
@@ -732,12 +939,6 @@ export function LoginPage({
 
   return (
     <PageShell tone="account">
-      <SubpageHeader
-        onBack={() => navigate(backPath, { replace: true })}
-        isRTL={isRTL}
-        backLabel={isRTL ? "العودة إلى السوق" : "Back to marketplace"}
-        showLogo={false}
-      />
       {formComponent}
     </PageShell>
   );

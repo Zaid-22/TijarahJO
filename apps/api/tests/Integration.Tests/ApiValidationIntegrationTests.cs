@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace TijarahJo.Api.Integration.Tests;
 
@@ -319,20 +320,77 @@ public sealed class ApiValidationIntegrationTests
             LastName = "Tester"
         };
 
-        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/auth/signup", signupPayload);
-        string content = await response.Content.ReadAsStringAsync();
-        Assert.True(response.IsSuccessStatusCode, $"Signup failed ({(int)response.StatusCode}): {content}");
+        using HttpResponseMessage signupResponse = await client.PostAsJsonAsync("/api/v1/auth/signup", signupPayload);
+        string signupContent = await signupResponse.Content.ReadAsStringAsync();
+        Assert.True(signupResponse.IsSuccessStatusCode, $"Signup failed ({(int)signupResponse.StatusCode}): {signupContent}");
+
+        using (JsonDocument signupJson = JsonDocument.Parse(signupContent))
+        {
+            Assert.True(
+                signupJson.RootElement.TryGetProperty("RequiresEmailVerification", out JsonElement requiresVerification) &&
+                requiresVerification.GetBoolean(),
+                "Signup response did not require email verification.");
+        }
+
+        bool signupIssuedJwt =
+            signupResponse.Headers.TryGetValues("Set-Cookie", out IEnumerable<string>? signupCookieHeaders) &&
+            signupCookieHeaders.Any(header => header.StartsWith("jwt=", StringComparison.Ordinal));
+        Assert.False(signupIssuedJwt, "Signup issued a JWT before email verification.");
+
+        string verificationToken = await WaitForEmailVerificationTokenAsync(email);
+        using HttpResponseMessage verifyResponse = await client.PostAsJsonAsync(
+            "/api/v1/auth/verify-email",
+            new { Token = verificationToken });
+        string verifyContent = await verifyResponse.Content.ReadAsStringAsync();
         Assert.True(
-            response.Headers.TryGetValues("Set-Cookie", out IEnumerable<string>? cookieHeaders),
-            "Signup response did not include any Set-Cookie headers.");
+            verifyResponse.IsSuccessStatusCode,
+            $"Email verification failed ({(int)verifyResponse.StatusCode}): {verifyContent}");
+        Assert.True(
+            verifyResponse.Headers.TryGetValues("Set-Cookie", out IEnumerable<string>? cookieHeaders),
+            "Email verification response did not include any Set-Cookie headers.");
 
         string? jwtCookie = cookieHeaders
             .FirstOrDefault(header => header.StartsWith("jwt=", StringComparison.Ordinal));
-        Assert.False(string.IsNullOrWhiteSpace(jwtCookie), "Signup response did not set the jwt cookie.");
+        Assert.False(string.IsNullOrWhiteSpace(jwtCookie), "Email verification response did not set the jwt cookie.");
 
         string token = jwtCookie!.Split(';', 2)[0]["jwt=".Length..];
         Assert.False(string.IsNullOrWhiteSpace(token), "JWT cookie did not contain a token value.");
         return token;
+    }
+
+    private static async Task<string> WaitForEmailVerificationTokenAsync(string email)
+    {
+        string logPath = Environment.GetEnvironmentVariable("BACKEND_LOG_FILE")
+            ?? Path.Combine(Path.GetTempPath(), "tijarahjo_bootstrap_backend.log");
+        DateTime deadlineUtc = DateTime.UtcNow.AddSeconds(10);
+        Regex tokenPattern = new(
+            $@"Recipient={Regex.Escape(email)}\s+Link=\S*[?&]token=(?<token>\S+)",
+            RegexOptions.CultureInvariant);
+
+        while (DateTime.UtcNow < deadlineUtc)
+        {
+            try
+            {
+                if (File.Exists(logPath))
+                {
+                    string logContents = await File.ReadAllTextAsync(logPath);
+                    Match? match = tokenPattern.Matches(logContents).LastOrDefault();
+                    if (match?.Success == true)
+                    {
+                        return Uri.UnescapeDataString(match.Groups["token"].Value);
+                    }
+                }
+            }
+            catch (IOException)
+            {
+                // The backend may be appending to the log; retry until the deadline.
+            }
+
+            await Task.Delay(100);
+        }
+
+        throw new InvalidOperationException(
+            $"No email verification token for {email} appeared in backend log {logPath}.");
     }
 
     private static async Task<int> GetFirstCategoryIdAsync(HttpClient client)
@@ -348,24 +406,45 @@ public sealed class ApiValidationIntegrationTests
         return categories[0].CategoryID;
     }
 
+    private static async Task<(int CityId, int AreaId)> GetFirstCityAndAreaAsync(HttpClient client)
+    {
+        HttpResponseMessage citiesResponse = await client.GetAsync("/api/v1/cities");
+        string citiesContent = await citiesResponse.Content.ReadAsStringAsync();
+        Assert.True(citiesResponse.IsSuccessStatusCode, $"Fetching cities failed ({(int)citiesResponse.StatusCode}): {citiesContent}");
+
+        List<CityResponse>? cities = JsonSerializer.Deserialize<List<CityResponse>>(citiesContent, JsonOptions);
+        Assert.NotNull(cities);
+        Assert.NotEmpty(cities!);
+        int cityId = cities![0].CityId;
+        Assert.True(cityId > 0, "Expected a valid city ID in seed data.");
+
+        HttpResponseMessage areasResponse = await client.GetAsync($"/api/v1/cities/{cityId}/areas");
+        string areasContent = await areasResponse.Content.ReadAsStringAsync();
+        Assert.True(areasResponse.IsSuccessStatusCode, $"Fetching areas failed ({(int)areasResponse.StatusCode}): {areasContent}");
+
+        List<AreaResponse>? areas = JsonSerializer.Deserialize<List<AreaResponse>>(areasContent, JsonOptions);
+        Assert.NotNull(areas);
+        Assert.NotEmpty(areas!);
+        int areaId = areas![0].AreaId;
+        Assert.True(areaId > 0, "Expected a valid area ID in seed data.");
+
+        return (cityId, areaId);
+    }
+
     private static async Task<int> CreatePostAsync(HttpClient client, string token, int categoryId)
     {
+        (int cityId, int areaId) = await GetFirstCityAndAreaAsync(client);
+
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/posts");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Content = JsonContent.Create(new
         {
-            PostID = (int?)null,
-            UserID = 0,
             CategoryID = categoryId,
             PostTitle = $"Integration Status Test {Guid.NewGuid():N}",
             PostDescription = "Integration test post.",
             Price = 15.0m,
-            Status = 0,
-            CreatedAt = DateTime.UtcNow,
-            IsDeleted = false,
-            Views = 0L,
-            CityId = (int?)null,
-            AreaId = (int?)null
+            CityId = cityId,
+            AreaId = areaId
         });
 
         HttpResponseMessage response = await client.SendAsync(request);
@@ -389,6 +468,16 @@ public sealed class ApiValidationIntegrationTests
     private sealed class CategoryResponse
     {
         public int CategoryID { get; set; }
+    }
+
+    private sealed class CityResponse
+    {
+        public int CityId { get; set; }
+    }
+
+    private sealed class AreaResponse
+    {
+        public int AreaId { get; set; }
     }
 
     private sealed class PostResponse

@@ -35,6 +35,7 @@ public class AdminImageOptimizationController(
     public async Task<ActionResult> OptimizeExistingImages(CancellationToken cancellationToken)
     {
         var result = new OptimizationResult();
+        var convertedFiles = new List<ConvertedFile>();
 
         string uploadsRoot = LocalPostImageFileStorageService.ResolveAbsoluteUploadsRootPath(
             environment.ContentRootPath, _options);
@@ -44,20 +45,42 @@ public class AdminImageOptimizationController(
             return Ok(new { Message = "No uploads directory found.", result });
         }
 
-        // Phase 1: Optimize files on disk
-        string[] subDirs = ["post-images", "chat-images", "user-avatars"];
-        foreach (string subDir in subDirs)
+        // Signed chat-image URLs include the stored path in their signature, so they
+        // cannot be renamed by this maintenance operation. New chat uploads are
+        // already normalized during ingestion.
+        var directories = new[]
         {
-            string dirPath = Path.Combine(uploadsRoot, subDir);
+            new
+            {
+                Path = LocalPostImageFileStorageService.ResolveAbsolutePostImagesRootPath(
+                    environment.ContentRootPath, _options),
+                GenerateThumbnails = true
+            },
+            new
+            {
+                Path = LocalPostImageFileStorageService.ResolveAbsoluteUserAvatarsRootPath(
+                    environment.ContentRootPath, _options),
+                GenerateThumbnails = false
+            }
+        };
+        foreach (var directory in directories)
+        {
+            string dirPath = directory.Path;
             if (!Directory.Exists(dirPath)) continue;
 
-            bool generateThumbs = subDir == "post-images";
-            await ProcessDirectory(dirPath, generateThumbs, result, cancellationToken);
+            await ProcessDirectory(
+                dirPath,
+                directory.GenerateThumbnails,
+                result,
+                convertedFiles,
+                cancellationToken);
         }
 
-        // Phase 2: Update database URLs (.jpg/.png → .webp) only for converted upload assets.
+        // Database references move first. Original files remain available if this
+        // operation is cancelled or the database update fails.
         int dbUpdates = await UpdateDatabaseUrls(cancellationToken);
         result.DatabaseUrlsUpdated = dbUpdates;
+        DeleteConvertedSources(convertedFiles, result);
 
         logger.LogInformation(
             "Image optimization complete: {Processed} processed, {Converted} converted to WebP, " +
@@ -87,6 +110,7 @@ public class AdminImageOptimizationController(
 
         // Update CategoryEntity.Image
         var categories = await dbContext.Categories
+            .IgnoreQueryFilters()
             .Where(c => c.Image != null &&
                         (c.Image.EndsWith(".jpg") || c.Image.EndsWith(".jpeg") || c.Image.EndsWith(".png")))
             .ToListAsync(ct);
@@ -105,6 +129,7 @@ public class AdminImageOptimizationController(
 
         // Update PostImageEntity.PostImageURL
         var postImages = await dbContext.PostImages
+            .IgnoreQueryFilters()
             .Where(pi => pi.PostImageURL.EndsWith(".jpg") ||
                          pi.PostImageURL.EndsWith(".jpeg") ||
                          pi.PostImageURL.EndsWith(".png"))
@@ -112,13 +137,40 @@ public class AdminImageOptimizationController(
 
         foreach (var pi in postImages)
         {
-            if (!TryGetConvertedWebpUrl(pi.PostImageURL, out string newUrl))
+            if (!TryGetConvertedWebpUrl(
+                    pi.PostImageURL,
+                    out string newUrl,
+                    requireThumbnail: true))
             {
                 continue;
             }
 
             logger.LogInformation("Updating post image {Id}: {Old} → {New}", pi.PostImageID, pi.PostImageURL, newUrl);
             pi.PostImageURL = newUrl;
+            totalUpdated++;
+        }
+
+        var users = await dbContext.Users
+            .IgnoreQueryFilters()
+            .Where(user => user.Avatar != null &&
+                           (user.Avatar.EndsWith(".jpg") ||
+                            user.Avatar.EndsWith(".jpeg") ||
+                            user.Avatar.EndsWith(".png")))
+            .ToListAsync(ct);
+
+        foreach (var user in users)
+        {
+            if (!TryGetConvertedWebpUrl(user.Avatar!, out string newUrl))
+            {
+                continue;
+            }
+
+            logger.LogInformation(
+                "Updating user {Id} avatar: {Old} -> {New}",
+                user.UserID,
+                user.Avatar,
+                newUrl);
+            user.Avatar = newUrl;
             totalUpdated++;
         }
 
@@ -137,7 +189,10 @@ public class AdminImageOptimizationController(
         return url[..lastDot] + ".webp";
     }
 
-    private bool TryGetConvertedWebpUrl(string currentUrl, out string convertedUrl)
+    private bool TryGetConvertedWebpUrl(
+        string currentUrl,
+        out string convertedUrl,
+        bool requireThumbnail = false)
     {
         convertedUrl = string.Empty;
 
@@ -166,13 +221,27 @@ public class AdminImageOptimizationController(
             return false;
         }
 
+        if (requireThumbnail)
+        {
+            string thumbnailPath = Path.Combine(
+                Path.GetDirectoryName(absoluteFilePath)!,
+                LocalPostImageFileStorageService.BuildThumbnailFileName(
+                    Path.GetFileName(absoluteFilePath)));
+            if (!System.IO.File.Exists(thumbnailPath))
+            {
+                return false;
+            }
+        }
+
         convertedUrl = candidateUrl;
         return true;
     }
 
     private async Task ProcessDirectory(
         string dirPath, bool generateThumbs,
-        OptimizationResult result, CancellationToken ct)
+        OptimizationResult result,
+        ICollection<ConvertedFile> convertedFiles,
+        CancellationToken ct)
     {
         string[] imageExtensions = [".jpg", ".jpeg", ".png", ".webp"];
         var files = Directory.EnumerateFiles(dirPath)
@@ -189,7 +258,8 @@ public class AdminImageOptimizationController(
 
             try
             {
-                await ProcessSingleImage(filePath, generateThumbs, result, ct);
+                await ProcessSingleImage(
+                    filePath, generateThumbs, result, convertedFiles, ct);
             }
             catch (Exception ex)
             {
@@ -201,7 +271,9 @@ public class AdminImageOptimizationController(
 
     private async Task ProcessSingleImage(
         string filePath, bool generateThumbs,
-        OptimizationResult result, CancellationToken ct)
+        OptimizationResult result,
+        ICollection<ConvertedFile> convertedFiles,
+        CancellationToken ct)
     {
         string ext = Path.GetExtension(filePath).ToLowerInvariant();
         bool isAlreadyWebp = ext == ".webp";
@@ -270,13 +342,7 @@ public class AdminImageOptimizationController(
             }
 
             long newSize = buffer.Length;
-            result.BytesSaved += originalSize - newSize;
             result.ConvertedToWebp++;
-
-            if (filePath != newFilePath && System.IO.File.Exists(filePath))
-            {
-                System.IO.File.Delete(filePath);
-            }
 
             if (generateThumbs)
             {
@@ -286,8 +352,16 @@ public class AdminImageOptimizationController(
                 await GenerateThumbnail(image, newThumbPath, ct);
                 result.ThumbnailsCreated++;
 
-                if (System.IO.File.Exists(thumbPath)) System.IO.File.Delete(thumbPath);
             }
+
+            // Only publish this conversion to the database/delete phase after all
+            // required derivative files exist.
+            convertedFiles.Add(new ConvertedFile(
+                filePath,
+                newFilePath,
+                originalSize,
+                newSize,
+                generateThumbs ? thumbPath : null));
         }
         else
         {
@@ -328,6 +402,45 @@ public class AdminImageOptimizationController(
         result.Processed++;
     }
 
+    private void DeleteConvertedSources(
+        IEnumerable<ConvertedFile> convertedFiles,
+        OptimizationResult result)
+    {
+        foreach (ConvertedFile convertedFile in convertedFiles)
+        {
+            if (string.Equals(
+                    convertedFile.SourcePath,
+                    convertedFile.ConvertedPath,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            try
+            {
+                if (System.IO.File.Exists(convertedFile.SourcePath))
+                {
+                    System.IO.File.Delete(convertedFile.SourcePath);
+                    result.BytesSaved += convertedFile.OriginalSize - convertedFile.ConvertedSize;
+                }
+
+                if (!string.IsNullOrWhiteSpace(convertedFile.OldThumbnailPath) &&
+                    System.IO.File.Exists(convertedFile.OldThumbnailPath))
+                {
+                    System.IO.File.Delete(convertedFile.OldThumbnailPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Failed++;
+                logger.LogWarning(
+                    ex,
+                    "Converted image is active, but the original could not be removed: {Path}",
+                    convertedFile.SourcePath);
+            }
+        }
+    }
+
     private async Task GenerateThumbnail(Image sourceImage, string thumbPath, CancellationToken ct)
     {
         using Image thumbnail = sourceImage.Clone(ctx => ctx.Resize(new ResizeOptions
@@ -360,4 +473,11 @@ public class AdminImageOptimizationController(
         public long BytesSaved { get; set; }
         public int DatabaseUrlsUpdated { get; set; }
     }
+
+    private sealed record ConvertedFile(
+        string SourcePath,
+        string ConvertedPath,
+        long OriginalSize,
+        long ConvertedSize,
+        string? OldThumbnailPath);
 }

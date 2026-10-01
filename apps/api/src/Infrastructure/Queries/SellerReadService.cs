@@ -7,41 +7,37 @@ using TijarahJo.Infrastructure.Persistence;
 
 namespace TijarahJo.Infrastructure.Queries;
 
-public sealed class SellerReadService : ISellerReadService
+public sealed class SellerReadService(TijarahJoDbContext dbContext, IMemoryCache cache) : ISellerReadService
 {
-    private readonly TijarahJoDbContext _dbContext;
-    private readonly IMemoryCache _cache;
-
-    public SellerReadService(TijarahJoDbContext dbContext, IMemoryCache cache)
-    {
-        _dbContext = dbContext;
-        _cache = cache;
-    }
 
     public async Task<IReadOnlyList<TopSellerReadModel>> GetTopSellersAsync(int takeCount = 10, CancellationToken cancellationToken = default)
     {
         int safeTake = Math.Clamp(takeCount, 1, 50);
 
         string cacheKey = $"top-sellers|{safeTake}";
-        if (_cache.TryGetValue(cacheKey, out IReadOnlyList<TopSellerReadModel>? cached) && cached is not null)
+        if (cache.TryGetValue(cacheKey, out IReadOnlyList<TopSellerReadModel>? cached) && cached is not null)
         {
             return cached;
         }
 
         var rows = (
-            from post in _dbContext.Posts.AsNoTracking()
-            join user in _dbContext.Users.AsNoTracking() on post.UserID equals user.UserID
-            join city in _dbContext.Cities.AsNoTracking() on user.CityID equals city.CityID into cityJoin
+            from post in dbContext.Posts.AsNoTracking()
+            join user in dbContext.Users.AsNoTracking() on post.UserID equals user.UserID
+            join city in dbContext.Cities.AsNoTracking() on user.CityID equals city.CityID into cityJoin
             from city in cityJoin.DefaultIfEmpty()
-            join area in _dbContext.Areas.AsNoTracking() on user.AreaID equals area.AreaID into areaJoin
+            join area in dbContext.Areas.AsNoTracking() on user.AreaID equals area.AreaID into areaJoin
             from area in areaJoin.DefaultIfEmpty()
-            where !user.IsDeleted && !post.IsDeleted
+            where !user.IsDeleted &&
+                  user.Status == UserStatusPolicy.Active &&
+                  !post.IsDeleted &&
+                  (post.Status == PostStatusPolicy.Active || post.Status == PostStatusPolicy.Sold)
             group post by new
             {
                 user.UserID,
                 user.FirstName,
                 user.LastName,
                 user.Email,
+                user.Avatar,
                 user.JoinDate,
                 CityName = city != null ? city.CityName : string.Empty,
                 AreaName = area != null ? area.AreaName : string.Empty
@@ -53,12 +49,11 @@ public sealed class SellerReadService : ISellerReadService
                 grouped.Key.FirstName,
                 grouped.Key.LastName,
                 grouped.Key.Email,
+                grouped.Key.Avatar,
                 grouped.Key.JoinDate,
                 grouped.Key.CityName,
                 grouped.Key.AreaName,
-                ActiveListingsCount = grouped.Count(post =>
-                    post.Status == PostStatusPolicy.Active ||
-                    post.Status == PostStatusPolicy.Sold),
+                ActiveListingsCount = grouped.Count(),
                 TotalSalesCount = grouped.Count(post => post.Status == PostStatusPolicy.Sold),
                 TotalViews = grouped.Sum(post => (long?)post.Views) ?? 0L
             }
@@ -70,21 +65,23 @@ public sealed class SellerReadService : ISellerReadService
         .Take(safeTake)
         .ToListAsync(cancellationToken);
 
-        IReadOnlyList<TopSellerReadModel> results = (await rows).Select(row => new TopSellerReadModel
+        var sellerModels = (await rows).Select(row => new TopSellerReadModel
         {
             Id = row.UserID.ToString(CultureInfo.InvariantCulture),
             Name = BuildSellerName(row.FirstName, row.LastName, row.Email, row.UserID),
             Phone = string.Empty,
             City = row.CityName,
             Area = row.AreaName,
-            Avatar = string.Empty,
+            Avatar = row.Avatar ?? string.Empty,
             JoinedDate = row.JoinDate.ToString("o"),
             ActiveListingsCount = row.ActiveListingsCount,
             TotalSalesCount = row.TotalSalesCount,
             TotalViews = row.TotalViews
-        }).ToList();
+        });
 
-        _cache.Set(
+        IReadOnlyList<TopSellerReadModel> results = [.. sellerModels];
+
+        cache.Set(
             cacheKey,
             results,
             new MemoryCacheEntryOptions

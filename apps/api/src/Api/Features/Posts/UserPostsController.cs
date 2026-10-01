@@ -39,6 +39,7 @@ namespace TijarahJo.Api.Features.Posts
         // --- Feed ---
 
         [HttpGet("feed")]
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> GetPostsFeed([FromQuery] PostsFeedRequest request, CancellationToken cancellationToken)
@@ -55,6 +56,7 @@ namespace TijarahJo.Api.Features.Posts
         // --- Read ---
 
         [HttpGet("{id:int}")]
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -70,7 +72,8 @@ namespace TijarahJo.Api.Features.Posts
             return Ok(dto);
         }
 
-        [HttpGet("Exists/{id:int}")]
+        [HttpGet("exists/{id:int}")]
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<bool>> DoesPostExist(int id, CancellationToken cancellationToken)
@@ -85,6 +88,7 @@ namespace TijarahJo.Api.Features.Posts
         }
 
         [HttpPost("{id:int}/views")]
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -100,6 +104,7 @@ namespace TijarahJo.Api.Features.Posts
         }
 
         [HttpGet("user/{userId:int}")]
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -124,6 +129,7 @@ namespace TijarahJo.Api.Features.Posts
         }
 
         [HttpGet("category/{categoryId:int}")]
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -179,6 +185,7 @@ namespace TijarahJo.Api.Features.Posts
 
             if (result.Success && result.Post != null)
             {
+                _postsFeedService.InvalidateAll();
                 return CreatedAtAction(
                     nameof(GetPostById),
                     new { id = result.Post.PostID },
@@ -222,6 +229,7 @@ namespace TijarahJo.Api.Features.Posts
 
             if (result.Success && result.Post != null)
             {
+                _postsFeedService.InvalidateAll();
                 return Ok(DTOMapper.ToPostResponseDTO(result.Post.PostModel));
             }
 
@@ -229,7 +237,7 @@ namespace TijarahJo.Api.Features.Posts
         }
 
         [Authorize]
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -251,6 +259,7 @@ namespace TijarahJo.Api.Features.Posts
 
             if (result.Success)
             {
+                _postsFeedService.InvalidateAll();
                 return Ok(new ApiMessageResponse { Message = $"Post with ID {id} has been deleted." });
             }
 
@@ -286,6 +295,7 @@ namespace TijarahJo.Api.Features.Posts
 
             if (result.Success)
             {
+                _postsFeedService.InvalidateAll();
                 return Ok(DTOMapper.ToPostResponseDTO(result.Post!.PostModel));
             }
 

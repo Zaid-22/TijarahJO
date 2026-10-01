@@ -1,9 +1,13 @@
 import {
+  Suspense,
+  lazy,
   useEffect,
   useRef,
   useState,
 } from "react";
 import { SearchProvider, useSearch } from "../contexts/SearchContext";
+import { CompareProvider } from "../contexts/CompareContext";
+import { useCompare } from "../contexts/CompareContext";
 import {
   AppSettingsProvider,
   useAppSettings,
@@ -17,17 +21,37 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { ScrollToTop } from "../shared/ui/ScrollToTop";
 
 import { useAuth } from "../contexts/AuthContext";
+import { userHasAdminAccess } from "../contexts/authUtils";
 import { api } from "../services/api";
 import { deferredToast } from "../utils/toast";
 import { useScrollReset } from "./hooks/useScrollReset";
 import { useChatConnection } from "./hooks/useChatConnection";
 import { useNotificationPolling } from "./hooks/useNotificationPolling";
-import { MaintenanceScreen } from "./components/MaintenanceScreen";
 import type { PublicSystemStatus } from "../services/api/system";
+import { lazyImportWithRetry } from "../shared/lib/lazyImportWithRetry";
 
 import { Header } from "../features/marketplace/components/Header";
-import { Footer } from "../features/marketplace/components/Footer";
+import { ComparePanel } from "../features/marketplace/components/ComparePanel";
 import { AppRoutes } from "./routes/AppRoutes";
+
+const MaintenanceScreen = lazy(
+  lazyImportWithRetry(
+    () =>
+      import("./components/MaintenanceScreen").then((m) => ({
+        default: m.MaintenanceScreen,
+      })),
+    "lazy-import-retry:maintenance-screen",
+  ),
+);
+const Footer = lazy(
+  lazyImportWithRetry(
+    () =>
+      import("../features/marketplace/components/Footer").then((m) => ({
+        default: m.Footer,
+      })),
+    "lazy-import-retry:footer",
+  ),
+);
 
 const ROUTES_WITH_LOCAL_HEADER = new Set([
   "admin",
@@ -42,23 +66,117 @@ const ROUTES_WITH_LOCAL_HEADER = new Set([
   "terms",
   "privacy",
   "post",
-  "category",
   "seller",
 ]);
 const KNOWN_PRIMARY_SEGMENTS = new Set([
   "",
   "login",
+  "forgot-password",
+  "complete-profile",
+  "register",
   "admin",
+  "compare",
+  "category",
+  "search",
   ...Array.from(ROUTES_WITH_LOCAL_HEADER),
 ]);
+const AUTH_ROUTE_SEGMENTS = new Set([
+  "login",
+  "forgot-password",
+  "complete-profile",
+  "register",
+]);
+// Routes that must remain accessible even when maintenance mode is active.
+// "complete-profile" is included because an admin who logs in during maintenance
+// may still have an incomplete profile and must be able to complete it to gain
+// access — without this they would be trapped in a maintenance ↔ login loop.
+// "register" is intentionally excluded — new user sign-ups are blocked.
+const MAINTENANCE_EXEMPT_ROUTE_SEGMENTS = new Set([
+  "login",
+  "forgot-password",
+  "complete-profile",
+]);
 const AUTH_TOAST_COOLDOWN_MS = 12_000;
+const MAINTENANCE_STATUS_CACHE_KEY = "tijarahjo_public_system_status_v1";
+const MAINTENANCE_STATUS_TTL_MS = 60_000;
+const COMPARISON_EXCLUDED_SEGMENTS = new Set([
+  "admin",
+  "compare",
+  "favorites",
+  "settings",
+  "profile",
+  "chat",
+  "sell",
+  "login",
+  "forgot-password",
+  "complete-profile",
+  "register",
+]);
+const MAINTENANCE_STATUS_REFRESH_MS = 30_000;
+
+type CachedMaintenanceStatus = {
+  cachedAt: number;
+  status: PublicSystemStatus;
+};
+
+function readCachedMaintenanceStatus(): PublicSystemStatus | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(MAINTENANCE_STATUS_CACHE_KEY);
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as CachedMaintenanceStatus;
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      typeof parsed.cachedAt !== "number" ||
+      typeof parsed.status !== "object" ||
+      parsed.status === null
+    ) {
+      return null;
+    }
+
+    if (Date.now() - parsed.cachedAt > MAINTENANCE_STATUS_TTL_MS) {
+      return null;
+    }
+
+    return parsed.status;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedMaintenanceStatus(status: PublicSystemStatus): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(
+      MAINTENANCE_STATUS_CACHE_KEY,
+      JSON.stringify({
+        cachedAt: Date.now(),
+        status,
+      } satisfies CachedMaintenanceStatus),
+    );
+  } catch {
+    // Ignore cache write failures so app startup never breaks.
+  }
+}
 
 export default function App() {
   return (
     <AppSettingsProvider>
       <UserProfileProvider>
         <SearchProvider>
-          <AppContent />
+          <CompareProvider>
+            <AppContent />
+          </CompareProvider>
         </SearchProvider>
       </UserProfileProvider>
     </AppSettingsProvider>
@@ -66,6 +184,7 @@ export default function App() {
 }
 
 function AppContent() {
+  const { compareCount } = useCompare();
   const navigate = useNavigate();
   const location = useLocation();
   const {
@@ -81,15 +200,13 @@ function AppContent() {
     shownAt: 0,
   });
   const [maintenanceStatus, setMaintenanceStatus] =
-    useState<PublicSystemStatus | null>(null);
-  const [hasLoadedMaintenanceStatus, setHasLoadedMaintenanceStatus] =
-    useState(false);
+    useState<PublicSystemStatus | null>(() => readCachedMaintenanceStatus());
   const normalizedPathname = location.pathname
     .toLowerCase()
     .replace(/\/+$/, "");
   const pathSegments = normalizedPathname.split("/").filter(Boolean);
   const primarySegment = pathSegments[0] || "";
-  const isAuthRoute = primarySegment === "login";
+  const isAuthRoute = AUTH_ROUTE_SEGMENTS.has(primarySegment);
   const hasLocalPageHeader = ROUTES_WITH_LOCAL_HEADER.has(primarySegment);
   const isUnknownPrimarySegment =
     primarySegment !== "" && !KNOWN_PRIMARY_SEGMENTS.has(primarySegment);
@@ -98,16 +215,21 @@ function AppContent() {
   const shouldRenderGlobalHeader = shouldShowGlobalHeader;
 
   // Context Hooks
-  const { userProfile } = useUserProfileContext();
+  const { userProfile, isLoading: isProfileLoading } = useUserProfileContext();
   const { darkMode, language } = useAppSettings();
 
   // Search state lives in SearchContext
   const { searchQuery, setSearchQuery, submitSearch } = useSearch();
 
   // Extracted effect hooks
-  useScrollReset();
+  const routeAnnouncement = useScrollReset(language);
   useChatConnection();
-  const { unreadNotificationsCount } = useNotificationPolling();
+  const { unreadNotificationsCount } = useNotificationPolling({
+    suspended:
+      maintenanceStatus === null ||
+      (maintenanceStatus?.maintenanceMode ?? false) ||
+      (maintenanceStatus?.serviceUnavailable ?? false),
+  });
 
   // Auth error toast (kept inline — too tightly coupled to local ref)
   useEffect(() => {
@@ -133,28 +255,49 @@ function AppContent() {
   }, [authError, clearAuthError]);
 
   useEffect(() => {
-    document.title = "TijarahJo - Jordan's Marketplace";
-  }, []);
-
-  useEffect(() => {
     let isCurrent = true;
+    let isLoading = false;
 
     const loadMaintenanceStatus = async () => {
-      const status = await api.system.getPublicStatus();
-      if (!isCurrent) {
+      if (isLoading) {
         return;
       }
 
-      setMaintenanceStatus(status);
-      setHasLoadedMaintenanceStatus(true);
+      isLoading = true;
+      try {
+        const status = await api.system.getPublicStatus();
+        if (!isCurrent) {
+          return;
+        }
+
+        setMaintenanceStatus(status);
+        writeCachedMaintenanceStatus(status);
+      } finally {
+        isLoading = false;
+      }
+    };
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") {
+        void loadMaintenanceStatus();
+      }
     };
 
     void loadMaintenanceStatus();
+    const intervalId = window.setInterval(
+      () => void loadMaintenanceStatus(),
+      MAINTENANCE_STATUS_REFRESH_MS,
+    );
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
 
     return () => {
       isCurrent = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
-  }, [normalizedPathname]);
+  }, []);
 
   const globalHeader = shouldRenderGlobalHeader ? (
     <Header
@@ -168,54 +311,64 @@ function AppContent() {
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
       onSearchSubmit={submitSearch}
-      onShowFavorites={() => navigate("/favorites")}
-      onShowMessages={() => navigate("/chat")}
+      onShowFavorites={() => navigate("/favorites", { state: { fromPath: location.pathname + location.search } })}
+      onShowMessages={() => navigate("/chat", { state: { fromPath: location.pathname + location.search } })}
       onShowProfile={() => {
         if (isAuthenticated) navigate("/profile");
         else navigate("/login");
       }}
       onShowSettings={() => navigate("/settings")}
       onShowAdminDashboard={() => navigate("/admin")}
-      onShowSellItem={() => navigate("/sell")}
+      onShowCreatePost={() => navigate("/sell")}
       onLogout={logout}
       onCategoryClick={(cat) =>
         navigate(`/category/${encodeURIComponent(cat)}`)
       }
       onNotificationsNavigate={(url) => navigate(url)}
       darkMode={darkMode}
-      isAdmin={user?.role === "admin"}
+      isAdmin={userHasAdminAccess(user)}
+      isMaintenanceMode={maintenanceStatus?.maintenanceMode ?? false}
       unreadMessagesCount={unreadNotificationsCount}
-      authLoading={authLoading}
+      authLoading={authLoading || isProfileLoading}
     />
   ) : null;
 
-  if (maintenanceStatus?.maintenanceMode && !isAuthRoute) {
+  if (
+    maintenanceStatus?.maintenanceMode &&
+    !MAINTENANCE_EXEMPT_ROUTE_SEGMENTS.has(primarySegment) &&
+    primarySegment !== "admin" &&
+    !userHasAdminAccess(user)
+  ) {
     return (
-      <MaintenanceScreen
-        language={language}
-        maintenanceReason={maintenanceStatus.maintenanceReason}
-        maintenanceExpectedReturn={maintenanceStatus.maintenanceExpectedReturn}
-      />
+      <Suspense fallback={<div className="min-h-screen bg-background" />}>
+        <MaintenanceScreen
+          language={language}
+          maintenanceReason={maintenanceStatus.maintenanceReason}
+          maintenanceExpectedReturn={maintenanceStatus.maintenanceExpectedReturn}
+        />
+      </Suspense>
     );
   }
 
-  // Determine main content: show spinner while maintenance status loads, else show routes
-  const mainContent = !hasLoadedMaintenanceStatus && !isAuthRoute ? (
-    <div className="flex justify-center pt-32 sm:pt-40">
-      <span
-        aria-hidden="true"
-        className="h-7 w-7 rounded-full border-2 border-primary/20 border-t-primary animate-spin"
-      />
-    </div>
-  ) : (
-    <AppRoutes />
-  );
+  const shouldShowComparePanel = 
+    isAuthenticated && !isAuthRoute && !COMPARISON_EXCLUDED_SEGMENTS.has(primarySegment);
+  const isComparePanelVisible = shouldShowComparePanel && compareCount > 0;
+  const shouldShowFooter =
+    !isAuthRoute && primarySegment !== "admin" && primarySegment !== "sell" && primarySegment !== "chat";
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <div
+        className="sr-only"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {routeAnnouncement}
+      </div>
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-3 focus:py-2 focus:rounded-md focus:bg-primary focus:text-primary-foreground"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-100 focus:px-3 focus:py-2 focus:rounded-md focus:bg-primary focus:text-primary-foreground"
       >
         {language === "ar"
           ? "تخطي إلى المحتوى الرئيسي"
@@ -223,14 +376,35 @@ function AppContent() {
       </a>
       {globalHeader}
 
-      <main id="main-content" className="flex-1">
-        {mainContent}
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="flex-1 focus:outline-none"
+      >
+        <AppRoutes
+          registrationEnabled={
+            // During maintenance mode, always disable registration regardless
+            // of the registrationEnabled setting — the site is locked down and
+            // new users should not be able to sign up via the login page toggle.
+            (maintenanceStatus?.maintenanceMode ?? false)
+              ? false
+              : (maintenanceStatus?.registrationEnabled ?? true)
+          }
+        />
       </main>
 
-      {!isAuthRoute && (
-        <Footer language={language} />
-      )}
-      <ScrollToTop />
+      {shouldShowFooter ? (
+        <Suspense fallback={<div aria-hidden="true" className="h-0" />}>
+          <div className="animate-in fade-in duration-300">
+            <Footer language={language} />
+          </div>
+        </Suspense>
+      ) : null}
+      {isComparePanelVisible ? (
+        <div aria-hidden="true" className="h-44 shrink-0 sm:h-40 lg:h-44" />
+      ) : null}
+      <ScrollToTop avoidBottomOverlay={isComparePanelVisible} />
+      {shouldShowComparePanel && <ComparePanel />}
     </div>
   );
 }

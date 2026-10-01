@@ -2,7 +2,6 @@ import { APP_CONFIG } from "../../constants/appConfig";
 import type { Language } from "../../types";
 
 const CHAT_IMAGE_PREFIX = "[chat-image]";
-const CHAT_DOWNLOAD_ROUTE_FRAGMENT = "/chat/download-image";
 
 type ParsedChatMessageContent =
   | {
@@ -28,15 +27,25 @@ function isLikelyImageUrl(value: string): boolean {
     return false;
   }
 
+  // Check for our specific chat download route fragment
+  // We check for 'chat/download-image' more generically now
+  if (trimmed.includes("chat/download-image")) {
+    return true;
+  }
+
   if (trimmed.startsWith("/uploads/")) {
     return true;
   }
 
-  if (trimmed.includes(CHAT_DOWNLOAD_ROUTE_FRAGMENT)) {
+  if (IMAGE_PATH_PATTERN.test(trimmed)) {
     return true;
   }
 
   if (!isHttpUrl(trimmed) && !trimmed.startsWith("/")) {
+    // If it starts with 'api/', it's likely one of our routes
+    if (trimmed.startsWith("api/")) {
+      return true;
+    }
     return false;
   }
 
@@ -44,7 +53,7 @@ function isLikelyImageUrl(value: string): boolean {
     const parsed = new URL(trimmed, APP_CONFIG.backendHostUrl);
     return IMAGE_PATH_PATTERN.test(parsed.pathname + parsed.search);
   } catch {
-    return IMAGE_PATH_PATTERN.test(trimmed);
+    return false;
   }
 }
 
@@ -63,24 +72,11 @@ function resolveImageUrl(value: string): string {
     return trimmed;
   }
 
-  return trimmed.startsWith("/")
-    ? `${backendHost}${trimmed}`
-    : `${backendHost}/${trimmed}`;
-}
-
-export function serializeChatImageMessage(
-  imageUrl: string,
-  caption?: string,
-): string {
-  const normalizedImageUrl = imageUrl.trim();
-  const normalizedCaption = caption?.trim() ?? "";
-  if (!normalizedImageUrl) {
-    return normalizedCaption;
-  }
-
-  return normalizedCaption
-    ? `${CHAT_IMAGE_PREFIX} ${normalizedImageUrl}\n${normalizedCaption}`
-    : `${CHAT_IMAGE_PREFIX} ${normalizedImageUrl}`;
+  // Ensure absolute path
+  const absolutePath = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  
+  // Guard against double /api/v1 if backendHost already contains partially resolved paths
+  return `${backendHost}${absolutePath}`;
 }
 
 export function parseChatMessageContent(content: string): ParsedChatMessageContent {
@@ -128,7 +124,7 @@ export function formatChatPreviewText(
     return parsed.text;
   }
 
-  const photoLabel = language === "ar" ? "صورة" : "Photo";
+  const photoLabel = language === "ar" ? "أرسل صورة" : "Sent an image";
   if (parsed.caption) {
     return `${photoLabel}: ${parsed.caption}`;
   }

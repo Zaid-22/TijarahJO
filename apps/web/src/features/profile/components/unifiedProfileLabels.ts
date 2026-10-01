@@ -39,6 +39,8 @@ export interface UnifiedProfileLabels {
   reviewsDescription: string;
   reviewPrompt: string;
   rateStar: (star: number) => string;
+  reportUser: string;
+  reportReview: string;
 }
 
 function normalizeLabel(value: string | undefined, fallback: string): string {
@@ -58,8 +60,8 @@ export function buildUnifiedProfileLabels(
     reviews: isRTL ? "التقييمات" : "Reviews",
     reviewCountWord: isRTL ? "تقييم" : "reviews",
     newSeller: isRTL ? "جديد" : "New",
-    chatWithSeller: isRTL ? "الدردشة مع البائع" : "Chat with Seller",
-    callSeller: isRTL ? "اتصل بالبائع" : "Call Seller",
+    chatWithSeller: isRTL ? "دردشة" : "Chat",
+    callSeller: isRTL ? "اتصال" : "Call",
     call: isRTL ? "اتصال" : "Call",
     activeListings: normalizeLabel(
       t.activeListings,
@@ -128,5 +130,7 @@ export function buildUnifiedProfileLabels(
       isRTL
         ? `قيّم ${star} نجمة${star > 1 ? "ات" : ""}`
         : `Rate ${star} star${star > 1 ? "s" : ""}`,
+    reportUser: isRTL ? "إبلاغ عن مستخدم" : "Report User",
+    reportReview: isRTL ? "إبلاغ عن التقييم" : "Report Review",
   };
 }

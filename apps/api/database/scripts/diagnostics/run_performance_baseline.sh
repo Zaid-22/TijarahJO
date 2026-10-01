@@ -8,6 +8,7 @@ THRESHOLDS_FILE="$SCRIPT_DIR/performance_thresholds.env"
 
 CONTAINER_NAME="${CONTAINER_NAME:-tijarahjo-db}"
 SQLCMD_IN_CONTAINER="${SQLCMD_IN_CONTAINER:-/opt/mssql-tools18/bin/sqlcmd}"
+SQLCMD_UTF8_FLAGS=(-f 65001)
 PERF_REPORT_FILE="${PERF_REPORT_FILE:-/tmp/tijarahjo_performance_baseline.json}"
 
 if [[ -z "${MSSQL_SA_PASSWORD:-}" ]]; then
@@ -38,7 +39,7 @@ run_probe() {
   local raw_output
   if ! raw_output="$(
     printf "%s\n" "$sql_payload" \
-      | docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" \
+      | docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" "${SQLCMD_UTF8_FLAGS[@]}" \
         -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -b -W -h -1 2>&1
   )"; then
     echo "::error::${probe_name} probe execution failed." >&2

@@ -19,6 +19,57 @@ namespace TijarahJo.Api.Tests;
 public sealed class TwoFactorDeliveryTests
 {
     [Fact]
+    public async Task Signup_ReturnsCreatedAndRequiresResend_WhenVerificationEmailFails()
+    {
+        var user = CreateUser(twoFactorEnabled: false, twoFactorSecret: null);
+        var authCommands = new FakeAuthCommandService(new AuthCommandResult
+        {
+            Success = true,
+            User = user,
+            RoleName = "User"
+        });
+        var controller = new AuthController(
+            new FakeTokenService(),
+            authCommands,
+            new FakeUserQueryHandler(),
+            new FakeRoleService(),
+            new FakeUserPermissionService(),
+            CreateTwoFactorService(),
+            new FakeEmailTwoFactorSender(new EmailTwoFactorSendResult(true)),
+            new FakeTokenBlacklistService(),
+            new FakeEmailVerificationService(EmailVerificationRequestResult.Failed(
+                EmailVerificationRequestFailureReason.EmailSendFailed,
+                "Unable to send verification email. Please try again.")),
+            NullLogger<AuthController>.Instance
+        )
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext()
+            }
+        };
+
+        ActionResult<AuthResponse> actionResult = await controller.Signup(
+            new SignUpRequest
+            {
+                Email = user.Email,
+                Password = "Password123!",
+                FirstName = user.FirstName,
+                LastName = user.LastName
+            },
+            CancellationToken.None
+        );
+
+        ObjectResult result = Assert.IsType<ObjectResult>(actionResult.Result);
+        Assert.Equal(StatusCodes.Status201Created, result.StatusCode);
+        AuthResponse response = Assert.IsType<AuthResponse>(result.Value);
+        Assert.True(response.Success);
+        Assert.True(response.RequiresEmailVerification);
+        Assert.Contains("could not be delivered", response.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("resend verification", response.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Login_ReturnsServiceUnavailable_WhenTwoFactorEmailFails()
     {
         var user = CreateUser(twoFactorEnabled: true, twoFactorSecret: "EMAIL");
@@ -37,6 +88,7 @@ public sealed class TwoFactorDeliveryTests
             CreateTwoFactorService(),
             new FakeEmailTwoFactorSender(new EmailTwoFactorSendResult(false, "SMTP unavailable.")),
             new FakeTokenBlacklistService(),
+            new FakeEmailVerificationService(),
             NullLogger<AuthController>.Instance
         )
         {
@@ -56,6 +108,47 @@ public sealed class TwoFactorDeliveryTests
 
         ProblemDetails problem = Assert.IsType<ProblemDetails>(result.Value);
         Assert.Equal("SMTP unavailable.", problem.Detail);
+    }
+
+    [Fact]
+    public async Task Login_ReturnsInactiveAccountMessage_WhenUserIsBanned()
+    {
+        const string message = "User account is banned or inactive.";
+        var authCommands = new FakeAuthCommandService(new AuthCommandResult
+        {
+            Success = false,
+            FailureReason = AuthCommandFailureReason.UserInactive,
+            Message = message
+        });
+        var controller = new AuthController(
+            new FakeTokenService(),
+            authCommands,
+            new FakeUserQueryHandler(),
+            new FakeRoleService(),
+            new FakeUserPermissionService(),
+            CreateTwoFactorService(),
+            new FakeEmailTwoFactorSender(new EmailTwoFactorSendResult(true)),
+            new FakeTokenBlacklistService(),
+            new FakeEmailVerificationService(),
+            NullLogger<AuthController>.Instance
+        )
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext()
+            }
+        };
+
+        ActionResult<AuthResponse> actionResult = await controller.Login(
+            new LoginRequest { Login = "banned@example.com", Password = "Password123!" },
+            CancellationToken.None
+        );
+
+        ObjectResult? result = Assert.IsType<ObjectResult>(actionResult.Result);
+        Assert.Equal(StatusCodes.Status401Unauthorized, result.StatusCode);
+
+        ProblemDetails problem = Assert.IsType<ProblemDetails>(result.Value);
+        Assert.Equal(message, problem.Detail);
     }
 
     [Fact]
@@ -122,7 +215,46 @@ public sealed class TwoFactorDeliveryTests
         Assert.True(users.UpdateCalled);
     }
 
-    private static TwoFactorService CreateTwoFactorService()
+    [Fact]
+    public async Task VerifyLoginCodeAsync_RejectsInvalidVerificationCode()
+    {
+        var service = CreateTwoFactorService();
+        string code = await service.GenerateAndStoreLoginCodeAsync(7);
+        string invalidCode = code == "000000" ? "111111" : "000000";
+
+        bool result = await service.VerifyLoginCodeAsync(7, invalidCode);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task VerifyLoginCodeAsync_AcceptsOnlyStoredVerificationCode()
+    {
+        var service = CreateTwoFactorService();
+        string code = await service.GenerateAndStoreLoginCodeAsync(7);
+
+        bool result = await service.VerifyLoginCodeAsync(7, code);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task GenerateAndStoreLoginCodeAsync_ConcurrentRequestsReuseOneValidCode()
+    {
+        var challenges = new FakeVerificationChallengeDataAccess();
+        var service = CreateTwoFactorService(challenges);
+
+        string[] codes = await Task.WhenAll(
+            Enumerable.Range(0, 8)
+                .Select(_ => service.GenerateAndStoreLoginCodeAsync(7)));
+
+        string code = Assert.Single(codes.Distinct());
+        Assert.True(await service.VerifyLoginCodeAsync(7, code));
+        Assert.False(await service.VerifyLoginCodeAsync(7, code));
+    }
+
+    private static TwoFactorService CreateTwoFactorService(
+        IVerificationChallengeDataAccess? challenges = null)
     {
         return new TwoFactorService(
             Options.Create(new TwoFactorOptions
@@ -136,7 +268,7 @@ public sealed class TwoFactorDeliveryTests
             {
                 SigningKey = "UnitTestSigningKey_AtLeast32Chars_Long"
             },
-            new FakeVerificationChallengeDataAccess()
+            challenges ?? new FakeVerificationChallengeDataAccess()
         );
     }
 
@@ -194,7 +326,7 @@ public sealed class TwoFactorDeliveryTests
             => Task.FromResult(loginResult);
 
         public Task<AuthCommandResult> SignupAsync(SignupCommand command, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
+            => Task.FromResult(loginResult);
 
         public Task<AuthCommandResult> GoogleAuthAsync(GoogleAuthCommand command, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
@@ -243,6 +375,7 @@ public sealed class TwoFactorDeliveryTests
         public Task<bool> SaveAsync(Role role, CancellationToken cancellationToken = default) => Task.FromResult(false);
         public Task<bool> DeleteRoleAsync(int? roleId, CancellationToken cancellationToken = default) => Task.FromResult(false);
         public Task<bool> DoesRoleExistAsync(int? roleId, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<bool> IsRoleNameTakenAsync(string roleName, int? excludeRoleId = null, CancellationToken cancellationToken = default) => Task.FromResult(false);
     }
 
     private sealed class FakeTokenBlacklistService : ITokenBlacklistService
@@ -271,7 +404,11 @@ public sealed class TwoFactorDeliveryTests
         public Task<int> AddUserAsync(UserModel user, CancellationToken cancellationToken = default)
             => throw new NotImplementedException();
 
-        public Task<bool> UpdateUserAsync(UserModel user, int actorUserId, CancellationToken cancellationToken = default)
+        public Task<bool> UpdateUserFieldsAsync(
+            UserModel user,
+            int actorUserId,
+            UserUpdateFields fields,
+            CancellationToken cancellationToken = default)
         {
             UpdateCalled = true;
             StoredUser = user;
@@ -297,27 +434,103 @@ public sealed class TwoFactorDeliveryTests
     private sealed class FakeVerificationChallengeDataAccess : IVerificationChallengeDataAccess
     {
         private sealed record Challenge(string StateJson, DateTime ExpiresAt);
+        private readonly object _gate = new();
         private readonly Dictionary<(int, string), Challenge> _challenges = [];
 
         public Task<string?> GetChallengeStateAsync(int userId, string challengeType, CancellationToken cancellationToken = default)
         {
-             if (_challenges.TryGetValue((userId, challengeType), out var c) && c.ExpiresAt > DateTime.UtcNow)
-             {
-                 return Task.FromResult<string?>(c.StateJson);
-             }
-             return Task.FromResult<string?>(null);
+            lock (_gate)
+            {
+                if (_challenges.TryGetValue((userId, challengeType), out Challenge? challenge))
+                {
+                    return Task.FromResult<string?>(challenge.StateJson);
+                }
+                return Task.FromResult<string?>(null);
+            }
         }
 
         public Task UpsertChallengeStateAsync(int userId, string challengeType, string stateJson, DateTime expiresAt, CancellationToken cancellationToken = default)
         {
-             _challenges[(userId, challengeType)] = new Challenge(stateJson, expiresAt);
-             return Task.CompletedTask;
+            lock (_gate)
+            {
+                _challenges[(userId, challengeType)] = new Challenge(stateJson, expiresAt);
+            }
+            return Task.CompletedTask;
         }
 
         public Task DeleteChallengeStateAsync(int userId, string challengeType, CancellationToken cancellationToken = default)
         {
-             _challenges.Remove((userId, challengeType));
-             return Task.CompletedTask;
+            lock (_gate)
+            {
+                _challenges.Remove((userId, challengeType));
+            }
+            return Task.CompletedTask;
+        }
+
+        public Task<bool> TryReplaceChallengeStateAsync(
+            int userId,
+            string challengeType,
+            string? expectedStateJson,
+            string stateJson,
+            DateTime expiresAt,
+            CancellationToken cancellationToken = default)
+        {
+            lock (_gate)
+            {
+                bool exists = _challenges.TryGetValue((userId, challengeType), out Challenge? current);
+                bool matches = expectedStateJson is null
+                    ? !exists
+                    : exists && string.Equals(current!.StateJson, expectedStateJson, StringComparison.Ordinal);
+                if (!matches)
+                {
+                    return Task.FromResult(false);
+                }
+
+                _challenges[(userId, challengeType)] = new Challenge(stateJson, expiresAt);
+                return Task.FromResult(true);
+            }
+        }
+
+        public Task<bool> TryDeleteChallengeStateAsync(
+            int userId,
+            string challengeType,
+            string expectedStateJson,
+            CancellationToken cancellationToken = default)
+        {
+            lock (_gate)
+            {
+                if (!_challenges.TryGetValue((userId, challengeType), out Challenge? current) ||
+                    !string.Equals(current.StateJson, expectedStateJson, StringComparison.Ordinal))
+                {
+                    return Task.FromResult(false);
+                }
+
+                _challenges.Remove((userId, challengeType));
+                return Task.FromResult(true);
+            }
+        }
+    }
+
+    private sealed class FakeEmailVerificationService(
+        EmailVerificationRequestResult? sendResult = null) : IEmailVerificationService
+    {
+        public Task<EmailVerificationRequestResult> SendVerificationAsync(
+            int userId, string email, string? firstName,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(sendResult ?? EmailVerificationRequestResult.Ok());
+        }
+
+        public Task<EmailVerificationConfirmResult> ConfirmVerificationAsync(
+            string? token, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(EmailVerificationConfirmResult.Ok());
+        }
+
+        public Task<EmailVerificationRequestResult> ResendVerificationAsync(
+            string? email, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(EmailVerificationRequestResult.Ok());
         }
     }
 }

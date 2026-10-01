@@ -4,18 +4,12 @@ using TijarahJo.Application.Common;
 
 namespace TijarahJo.Application.Services;
 
-public sealed class PostMutationService : IPostMutationService
+public sealed class PostMutationService(
+    IPostService posts,
+    ISearchCacheInvalidationService searchCacheInvalidation) : IPostMutationService
 {
-    private readonly IPostService _posts;
-    private readonly ISearchCacheInvalidationService _searchCacheInvalidation;
-
-    public PostMutationService(
-        IPostService posts,
-        ISearchCacheInvalidationService searchCacheInvalidation)
-    {
-        _posts = posts;
-        _searchCacheInvalidation = searchCacheInvalidation;
-    }
+    private readonly IPostService _posts = posts;
+    private readonly ISearchCacheInvalidationService _searchCacheInvalidation = searchCacheInvalidation;
 
     public async Task<PostMutationResult> CreateAsync(CreatePostCommand command, CancellationToken cancellationToken = default)
     {
@@ -131,15 +125,9 @@ public sealed class PostMutationService : IPostMutationService
     {
         invalidMessage = null;
 
-        if (command.ActorUserId < 1 || command.CategoryId < 1 || string.IsNullOrWhiteSpace(command.Title))
+        if (command.ActorUserId < 1 || command.CategoryId < 1 || string.IsNullOrWhiteSpace(command.Title) || command.CityId < 1 || command.AreaId < 1)
         {
-            invalidMessage = "Invalid post data.";
-            return false;
-        }
-
-        if (command.AreaId.HasValue && !command.CityId.HasValue)
-        {
-            invalidMessage = "CityId is required when AreaId is provided.";
+            invalidMessage = "Invalid post data. Title, Category, City, and Area are required.";
             return false;
         }
 
@@ -150,15 +138,9 @@ public sealed class PostMutationService : IPostMutationService
     {
         invalidMessage = null;
 
-        if (command.ActorUserId < 1 || command.PostId < 1 || command.CategoryId < 1 || string.IsNullOrWhiteSpace(command.Title))
+        if (command.ActorUserId < 1 || command.PostId < 1 || command.CategoryId < 1 || string.IsNullOrWhiteSpace(command.Title) || command.CityId < 1 || command.AreaId < 1)
         {
-            invalidMessage = "Invalid post data.";
-            return false;
-        }
-
-        if (command.AreaId.HasValue && !command.CityId.HasValue)
-        {
-            invalidMessage = "CityId is required when AreaId is provided.";
+            invalidMessage = "Invalid post data. Title, Category, City, and Area are required.";
             return false;
         }
 

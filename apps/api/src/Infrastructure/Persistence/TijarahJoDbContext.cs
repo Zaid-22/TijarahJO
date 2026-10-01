@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System.Text.Json;
 using TijarahJo.Domain.Entities;
 
@@ -32,6 +33,7 @@ public sealed class TijarahJoDbContext(DbContextOptions<TijarahJoDbContext> opti
     public DbSet<VerificationChallengeEntity> VerificationChallenges => Set<VerificationChallengeEntity>();
     public DbSet<HeroBannerEntity> HeroBanners => Set<HeroBannerEntity>();
     public DbSet<PostCommentEntity> PostComments => Set<PostCommentEntity>();
+    public DbSet<DataHygieneLogEntity> DataHygieneLogs => Set<DataHygieneLogEntity>();
 
     // Set this to the current actor's UserID before calling SaveChangesAsync on a
     // mutating operation so that AuditLog entries carry the correct ChangedByUserID.
@@ -52,6 +54,13 @@ public sealed class TijarahJoDbContext(DbContextOptions<TijarahJoDbContext> opti
                     .HasConversion(converter);
                 builder.Property(e => e.TwoFactorPendingSecret)
                     .HasConversion(converter);
+            });
+
+            // Encrypt PushSubscription auth keys at rest (Audit O5)
+            modelBuilder.Entity<PushSubscriptionEntity>(builder =>
+            {
+                builder.Property(e => e.Auth)
+                    .HasConversion((ValueConverter)converter);
             });
         }
     }

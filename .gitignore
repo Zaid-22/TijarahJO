@@ -49,6 +49,12 @@ Thumbs.db
 .env.*.local
 appsettings.Development.json
 
+# Production secrets (NEVER commit these)
+infra/.env
+infra/.env.*
+!infra/.env.example
+_on_server/.env
+
 # Logs
 logs/
 *.log
@@ -67,9 +73,12 @@ apps/web/test-results/
 .cache/
 *.pid
 parse_and_test.sh
-apps/api/src/Api/uploads/post-images/
-apps/api/src/Api/uploads/chat-images/
-apps/api/src/Api/uploads/user-avatars/
+apps/api/capture.txt
+apps/api/curl_output.txt
+apps/api/response.txt
+apps/api/scratch.cs
+apps/api/token.txt
+apps/api/publish/
 
 # Database
 *.db
@@ -92,7 +101,33 @@ master.sql
 # Documentation build
 docs/_build/
 
+# Local VPS provider runbooks
+docs/setup/NETCUP_VPS_SETUP_GUIDE.md
+
 # TypeScript
 *.tsbuildinfo
 apps/web/.unit-dist/
 **/.unit-dist/
+
+# Scratch / debug files
+apps/web/measure*.mjs
+apps/web/screenshot*.mjs
+apps/web/login_gap.png
+.playwright-mcp/
+dev_server.log
+apps/web/.env.production
+
+# Desktop and Android directories
+Desktop/
+.android/
+
+# Google Cloud credentials key file
+gcp-vision-sa.json
+
+# User-generated runtime uploads — never commit these to git.
+# They live on the server's filesystem and are served via the /uploads/ route.
+# category-images/ is intentionally kept: it holds seed images for fresh deployments.
+apps/api/src/Api/uploads/post-images/
+apps/api/src/Api/uploads/user-avatars/
+apps/api/src/Api/uploads/chat-images/
+apps/api/src/Api/uploads/report-images/

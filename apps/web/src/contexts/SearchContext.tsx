@@ -7,7 +7,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { APP_ROUTE_PATHS } from "../app/routes/routeConfig";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -23,7 +24,7 @@ interface SearchContextValue {
   /** Directly set the active search query (e.g. clearing from another page). */
   setActiveSearchQuery: (query: string) => void;
   /** Trim, commit, and navigate to `/search`. */
-  submitSearch: () => void;
+  submitSearch: (query?: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -42,9 +43,15 @@ interface SearchProviderProps {
 
 export function SearchProvider({ children }: SearchProviderProps) {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [searchQuery, setSearchQueryRaw] = useState("");
-  const [activeSearchQuery, setActiveSearchQuery] = useState("");
+  const queryFromUrl =
+    location.pathname === APP_ROUTE_PATHS.search
+      ? new URLSearchParams(location.search).get("q")?.trim() || ""
+      : "";
+
+  const [searchQuery, setSearchQueryRaw] = useState(queryFromUrl);
+  const [activeSearchQuery, setActiveSearchQuery] = useState(queryFromUrl);
 
   useEffect(() => {
     // Remove legacy persisted search so a full refresh always starts clean.
@@ -55,6 +62,23 @@ export function SearchProvider({ children }: SearchProviderProps) {
   // Ref keeps the latest value available synchronously for submitSearch.
   const searchQueryRef = useRef(searchQuery);
 
+  useEffect(() => {
+    if (location.pathname === APP_ROUTE_PATHS.home) {
+      searchQueryRef.current = "";
+      setSearchQueryRaw("");
+      setActiveSearchQuery("");
+      return;
+    }
+
+    if (location.pathname !== APP_ROUTE_PATHS.search) {
+      return;
+    }
+
+    searchQueryRef.current = queryFromUrl;
+    setSearchQueryRaw(queryFromUrl);
+    setActiveSearchQuery(queryFromUrl);
+  }, [location.pathname, location.search, queryFromUrl]);
+
   const setSearchQuery = useCallback(
     (query: string) => {
       searchQueryRef.current = query;
@@ -63,15 +87,20 @@ export function SearchProvider({ children }: SearchProviderProps) {
     [setSearchQueryRaw],
   );
 
-  const submitSearch = useCallback(() => {
-    const normalizedQuery = searchQueryRef.current.trim();
+  const submitSearch = useCallback((query?: string) => {
+    const normalizedQuery = (query ?? searchQueryRef.current).trim();
     searchQueryRef.current = normalizedQuery;
     setSearchQueryRaw(normalizedQuery);
     setActiveSearchQuery(normalizedQuery);
     if (!normalizedQuery) {
       return;
     }
-    navigate("/search");
+    const params = new URLSearchParams();
+    params.set("q", normalizedQuery);
+    navigate({
+      pathname: APP_ROUTE_PATHS.search,
+      search: `?${params.toString()}`,
+    });
   }, [navigate, setSearchQueryRaw, setActiveSearchQuery]);
 
   return (

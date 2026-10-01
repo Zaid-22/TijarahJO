@@ -10,13 +10,15 @@ import { resolveCityId, resolveAreaId } from "../../services/api/posts/lookups";
 interface UseProfileSaveActionParams {
   navigate: NavigateFunction;
   userProfile: UserProfile;
-  setUserProfile: (profile: UserProfile) => void;
+  setUserProfile: (profile: UserProfile) => boolean;
+  isCurrentProfileOwner: (userId: string) => boolean;
 }
 
 export function useProfileSaveAction({
   navigate,
   userProfile,
   setUserProfile,
+  isCurrentProfileOwner,
 }: UseProfileSaveActionParams) {
   return useCallback(
     async (updatedProfile: EditProfileFormProfile) => {
@@ -27,6 +29,16 @@ export function useProfileSaveAction({
         throw new Error(message);
       }
 
+      const assertCurrentOwner = () => {
+        if (!isCurrentProfileOwner(resolvedUserId)) {
+          throw new Error(
+            "Your active account changed while saving. Please review the current profile and try again.",
+          );
+        }
+      };
+
+      assertCurrentOwner();
+
       const trimmedFirstName = updatedProfile.firstName.trim();
       const trimmedLastName = updatedProfile.lastName.trim();
       const trimmedPhone = updatedProfile.phone.trim();
@@ -34,6 +46,8 @@ export function useProfileSaveAction({
       const trimmedArea = updatedProfile.area.trim();
       const trimmedBio = updatedProfile.bio.trim();
       const trimmedAvatar = (updatedProfile.avatar || "").trim();
+      const currentAvatar = (userProfile.avatar || "").trim();
+      const shouldSendAvatar = trimmedAvatar != currentAvatar;
       const normalizedEmail = (
         updatedProfile.email || userProfile.email
       ).trim();
@@ -64,6 +78,8 @@ export function useProfileSaveAction({
           ? await resolveAreaId(cityId, trimmedArea)
           : undefined;
 
+        assertCurrentOwner();
+
         await api.users.updateUser(resolvedUserId, {
           Email: normalizedEmail,
           FirstName: trimmedFirstName,
@@ -72,10 +88,12 @@ export function useProfileSaveAction({
           CityId: cityId,
           AreaId: areaId,
           Bio: trimmedBio || null,
-          Avatar: trimmedAvatar || null,
+          ...(shouldSendAvatar ? { Avatar: trimmedAvatar || null } : {}),
         });
 
-        setUserProfile({
+        assertCurrentOwner();
+
+        const profileCommitted = setUserProfile({
           ...userProfile,
           ...updatedProfile,
           id: resolvedUserId,
@@ -86,21 +104,27 @@ export function useProfileSaveAction({
           city: trimmedCity,
           area: trimmedArea,
           bio: trimmedBio,
-          avatar: trimmedAvatar,
+          avatar: shouldSendAvatar ? (trimmedAvatar || null) : userProfile.avatar,
           location: `${trimmedCity}, ${trimmedArea}`,
           name:
             `${trimmedFirstName} ${trimmedLastName}`.trim() || normalizedEmail,
         });
+        if (!profileCommitted) {
+          assertCurrentOwner();
+          throw new Error("The profile could not be applied to the active account.");
+        }
 
         deferredToast.success("Profile updated");
         navigate("/profile");
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Failed to update profile";
-        deferredToast.error(errorMessage);
+        if (isCurrentProfileOwner(resolvedUserId)) {
+          const errorMessage =
+            error instanceof Error ? error.message : "Failed to update profile";
+          deferredToast.error(errorMessage);
+        }
         throw error;
       }
     },
-    [navigate, setUserProfile, userProfile],
+    [isCurrentProfileOwner, navigate, setUserProfile, userProfile],
   );
 }

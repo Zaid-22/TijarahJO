@@ -70,6 +70,22 @@ public static class MiddlewareExtensions
         return app;
     }
 
+    public static WebApplication UseTijarahJoSecurityHeaders(this WebApplication app)
+    {
+        app.Use(async (context, next) =>
+        {
+            var headers = context.Response.Headers;
+            headers.XContentTypeOptions = "nosniff";
+            headers.XFrameOptions = "DENY";
+            headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+            headers["X-Permitted-Cross-Domain-Policies"] = "none";
+            headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+            await next();
+        });
+
+        return app;
+    }
+
     public static WebApplication UseTijarahJoTokenBlacklist(this WebApplication app)
     {
         app.UseMiddleware<TokenBlacklistMiddleware>();
@@ -100,12 +116,20 @@ public static class MiddlewareExtensions
                 var tokens = antiforgery.GetAndStoreTokens(context);
                 if (!string.IsNullOrWhiteSpace(tokens.RequestToken))
                 {
+                    bool isDevelopment = app.Environment.IsDevelopment();
                     bool isHttpsRequest = context.Request.IsHttps;
+                    // Use the same production-safe logic as AuthShared: force Secure=true
+                    // and SameSite=None in non-development environments, regardless of
+                    // Request.IsHttps which can be unreliable behind a reverse proxy.
+                    bool secure = !isDevelopment || isHttpsRequest;
+                    SameSiteMode sameSite = isDevelopment && !isHttpsRequest
+                        ? SameSiteMode.Lax
+                        : SameSiteMode.None;
                     context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken!, new CookieOptions
                     {
                         HttpOnly = false,
-                        Secure = isHttpsRequest,
-                        SameSite = isHttpsRequest ? SameSiteMode.None : SameSiteMode.Lax,
+                        Secure = secure,
+                        SameSite = sameSite,
                         Path = "/"
                     });
                 }
@@ -186,6 +210,17 @@ public static class MiddlewareExtensions
             }
 
             if (IsMaintenanceBypassRequest(context))
+            {
+                await next();
+                return;
+            }
+
+            // Public (anonymous) endpoints are always allowed through — users should
+            // still be able to browse the marketplace feed, categories, cities, seller
+            // profiles, etc. even during maintenance. Only protected operations
+            // (posting, chatting, comparing, etc.) need to be blocked.
+            Endpoint? endpoint = context.GetEndpoint();
+            if (endpoint?.Metadata.GetMetadata<IAllowAnonymous>() != null)
             {
                 await next();
                 return;

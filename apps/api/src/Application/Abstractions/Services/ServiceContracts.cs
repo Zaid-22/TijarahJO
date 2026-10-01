@@ -33,6 +33,7 @@ public interface IRoleService
     Task<bool> SaveAsync(Role role, CancellationToken cancellationToken = default);
     Task<bool> DeleteRoleAsync(int? roleId, CancellationToken cancellationToken = default);
     Task<bool> DoesRoleExistAsync(int? roleId, CancellationToken cancellationToken = default);
+    Task<bool> IsRoleNameTakenAsync(string roleName, int? excludeRoleId = null, CancellationToken cancellationToken = default);
 }
 
 public interface IPostService
@@ -178,8 +179,25 @@ public interface IMessageService
     Task<bool> CanAccessConversationAsync(int userId, int conversationId, CancellationToken cancellationToken = default);
     Task<ConversationAccessMetadata?> GetConversationMetadataAsync(int conversationId, CancellationToken cancellationToken = default);
     Task<List<MessageModel>> GetChatHistoryAsync(int conversationId, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
+    Task<List<MessageModel>> GetChatHistoryBetweenUsersAsync(
+        int userA,
+        int userB,
+        int pageNumber = 1,
+        int pageSize = 50,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(new List<MessageModel>());
+    Task<IReadOnlyList<int>> GetConversationIdsBetweenUsersAsync(
+        int userA,
+        int userB,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<int>>([]);
     Task<List<MessageModel>> GetRecentChatsAsync(int userId, CancellationToken cancellationToken = default);
     Task<bool> MarkAsReadAsync(int conversationId, int receiverId, CancellationToken cancellationToken = default);
+    Task<bool> MarkAsReadBetweenUsersAsync(
+        int currentUserId,
+        int otherUserId,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
     Message Create(MessageModel model);
     Task<bool> SaveAsync(Message message, CancellationToken cancellationToken = default);
 }
@@ -197,6 +215,10 @@ public interface IReviewService
     Task<bool> CanReviewAsync(int reviewerId, int reviewedUserId, CancellationToken cancellationToken = default);
     Review Create(ReviewModel model);
     Task<bool> SaveAsync(Review review, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Returns aggregated rating stats (average, count) per user ID in a single DB round-trip.
+    /// </summary>
+    Task<IReadOnlyDictionary<int, (double AverageRating, int ReviewCount)>> GetRatingsByUserIdsAsync(IReadOnlyList<int> userIds, CancellationToken cancellationToken = default);
 }
 
 public enum ReviewSubmissionFailureReason
@@ -311,10 +333,9 @@ public interface IPostCommentService
     Task<PostCommentListResult> GetTopLevelCommentsAsync(
         int postId, int pageNumber = 1, int pageSize = 20, CancellationToken cancellationToken = default);
     Task<PostCommentListResult> GetRepliesAsync(
-        int parentCommentId, int pageNumber = 1, int pageSize = 20, CancellationToken cancellationToken = default);
+        int postId, int parentCommentId, int pageNumber = 1, int pageSize = 20, CancellationToken cancellationToken = default);
     Task<PostCommentResult> UpdateCommentAsync(
-        int commentId, int actorUserId, string? content, CancellationToken cancellationToken = default);
+        int postId, int commentId, int actorUserId, string? content, CancellationToken cancellationToken = default);
     Task<PostCommentResult> DeleteCommentAsync(
-        int commentId, int actorUserId, bool actorIsAdmin, int? postOwnerId = null, CancellationToken cancellationToken = default);
+        int postId, int commentId, int actorUserId, bool actorIsAdmin, int? postOwnerId = null, CancellationToken cancellationToken = default);
 }
-

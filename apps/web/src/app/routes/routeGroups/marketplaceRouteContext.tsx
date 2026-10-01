@@ -15,6 +15,7 @@ export interface MarketplaceSharedUserRouteProps {
 
 export interface MarketplaceSharedPostRouteProps {
   availablePosts: Post[];
+  isLoadingPosts: boolean;
   favoriteIds: string[];
   onFavoriteToggle: (postId: string) => void;
 }

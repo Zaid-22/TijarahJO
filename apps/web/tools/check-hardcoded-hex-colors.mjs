@@ -4,10 +4,6 @@ import path from "node:path";
 const SRC_DIR = path.resolve(process.cwd(), "src");
 const HEX_COLOR_PATTERN = /#[0-9a-fA-F]{3,8}\b/g;
 
-const ALLOWED_FILES = new Set([
-  "src/constants/colors.ts",
-]);
-
 function walkFiles(dirPath) {
   const entries = readdirSync(dirPath);
   const files = [];
@@ -29,6 +25,10 @@ function walkFiles(dirPath) {
   return files;
 }
 
+const IGNORE_FILES = [
+  "src/shared/design/colorTokens.ts",
+];
+
 function main() {
   const files = walkFiles(SRC_DIR);
   const violations = [];
@@ -37,7 +37,8 @@ function main() {
     const relativePath = path
       .relative(process.cwd(), filePath)
       .replace(/\\/g, "/");
-    if (ALLOWED_FILES.has(relativePath)) {
+
+    if (IGNORE_FILES.includes(relativePath)) {
       continue;
     }
 
@@ -60,14 +61,15 @@ function main() {
     return;
   }
 
+  // eslint-disable-next-line no-console
   console.error(
     "Design-system check failed: hardcoded hex colors are not allowed in TS/TSX files.",
   );
   for (const violation of violations) {
+    // eslint-disable-next-line no-console
     console.error(`- ${violation}`);
   }
   process.exit(1);
 }
 
 main();
-

@@ -5,7 +5,9 @@ export interface Post {
   name: string;
   price: number;
   location: string;
+  locationAr?: string;
   area?: string; // Area/neighborhood within the city
+  areaAr?: string;
   locationId?: string; // Link to location entity
   seller: string;
   sellerId: string; // Link to user entity
@@ -35,6 +37,8 @@ export interface UserProfile {
   phone: string;
   city?: string;
   area?: string;
+  cityId?: number;
+  areaId?: number;
   location: string;
   locationId?: string; // Link to location entity
   bio: string;

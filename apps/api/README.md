@@ -67,7 +67,7 @@ Represents a registered user.
 |-----------|------|-------------|
 | **UserID** (PK) | INT | Unique identifier |
 | Email | NVARCHAR | Primary email address |
-| HashedPassword | NVARCHAR | BCrypt hashed password |
+| HashedPassword | NVARCHAR | PBKDF2-SHA256 hashed password |
 | FirstName | NVARCHAR | First name |
 | LastName | NVARCHAR? | Last name (optional) |
 | Phone | NVARCHAR? | Phone number (+962 format) |
@@ -379,7 +379,7 @@ User-submitted abuse/fraud reports.
 | Attribute | Type | Description |
 |-----------|------|-------------|
 | **ReportID** (PK) | INT | Unique report ID |
-| ReportType | NVARCHAR | `LISTING`, `USER`, `REVIEW`, `CHAT` |
+| ReportType | NVARCHAR | `LISTING`, `USER`, `REVIEW`, `COMMENT` |
 | TargetID | INT | ID of reported entity |
 | Reason | NVARCHAR | `SPAM`, `SCAM`, `OFFENSIVE`, `FAKE`, `HARASSMENT`, `OTHER` |
 | Description | NVARCHAR? | Additional details |
@@ -505,7 +505,7 @@ Reference table for user status codes.
 - **Conversation pair model** — `User1ID < User2ID` prevents duplicate threads
 - **Audit logging** — mutations recorded in same transaction via EF Core interceptor
 - `CreatedAt` / `UpdatedAt` timestamps via EF Core `UpdatedAtInterceptor`
-- **23 entity tables** managed via **34 ordered migration scripts**
+- **23 entity tables** managed via **59 ordered migration scripts**
 
 ---
 
@@ -517,4 +517,4 @@ Reference table for user status codes.
 
 ---
 
-Last Updated: 2026-04-02
+Last Updated: 2026-05-22

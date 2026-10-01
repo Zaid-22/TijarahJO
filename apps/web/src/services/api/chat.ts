@@ -1,9 +1,9 @@
 import { ChatPresence, Message } from "../../types";
-import { ChatImageUploadResponse } from "../../types/api";
 import { toPositiveIntegerId } from "../../utils/idValidation";
 import { apiRequest } from "./client";
 import { normalizeChatMessage, RawChatMessage } from "./chatNormalization";
 import {
+  isChatMessagesPayload,
   parseChatMessagesPayload,
   normalizePresenceTimestamp,
   parsePresencePayload,
@@ -38,7 +38,11 @@ async function fetchChatMessages(endpoint: string): Promise<Message[]> {
     method: "GET",
   });
   if (!response.success) {
-    return [];
+    throw new Error(response.error.message || "Failed to load chat messages");
+  }
+
+  if (!isChatMessagesPayload(response.data)) {
+    throw new Error("Invalid chat messages response");
   }
 
   return mapChatMessages(parseChatMessagesPayload(response.data));
@@ -50,7 +54,7 @@ export const chatApi = {
   getChatHistory: async (otherUserId: number): Promise<Message[]> => {
     const normalizedOtherUserId = normalizeChatUserId(otherUserId);
     if (!normalizedOtherUserId) {
-      return [];
+      throw new Error("Invalid chat user ID");
     }
 
     return fetchChatMessages(`/chat/history/${normalizedOtherUserId}`);
@@ -59,9 +63,7 @@ export const chatApi = {
   getPresence: async (otherUserId: number): Promise<ChatPresence> => {
     const normalizedOtherUserId = normalizeChatUserId(otherUserId);
     if (!normalizedOtherUserId) {
-      return {
-        isOnline: false,
-      };
+      throw new Error("Invalid chat user ID");
     }
 
     const response = await apiRequest<unknown>(
@@ -72,16 +74,12 @@ export const chatApi = {
     );
 
     if (!response.success) {
-      return {
-        isOnline: false,
-      };
+      throw new Error(response.error.message || "Failed to load chat presence");
     }
 
     const presence = parsePresencePayload(response.data);
     if (!presence) {
-      return {
-        isOnline: false,
-      };
+      throw new Error("Invalid chat presence response");
     }
 
     const isOnline = Boolean(
@@ -134,11 +132,12 @@ export const chatApi = {
     return null;
   },
 
-  uploadImage: async (
+  sendImageMessage: async (
     file: File,
     receiverId: number,
+    caption?: string,
     postId?: number,
-  ): Promise<string> => {
+  ): Promise<Message> => {
     if (!(file instanceof File) || file.size <= 0) {
       throw new Error("Please choose a valid image file.");
     }
@@ -171,22 +170,29 @@ export const chatApi = {
     if (normalizedPostId) {
       formData.append("PostId", String(normalizedPostId));
     }
+    const normalizedCaption = caption?.trim();
+    if (normalizedCaption) {
+      formData.append("Caption", normalizedCaption);
+    }
 
-    const response = await apiRequest<ChatImageUploadResponse>("/chat/upload-image", {
+    const response = await apiRequest<unknown>("/chat/send-image", {
       method: "POST",
       body: formData,
-      timeoutMs: 60000, // 60 seconds
+      timeoutMs: 60000,
     });
 
     if (!response.success) {
       throw new Error(response.error?.message || "Failed to upload image.");
     }
 
-    const imageUrl = response.data?.url || response.data?.Url;
-    if (!imageUrl) {
-      throw new Error("Upload failed because the server returned no image URL.");
+    const messagePayload = parseSentChatMessagePayload(response.data);
+    const message = messagePayload
+      ? normalizeChatMessage(messagePayload)
+      : null;
+    if (!message) {
+      throw new Error("Image send failed because the server returned no message.");
     }
 
-    return imageUrl;
+    return message;
   },
 };

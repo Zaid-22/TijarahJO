@@ -10,11 +10,15 @@ DOCKER_COMPOSE_FILE="$ROOT_DIR/infra/docker-compose.yml"
 SQL_BUNDLE_BUILDER="$DB_SCRIPTS_DIR/build_sql_bundles.sh"
 MASTER_SQL_BUNDLE="$DB_BUNDLES_DIR/master.sql"
 SEED_BASELINE_SQL_BUNDLE="$DB_BUNDLES_DIR/seed_data.sql"
+SEED_ADMIN_SQL_BUNDLE="$DB_BUNDLES_DIR/seed_admin.sql"
 SEED_DEV_SQL_BUNDLE="$DB_BUNDLES_DIR/seed_dev.sql"
+SEED_SAMPLE_POSTS_SQL_BUNDLE="$DB_BUNDLES_DIR/seed_sample_posts.sql"
 SEED_TEST_SQL_BUNDLE="$DB_BUNDLES_DIR/seed_test.sql"
 VERIFY_SCRIPT="$ROOT_DIR/scripts/verify_all_apis.sh"
 CONTAINER_NAME="tijarahjo-db"
 SQLCMD_IN_CONTAINER="/opt/mssql-tools18/bin/sqlcmd"
+# Force UTF-8 script input so Arabic NVARCHAR literals are not misread as Windows-1252 (mojibake like Ø§Ù„Ø£Ø«Ø§Ø«).
+SQLCMD_UTF8_FLAGS=(-f 65001)
 BACKEND_LOG_FILE="${BACKEND_LOG_FILE:-/tmp/tijarahjo_bootstrap_backend.log}"
 BACKEND_PID_FILE="${BACKEND_PID_FILE:-$ROOT_DIR/.tijarahjo_backend.pid}"
 CONFIGURATION="${CONFIGURATION:-Debug}"
@@ -23,7 +27,10 @@ CONFIGURATION="${CONFIGURATION:-Debug}"
 RESET_VOLUME=1
 RUN_VERIFY=1
 KEEP_BACKEND_RUNNING=0
+SQL_ONLY=0
+ENABLE_ADMIN_BOOTSTRAP=0
 ENABLE_DEV_SEEDS=0
+ENABLE_SAMPLE_POST_SEEDS=0
 ENABLE_TEST_SEEDS=0
 
 print_usage() {
@@ -33,8 +40,12 @@ Usage: ./scripts/bootstrap_db.sh [options]
 Options:
   --no-volume-reset   Keep Docker volume; still recreates TijarahJoDB database.
   --no-verify         Skip verify_all_apis.sh.
+  --sql-only          Apply SQL bundles only; skip local dotnet backend startup (VPS/Docker deploy).
   --keep-backend      Keep backend process running after completion.
+  --with-admin-bootstrap
+                     Apply guarded admin bootstrap seed after baseline seeds.
   --with-dev-seeds    Apply development seed bundle after baseline seeds.
+  --with-sample-posts Apply sample marketplace post seed bundle after baseline seeds.
   --with-test-seeds   Apply test seed bundle after baseline seeds.
   -h, --help          Show this help message.
 
@@ -45,6 +56,14 @@ Environment:
   DB_RUNTIME_PRINCIPAL Runtime DB principal for backend connection: app|sa (default: app)
   DB_APP_LOGIN        App DB login when DB_RUNTIME_PRINCIPAL=app (default: tijarahjo_app)
   DB_APP_PASSWORD     App DB password when DB_RUNTIME_PRINCIPAL=app (required; no fallback)
+  BOOTSTRAP_ADMIN_EMAIL
+                     Admin email for guarded admin bootstrap (default: admin@tijarahjo.local)
+  BOOTSTRAP_ADMIN_FIRST_NAME
+                     Admin first name (default: Admin)
+  BOOTSTRAP_ADMIN_LAST_NAME
+                     Admin last name (default: User)
+  BOOTSTRAP_ADMIN_PASSWORD_HASH
+                     PBKDF2 password hash for the bootstrap admin
   ADMIN_TOKEN         Optional token passed through to verify_all_apis.sh
 EOF
 }
@@ -59,12 +78,25 @@ while [[ $# -gt 0 ]]; do
       RUN_VERIFY=0
       shift
       ;;
+    --sql-only)
+      SQL_ONLY=1
+      RUN_VERIFY=0
+      shift
+      ;;
     --keep-backend)
       KEEP_BACKEND_RUNNING=1
       shift
       ;;
+    --with-admin-bootstrap)
+      ENABLE_ADMIN_BOOTSTRAP=1
+      shift
+      ;;
     --with-dev-seeds)
       ENABLE_DEV_SEEDS=1
+      shift
+      ;;
+    --with-sample-posts)
+      ENABLE_SAMPLE_POST_SEEDS=1
       shift
       ;;
     --with-test-seeds)
@@ -96,7 +128,7 @@ if [[ -z "${MSSQL_SA_PASSWORD:-}" ]]; then
   exit 1
 fi
 
-if [[ -z "${JWT_SIGNING_KEY:-}" ]]; then
+if [[ "$SQL_ONLY" -eq 0 && -z "${JWT_SIGNING_KEY:-}" ]]; then
   echo "Error: JWT_SIGNING_KEY is not set."
   echo "Set it in your shell or $ROOT_DIR/.env before running scripts/bootstrap_db.sh." >&2
   exit 1
@@ -108,6 +140,10 @@ BACKEND_URL="${ASPNETCORE_URLS:-http://localhost:5033}"
 DB_RUNTIME_PRINCIPAL="${DB_RUNTIME_PRINCIPAL:-app}"
 DB_APP_LOGIN="${DB_APP_LOGIN:-tijarahjo_app}"
 DB_APP_PASSWORD="${DB_APP_PASSWORD:-}"
+BOOTSTRAP_ADMIN_EMAIL="${BOOTSTRAP_ADMIN_EMAIL:-admin@tijarahjo.local}"
+BOOTSTRAP_ADMIN_FIRST_NAME="${BOOTSTRAP_ADMIN_FIRST_NAME:-Admin}"
+BOOTSTRAP_ADMIN_LAST_NAME="${BOOTSTRAP_ADMIN_LAST_NAME:-User}"
+BOOTSTRAP_ADMIN_PASSWORD_HASH="${BOOTSTRAP_ADMIN_PASSWORD_HASH:-PBKDF2_SHA256\$100000\$fyQpso6qnOiDKHSIHUSP4A==\$VI9qIEp2EMOo7RFhl7nt5NxEAxWWtEtRfFe5Pi6vggM=}"
 RUNTIME_DB_USER="sa"
 RUNTIME_DB_PASSWORD="$SA_PASSWORD"
 
@@ -122,7 +158,13 @@ if [[ "$DB_RUNTIME_PRINCIPAL" == "app" && -z "${DB_APP_PASSWORD:-}" ]]; then
   exit 1
 fi
 
-for required_cmd in docker dotnet curl jq awk sed lsof rg; do
+if [[ "$SQL_ONLY" -eq 1 ]]; then
+  required_cmds=(docker awk sed)
+else
+  required_cmds=(docker dotnet curl jq awk sed lsof)
+fi
+
+for required_cmd in "${required_cmds[@]}"; do
   if ! command -v "$required_cmd" >/dev/null 2>&1; then
     echo "Error: required command '$required_cmd' was not found in PATH." >&2
     exit 1
@@ -139,7 +181,7 @@ if [[ ! -f "$DOCKER_COMPOSE_FILE" ]]; then
   exit 1
 fi
 
-if [[ ! -f "$VERIFY_SCRIPT" ]]; then
+if [[ "$SQL_ONLY" -eq 0 && ! -f "$VERIFY_SCRIPT" ]]; then
   echo "Error: verify script not found at $VERIFY_SCRIPT" >&2
   exit 1
 fi
@@ -158,7 +200,7 @@ MSSQL_SA_PASSWORD="$SA_PASSWORD" docker compose -f "$DOCKER_COMPOSE_FILE" up -d 
 
 echo "==> Waiting for SQL Server readiness..."
 for i in $(seq 1 90); do
-  if docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" -S localhost -U sa -P "$SA_PASSWORD" -C -b -Q "SELECT 1" >/dev/null 2>&1; then
+  if docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" "${SQLCMD_UTF8_FLAGS[@]}" -S localhost -U sa -P "$SA_PASSWORD" -C -b -Q "SELECT 1" >/dev/null 2>&1; then
     break
   fi
   sleep 2
@@ -169,11 +211,22 @@ for i in $(seq 1 90); do
 done
 
 echo "==> Recreating TijarahJoDB..."
-docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" -S localhost -U sa -P "$SA_PASSWORD" -C -b -Q "USE master; IF DB_ID('TijarahJoDB') IS NOT NULL BEGIN ALTER DATABASE [TijarahJoDB] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [TijarahJoDB]; END;"
+docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" "${SQLCMD_UTF8_FLAGS[@]}" -S localhost -U sa -P "$SA_PASSWORD" -C -b -Q "USE master; IF DB_ID('TijarahJoDB') IS NOT NULL BEGIN ALTER DATABASE [TijarahJoDB] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [TijarahJoDB]; END;"
 
 apply_sql_file() {
   local file_path="$1"
-  cat "$file_path" | docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" -S localhost -U sa -P "$SA_PASSWORD" -C -b -I
+  cat "$file_path" | docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" "${SQLCMD_UTF8_FLAGS[@]}" -S localhost -U sa -P "$SA_PASSWORD" -C -b -I
+}
+
+apply_admin_bootstrap_file() {
+  local file_path="$1"
+
+  cat "$file_path" | docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" "${SQLCMD_UTF8_FLAGS[@]}" \
+    -S localhost -U sa -P "$SA_PASSWORD" -C -b -I \
+    -v "AdminEmail=$BOOTSTRAP_ADMIN_EMAIL" \
+    -v "AdminFirstName=$BOOTSTRAP_ADMIN_FIRST_NAME" \
+    -v "AdminLastName=$BOOTSTRAP_ADMIN_LAST_NAME" \
+    -v "AdminPasswordHash=$BOOTSTRAP_ADMIN_PASSWORD_HASH"
 }
 
 configure_runtime_db_principal() {
@@ -192,7 +245,7 @@ configure_runtime_db_principal() {
   local escaped_app_password
   escaped_app_password="$(printf "%s" "$DB_APP_PASSWORD" | sed "s/'/''/g")"
 
-  cat <<SQL | docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" -S localhost -U sa -P "$SA_PASSWORD" -C -b -I >/dev/null
+  cat <<SQL | docker exec -i "$CONTAINER_NAME" "$SQLCMD_IN_CONTAINER" "${SQLCMD_UTF8_FLAGS[@]}" -S localhost -U sa -P "$SA_PASSWORD" -C -b -I >/dev/null
 USE master;
 IF NOT EXISTS (SELECT 1 FROM sys.sql_logins WHERE name = N'${DB_APP_LOGIN}')
 BEGIN
@@ -284,6 +337,10 @@ GRANT SELECT ON dbo.Cities TO [tijarahjo_app_runtime];
 GRANT SELECT ON dbo.Areas TO [tijarahjo_app_runtime];
 GRANT SELECT ON dbo.UserStatusLookup TO [tijarahjo_app_runtime];
 GRANT SELECT ON dbo.PostStatusLookup TO [tijarahjo_app_runtime];
+GRANT SELECT ON dbo.PostComments TO [tijarahjo_app_runtime];
+
+-- Challenge-backed auth flows use compare-and-swap updates and single-use deletes.
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.VerificationChallenges TO [tijarahjo_app_runtime];
 
 GRANT INSERT, UPDATE ON dbo.Users TO [tijarahjo_app_runtime];
 GRANT INSERT, UPDATE ON dbo.Categories TO [tijarahjo_app_runtime];
@@ -296,13 +353,20 @@ GRANT INSERT, UPDATE ON dbo.Messages TO [tijarahjo_app_runtime];
 GRANT INSERT, UPDATE ON dbo.Notifications TO [tijarahjo_app_runtime];
 GRANT INSERT, UPDATE ON dbo.PushSubscriptions TO [tijarahjo_app_runtime];
 GRANT INSERT, UPDATE ON dbo.UserExternalIdentities TO [tijarahjo_app_runtime];
+GRANT INSERT, UPDATE, DELETE ON dbo.PostComments TO [tijarahjo_app_runtime];
 
--- Explicitly keep reference/metadata tables read-only for runtime.
-DENY INSERT, UPDATE, DELETE ON dbo.Roles TO [tijarahjo_app_runtime];
+-- Admin RBAC: roles.manage requires DML on Roles and RolePermissions.
+GRANT INSERT, UPDATE, DELETE ON dbo.Roles TO [tijarahjo_app_runtime];
+IF OBJECT_ID(N'dbo.RolePermissions', N'U') IS NOT NULL
+    GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.RolePermissions TO [tijarahjo_app_runtime];
+
+-- Admin locations: locations.manage requires DML on Cities and Areas.
+GRANT INSERT, UPDATE, DELETE ON dbo.Cities TO [tijarahjo_app_runtime];
+GRANT INSERT, UPDATE, DELETE ON dbo.Areas TO [tijarahjo_app_runtime];
+
+-- Explicitly keep lookup/metadata tables read-only for runtime.
 DENY INSERT, UPDATE, DELETE ON dbo.UserStatusLookup TO [tijarahjo_app_runtime];
 DENY INSERT, UPDATE, DELETE ON dbo.PostStatusLookup TO [tijarahjo_app_runtime];
-DENY INSERT, UPDATE, DELETE ON dbo.Cities TO [tijarahjo_app_runtime];
-DENY INSERT, UPDATE, DELETE ON dbo.Areas TO [tijarahjo_app_runtime];
 DENY INSERT, UPDATE, DELETE ON dbo.SchemaMigrations TO [tijarahjo_app_runtime];
 GO
 SQL
@@ -328,11 +392,27 @@ else
   echo "Warning: baseline seed bundle was not generated at $SEED_BASELINE_SQL_BUNDLE (continuing without seeds)."
 fi
 
+if [[ "$ENABLE_ADMIN_BOOTSTRAP" -eq 1 ]]; then
+  if [[ -f "$SEED_ADMIN_SQL_BUNDLE" ]]; then
+    apply_admin_bootstrap_file "$SEED_ADMIN_SQL_BUNDLE"
+  else
+    echo "Warning: admin bootstrap bundle was not generated at $SEED_ADMIN_SQL_BUNDLE (skipping admin bootstrap)."
+  fi
+fi
+
 if [[ "$ENABLE_DEV_SEEDS" -eq 1 ]]; then
   if [[ -f "$SEED_DEV_SQL_BUNDLE" ]]; then
     apply_sql_file "$SEED_DEV_SQL_BUNDLE"
   else
     echo "Warning: dev seed bundle was not generated at $SEED_DEV_SQL_BUNDLE (skipping dev seeds)."
+  fi
+fi
+
+if [[ "$ENABLE_SAMPLE_POST_SEEDS" -eq 1 ]]; then
+  if [[ -f "$SEED_SAMPLE_POSTS_SQL_BUNDLE" ]]; then
+    apply_sql_file "$SEED_SAMPLE_POSTS_SQL_BUNDLE"
+  else
+    echo "Warning: sample post seed bundle was not generated at $SEED_SAMPLE_POSTS_SQL_BUNDLE (skipping sample posts)."
   fi
 fi
 
@@ -345,6 +425,11 @@ if [[ "$ENABLE_TEST_SEEDS" -eq 1 ]]; then
 fi
 
 configure_runtime_db_principal
+
+if [[ "$SQL_ONLY" -eq 1 ]]; then
+  echo "==> Done. Database bootstrapped (sql-only; no local backend started)."
+  exit 0
+fi
 
 RUNTIME_DB_PASSWORD_ESCAPED="$(printf "%s" "$RUNTIME_DB_PASSWORD" | sed "s/'/''/g")"
 

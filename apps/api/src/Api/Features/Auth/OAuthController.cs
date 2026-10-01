@@ -70,6 +70,15 @@ public class OAuthController(
         string expectedState = Request.Cookies[GoogleStateCookieName] ?? string.Empty;
         string expectedNonce = Request.Cookies[GoogleNonceCookieName] ?? string.Empty;
 
+        // Diagnostic logging to help debug OAuth cookie issues behind reverse proxies.
+        _logger.LogInformation(
+            "Google OAuth callback: IsHttps={IsHttps}, X-Forwarded-Proto={Proto}, StateCookiePresent={StatePresent}, NonceCookiePresent={NoncePresent}, StateFromQuery={StateParam}",
+            Request.IsHttps,
+            Request.Headers["X-Forwarded-Proto"].ToString(),
+            !string.IsNullOrEmpty(expectedState),
+            !string.IsNullOrEmpty(expectedNonce),
+            !string.IsNullOrWhiteSpace(state));
+
         AuthShared.DeleteCookie(Response, GoogleStateCookieName);
         AuthShared.DeleteCookie(Response, GoogleNonceCookieName);
 
@@ -122,14 +131,16 @@ public class OAuthController(
 
         if (!result.Success || result.User == null || result.User.UserID == null || string.IsNullOrWhiteSpace(result.RoleName))
         {
+            string errorMessage = result.FailureReason == AuthCommandFailureReason.RegistrationDisabled
+                ? (result.Message ?? "New user registrations are currently disabled.")
+                : (result.Message ?? "Unable to sign in with Google.");
+
             _logger.LogWarning(
                 "Google auth command failed. reason={Reason} message={Message}",
                 result.FailureReason,
                 result.Message
             );
-            return Redirect(BuildGoogleFailureRedirectUri(
-                result.Message ?? "Unable to sign in with Google."
-            ));
+            return Redirect(BuildGoogleFailureRedirectUri(errorMessage));
         }
 
         if (result.User.TwoFactorEnabled)
@@ -212,7 +223,14 @@ public class OAuthController(
             result.User,
             result.RoleName,
             permissionSnapshot);
-        return Redirect(_googleAuthService.GetFrontendSuccessUrl());
+
+        // Append ?oauthSuccess=1 so the frontend auth context can detect
+        // the completed OAuth session and probe the backend for the JWT cookie,
+        // even if localStorage session hints were lost during the redirect chain.
+        string successUrl = QueryHelpers.AddQueryString(
+            _googleAuthService.GetFrontendSuccessUrl(),
+            "oauthSuccess", "1");
+        return Redirect(successUrl);
     }
 
     private string BuildGoogleFailureRedirectUri(string message)
@@ -221,13 +239,8 @@ public class OAuthController(
         return QueryHelpers.AddQueryString(frontendFailureUrl, "googleError", message);
     }
 
-    private static string BuildTwoFactorPromptMessage(string message, string? debugCode)
+    private static string BuildTwoFactorPromptMessage(string message, string? _)
     {
-        if (string.IsNullOrWhiteSpace(debugCode))
-        {
-            return message;
-        }
-
-        return $"{message} Development code: {debugCode}.";
+        return message;
     }
 }

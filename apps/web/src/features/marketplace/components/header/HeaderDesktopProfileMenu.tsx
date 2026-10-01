@@ -1,7 +1,8 @@
+import { useState } from "react";
 import {
+  ChevronDown,
   Heart,
   LogOut,
-  MessageCircle,
   Settings,
   Shield,
   User,
@@ -11,7 +12,10 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "../../../../shared/ui/avatar";
-import { resolveAvatarSrc, getAvatarInitial } from "../../../../shared/lib/avatar";
+import {
+  resolveAvatarSrc,
+  getAvatarInitial,
+} from "../../../../shared/lib/avatar";
 import { Button } from "../../../../shared/ui/button";
 import {
   DropdownMenu,
@@ -20,6 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../../../../shared/ui/dropdown-menu";
+import { cn } from "../../../../shared/ui/utils";
 import { type HeaderActionHandlers, type HeaderIdentity } from "./headerTypes";
 
 type HeaderDesktopProfileMenuProps = HeaderActionHandlers &
@@ -31,7 +36,6 @@ type HeaderDesktopProfileMenuProps = HeaderActionHandlers &
     | "isAdmin"
     | "currentUserDisplayName"
     | "userAvatar"
-    | "unreadMessagesCount"
   >;
 
 export function HeaderDesktopProfileMenu({
@@ -41,15 +45,26 @@ export function HeaderDesktopProfileMenu({
   isAdmin,
   currentUserDisplayName,
   userAvatar,
-  unreadMessagesCount,
   onShowProfile,
   onShowFavorites,
-  onShowMessages,
   onShowSettings,
   onShowAdminDashboard,
   onLogout,
 }: HeaderDesktopProfileMenuProps) {
-  const iconSpacingClass = language === "ar" ? "ml-2" : "mr-2";
+  const [isOpen, setIsOpen] = useState(false);
+  const isRTL = language === "ar";
+  const iconSpacingClass = isRTL ? "ml-2.5" : "mr-2.5";
+  
+  // Premium menu item styling with micro-animations
+  const menuItemClass =
+    "group flex h-10 cursor-pointer items-center rounded-xl px-3 text-sm font-semibold text-slate-700 outline-hidden transition-all duration-200 hover:bg-primary/5 hover:text-primary focus:bg-primary/5 focus:text-primary dark:text-slate-200 dark:hover:bg-primary/10";
+  
+  const iconClass = cn(
+    "h-4.5 w-4.5 text-slate-400 transition-all duration-300 group-hover:text-primary",
+    iconSpacingClass,
+    // Add a subtle bounce/move effect on hover
+    isRTL ? "group-hover:-translate-x-0.5" : "group-hover:translate-x-0.5"
+  );
 
   if (authLoading) {
     return <div className="hidden h-10 w-24 sm:block" aria-hidden="true" />;
@@ -63,74 +78,104 @@ export function HeaderDesktopProfileMenu({
         className="hidden h-10 rounded-full border border-primary/35 bg-background/85 px-5 font-semibold text-primary shadow-sm hover:border-primary hover:bg-primary hover:text-primary-foreground hover:shadow-md sm:flex"
         onClick={onShowProfile}
       >
-        {language === "ar" ? "تسجيل الدخول" : "Sign In"}
+        {isRTL ? "تسجيل الدخول" : "Sign In"}
       </Button>
     );
   }
 
-  const normalizedUnread = Math.max(0, Math.floor(unreadMessagesCount));
-
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={setIsOpen} modal={false}>
       <DropdownMenuTrigger asChild>
+        {/* 
+          Premium Unified Pill: 
+          No internal borders or backgrounds for the chevron.
+          The entire pill reacts as one single element.
+        */}
         <Button
           variant="ghost"
-          size="icon"
-          className="hidden h-10 w-10 rounded-full border border-border/60 bg-background/70 p-0 shadow-sm transition-all duration-200 hover:scale-105 hover:border-primary/35 hover:bg-primary/5 sm:flex"
+          className={cn(
+            "group hidden h-10 items-center gap-1.5 rounded-full p-1 transition-colors duration-300 hover:bg-slate-100 sm:flex dark:hover:bg-slate-800",
+            // Logical padding to keep it balanced in both LTR and RTL
+            isRTL ? "pl-2.5 pr-1 flex-row-reverse" : "pr-2.5 pl-1 flex-row"
+          )}
           aria-label={
-            language === "ar" ? "فتح قائمة الحساب" : "Open account menu"
+            isRTL ? "فتح قائمة الحساب" : "Open account menu"
           }
         >
-          <Avatar className="h-9 w-9 border border-border/70 bg-muted shadow-sm ring-2 ring-background">
+          <Avatar className="h-8 w-8 transition-transform duration-300 group-hover:scale-105">
             <AvatarImage
               src={resolveAvatarSrc(userAvatar) || undefined}
               alt={currentUserDisplayName || "User"}
               className="object-cover object-center"
             />
-            <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
+            <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs uppercase">
               {getAvatarInitial(currentUserDisplayName)}
             </AvatarFallback>
           </Avatar>
+
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 text-slate-500 transition-all duration-300 ease-in-out group-hover:text-slate-900 dark:text-slate-400 dark:group-hover:text-slate-100",
+              isOpen && "rotate-180 text-slate-900 dark:text-slate-100"
+            )}
+            strokeWidth={2.5}
+          />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem onClick={onShowProfile} className="cursor-pointer">
-          <User className={`h-4 w-4 ${iconSpacingClass}`} />
-          {language === "ar" ? "ملفي الشخصي" : "My Profile"}
+
+      <DropdownMenuContent
+        align="end"
+        sideOffset={8}
+        className="w-56 rounded-2xl border border-slate-200/60 bg-white/95 p-1.5 shadow-2xl backdrop-blur-md dark:border-white/10 dark:bg-slate-900/95"
+      >
+        <DropdownMenuItem
+          onClick={onShowProfile}
+          className={menuItemClass}
+        >
+          <User className={iconClass} />
+          {isRTL ? "ملفي الشخصي" : "My Profile"}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={onShowFavorites} className="cursor-pointer">
-          <Heart className={`h-4 w-4 ${iconSpacingClass}`} />
-          {language === "ar" ? "المفضلة" : "Favorites"}
+
+        <DropdownMenuItem
+          onClick={onShowFavorites}
+          className={menuItemClass}
+        >
+          <Heart className={iconClass} />
+          {isRTL ? "المفضلة" : "Favorites"}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={onShowMessages} className="cursor-pointer">
-          <MessageCircle className={`h-4 w-4 ${iconSpacingClass}`} />
-          <span>{language === "ar" ? "الرسائل" : "Messages"}</span>
-          {normalizedUnread > 0 && (
-            <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-xs font-semibold text-destructive-foreground">
-              {normalizedUnread > 99 ? "99+" : normalizedUnread}
-            </span>
-          )}
+
+        <DropdownMenuItem
+          onClick={onShowSettings}
+          className={menuItemClass}
+        >
+          <Settings className={iconClass} />
+          {isRTL ? "الإعدادات" : "Settings"}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={onShowSettings} className="cursor-pointer">
-          <Settings className={`h-4 w-4 ${iconSpacingClass}`} />
-          {language === "ar" ? "الإعدادات" : "Settings"}
-        </DropdownMenuItem>
+
         {isAdmin && (
           <DropdownMenuItem
             onClick={onShowAdminDashboard}
-            className="cursor-pointer"
+            className={menuItemClass}
           >
-            <Shield className={`h-4 w-4 ${iconSpacingClass}`} />
-            {language === "ar" ? "لوحة الإدارة" : "Admin Dashboard"}
+            <Shield className={iconClass} />
+            {isRTL ? "لوحة الإدارة" : "Admin Dashboard"}
           </DropdownMenuItem>
         )}
-        <DropdownMenuSeparator />
+
+        <DropdownMenuSeparator className="mx-1 my-1 border-slate-100 dark:border-slate-800" />
+
         <DropdownMenuItem
           onClick={onLogout}
-          className="cursor-pointer text-destructive focus:text-destructive"
+          className="group flex h-10 cursor-pointer items-center rounded-xl px-3 text-sm font-semibold text-rose-600 outline-hidden transition-all duration-200 hover:bg-rose-50 focus:bg-rose-50 dark:hover:bg-rose-950/30"
         >
-          <LogOut className={`h-4 w-4 ${iconSpacingClass}`} />
-          {language === "ar" ? "تسجيل الخروج" : "Logout"}
+          <LogOut 
+            className={cn(
+              "h-4.5 w-4.5 text-rose-400 transition-all duration-300 group-hover:text-rose-600",
+              iconSpacingClass,
+              isRTL ? "group-hover:-translate-x-0.5" : "group-hover:translate-x-0.5"
+            )} 
+          />
+          {isRTL ? "تسجيل الخروج" : "Logout"}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

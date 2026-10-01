@@ -47,6 +47,7 @@ public class UsersController(
     }
 
     [HttpGet("{id:int}")]
+    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -142,7 +143,8 @@ public class UsersController(
             Avatar = updatedUser.Avatar,
             Status = updatedUser.Status,
             RoleId = updatedUser.RoleID,
-            IsDeleted = updatedUser.IsDeleted
+            IsDeleted = updatedUser.IsDeleted,
+            ClearSuspension = updatedUser.ClearSuspension
         }, cancellationToken);
         if (!result.Success || result.User == null)
         {

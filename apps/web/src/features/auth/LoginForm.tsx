@@ -1,11 +1,12 @@
+/* eslint-disable max-lines */
 import {
   AlertCircle,
+  CheckCircle2,
   Loader2,
   Lock,
   Mail,
   MapPin,
   Phone,
-  Shield,
   User,
 } from "lucide-react";
 import { Alert, AlertDescription } from "../../shared/ui/alert";
@@ -15,8 +16,9 @@ import { AuthPhoneField } from "./AuthPhoneField";
 import { AuthSelectField } from "./AuthSelectField";
 import { AuthGoogleButton } from "./AuthGoogleButton";
 import { AuthAvatarUpload } from "./AuthAvatarUpload";
-import { JORDAN_CITIES, JORDAN_CITIES_AR } from "./loginUtils";
+
 import { AuthPageLayout } from "./components/AuthPageLayout";
+import { OtpCodeInput } from "./components/OtpCodeInput";
 import type { Language } from "../../types";
 import {
   LoginField,
@@ -34,6 +36,8 @@ interface LoginFormProps {
   canSubmit: boolean;
   values: LoginFormValues;
   errors: LoginFormErrors;
+  cityOptions: Array<{ value: string; label: string }>;
+  isLoadingCities?: boolean; // reserved for future skeleton/loading state
   areaOptions: Array<{ value: string; label: string }>;
   isAreaDisabled: boolean;
   copy: LoginCopy;
@@ -48,6 +52,8 @@ interface LoginFormProps {
   onContinueWithGoogle: () => void;
   onContinueAsGuest: () => void;
   onCancelTwoFactor: () => void;
+  onResendTwoFactor?: () => void;
+  isResendingTwoFactor?: boolean;
   onTwoFactorCodeChange: (value: string) => void;
   onFieldChange: (field: LoginField, value: string) => void;
   onFieldFocus: (field: LoginField) => void;
@@ -57,6 +63,13 @@ interface LoginFormProps {
   avatarPreview?: string;
   onAvatarClick?: () => void;
   isModal?: boolean;
+  isEmailVerificationStep?: boolean;
+  emailVerificationEmail?: string;
+  onCancelEmailVerification?: () => void;
+  onResendVerificationEmail?: () => void;
+  isResendingVerification?: boolean;
+  resendCooldown?: number;
+  allowSignup?: boolean;
 }
 
 export function LoginForm({
@@ -68,6 +81,8 @@ export function LoginForm({
   canSubmit,
   values,
   errors,
+  cityOptions,
+  isLoadingCities: _isLoadingCities,
   areaOptions,
   isAreaDisabled,
   copy,
@@ -82,6 +97,8 @@ export function LoginForm({
   onContinueWithGoogle,
   onContinueAsGuest,
   onCancelTwoFactor,
+  onResendTwoFactor,
+  isResendingTwoFactor = false,
   onTwoFactorCodeChange,
   onFieldChange,
   onFieldFocus,
@@ -91,51 +108,76 @@ export function LoginForm({
   avatarPreview,
   onAvatarClick,
   isModal,
+  isEmailVerificationStep = false,
+  emailVerificationEmail = "",
+  onCancelEmailVerification,
+  onResendVerificationEmail,
+  isResendingVerification = false,
+  resendCooldown = 0,
+  allowSignup = true,
 }: LoginFormProps) {
   const isRTL = language === "ar";
+  const conicGradientStyle = {
+    background: `conic-gradient(hsl(var(--primary)) ${((60 - (resendCooldown || 0)) / 60) * 360}deg, hsl(var(--muted)) 0deg)`,
+  };
 
-  const cityOptions = JORDAN_CITIES.map((city) => ({
-    value: city,
-    label: isRTL ? JORDAN_CITIES_AR[city] || city : city,
-  }));
+
 
   const canInteract = canSubmit && !isLoading;
   const submitButtonClassName = canInteract
     ? "bg-primary text-primary-foreground hover:bg-primary/90"
     : "bg-muted text-muted-foreground cursor-not-allowed opacity-70 hover:bg-muted";
 
-  const title = isTwoFactorStep
-    ? copy.form.twoFactorTitle
-    : isSignUp
-      ? copy.form.signUpTitle
-      : copy.form.signInTitle;
+  const title = isEmailVerificationStep
+    ? (language === "ar" ? "تحقق من بريدك الإلكتروني" : "Check your email")
+    : isTwoFactorStep
+      ? copy.form.twoFactorTitle
+      : isSignUp
+        ? copy.form.signUpTitle
+        : copy.form.signInTitle;
 
-  const subtitle = isTwoFactorStep
-    ? copy.form.twoFactorSubtitle
-    : isSignUp
-      ? copy.form.signUpSubtitle
-      : copy.form.signInSubtitle;
+  const subtitle = isEmailVerificationStep
+    ? (language === "ar"
+      ? `أرسلنا رابط التحقق إلى ${emailVerificationEmail || "بريدك الإلكتروني"}`
+      : `We sent a verification link to ${emailVerificationEmail || "your email"}`)
+    : isTwoFactorStep
+      ? copy.form.twoFactorSubtitle
+      : isSignUp
+        ? copy.form.signUpSubtitle
+        : copy.form.signInSubtitle;
 
   const footer = (
     <>
-      {!isTwoFactorStep && (
+      {!isTwoFactorStep && !isEmailVerificationStep && (
         <div className="mt-6 text-center">
           <p className="text-sm text-muted-foreground">
             {isSignUp
               ? copy.form.alreadyHaveAccount
-              : copy.form.dontHaveAccount}{" "}
-            <button
-              type="button"
-              onClick={onToggleAuthMode}
-              className="font-medium text-primary hover:underline"
-            >
-              {isSignUp ? copy.form.signInLink : copy.form.signUpLink}
-            </button>
+              : allowSignup
+                ? copy.form.dontHaveAccount
+                : null}{" "}
+            {isSignUp ? (
+              <button
+                type="button"
+                onClick={onToggleAuthMode}
+                className="font-medium text-primary hover:underline"
+              >
+                {copy.form.signInLink}
+              </button>
+            ) : allowSignup ? (
+              <button
+                type="button"
+                onClick={onToggleAuthMode}
+                className="font-medium text-primary hover:underline"
+              >
+                {copy.form.signUpLink}
+              </button>
+            ) : null}
           </p>
         </div>
       )}
 
-      {!isTwoFactorStep && (
+      {!isTwoFactorStep && !isEmailVerificationStep && (
         <div className="mt-4 text-center">
           <button
             type="button"
@@ -149,16 +191,78 @@ export function LoginForm({
     </>
   );
 
+  const emailVerificationContent = (
+    <div className="space-y-6">
+      {generalError && (
+        <Alert
+          className="border-primary/30 bg-primary/5 px-3 py-2.5 shadow-none"
+          aria-live="assertive"
+        >
+          <CheckCircle2 className="h-4 w-4 text-primary" />
+          <AlertDescription className="text-sm font-medium text-foreground" dir="auto">
+            {generalError}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="flex flex-col items-center gap-4 py-4">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+          <Mail className="h-8 w-8 text-primary" />
+        </div>
+        <p className="text-sm text-muted-foreground text-center" dir="auto">
+          {language === "ar"
+            ? "انقر على الرابط في البريد الإلكتروني للتحقق من حسابك. تحقق من مجلد الرسائل غير المرغوب فيها إذا لم تجده."
+            : "Click the link in the email to verify your account. Check your spam folder if you don't see it."}
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full h-11 transition-all duration-300"
+          onClick={onResendVerificationEmail}
+          disabled={isResendingVerification || resendCooldown > 0}
+        >
+          {isResendingVerification ? (
+            <span>{language === "ar" ? "جارٍ الإرسال..." : "Sending..."}</span>
+          ) : resendCooldown > 0 ? (
+            <span className="flex items-center gap-2">
+              <span
+                className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold"
+                style={conicGradientStyle}
+              />
+              {language === "ar"
+                ? `إعادة الإرسال خلال ${resendCooldown}ث`
+                : `Resend in ${resendCooldown}s`}
+            </span>
+          ) : (
+            <span>{language === "ar" ? "إعادة إرسال رابط التحقق" : "Resend verification link"}</span>
+          )}
+        </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          className="w-full h-11 text-muted-foreground"
+          onClick={onCancelEmailVerification}
+        >
+          {language === "ar" ? "العودة إلى تسجيل الدخول" : "Back to sign in"}
+        </Button>
+      </div>
+    </div>
+  );
+
   const formContent = (
     <>
       {generalError && (
         <Alert
           variant="destructive"
-          className="mb-4 sm:mb-6"
-          aria-live="polite"
+          className="mb-4 border-destructive/30 bg-destructive/5 px-3 py-2.5 text-destructive shadow-none sm:mb-5 [&>svg]:text-destructive"
+          aria-live="assertive"
         >
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="text-sm">
+          <AlertDescription className="text-sm font-medium text-destructive" dir="auto">
             {generalError}
           </AlertDescription>
         </Alert>
@@ -180,23 +284,17 @@ export function LoginForm({
             )}
 
             {isTwoFactorStep && (
-              <AuthInputField
+              <OtpCodeInput
                 id="twoFactorCode"
-                name="twoFactorCode"
                 label={copy.form.twoFactorCodeLabel}
-                required
-                placeholder={copy.form.twoFactorCodePlaceholder}
                 value={twoFactorCode}
-                error=""
                 disabled={isLoading}
-                type="text"
-                autoComplete="one-time-code"
-                icon={Shield}
-                focused={false}
                 onChange={onTwoFactorCodeChange}
-                onFocus={() => {}}
-                onBlur={() => {}}
-                isRTL={isRTL}
+                resendPrompt={copy.form.twoFactorResendPrompt}
+                resendLabel={copy.form.twoFactorResendAction}
+                resendingLabel={copy.form.twoFactorResending}
+                isResending={isResendingTwoFactor}
+                onResend={onResendTwoFactor}
               />
             )}
 
@@ -315,14 +413,14 @@ export function LoginForm({
               <AuthInputField
                 id="authIdentifier"
                 name="authIdentifier"
-                label={copy.form.identifierLabel}
+                label={isSignUp ? copy.form.identifierSignUpLabel : copy.form.identifierLabel}
                 required={isSignUp}
-                placeholder={copy.form.identifierPlaceholder}
+                placeholder={isSignUp ? copy.form.identifierSignUpPlaceholder : copy.form.identifierPlaceholder}
                 value={values.identifier}
                 error={errors.identifier}
                 disabled={isLoading}
-                type="text"
-                autoComplete="username"
+                type={isSignUp ? "email" : "text"}
+                autoComplete={isSignUp ? "email" : "username"}
                 icon={Mail}
                 focused={focusedField === "identifier"}
                 onChange={(value) => onFieldChange("identifier", value)}
@@ -343,7 +441,7 @@ export function LoginForm({
                 error={errors.password}
                 disabled={isLoading}
                 type="password"
-                autoComplete={isSignUp ? "new-password" : "current-password"}
+                autoComplete={isSignUp ? "off" : "current-password"}
                 icon={Lock}
                 focused={focusedField === "password"}
                 showToggle
@@ -382,7 +480,7 @@ export function LoginForm({
                 error={errors.confirmPassword}
                 disabled={isLoading}
                 type="password"
-                autoComplete="new-password"
+                autoComplete="off"
                 icon={Lock}
                 focused={focusedField === "confirmPassword"}
                 showToggle
@@ -447,11 +545,13 @@ export function LoginForm({
           <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
             {title}
           </h2>
-          <p className="text-sm text-muted-foreground">
-            {subtitle}
-          </p>
+          {subtitle && (
+            <p className="text-sm text-muted-foreground">
+              {subtitle}
+            </p>
+          )}
         </div>
-        {formContent}
+        {isEmailVerificationStep ? emailVerificationContent : formContent}
         {footer}
       </div>
     );
@@ -464,7 +564,7 @@ export function LoginForm({
       subtitle={subtitle}
       footer={footer}
     >
-      {formContent}
+      {isEmailVerificationStep ? emailVerificationContent : formContent}
     </AuthPageLayout>
   );
 }

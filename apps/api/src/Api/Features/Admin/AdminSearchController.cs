@@ -32,7 +32,8 @@ public class AdminSearchController(TijarahJoDbContext dbContext) : ControllerBas
             .Where(u => !u.IsDeleted &&
                 (EF.Functions.Like(u.FirstName, $"%{term}%") ||
                  (u.LastName != null && EF.Functions.Like(u.LastName, $"%{term}%")) ||
-                 EF.Functions.Like(u.Email, $"%{term}%")))
+                 EF.Functions.Like(u.Email, $"%{term}%") ||
+                 (u.Phone != null && EF.Functions.Like(u.Phone, $"%{term}%"))))
             .OrderBy(u => u.FirstName)
             .Take(maxResults)
             .Select(u => new SearchResultItem
@@ -40,7 +41,9 @@ public class AdminSearchController(TijarahJoDbContext dbContext) : ControllerBas
                 Id = u.UserID,
                 Type = "USER",
                 Title = (u.FirstName + " " + (u.LastName ?? "")).Trim(),
-                Subtitle = u.Email
+                Subtitle = u.Phone == null || u.Phone == string.Empty
+                    ? u.Email
+                    : u.Email + " • " + u.Phone
             })
             .ToListAsync(HttpContext.RequestAborted);
 

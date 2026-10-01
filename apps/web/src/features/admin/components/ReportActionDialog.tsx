@@ -1,0 +1,416 @@
+import { ShieldBan, ExternalLink, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Button } from "../../../shared/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "../../../shared/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../shared/ui/select";
+import { Textarea } from "../../../shared/ui/textarea";
+import { AdminReportItem } from "../../../services/api/admin";
+import { resolveUploadUrl } from "../../../services/api/utils";
+
+function formatReportTargetLabel(report: AdminReportItem): string {
+  const normalizedLabel = report.targetLabel?.trim();
+  if (normalizedLabel) return normalizedLabel;
+  switch (report.reportType) {
+    case "LISTING": return `Listing #${report.targetID}`;
+    case "USER": return `User #${report.targetID}`;
+    case "REVIEW": return `Review #${report.targetID}`;
+    case "COMMENT": return `Comment #${report.targetID}`;
+    default: return `Target #${report.targetID}`;
+  }
+}
+
+function renderUserStatusBadge(
+  status: number | null | undefined,
+  suspendedUntil: string | null | undefined
+) {
+  if (status === undefined || status === null) return null;
+
+  const isTimedSuspended =
+    status === 1 &&
+    suspendedUntil &&
+    new Date(suspendedUntil).getTime() > Date.now();
+
+  let label = "Active";
+  let badgeClass =
+    "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border border-emerald-500/20";
+
+  if (status !== 1) {
+    label = "Banned";
+    badgeClass =
+      "bg-destructive/10 text-destructive border border-destructive/20";
+  } else if (isTimedSuspended) {
+    label = "Suspended";
+    badgeClass =
+      "bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20";
+  }
+
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${badgeClass}`}
+    >
+      {label}
+    </span>
+  );
+}
+
+const SUSPENSION_OPTIONS: { label: string; hours: number | null }[] = [
+  { label: "1 Hour", hours: 1 },
+  { label: "24 Hours", hours: 24 },
+  { label: "7 Days", hours: 24 * 7 },
+  { label: "30 Days", hours: 24 * 30 },
+  { label: "Permanent Ban", hours: null },
+];
+
+interface ReportActionDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  report: AdminReportItem | null;
+  newStatus: number;
+  onStatusChange: (status: number) => void;
+  resolutionNotes: string;
+  onResolutionNotesChange: (notes: string) => void;
+  onSave: () => void;
+  isSuspending: boolean;
+  selectedSuspensionHours: string;
+  onSuspensionHoursChange: (hours: string) => void;
+  onBlockUser: () => void;
+  isBlockingPost?: boolean;
+  onBlockPost?: () => void;
+  isDeletingComment?: boolean;
+  onDeleteComment?: () => void;
+}
+
+export function ReportActionDialog({
+  open,
+  onOpenChange,
+  report,
+  newStatus,
+  onStatusChange,
+  resolutionNotes,
+  onResolutionNotesChange,
+  onSave,
+  isSuspending,
+  selectedSuspensionHours,
+  onSuspensionHoursChange,
+  onBlockUser,
+  isBlockingPost,
+  onBlockPost,
+  isDeletingComment,
+  onDeleteComment,
+}: ReportActionDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Review Report #{report?.reportID}</DialogTitle>
+          <DialogDescription className="sr-only">
+            Review report details, update moderation status, and apply related
+            admin actions.
+          </DialogDescription>
+        </DialogHeader>
+        {report && (
+          <div className="space-y-6 py-4">
+            {/* Report Details Block */}
+            <div className="bg-muted/30 rounded-xl p-4 grid grid-cols-2 gap-y-5 gap-x-6">
+              <div>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                  Report Type
+                </p>
+                <p className="text-sm font-medium text-foreground">{report.reportType}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                  Target
+                </p>
+                <p className="text-sm font-medium text-foreground">{formatReportTargetLabel(report)}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                  Reason
+                </p>
+                <p className="text-sm font-medium text-foreground">{report.reason}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                  Reporter
+                </p>
+                <div className="text-sm">
+                  <p className="font-medium text-foreground">{report.reporterName}</p>
+                  {report.reporterEmail && (
+                    <p className="text-muted-foreground text-xs mt-0.5">{report.reporterEmail}</p>
+                  )}
+                </div>
+              </div>
+              {report.targetUserID && (
+                <div className="col-span-2 sm:col-span-1">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                    Target User
+                  </p>
+                  <div className="text-sm font-medium text-foreground flex items-center flex-wrap gap-1.5">
+                    <span>{report.targetUserName || `User #${report.targetUserID}`}</span>
+                    {renderUserStatusBadge(report.targetUserStatus, report.targetUserSuspendedUntil)}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {report.description && (
+              <div className="space-y-2">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  Description
+                </p>
+                <div className="bg-muted/20 border border-border/50 rounded-lg p-3 text-sm text-foreground leading-relaxed">
+                  {report.description}
+                </div>
+              </div>
+            )}
+
+            {report.imageUrl && (
+              <div className="space-y-2">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  Evidence Image
+                </p>
+                <a
+                  href={resolveUploadUrl(report.imageUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open full image in new tab"
+                >
+                  <img
+                    src={resolveUploadUrl(report.imageUrl)}
+                    alt="Reporter evidence"
+                    className="w-full max-h-64 object-contain rounded-lg border border-border hover:opacity-90 transition-opacity bg-muted/10"
+                  />
+                  <p className="mt-1 text-xs text-primary hover:underline flex items-center gap-1">
+                    <ExternalLink className="w-3 h-3" /> Open full size
+                  </p>
+                </a>
+              </div>
+            )}
+
+            {/* Moderation Actions Section */}
+            {(report.targetUserID || report.reportType === "LISTING" || report.reportType === "COMMENT") && (
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-foreground border-b border-border/50 pb-2">
+                  Moderation Actions
+                </h4>
+
+                {report.targetUserID && (() => {
+                  const isTimedSuspended =
+                    report.targetUserStatus === 1 &&
+                    report.targetUserSuspendedUntil &&
+                    new Date(report.targetUserSuspendedUntil).getTime() > Date.now();
+
+                  const isPermanentlyBanned =
+                    report.targetUserStatus !== undefined &&
+                    report.targetUserStatus !== null &&
+                    report.targetUserStatus !== 1;
+
+                  if (isPermanentlyBanned) {
+                    return (
+                      <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 shadow-sm">
+                        <div className="flex items-center gap-3 text-destructive">
+                          <ShieldBan className="w-5 h-5 shrink-0" />
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold">User Already Banned</p>
+                            <p className="text-xs text-destructive/80 leading-relaxed">
+                              {report.targetUserName || "This user"} is permanently banned. No further suspension actions can be applied.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 transition-colors hover:border-destructive/30 space-y-3 shadow-sm">
+                      {isTimedSuspended && (
+                        <div className="px-3 py-2 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs border border-amber-500/20 leading-relaxed">
+                          This user is currently suspended until {new Date(report.targetUserSuspendedUntil!).toLocaleString()}.
+                        </div>
+                      )}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <ShieldBan className="w-4 h-4 text-destructive" />
+                            <span className="text-sm font-semibold text-destructive">
+                              Suspend User
+                            </span>
+                          </div>
+                          <p className="text-xs text-destructive/80 max-w-70 leading-relaxed">
+                            {report.targetUserName
+                              ? `Invalidates ${report.targetUserName}'s active sessions. Auto-resolves report.`
+                              : "Invalidates active sessions. Auto-resolves report."}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                          <Select value={selectedSuspensionHours} onValueChange={onSuspensionHoursChange}>
+                            <SelectTrigger className="w-32.5 h-9 text-xs" aria-label="Select suspension duration">
+                              <SelectValue placeholder="Duration" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {SUSPENSION_OPTIONS.map((opt) => (
+                                <SelectItem key={String(opt.hours)} value={String(opt.hours)} className="text-xs">
+                                  {opt.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={onBlockUser}
+                            disabled={isSuspending}
+                            className="h-9 px-4 shrink-0 shadow-sm"
+                          >
+                            {isSuspending ? (
+                              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                            ) : (
+                              "Apply"
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {report.reportType === "LISTING" && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <ShieldBan className="w-4 h-4 text-foreground/80" />
+                          <span className="text-sm font-semibold text-foreground">Block Listing</span>
+                        </div>
+                        <Link
+                          to={`/post/${report.targetID}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline flex items-center gap-1 sm:hidden"
+                        >
+                          View <ExternalLink className="w-3 h-3" />
+                        </Link>
+                      </div>
+                      <p className="text-xs text-muted-foreground max-w-70 leading-relaxed">
+                        Hides the post from the marketplace and auto-resolves this report.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <Link
+                        to={`/post/${report.targetID}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline hidden sm:flex items-center gap-1"
+                      >
+                        View Post <ExternalLink className="w-3 h-3" />
+                      </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onBlockPost}
+                        disabled={isBlockingPost}
+                        className="w-full sm:w-auto h-9 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive shadow-sm"
+                      >
+                        {isBlockingPost ? (
+                          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-destructive/30 border-t-destructive" />
+                        ) : (
+                          "Block Post"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {report.reportType === "COMMENT" && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <Trash2 className="w-4 h-4 text-foreground/80" />
+                        <span className="text-sm font-semibold text-foreground">Delete Comment</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground max-w-70 leading-relaxed">
+                        Permanently hides the comment and auto-resolves this report.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onDeleteComment}
+                      disabled={isDeletingComment}
+                      className="w-full sm:w-auto h-9 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive shadow-sm"
+                    >
+                      {isDeletingComment ? (
+                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-destructive/30 border-t-destructive" />
+                      ) : (
+                        "Delete Comment"
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Resolution Form */}
+            <div className="space-y-4 pt-2">
+              <div className="grid gap-2">
+                <div id="report-status-update-label" className="text-sm font-semibold text-foreground">
+                  Update Status
+                </div>
+                <Select
+                  name="reportStatusUpdate"
+                  value={String(newStatus)}
+                  onValueChange={(v) => onStatusChange(Number(v))}
+                >
+                  <SelectTrigger
+                    id="report-status-update"
+                    className="h-10 shadow-sm"
+                    aria-labelledby="report-status-update-label"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Pending</SelectItem>
+                    <SelectItem value="1">Under Review</SelectItem>
+                    <SelectItem value="2">Resolved</SelectItem>
+                    <SelectItem value="3">Dismissed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <label htmlFor="resolution-notes" className="text-sm font-semibold text-foreground">
+                  Resolution Notes
+                </label>
+                <Textarea
+                  id="resolution-notes"
+                  className="resize-none min-h-24 shadow-sm"
+                  placeholder="Add details about how this report was handled..."
+                  value={resolutionNotes}
+                  onChange={(e) => onResolutionNotesChange(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={onSave}>Save Changes</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

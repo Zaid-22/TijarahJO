@@ -5,14 +5,22 @@ public sealed class FileStorageOptions
     // Relative paths are resolved from API content root.
     public string RootPath { get; set; } = "uploads";
 
+    // Private files are deliberately stored outside the static-files root.
+    public string PrivateRootPath { get; set; } = "private-uploads";
+
     public string PostImagesPath { get; set; } = "post-images";
 
     public string ChatImagesPath { get; set; } = "chat-images";
 
     public string UserAvatarsPath { get; set; } = "user-avatars";
 
+    public string ReportImagesPath { get; set; } = "report-images";
+
     // Public URL prefix used to serve files via static file middleware.
     public string PublicBasePath { get; set; } = "/uploads";
+
+    // Logical path used in persisted private-media references; it is never static-file mapped.
+    public string PrivateBasePath { get; set; } = "/private-uploads";
 
     public long MaxPostImageBytes { get; set; } = 5 * 1024 * 1024;
 

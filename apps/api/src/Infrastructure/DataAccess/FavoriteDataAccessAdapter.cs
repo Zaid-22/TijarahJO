@@ -9,30 +9,24 @@ using TijarahJo.Infrastructure.Persistence;
 namespace TijarahJo.Infrastructure.DataAccess;
 
 
-public sealed class FavoriteDataAccessAdapter : IFavoriteDataAccess
+public sealed class FavoriteDataAccessAdapter(TijarahJoDbContext dbContext) : IFavoriteDataAccess
 {
-    private readonly TijarahJoDbContext _dbContext;
-
-    public FavoriteDataAccessAdapter(TijarahJoDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
 
     public async Task<IReadOnlyList<FavoriteModel>> GetFavoritesByUserIdAsync(int userId, CancellationToken cancellationToken = default)
     {
-        List<FavoriteEntity> entities = await _dbContext.Favorites
+        List<FavoriteEntity> entities = await dbContext.Favorites
             .AsNoTracking()
             .Where(item => item.UserID == userId && !item.IsDeleted)
             .OrderByDescending(item => item.CreatedAt)
             .ThenByDescending(item => item.FavoriteID)
             .ToListAsync(cancellationToken);
 
-        return entities.Select(item => new FavoriteModel(
+        return [.. entities.Select(item => new FavoriteModel(
             item.FavoriteID,
             item.UserID,
             item.PostID,
             item.CreatedAt
-        )).ToList();
+        ))];
     }
 
     public async Task<bool> AddFavoriteAsync(int userId, int postId, CancellationToken cancellationToken = default)
@@ -44,7 +38,7 @@ public sealed class FavoriteDataAccessAdapter : IFavoriteDataAccess
 
         // Ignore the global soft-delete filter so we can revive a deleted favorite
         // instead of hitting the unique index with a duplicate insert.
-        FavoriteEntity? existing = await _dbContext.Favorites
+        FavoriteEntity? existing = await dbContext.Favorites
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(item => item.UserID == userId && item.PostID == postId, cancellationToken);
         if (existing is not null)
@@ -53,13 +47,13 @@ public sealed class FavoriteDataAccessAdapter : IFavoriteDataAccess
             {
                 existing.IsDeleted = false;
                 existing.CreatedAt = DateTime.UtcNow;
-                return await _dbContext.SaveChangesAsync(cancellationToken) > 0;
+                return await dbContext.SaveChangesAsync(cancellationToken) > 0;
             }
 
             return true;
         }
 
-        await _dbContext.Favorites.AddAsync(new FavoriteEntity
+        await dbContext.Favorites.AddAsync(new FavoriteEntity
         {
             UserID = userId,
             PostID = postId,
@@ -69,12 +63,12 @@ public sealed class FavoriteDataAccessAdapter : IFavoriteDataAccess
 
         try
         {
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
             return true;
         }
         catch (DbUpdateException)
         {
-            return await _dbContext.Favorites
+            return await dbContext.Favorites
                 .IgnoreQueryFilters()
                 .AsNoTracking()
                 .AnyAsync(item => item.UserID == userId && item.PostID == postId && !item.IsDeleted, cancellationToken);
@@ -83,7 +77,7 @@ public sealed class FavoriteDataAccessAdapter : IFavoriteDataAccess
 
     public async Task<bool> RemoveFavoriteAsync(int userId, int postId, CancellationToken cancellationToken = default)
     {
-        FavoriteEntity? entity = await _dbContext.Favorites
+        FavoriteEntity? entity = await dbContext.Favorites
             .FirstOrDefaultAsync(item => item.UserID == userId && item.PostID == postId && !item.IsDeleted, cancellationToken);
         if (entity is null)
         {
@@ -91,12 +85,12 @@ public sealed class FavoriteDataAccessAdapter : IFavoriteDataAccess
         }
 
         entity.IsDeleted = true;
-        return await _dbContext.SaveChangesAsync(cancellationToken) > 0;
+        return await dbContext.SaveChangesAsync(cancellationToken) > 0;
     }
 
     public Task<bool> IsFavoriteAsync(int userId, int postId, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Favorites
+        return dbContext.Favorites
             .AsNoTracking()
             .AnyAsync(item => item.UserID == userId && item.PostID == postId && !item.IsDeleted, cancellationToken);
     }

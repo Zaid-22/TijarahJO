@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -11,6 +10,7 @@ namespace TijarahJo.Api.Common.Services;
 
 public sealed class TwoFactorService
 {
+    private const int MaxConcurrencyRetries = 8;
     private readonly TwoFactorOptions _options;
     private readonly byte[] _secretEncryptionKey;
     private readonly byte[] _challengeSigningKey;
@@ -186,28 +186,47 @@ public sealed class TwoFactorService
         return await VerifyAndRemoveCodeAsync(userId, submittedCode, "TwoFactorSetup", cancellationToken);
     }
 
-    public async Task RemoveSetupCacheAsync(int userId, CancellationToken cancellationToken = default)
-    {
-        await _challenges.DeleteChallengeStateAsync(userId, "TwoFactorSetup", cancellationToken);
-    }
-
     private async Task<string> GenerateAndStoreCodeAsync(int userId, string challengeType, CancellationToken cancellationToken)
     {
-        string code = GenerateNumericCode(_options.Digits);
-        byte[] hash = ComputeCodeHash(userId, code);
-        
-        DateTimeOffset now = DateTimeOffset.UtcNow;
-        var challenge = new TwoFactorChallengeState(hash, now.AddSeconds(_options.LoginChallengeLifetimeSeconds), 0);
-        
-        string stateJson = JsonSerializer.Serialize(challenge);
-        await _challenges.UpsertChallengeStateAsync(
-            userId, 
-            challengeType, 
-            stateJson, 
-            challenge.ExpiresAtUtc.UtcDateTime, 
-            cancellationToken);
+        for (int attempt = 0; attempt < MaxConcurrencyRetries; attempt++)
+        {
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            string? expectedStateJson = await _challenges.GetChallengeStateAsync(
+                userId, challengeType, cancellationToken);
 
-        return code;
+            if (TryReadReusableCode(
+                    userId,
+                    challengeType,
+                    expectedStateJson,
+                    now,
+                    out string reusableCode))
+            {
+                return reusableCode;
+            }
+
+            string code = GenerateNumericCode(_options.Digits);
+            byte[] hash = ComputeCodeHash(userId, code);
+            var challenge = new TwoFactorChallengeState(
+                hash,
+                now.AddSeconds(_options.LoginChallengeLifetimeSeconds),
+                0,
+                ProtectCode(userId, challengeType, code));
+
+            string stateJson = JsonSerializer.Serialize(challenge);
+            if (await _challenges.TryReplaceChallengeStateAsync(
+                    userId,
+                    challengeType,
+                    expectedStateJson,
+                    stateJson,
+                    challenge.ExpiresAtUtc.UtcDateTime,
+                    cancellationToken))
+            {
+                return code;
+            }
+        }
+
+        throw new InvalidOperationException(
+            "Unable to issue a stable two-factor challenge because of concurrent requests.");
     }
 
     private async Task<bool> VerifyAndRemoveCodeAsync(int userId, string? submittedCode, string challengeType, CancellationToken cancellationToken)
@@ -215,8 +234,109 @@ public sealed class TwoFactorService
         DateTimeOffset now = DateTimeOffset.UtcNow;
         string normalizedCode = string.Concat((submittedCode ?? "").Where(char.IsDigit));
 
-        string? stateStr = await _challenges.GetChallengeStateAsync(userId, challengeType, cancellationToken);
-        if (string.IsNullOrEmpty(stateStr))
+        for (int attempt = 0; attempt < MaxConcurrencyRetries; attempt++)
+        {
+            string? stateStr = await _challenges.GetChallengeStateAsync(userId, challengeType, cancellationToken);
+            if (string.IsNullOrEmpty(stateStr))
+            {
+                return false;
+            }
+
+            TwoFactorChallengeState? challenge;
+            try
+            {
+                challenge = JsonSerializer.Deserialize<TwoFactorChallengeState>(stateStr);
+            }
+            catch (JsonException)
+            {
+                if (await _challenges.TryDeleteChallengeStateAsync(
+                        userId, challengeType, stateStr, cancellationToken))
+                {
+                    return false;
+                }
+
+                continue;
+            }
+
+            if (challenge == null || challenge.ExpiresAtUtc <= now)
+            {
+                if (await _challenges.TryDeleteChallengeStateAsync(
+                        userId, challengeType, stateStr, cancellationToken))
+                {
+                    return false;
+                }
+
+                continue;
+            }
+
+            const int maxAttempts = 5;
+            if (challenge.FailedAttempts >= maxAttempts)
+            {
+                if (await _challenges.TryDeleteChallengeStateAsync(
+                        userId, challengeType, stateStr, cancellationToken))
+                {
+                    return false;
+                }
+
+                continue;
+            }
+
+            byte[] expectedHash = challenge.CodeHash;
+            byte[] providedHash = ComputeCodeHash(userId, normalizedCode);
+
+            bool lengthMatch = expectedHash.Length == providedHash.Length;
+            int maxLen = Math.Max(expectedHash.Length, providedHash.Length);
+            byte[] p1 = new byte[maxLen];
+            byte[] p2 = new byte[maxLen];
+            Array.Copy(expectedHash, p1, expectedHash.Length);
+            Array.Copy(providedHash, p2, providedHash.Length);
+
+            bool isCodeValid = lengthMatch && CryptographicOperations.FixedTimeEquals(p1, p2);
+
+            if (isCodeValid)
+            {
+                return await _challenges.TryDeleteChallengeStateAsync(
+                    userId, challengeType, stateStr, cancellationToken);
+            }
+
+            int nextFailedAttempts = challenge.FailedAttempts + 1;
+            if (nextFailedAttempts >= maxAttempts)
+            {
+                if (await _challenges.TryDeleteChallengeStateAsync(
+                        userId, challengeType, stateStr, cancellationToken))
+                {
+                    return false;
+                }
+
+                continue;
+            }
+
+            var updatedChallenge = challenge with { FailedAttempts = nextFailedAttempts };
+            string updatedStateJson = JsonSerializer.Serialize(updatedChallenge);
+            if (await _challenges.TryReplaceChallengeStateAsync(
+                    userId,
+                    challengeType,
+                    stateStr,
+                    updatedStateJson,
+                    updatedChallenge.ExpiresAtUtc.UtcDateTime,
+                    cancellationToken))
+            {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    private bool TryReadReusableCode(
+        int userId,
+        string challengeType,
+        string? stateJson,
+        DateTimeOffset now,
+        out string code)
+    {
+        code = string.Empty;
+        if (string.IsNullOrEmpty(stateJson))
         {
             return false;
         }
@@ -224,57 +344,88 @@ public sealed class TwoFactorService
         TwoFactorChallengeState? challenge;
         try
         {
-            challenge = JsonSerializer.Deserialize<TwoFactorChallengeState>(stateStr);
+            challenge = JsonSerializer.Deserialize<TwoFactorChallengeState>(stateJson);
         }
         catch (JsonException)
         {
-            await _challenges.DeleteChallengeStateAsync(userId, challengeType, cancellationToken);
             return false;
         }
 
-        if (challenge == null || challenge.ExpiresAtUtc <= now)
+        if (challenge is null ||
+            challenge.ExpiresAtUtc <= now ||
+            challenge.FailedAttempts >= 5 ||
+            string.IsNullOrWhiteSpace(challenge.ProtectedCode) ||
+            !TryUnprotectCode(userId, challengeType, challenge.ProtectedCode, out code))
         {
-            await _challenges.DeleteChallengeStateAsync(userId, challengeType, cancellationToken);
             return false;
         }
 
-        int maxAttempts = 5; // allow 5 attempts
-        if (challenge.FailedAttempts >= maxAttempts)
+        byte[] recoveredHash = ComputeCodeHash(userId, code);
+        if (recoveredHash.Length != challenge.CodeHash.Length ||
+            !CryptographicOperations.FixedTimeEquals(recoveredHash, challenge.CodeHash))
         {
-            await _challenges.DeleteChallengeStateAsync(userId, challengeType, cancellationToken);
+            code = string.Empty;
             return false;
         }
 
-        byte[] expectedHash = challenge.CodeHash;
-        byte[] providedHash = ComputeCodeHash(userId, normalizedCode);
-        
-        bool lengthMatch = expectedHash.Length == providedHash.Length;
-        int maxLen = Math.Max(expectedHash.Length, providedHash.Length);
-        byte[] p1 = new byte[maxLen];
-        byte[] p2 = new byte[maxLen];
-        Array.Copy(expectedHash, p1, expectedHash.Length);
-        Array.Copy(providedHash, p2, providedHash.Length);
-        
-        bool isCodeValid = lengthMatch && CryptographicOperations.FixedTimeEquals(p1, p2);
-
-        if (!isCodeValid)
-        {
-            int nextFailedAttempts = challenge.FailedAttempts + 1;
-            if (nextFailedAttempts >= maxAttempts)
-            {
-                await _challenges.DeleteChallengeStateAsync(userId, challengeType, cancellationToken);
-            }
-            else
-            {
-                var updatedChallenge = challenge with { FailedAttempts = nextFailedAttempts };
-                string updatedStateJson = JsonSerializer.Serialize(updatedChallenge);
-                await _challenges.UpsertChallengeStateAsync(userId, challengeType, updatedStateJson, updatedChallenge.ExpiresAtUtc.UtcDateTime, cancellationToken);
-            }
-            return false;
-        }
-
-        await _challenges.DeleteChallengeStateAsync(userId, challengeType, cancellationToken);
         return true;
+    }
+
+    private string ProtectCode(int userId, string challengeType, string code)
+    {
+        byte[] nonce = RandomNumberGenerator.GetBytes(12);
+        byte[] plaintext = Encoding.UTF8.GetBytes(code);
+        byte[] ciphertext = new byte[plaintext.Length];
+        byte[] tag = new byte[16];
+        byte[] associatedData = Encoding.UTF8.GetBytes($"{userId}:{challengeType}");
+
+        using (var aes = new AesGcm(_secretEncryptionKey, tagSizeInBytes: tag.Length))
+        {
+            aes.Encrypt(nonce, plaintext, ciphertext, tag, associatedData);
+        }
+
+        byte[] payload = new byte[nonce.Length + tag.Length + ciphertext.Length];
+        Buffer.BlockCopy(nonce, 0, payload, 0, nonce.Length);
+        Buffer.BlockCopy(tag, 0, payload, nonce.Length, tag.Length);
+        Buffer.BlockCopy(ciphertext, 0, payload, nonce.Length + tag.Length, ciphertext.Length);
+        return WebEncoders.Base64UrlEncode(payload);
+    }
+
+    private bool TryUnprotectCode(
+        int userId,
+        string challengeType,
+        string protectedCode,
+        out string code)
+    {
+        code = string.Empty;
+        try
+        {
+            byte[] payload = WebEncoders.Base64UrlDecode(protectedCode);
+            const int nonceLength = 12;
+            const int tagLength = 16;
+            if (payload.Length <= nonceLength + tagLength)
+            {
+                return false;
+            }
+
+            ReadOnlySpan<byte> nonce = payload.AsSpan(0, nonceLength);
+            ReadOnlySpan<byte> tag = payload.AsSpan(nonceLength, tagLength);
+            ReadOnlySpan<byte> ciphertext = payload.AsSpan(nonceLength + tagLength);
+            byte[] plaintext = new byte[ciphertext.Length];
+            byte[] associatedData = Encoding.UTF8.GetBytes($"{userId}:{challengeType}");
+
+            using (var aes = new AesGcm(_secretEncryptionKey, tagSizeInBytes: tagLength))
+            {
+                aes.Decrypt(nonce, ciphertext, tag, plaintext, associatedData);
+            }
+
+            code = Encoding.UTF8.GetString(plaintext);
+            return true;
+        }
+        catch (Exception ex) when (ex is FormatException or CryptographicException)
+        {
+            return false;
+        }
     }
 
     private byte[] ComputeCodeHash(int userId, string code)
@@ -308,6 +459,7 @@ public sealed class TwoFactorService
     private sealed record TwoFactorChallengeState(
         byte[] CodeHash,
         DateTimeOffset ExpiresAtUtc,
-        int FailedAttempts
+        int FailedAttempts,
+        string? ProtectedCode = null
     );
 }

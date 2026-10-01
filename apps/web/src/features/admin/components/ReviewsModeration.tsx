@@ -1,4 +1,3 @@
-/* eslint-disable jsx-a11y/control-has-associated-label */
 import { useEffect, useState } from "react";
 import { Star, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -12,6 +11,7 @@ import {
 import { ConfirmActionDialog } from "../../../shared/ui/confirm-action-dialog";
 import { formatCompactDate } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
+import { Link } from "react-router-dom";
 
 export function ReviewsModeration() {
   const [reviewsResult, setReviewsResult] = useState<AdminReviewListResult>({
@@ -140,7 +140,7 @@ export function ReviewsModeration() {
                     colSpan={7}
                     className="px-6 py-12 text-center text-muted-foreground"
                   >
-                    <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" role="status" aria-label="Loading" /><span className="sr-only">Loading…</span>
                   </td>
                 </tr>
               ) : filteredReviews.length === 0 ? (
@@ -159,15 +159,25 @@ export function ReviewsModeration() {
                     className="border-b border-border hover:bg-muted/50 transition-colors"
                   >
                     <td className="px-6 py-4 font-medium">{review.reviewID}</td>
-                    <td className="px-6 py-4 text-muted-foreground">
-                      {review.reviewerName}
+                    <td className="px-6 py-4">
+                      <Link
+                        to={`/admin/users/${review.reviewerID}`}
+                        className="text-primary hover:underline font-medium transition-colors"
+                      >
+                        {review.reviewerName}
+                      </Link>
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground">
-                      {review.reviewedUserName}
+                    <td className="px-6 py-4">
+                      <Link
+                        to={`/admin/users/${review.reviewedUserID}`}
+                        className="text-primary hover:underline font-medium transition-colors"
+                      >
+                        {review.reviewedUserName}
+                      </Link>
                     </td>
                     <td className="px-6 py-4">{renderStars(review.rating)}</td>
                     <td
-                      className="px-6 py-4 max-w-[250px] truncate"
+                      className="px-6 py-4 max-w-62.5 truncate"
                       title={review.comment}
                     >
                       {review.comment || "No comment"}

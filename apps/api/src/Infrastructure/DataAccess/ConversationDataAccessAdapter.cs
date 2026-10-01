@@ -6,14 +6,8 @@ using TijarahJo.Infrastructure.Persistence;
 namespace TijarahJo.Infrastructure.DataAccess;
 
 
-public sealed class ConversationDataAccessAdapter : IConversationDataAccess
+public sealed class ConversationDataAccessAdapter(TijarahJoDbContext dbContext) : IConversationDataAccess
 {
-    private readonly TijarahJoDbContext _dbContext;
-
-    public ConversationDataAccessAdapter(TijarahJoDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
 
     /// <summary>
     /// Finds an existing Conversation by the canonical (User1ID < User2ID, PostID) tuple.
@@ -21,7 +15,7 @@ public sealed class ConversationDataAccessAdapter : IConversationDataAccess
     /// </summary>
     public async Task<int?> FindConversationIdAsync(int user1Id, int user2Id, int? postId, CancellationToken cancellationToken = default)
     {
-        var conversation = await _dbContext.Conversations
+        var conversation = await dbContext.Conversations
             .AsNoTracking()
             .FirstOrDefaultAsync(c =>
                 c.User1ID == user1Id &&
@@ -42,8 +36,8 @@ public sealed class ConversationDataAccessAdapter : IConversationDataAccess
                 User2ID = user2Id,
                 PostID = postId
             };
-            await _dbContext.Conversations.AddAsync(entity, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await dbContext.Conversations.AddAsync(entity, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
             return entity.ConversationID;
         }
         catch (Microsoft.EntityFrameworkCore.DbUpdateException)
@@ -59,7 +53,7 @@ public sealed class ConversationDataAccessAdapter : IConversationDataAccess
             return false;
         }
 
-        return await _dbContext.Conversations
+        return await dbContext.Conversations
             .AsNoTracking()
             .AnyAsync(c =>
                 c.ConversationID == conversationId &&
@@ -74,7 +68,7 @@ public sealed class ConversationDataAccessAdapter : IConversationDataAccess
             return null;
         }
 
-        var conversation = await _dbContext.Conversations
+        var conversation = await dbContext.Conversations
             .AsNoTracking()
             .Where(c => c.ConversationID == conversationId)
             .Select(c => new

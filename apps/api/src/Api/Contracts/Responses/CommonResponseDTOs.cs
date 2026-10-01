@@ -19,7 +19,7 @@ public sealed class FavoritesResponse
     [JsonPropertyName("success")]
     public bool Success { get; set; }
     [JsonPropertyName("favorites")]
-    public List<string> Favorites { get; set; } = new();
+    public List<string> Favorites { get; set; } = [];
 }
 
 public sealed class PresenceResponseDTO
@@ -62,7 +62,7 @@ public sealed class SellerProfileResponseDTO
     [JsonPropertyName("seller")]
     public SellerSummaryResponseDTO Seller { get; set; } = new();
     [JsonPropertyName("posts")]
-    public List<SellerPostResponseDTO> Posts { get; set; } = new();
+    public List<SellerPostResponseDTO> Posts { get; set; } = [];
 }
 
 public sealed class SellerSummaryResponseDTO
@@ -114,7 +114,7 @@ public sealed class SellerPostResponseDTO
     [JsonPropertyName("thumbnailImage")]
     public string ThumbnailImage { get; set; } = string.Empty;
     [JsonPropertyName("images")]
-    public List<string> Images { get; set; } = new();
+    public List<string> Images { get; set; } = [];
     [JsonPropertyName("phone")]
     public string Phone { get; set; } = string.Empty;
     [JsonPropertyName("description")]

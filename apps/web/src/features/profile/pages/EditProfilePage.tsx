@@ -1,6 +1,6 @@
 
 import { toast } from "sonner";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { translations, Language } from "../../../translations";
 
 import { SubpageHeader } from "../../../shared/ui/subpage-header";
@@ -43,10 +43,47 @@ export function EditProfilePage({
     createInitialEditProfileForm(profile),
   );
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarChanged, setAvatarChanged] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [errors, setErrors] = useState<EditProfileValidationErrors>({});
-  const { cityNames, areaNames, isLoadingCities, isLoadingAreas } =
+  const { cityNames, areaNames, isLoadingCities, isLoadingAreas, cities, areas } =
     useLocationOptions(formData.city, language);
+
+  useEffect(() => {
+    if (cities && cities.length > 0 && formData.city) {
+      const normalizedCity = formData.city.trim().toLowerCase();
+      const cityObj = cities.find(
+        (c) =>
+          c.cityName.toLowerCase() === normalizedCity ||
+          (c.cityNameAr && c.cityNameAr.toLowerCase() === normalizedCity),
+      );
+
+      if (cityObj) {
+        const expectedName = language === "ar" && cityObj.cityNameAr ? cityObj.cityNameAr : cityObj.cityName;
+        if (expectedName !== formData.city) {
+          setFormData((prev) => ({ ...prev, city: expectedName }));
+        }
+      }
+    }
+  }, [cities, language, formData.city]);
+
+  useEffect(() => {
+    if (areas && areas.length > 0 && formData.area) {
+      const normalizedArea = formData.area.trim().toLowerCase();
+      const areaObj = areas.find(
+        (a) =>
+          a.areaName.toLowerCase() === normalizedArea ||
+          (a.areaNameAr && a.areaNameAr.toLowerCase() === normalizedArea),
+      );
+
+      if (areaObj) {
+        const expectedName = language === "ar" && areaObj.areaNameAr ? areaObj.areaNameAr : areaObj.areaName;
+        if (expectedName !== formData.area) {
+          setFormData((prev) => ({ ...prev, area: expectedName }));
+        }
+      }
+    }
+  }, [areas, language, formData.area]);
   const cityOptions = useMemo(() => {
     const normalizedOptionSet = new Set(
       cityNames
@@ -120,6 +157,7 @@ export function EditProfilePage({
     }
 
     setAvatarFile(file);
+    setAvatarChanged(true);
     const reader = new FileReader();
     reader.onloadend = () => {
       handleFieldChange("avatar", String(reader.result || ""));
@@ -129,6 +167,7 @@ export function EditProfilePage({
 
   const handlePhotoRemove = () => {
     setAvatarFile(null);
+    setAvatarChanged(true);
     handleFieldChange("avatar", "");
   };
 
@@ -177,9 +216,13 @@ export function EditProfilePage({
         finalAvatarUrl &&
         (finalAvatarUrl.startsWith("http://") || finalAvatarUrl.startsWith("https://") || finalAvatarUrl.startsWith("/uploads/"));
 
+      const nextAvatarValue = avatarChanged
+        ? (isValidAvatarUrl ? finalAvatarUrl : (avatarFile ? finalAvatarUrl : ""))
+        : (profile.avatar || "");
+
       const dataToSave = {
         ...formData,
-        avatar: isValidAvatarUrl ? finalAvatarUrl : (avatarFile ? finalAvatarUrl : ""),
+        avatar: nextAvatarValue,
       };
 
       const savePromise = onSave(dataToSave);
@@ -188,6 +231,7 @@ export function EditProfilePage({
       }
       setHasChanges(false);
       setAvatarFile(null);
+      setAvatarChanged(false);
     };
 
     doSave().catch(() => {});
@@ -197,6 +241,7 @@ export function EditProfilePage({
     setFormData(createInitialEditProfileForm(profile));
     setErrors({});
     setHasChanges(false);
+    setAvatarChanged(false);
     onBack();
   };
 

@@ -168,23 +168,6 @@ export function EditProfileFormSections({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="middleName">
-                {t.middleName || "Middle Name"}{" "}
-                <span className="text-xs text-muted-foreground">
-                  ({language === "ar" ? "اختياري" : "optional"})
-                </span>
-              </Label>
-              <Input
-                id="middleName"
-                name="middleName"
-                autoComplete="additional-name"
-                value={formData.middleName || ""}
-                onChange={(e) => onFieldChange("middleName", e.target.value)}
-                placeholder={t.enterMiddleName || "Enter your middle name"}
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="lastName">
                 {t.lastName || "Last Name"} <span className="text-destructive">*</span>
               </Label>
@@ -307,23 +290,6 @@ export function EditProfileFormSections({
             <p className="text-right text-sm text-muted-foreground">
               {formData.bio.length}/500 {t.characters || "characters"}
             </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t.accountStatistics || "Account Statistics"}</CardTitle>
-          <CardDescription>
-            {t.accountStatisticsDesc || "Your performance and activity"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-4">
-            <div className="rounded-lg border border-border bg-muted p-4 text-center">
-              <div className="text-sm text-muted-foreground">{t.memberSince || "Member since"}</div>
-              <div className="text-primary">{formData.joinedDate}</div>
-            </div>
           </div>
         </CardContent>
       </Card>

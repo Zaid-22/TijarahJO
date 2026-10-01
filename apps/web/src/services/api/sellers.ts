@@ -14,6 +14,9 @@ interface TopSeller {
   totalViews: number;
 }
 
+// In-flight deduplication — prevents concurrent duplicate requests to the seller profile endpoint
+const _sellerProfileInflight: Map<string, Promise<SellerProfileResponse | null>> = new Map();
+
 export const sellersApi = {
   getSellerProfile: async (
     sellerId: string,
@@ -23,19 +26,31 @@ export const sellersApi = {
       return null;
     }
 
-    const encodedSellerId = encodeURIComponent(normalizedSellerId);
-    const backendResponse = await apiRequest<SellerProfileResponse>(
-      `/sellers/${encodedSellerId}`,
-      {
-        method: "GET",
-      },
-    );
-
-    if (backendResponse.success && backendResponse.data) {
-      return backendResponse.data;
+    let inflight = _sellerProfileInflight.get(normalizedSellerId);
+    if (inflight) {
+      return inflight;
     }
 
-    return null;
+    const encodedSellerId = encodeURIComponent(normalizedSellerId);
+    inflight = (async () => {
+      const backendResponse = await apiRequest<SellerProfileResponse>(
+        `/sellers/${encodedSellerId}`,
+        {
+          method: "GET",
+        },
+      );
+
+      if (backendResponse.success && backendResponse.data) {
+        return backendResponse.data;
+      }
+
+      return null;
+    })().finally(() => {
+      _sellerProfileInflight.delete(normalizedSellerId);
+    });
+
+    _sellerProfileInflight.set(normalizedSellerId, inflight);
+    return inflight;
   },
 
   getTopSellers: async (take: number = 6): Promise<TopSeller[]> => {

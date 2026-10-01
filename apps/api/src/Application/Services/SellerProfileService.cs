@@ -31,7 +31,7 @@ public sealed class SellerProfileService : ISellerProfileService
         }
 
         UserModel? seller = await _users.GetUserByIDAsync(sellerId, cancellationToken);
-        if (seller == null || seller.IsDeleted)
+        if (seller == null || seller.IsDeleted || seller.Status != UserStatusPolicy.Active)
         {
             return Failure(SellerProfileFailureReason.NotFound, $"Seller with ID {sellerId} not found.");
         }
@@ -79,7 +79,7 @@ public sealed class SellerProfileService : ISellerProfileService
                     City = sellerCity,
                     Area = sellerArea,
                     Bio = string.Empty,
-                    Avatar = string.Empty,
+                    Avatar = seller.Avatar ?? string.Empty,
                     JoinedDate = seller.JoinDate.ToString("o"),
                     ActiveListingsCount = activeListingsCount,
                     TotalSalesCount = soldListingsCount

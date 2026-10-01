@@ -1,5 +1,5 @@
-/* eslint-disable jsx-a11y/control-has-associated-label */
 import { useDeferredValue, useEffect, useState } from "react";
+import { useSearchParams, Link } from "react-router-dom";
 import { Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../../contexts/AuthContext";
@@ -18,6 +18,10 @@ import { ADMIN_PERMISSIONS } from "../adminPermissions";
 
 export function PostCommentsModeration() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const searchParam = searchParams.get("search") ?? "";
+  const userIdParam = Number.parseInt(searchParams.get("userId") ?? "", 10);
+  const filteredUserId = Number.isNaN(userIdParam) ? undefined : userIdParam;
   const canModerate = userHasAdminPermission(
     user,
     ADMIN_PERMISSIONS.commentsModerate,
@@ -28,7 +32,7 @@ export function PostCommentsModeration() {
       totalCount: 0,
     },
   );
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(searchParam);
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -38,6 +42,7 @@ export function PostCommentsModeration() {
   const fetchComments = async (
     currentPage: number,
     currentSearchQuery: string,
+    currentUserId?: number,
   ) => {
     try {
       setIsLoading(true);
@@ -45,6 +50,7 @@ export function PostCommentsModeration() {
         currentPage,
         50,
         currentSearchQuery,
+        currentUserId,
       );
       setCommentsResult({
         comments: Array.isArray(result?.comments) ? result.comments : [],
@@ -60,8 +66,12 @@ export function PostCommentsModeration() {
   };
 
   useEffect(() => {
-    void fetchComments(page, deferredSearchQuery);
-  }, [deferredSearchQuery, page]);
+    void fetchComments(page, deferredSearchQuery, filteredUserId);
+  }, [deferredSearchQuery, filteredUserId, page]);
+
+  useEffect(() => {
+    setSearchQuery(searchParam);
+  }, [searchParam]);
 
   useEffect(() => {
     setPage(1);
@@ -71,12 +81,17 @@ export function PostCommentsModeration() {
     if (!pendingDelete || !canModerate) return;
 
     try {
-      const success = await api.admin.deletePostComment(pendingDelete.commentID);
-      if (success) {
-        toast.success("Comment deleted successfully");
-        await fetchComments(page, deferredSearchQuery);
+      const commentId = pendingDelete.commentID;
+      const result = await api.admin.deletePostComment(commentId);
+      if (result.success) {
+        toast.success(
+          result.alreadyDeleted
+            ? "Comment was already deleted"
+            : "Comment deleted successfully",
+        );
+        await fetchComments(page, deferredSearchQuery, filteredUserId);
       } else {
-        toast.error("Failed to delete comment");
+        toast.error(result.message || "Failed to delete comment");
       }
     } catch (error) {
       logger.warn("[PostCommentsModeration] Failed to delete comment", error);
@@ -96,13 +111,19 @@ export function PostCommentsModeration() {
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search by post, author, or comment..."
+            placeholder="Search by post, comment, author, email, or phone..."
             className="pl-10"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
           />
         </div>
       </div>
+
+      {filteredUserId !== undefined ? (
+        <div className="rounded-md border border-border bg-muted/30 px-4 py-2 text-sm text-muted-foreground">
+          Showing comments from user #{filteredUserId}
+        </div>
+      ) : null}
 
       <div className="rounded-md border border-border">
         <div className="min-h-96 overflow-x-auto">
@@ -145,7 +166,7 @@ export function PostCommentsModeration() {
                     colSpan={9}
                     className="px-6 py-12 text-center text-muted-foreground"
                   >
-                    <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" role="status" aria-label="Loading" /><span className="sr-only">Loading…</span>
                   </td>
                 </tr>
               ) : commentsResult.comments.length === 0 ? (
@@ -177,9 +198,14 @@ export function PostCommentsModeration() {
                         Post #{comment.postID}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground">
-                      <div>{comment.authorName || "Unknown user"}</div>
-                      <div className="text-xs text-muted-foreground/80">
+                    <td className="px-6 py-4">
+                      <Link
+                        to={`/admin/users/${comment.userID}`}
+                        className="text-primary hover:underline font-medium transition-colors block"
+                      >
+                        {comment.authorName || "Unknown user"}
+                      </Link>
+                      <div className="text-xs text-muted-foreground/80 mt-1">
                         User #{comment.userID}
                       </div>
                     </td>

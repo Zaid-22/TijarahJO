@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { MoreVertical, Reply, Trash2, Edit2, ChevronDown, ChevronUp } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { MoreVertical, Reply, Trash2, Edit2, ChevronDown, ChevronUp, Flag } from "lucide-react";
 import { api } from "../../../services/api";
 import { logger } from "../../../shared/lib/logger";
 import { PostComment, User } from "../../../types";
@@ -17,6 +17,7 @@ import {
 import { cn } from "../../../shared/ui/utils";
 import { toast } from "sonner";
 import { formatPostedAgo } from "../postDetailsUtils";
+import { ReportPostDialog } from "../../marketplace/components/ReportPostDialog";
 
 interface CommentItemProps {
   comment: PostComment;
@@ -27,6 +28,7 @@ interface CommentItemProps {
   postOwnerId?: string;
   onDelete: (id: number) => Promise<boolean>;
   onUpdate: (id: number, content: string) => Promise<boolean>;
+  onRequireAuth?: () => void;
   isRTL: boolean;
   nowTimestamp: number;
   isReply?: boolean;
@@ -41,12 +43,11 @@ export function CommentItem({
   postOwnerId,
   onDelete,
   onUpdate,
+  onRequireAuth,
   isRTL,
   nowTimestamp,
   isReply = false,
 }: CommentItemProps) {
-  const navigate = useNavigate();
-  const currentPathLocation = useLocation();
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [replyContent, setReplyContent] = useState("");
   const [showReplies, setShowReplies] = useState(false);
@@ -56,6 +57,15 @@ export function CommentItem({
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
   const [submittingReply, setSubmittingReply] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     setReplyCount(comment.replyCount);
@@ -67,23 +77,33 @@ export function CommentItem({
     currentUser.role === "admin"
   );
   const canEdit = currentUser && currentUser.id === comment.userId.toString();
+  const canReport = !currentUser || currentUser.id !== comment.userId.toString();
 
   const handleToggleReplies = async () => {
     if (!showReplies && replies.length === 0 && replyCount > 0) {
       setLoadingReplies(true);
       try {
         const response = await api.comments.getReplies(postId, comment.commentId);
+        if (!isMountedRef.current) {
+          return;
+        }
         if (response.success && response.data) {
           setReplies(response.data.comments);
         }
       } catch (error) {
-        logger.error("Failed to fetch replies", error);
-        toast.error("Failed to load replies");
+        if (isMountedRef.current) {
+          logger.error("Failed to fetch replies", error);
+          toast.error("Failed to load replies");
+        }
       } finally {
-        setLoadingReplies(false);
+        if (isMountedRef.current) {
+          setLoadingReplies(false);
+        }
       }
     }
-    setShowReplies(!showReplies);
+    if (isMountedRef.current) {
+      setShowReplies(!showReplies);
+    }
   };
 
   const handleReplySubmit = async () => {
@@ -91,6 +111,9 @@ export function CommentItem({
     setSubmittingReply(true);
     try {
       const response = await api.comments.addComment(postId, replyContent, comment.commentId);
+      if (!isMountedRef.current) {
+        return;
+      }
       if (response.success && response.data) {
         toast.success(labels.commentAdded);
         setReplyContent("");
@@ -104,9 +127,13 @@ export function CommentItem({
         }
       }
     } catch (error) {
-      toast.error("Failed to send reply");
+      if (isMountedRef.current) {
+        toast.error("Failed to send reply");
+      }
     } finally {
-      setSubmittingReply(false);
+      if (isMountedRef.current) {
+        setSubmittingReply(false);
+      }
     }
   };
 
@@ -121,6 +148,27 @@ export function CommentItem({
     return true;
   };
 
+  const handleUpdateReply = async (replyId: number, content: string) => {
+    const success = await onUpdate(replyId, content);
+    if (!success) {
+      return false;
+    }
+
+    setReplies((prev) =>
+      prev.map((reply) =>
+        reply.commentId === replyId
+          ? {
+              ...reply,
+              content,
+              isEdited: true,
+              updatedAt: new Date().toISOString(),
+            }
+          : reply,
+      ),
+    );
+    return true;
+  };
+
   const handleSaveEdit = async () => {
     if (!editContent.trim()) return;
     const success = await onUpdate(comment.commentId, editContent);
@@ -132,17 +180,21 @@ export function CommentItem({
   return (
     <div className={cn("group animate-in fade-in slide-in-from-bottom-2 duration-300", isReply ? "ms-12 mt-4" : "")}>
       <div className="flex gap-3">
-        <Avatar className="w-10 h-10 border-2 border-background shadow-sm ring-1 ring-muted">
-          <AvatarImage src={resolveAvatarSrc(comment.authorAvatar) || undefined} />
-          <AvatarFallback className="bg-primary/10 text-primary font-bold">
-            {getAvatarInitial(comment.authorName)}
-          </AvatarFallback>
-        </Avatar>
+        <Link to={`/seller/${comment.userId}`} className="shrink-0 cursor-pointer">
+          <Avatar className="w-10 h-10 border-2 border-background shadow-sm ring-1 ring-muted hover:ring-primary transition-all">
+            <AvatarImage src={resolveAvatarSrc(comment.authorAvatar) || undefined} />
+            <AvatarFallback className="bg-primary/10 text-primary font-bold">
+              {getAvatarInitial(comment.authorName)}
+            </AvatarFallback>
+          </Avatar>
+        </Link>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-foreground text-sm sm:text-base">{comment.authorName}</span>
+              <Link to={`/seller/${comment.userId}`} className="font-bold text-foreground hover:text-primary transition-colors text-sm sm:text-base">
+                {comment.authorName}
+              </Link>
               {comment.userId.toString() === postOwnerId && (
                 <span className="bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded-md font-bold border border-primary/20 uppercase tracking-tighter">
                   {isRTL ? "صاحب الإعلان" : "Seller"}
@@ -156,7 +208,7 @@ export function CommentItem({
               )}
             </div>
 
-            {(canEdit || canDelete) && (
+            {(canEdit || canDelete || canReport) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" aria-label={labels.options || "Options"} className="h-8 w-8 text-muted-foreground hover:bg-muted rounded-full">
@@ -174,6 +226,21 @@ export function CommentItem({
                     <DropdownMenuItem onClick={() => { void onDelete(comment.commentId); }} className="text-destructive focus:text-destructive cursor-pointer">
                       <Trash2 className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
                       {labels.deleteComment}
+                    </DropdownMenuItem>
+                  )}
+                  {canReport && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (!currentUser) {
+                          onRequireAuth?.();
+                          return;
+                        }
+                        setIsReportOpen(true);
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <Flag className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
+                      {isRTL ? "إبلاغ" : "Report"}
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
@@ -212,7 +279,7 @@ export function CommentItem({
                   className="h-7 text-xs font-bold text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-full"
                   onClick={() => {
                     if (!currentUser) {
-                      navigate("/auth/login", { state: { from: currentPathLocation.pathname } });
+                      onRequireAuth?.();
                       return;
                     }
                     setShowReplyForm(!showReplyForm);
@@ -274,7 +341,8 @@ export function CommentItem({
                     currentUser={currentUser}
                     postOwnerId={postOwnerId}
                     onDelete={handleDeleteReply}
-                    onUpdate={onUpdate}
+                    onUpdate={handleUpdateReply}
+                    onRequireAuth={onRequireAuth}
                     isRTL={isRTL}
                     nowTimestamp={nowTimestamp}
                     isReply={true}
@@ -285,6 +353,14 @@ export function CommentItem({
           )}
         </div>
       </div>
+      <ReportPostDialog
+        open={isReportOpen}
+        onOpenChange={setIsReportOpen}
+        language={language}
+        reportType="COMMENT"
+        targetId={comment.commentId}
+        targetTitle={comment.content.slice(0, 80)}
+      />
     </div>
   );
 }

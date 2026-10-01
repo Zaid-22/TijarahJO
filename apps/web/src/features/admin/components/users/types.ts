@@ -4,7 +4,7 @@ export type CreateUserForm = {
   email: string;
   password: string;
   phone: string;
-  role: "admin" | "user";
+  roleId: string;
 };
 
 export const initialCreateUserForm: CreateUserForm = {
@@ -13,5 +13,5 @@ export const initialCreateUserForm: CreateUserForm = {
   email: "",
   password: "",
   phone: "",
-  role: "user",
+  roleId: "",
 };

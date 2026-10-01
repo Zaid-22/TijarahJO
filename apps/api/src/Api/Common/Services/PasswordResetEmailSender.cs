@@ -15,6 +15,9 @@ public interface IPasswordResetEmailSender
         TimeSpan ttl,
         CancellationToken cancellationToken = default
     );
+
+    /// <summary>Returns true when the email transport is enabled and has a valid API key.</summary>
+    bool IsTransportConfigured();
 }
 
 public sealed class PasswordResetEmailSender(
@@ -38,9 +41,9 @@ public sealed class PasswordResetEmailSender(
             return;
         }
 
-        if (!IsApiConfigured())
+        if (!IsTransportConfigured())
         {
-            if (_options.LogCodesWhenEmailDisabled)
+            if (_options.LogCodesWhenEmailDisabled && _logger.IsEnabled(LogLevel.Information))
             {
                 _logger.LogInformation(
                     "Password reset email transport disabled. Recipient={Recipient} Code={Code} TTLMinutes={TtlMinutes}",
@@ -70,7 +73,7 @@ public sealed class PasswordResetEmailSender(
         {
             from = $"{_options.FromName} <{_options.FromAddress}>",
             to = new[] { recipientEmail },
-            subject = subject,
+            subject,
             text = body
         };
 
@@ -103,14 +106,10 @@ public sealed class PasswordResetEmailSender(
         }
     }
 
-    private bool IsApiConfigured()
+    public bool IsTransportConfigured()
     {
-        if (!_options.Enabled)
-        {
-            return false;
-        }
-
-        return !string.IsNullOrWhiteSpace(_options.ResendApiKey)
+        return _options.Enabled
+            && !string.IsNullOrWhiteSpace(_options.ResendApiKey)
             && !string.IsNullOrWhiteSpace(_options.FromAddress);
     }
 }

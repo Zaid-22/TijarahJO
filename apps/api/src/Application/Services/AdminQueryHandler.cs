@@ -1,19 +1,18 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using TijarahJo.Application.Abstractions.DataAccess;
 using TijarahJo.Application.Abstractions.Services;
 
 namespace TijarahJo.Application.Services;
 
-public sealed class AdminQueryHandler : IAdminQueryHandler
+public sealed class AdminQueryHandler(
+    IAdminDataAccess adminDataAccess,
+    ILogger<AdminQueryHandler> logger) : IAdminQueryHandler
 {
-    private readonly IAdminDataAccess _adminDataAccess;
-
-    public AdminQueryHandler(IAdminDataAccess adminDataAccess)
-    {
-        _adminDataAccess = adminDataAccess;
-    }
+    private readonly IAdminDataAccess _adminDataAccess = adminDataAccess;
+    private readonly ILogger<AdminQueryHandler> _logger = logger;
 
     public async Task<DashboardStatsQueryResult> GetDashboardStatsAsync(CancellationToken cancellationToken = default)
     {
@@ -45,11 +44,12 @@ public sealed class AdminQueryHandler : IAdminQueryHandler
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to retrieve dashboard statistics.");
             return new DashboardStatsQueryResult
             {
                 Success = false,
                 StatusCode = 500,
-                Message = $"Error retrieving dashboard stats: {ex.Message}"
+                Message = "Failed to retrieve dashboard statistics."
             };
         }
     }
@@ -68,11 +68,12 @@ public sealed class AdminQueryHandler : IAdminQueryHandler
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to retrieve administrative posts.");
             return new AdminPostsQueryResult
             {
                 Success = false,
                 StatusCode = 500,
-                Message = $"Error retrieving admin posts: {ex.Message}"
+                Message = "Failed to retrieve administrative posts."
             };
         }
     }
@@ -101,11 +102,12 @@ public sealed class AdminQueryHandler : IAdminQueryHandler
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to retrieve administrative user details for {UserId}.", userId);
             return new AdminUserDetailsQueryResult
             {
                 Success = false,
                 StatusCode = 500,
-                Message = $"Error retrieving user details: {ex.Message}"
+                Message = "Failed to retrieve user details."
             };
         }
     }
@@ -126,11 +128,12 @@ public sealed class AdminQueryHandler : IAdminQueryHandler
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to retrieve reviews for moderation.");
             return new AdminReviewsQueryResult
             {
                 Success = false,
                 StatusCode = 500,
-                Message = $"Error retrieving admin reviews: {ex.Message}"
+                Message = "Failed to retrieve reviews."
             };
         }
     }
@@ -159,20 +162,21 @@ public sealed class AdminQueryHandler : IAdminQueryHandler
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to delete review {ReviewId}.", reviewId);
             return new AdminReviewDeleteResult
             {
                 Success = false,
                 StatusCode = 500,
-                Message = $"Error deleting review: {ex.Message}"
+                Message = "Failed to delete review."
             };
         }
     }
 
-    public async Task<AdminPostCommentsQueryResult> GetAdminPostCommentsAsync(string? search = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
+    public async Task<AdminPostCommentsQueryResult> GetAdminPostCommentsAsync(string? search = null, int? userId = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
     {
         try
         {
-            var result = await _adminDataAccess.GetAdminPostCommentsAsync(search, pageNumber, pageSize, cancellationToken);
+            var result = await _adminDataAccess.GetAdminPostCommentsAsync(search, userId, pageNumber, pageSize, cancellationToken);
             return new AdminPostCommentsQueryResult
             {
                 Success = true,
@@ -182,11 +186,12 @@ public sealed class AdminQueryHandler : IAdminQueryHandler
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to retrieve post comments for moderation.");
             return new AdminPostCommentsQueryResult
             {
                 Success = false,
                 StatusCode = 500,
-                Message = $"Error retrieving admin post comments: {ex.Message}"
+                Message = "Failed to retrieve post comments."
             };
         }
     }
@@ -200,9 +205,9 @@ public sealed class AdminQueryHandler : IAdminQueryHandler
             {
                 return new AdminPostCommentDeleteResult
                 {
-                    Success = false,
-                    StatusCode = 404,
-                    Message = $"Comment with ID {commentId} not found."
+                    Success = true,
+                    StatusCode = 200,
+                    Message = "Comment was already deleted or no longer available."
                 };
             }
 
@@ -215,11 +220,12 @@ public sealed class AdminQueryHandler : IAdminQueryHandler
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to delete post comment {CommentId}.", commentId);
             return new AdminPostCommentDeleteResult
             {
                 Success = false,
                 StatusCode = 500,
-                Message = $"Error deleting post comment: {ex.Message}"
+                Message = "Failed to delete post comment."
             };
         }
     }
@@ -240,11 +246,12 @@ public sealed class AdminQueryHandler : IAdminQueryHandler
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to retrieve audit logs.");
             return new AdminAuditLogQueryResult
             {
                 Success = false,
                 StatusCode = 500,
-                Message = $"Error retrieving audit logs: {ex.Message}"
+                Message = "Failed to retrieve audit logs."
             };
         }
     }
@@ -260,7 +267,8 @@ public sealed class AdminQueryHandler : IAdminQueryHandler
         }
         catch (Exception ex)
         {
-            return new AdminSettingsQueryResult { Success = false, StatusCode = 500, Message = $"Error retrieving settings: {ex.Message}" };
+            _logger.LogError(ex, "Failed to retrieve system settings.");
+            return new AdminSettingsQueryResult { Success = false, StatusCode = 500, Message = "Failed to retrieve settings." };
         }
     }
 
@@ -275,37 +283,9 @@ public sealed class AdminQueryHandler : IAdminQueryHandler
         }
         catch (Exception ex)
         {
-            return new AdminSettingUpdateResult { Success = false, StatusCode = 500, Message = $"Error updating setting: {ex.Message}" };
+            _logger.LogError(ex, "Failed to update system setting {SettingKey}.", key);
+            return new AdminSettingUpdateResult { Success = false, StatusCode = 500, Message = "Failed to update setting." };
         }
     }
 
-    // ── Phase 3: Chat Inspection ──
-
-    public async Task<AdminConversationsQueryResult> GetConversationsAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var result = await _adminDataAccess.GetConversationsAsync(pageNumber, pageSize, cancellationToken);
-            return new AdminConversationsQueryResult { Success = true, StatusCode = 200, Result = result };
-        }
-        catch (Exception ex)
-        {
-            return new AdminConversationsQueryResult { Success = false, StatusCode = 500, Message = $"Error retrieving conversations: {ex.Message}" };
-        }
-    }
-
-    public async Task<AdminConversationDetailQueryResult> GetConversationMessagesAsync(int conversationId, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var result = await _adminDataAccess.GetConversationMessagesAsync(conversationId, cancellationToken);
-            if (result == null)
-                return new AdminConversationDetailQueryResult { Success = false, StatusCode = 404, Message = "Conversation not found." };
-            return new AdminConversationDetailQueryResult { Success = true, StatusCode = 200, Result = result };
-        }
-        catch (Exception ex)
-        {
-            return new AdminConversationDetailQueryResult { Success = false, StatusCode = 500, Message = $"Error retrieving conversation: {ex.Message}" };
-        }
-    }
 }

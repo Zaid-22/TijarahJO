@@ -37,7 +37,8 @@ WHEN MATCHED THEN
         JoinDate = source.JoinDate,
         Status = 1,
         RoleID = (SELECT TOP (1) RoleID FROM dbo.Roles WHERE RoleName = N'User' ORDER BY RoleID),
-        IsDeleted = 0
+        IsDeleted = 0,
+        IsEmailVerified = 1
 WHEN NOT MATCHED BY TARGET THEN
     INSERT (
         HashedPassword,
@@ -47,7 +48,8 @@ WHEN NOT MATCHED BY TARGET THEN
         JoinDate,
         Status,
         RoleID,
-        IsDeleted
+        IsDeleted,
+        IsEmailVerified
     )
     VALUES (
         'DISABLED_NO_SEEDED_CREDENTIALS',
@@ -57,7 +59,8 @@ WHEN NOT MATCHED BY TARGET THEN
         source.JoinDate,
         1,
         (SELECT TOP (1) RoleID FROM dbo.Roles WHERE RoleName = N'User' ORDER BY RoleID),
-        0
+        0,
+        1
     );
 GO
 

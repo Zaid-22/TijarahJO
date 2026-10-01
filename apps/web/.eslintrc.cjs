@@ -24,10 +24,14 @@ module.exports = {
   ],
   ignorePatterns: ["dist", "node_modules"],
   rules: {
-    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/no-unused-vars": [
       "error",
-      { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      {
+        argsIgnorePattern: "^_",
+        caughtErrors: "none",
+        varsIgnorePattern: "^_",
+      },
     ],
     "no-console": "error",
     "no-alert": "error",

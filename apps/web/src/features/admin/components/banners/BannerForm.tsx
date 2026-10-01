@@ -15,6 +15,11 @@ import { Button } from "../../../../shared/ui/button";
 import { Input } from "../../../../shared/ui/input";
 import { Label } from "../../../../shared/ui/label";
 import { toast } from "sonner";
+import { resolveBannerColor } from "../../../home/components/heroBannerData";
+import {
+  BANNER_BACKGROUND_FALLBACK,
+  BANNER_TEXT_FALLBACK,
+} from "../../../../shared/design/colorTokens";
 
 export type BannerFormState = {
   title: string;
@@ -41,8 +46,8 @@ export const DEFAULT_BANNER_FORM_STATE: BannerFormState = {
   buttonText: "Learn More",
   buttonTextAr: "اعرف المزيد",
   imageUrl: "",
-  bgClass: "bg-background",
-  textClass: "text-foreground",
+  bgClass: BANNER_BACKGROUND_FALLBACK,
+  textClass: BANNER_TEXT_FALLBACK,
   altText: "",
   altTextAr: "",
   linkUrl: "",
@@ -53,7 +58,9 @@ export const DEFAULT_BANNER_FORM_STATE: BannerFormState = {
 type BannerFormProps = {
   editingBannerId: number | null;
   bannerForm: BannerFormState;
+  isUploadingImage: boolean;
   onFormChange: (updater: (prev: BannerFormState) => BannerFormState) => void;
+  onImageUpload: (file: File) => Promise<void>;
   onSave: () => void;
   onCancel: () => void;
 };
@@ -61,14 +68,19 @@ type BannerFormProps = {
 export function BannerForm({
   editingBannerId,
   bannerForm,
+  isUploadingImage,
   onFormChange,
+  onImageUpload,
   onSave,
   onCancel,
 }: BannerFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
+    event.target.value = "";
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
@@ -81,14 +93,19 @@ export function BannerForm({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      onFormChange((prev) => ({
-        ...prev,
-        imageUrl: String(reader.result || ""),
-      }));
-    };
-    reader.readAsDataURL(file);
+    try {
+      await onImageUpload(file);
+    } catch {
+      toast.error("Failed to upload banner image");
+    }
+  };
+
+  const bgPreviewStyle = {
+    background:
+      resolveBannerColor(bannerForm.bgClass) || BANNER_BACKGROUND_FALLBACK,
+  };
+  const textPreviewStyle = {
+    background: resolveBannerColor(bannerForm.textClass) || BANNER_TEXT_FALLBACK,
   };
 
   return (
@@ -195,10 +212,15 @@ export function BannerForm({
                 type="button"
                 variant="outline"
                 className="w-full justify-start text-muted-foreground"
+                disabled={isUploadingImage}
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="w-4 h-4 mr-2" />
-                {bannerForm.imageUrl ? "Change Image" : "Upload Image"}
+                {isUploadingImage
+                  ? "Uploading Image..."
+                  : bannerForm.imageUrl
+                    ? "Change Image"
+                    : "Upload Image"}
               </Button>
               <input
                 id="banner-image-file"
@@ -227,6 +249,74 @@ export function BannerForm({
                   }))
                 }
                 className="pl-9"
+              />
+            </div>
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="banner-bgcolor">Background Color</Label>
+            <p className="text-xs text-muted-foreground">Overlay color shown when the banner has no image or a transparent background.</p>
+            <div className="flex items-center gap-3">
+              <input
+                id="banner-bgcolor"
+                type="color"
+                value={/^#[0-9A-Fa-f]{6}$/.test(bannerForm.bgClass) ? bannerForm.bgClass : BANNER_BACKGROUND_FALLBACK}
+                onChange={(e) =>
+                  onFormChange((prev) => ({
+                    ...prev,
+                    bgClass: e.target.value,
+                  }))
+                }
+                className="h-10 w-14 cursor-pointer rounded-md border border-border p-1 bg-background"
+              />
+              <Input
+                placeholder={BANNER_BACKGROUND_FALLBACK}
+                value={bannerForm.bgClass}
+                onChange={(e) =>
+                  onFormChange((prev) => ({
+                    ...prev,
+                    bgClass: e.target.value,
+                  }))
+                }
+                className="font-mono"
+              />
+              <div
+                className="h-10 w-16 rounded-md border border-border shrink-0"
+                style={bgPreviewStyle}
+                title="Color preview"
+              />
+            </div>
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="banner-btncolor">Text Color</Label>
+            <p className="text-xs text-muted-foreground">Color of the title and subtitle text on the banner.</p>
+            <div className="flex items-center gap-3">
+              <input
+                id="banner-btncolor"
+                type="color"
+                value={/^#[0-9A-Fa-f]{6}$/.test(bannerForm.textClass) ? bannerForm.textClass : BANNER_TEXT_FALLBACK}
+                onChange={(e) =>
+                  onFormChange((prev) => ({
+                    ...prev,
+                    textClass: e.target.value,
+                  }))
+                }
+                className="h-10 w-14 cursor-pointer rounded-md border border-border p-1 bg-background"
+              />
+              <Input
+                placeholder={BANNER_TEXT_FALLBACK}
+                value={bannerForm.textClass}
+                onChange={(e) =>
+                  onFormChange((prev) => ({
+                    ...prev,
+                    textClass: e.target.value,
+                  }))
+                }
+                className="font-mono"
+              />
+              <div
+                className="h-10 w-16 rounded-md border border-border shrink-0"
+                style={textPreviewStyle}
+                title="Text color preview"
               />
             </div>
           </div>
@@ -279,7 +369,11 @@ export function BannerForm({
           <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button onClick={onSave} aria-label={editingBannerId === null ? "Add Banner" : "Save Changes"}>
+          <Button
+            onClick={onSave}
+            disabled={isUploadingImage}
+            aria-label={editingBannerId === null ? "Add Banner" : "Save Changes"}
+          >
             {editingBannerId === null ? (
               <>
                 <Plus className="w-4 h-4 mr-2" />

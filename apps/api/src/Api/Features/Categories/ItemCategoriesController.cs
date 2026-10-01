@@ -17,7 +17,7 @@ public class ItemCategoriesController(ICategoryQueryHandler categoryQueries, ICa
 {
 
     [HttpGet("")]
-    [ResponseCache(Duration = 300)]
+    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IEnumerable<CategoryResponseDTO>>> GetAllCategories(
@@ -41,6 +41,7 @@ public class ItemCategoriesController(ICategoryQueryHandler categoryQueries, ICa
     }
 
     [HttpGet("{id:int}")]
+    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -151,6 +152,7 @@ public class ItemCategoriesController(ICategoryQueryHandler categoryQueries, ICa
     }
 
     [HttpGet("Exists/{id:int}")]
+    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<bool>> DoesCategoryExist(int id)

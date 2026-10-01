@@ -15,7 +15,6 @@ interface SellerProfilePageProps {
   onFavoriteToggle?: (postId: string) => void;
   isAuthenticated?: boolean;
   currentUserId?: string;
-  currentUserDisplayName?: string;
   onSettingsClick?: () => void;
   onEditProfileClick?: () => void;
   onAddPostClick?: () => void;
@@ -29,7 +28,6 @@ export function SellerProfilePage({
   onFavoriteToggle,
   isAuthenticated = false,
   currentUserId,
-  currentUserDisplayName,
   onSettingsClick,
   onEditProfileClick,
   onAddPostClick,
@@ -90,7 +88,6 @@ export function SellerProfilePage({
       isAuthenticated={isAuthenticated}
       favoriteIds={favoriteIds}
       currentUserId={currentUserId}
-      currentUserDisplayName={currentUserDisplayName}
       onBack={() => navigate(safeBackPath)}
       backLabel={language === "ar" ? "العودة" : "Back"}
       title={isOwner ? (language === "ar" ? "ملفي الشخصي" : "My Profile") : (language === "ar" ? "ملف البائع" : "Seller Profile")}
@@ -117,11 +114,23 @@ export function SellerProfilePage({
       onChatWithSeller={
         !isOwner
           ? () =>
-              navigate(`/chat/${profileUserId}`, {
-                state: {
-                  fromPath: currentPath,
-                },
-              })
+              {
+                if (typeof window !== "undefined") {
+                  window.sessionStorage.setItem(
+                    "chat:return-path",
+                    JSON.stringify({
+                      chatUserId: profileUserId,
+                      returnPath: currentPath,
+                    }),
+                  );
+                }
+
+                navigate(`/chat/${profileUserId}?returnTo=${encodeURIComponent(currentPath)}`, {
+                  state: {
+                    fromPath: currentPath,
+                  },
+                });
+            }
           : undefined
       }
       onDeletePost={isOwner ? onDeletePost : undefined}

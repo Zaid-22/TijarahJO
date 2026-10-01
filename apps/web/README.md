@@ -48,7 +48,6 @@
 
 ### 🔔 Notifications
 - In-app notification system with unread count badge
-- Push notification subscription support
 - Mark as read / mark all as read
 
 ### ⭐ Reviews
@@ -60,7 +59,6 @@
 - User management (view, block, delete, role assignment)
 - Post moderation and content management
 - Reports queue for flagged content
-- Fraud detection tools
 - Conversation monitoring
 - Audit log viewer
 - Location management
@@ -78,7 +76,7 @@
 ### 🎨 Modern UI/UX
 - Responsive design (mobile, tablet, desktop)
 - Full dark mode support with comfortable color scheme
-- Smooth animations and transitions with Framer Motion
+- Smooth CSS and Tailwind-powered transitions
 - Loading and error states
 - Confirmation dialogs and toast notifications (Sonner)
 - Pagination with configurable page sizes
@@ -121,7 +119,7 @@ apps/web/src/
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 20+
 - npm
 
 ### Installation
@@ -153,7 +151,7 @@ The application will be available at **http://localhost:5173**
 | **Styling** | Tailwind CSS v4 |
 | **Components** | Radix UI (accessible primitives) |
 | **Icons** | Lucide React |
-| **Animations** | Framer Motion |
+| **Animations** | CSS and Tailwind transitions |
 | **Realtime** | SignalR (@microsoft/signalr) |
 | **Notifications** | Sonner (toast) |
 | **Linting** | ESLint |
@@ -175,18 +173,18 @@ The application will be available at **http://localhost:5173**
 
 | Group | Endpoints |
 |-------|-----------|
-| **Auth** | `/api/auth/*` — login, signup, logout, me, refresh, Google OAuth |
+| **Auth** | `/api/v1/auth/*` — login, signup, logout, me, refresh, Google OAuth |
 | **2FA** | `/api/v1/auth/2fa/*` — status, setup/start, setup/confirm, verify-login, disable |
-| **Password Reset** | `/api/v1/auth/forgot-password/*` — request, confirm |
-| **Posts** | `/api/posts/*` — feed, CRUD, status, views |
-| **Post Images** | `/api/post-images/*` — CRUD, file upload |
-| **Categories** | `/api/categories/*` — list, CRUD (admin) |
+| **Password Reset** | `/api/v1/auth/forgot-password/*` — request, verify, confirm |
+| **Posts** | `/api/v1/posts/*` — feed, CRUD, status, views |
+| **Post Images** | `/api/v1/post-images/*` — CRUD, file upload |
+| **Categories** | `/api/v1/categories/*` — list, CRUD (admin) |
 | **Favorites** | `/api/v1/favorites/*` — list, add, remove |
 | **Chat** | `/api/v1/chat/*` + `/chatHub` — messages, history, presence, upload |
-| **Search** | `/api/search` — full-text search |
-| **Sellers** | `/api/sellers/*` — profile, top sellers |
+| **Search** | `/api/v1/search` — full-text search |
+| **Sellers** | `/api/v1/sellers/*` — profile, top sellers |
 | **Reviews** | `/api/v1/reviews/*` — list, create |
-| **Notifications** | `/api/v1/notifications/*` — list, read, push subscriptions |
+| **Notifications** | `/api/v1/notifications/*` — list, read, unread count |
 | **Admin** | `/api/v1/admin/*` — dashboard, users, posts, analytics, reports, settings |
 
 ---
@@ -211,11 +209,18 @@ Electronics • Mobile Phones & Tablets • Computers & Laptops • Home Applian
 ## 🧪 Testing
 
 ```bash
-# Unit tests
+# Unit, integration, and policy tests
 cd apps/web && npm test
 
-# E2E tests (Playwright)
-cd apps/web && npx playwright test
+# Mocked Playwright journeys on desktop, tablet, and mobile Chromium profiles
+cd apps/web && npx playwright install chromium
+cd apps/web && npm run test:e2e:browser
+
+# Production build plus enforced bundle budgets
+cd apps/web && npm run perf:bundle
+
+# Compile the baseline Storybook stories
+cd apps/web && npm run storybook:check
 
 # Frontend API contract checks
 ./apps/web/tests/frontend_api_contract.sh
@@ -231,18 +236,18 @@ cd apps/web && npx playwright test
 - [x] Cookie-backed JWT authentication, refresh retry, and Google OAuth
 - [x] Two-Factor Authentication (TOTP)
 - [x] Real-time chat with image sharing
-- [x] Notifications with push support
+- [x] In-app notifications
 - [x] Seller reviews and ratings
 - [x] Admin panel with full moderation
 - [x] Multi-language support (EN/AR)
 - [x] Dark mode
 - [x] Server-side image uploads
+- [x] Installable PWA app shell and runtime route-asset caching
 
 ### 🔮 Future
 - [ ] Payment integration
 - [ ] Mobile app (React Native)
 - [ ] Advanced analytics dashboard
-- [ ] Service Worker for offline support
 
 ---
 

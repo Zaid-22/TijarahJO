@@ -2,9 +2,11 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using TijarahJo.Api.Common.Services;
 using TijarahJo.Api.Common.Utils;
 using TijarahJo.Api.Contracts.Requests;
 using TijarahJo.Domain.Entities;
+using TijarahJo.Domain.Enums;
 using TijarahJo.Infrastructure.Persistence;
 
 namespace TijarahJo.Api.Features.Reports;
@@ -13,16 +15,20 @@ namespace TijarahJo.Api.Features.Reports;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/reports")]
 [Authorize]
-public sealed class ReportsController(TijarahJoDbContext dbContext) : ControllerBase
+public sealed class ReportsController(
+    TijarahJoDbContext dbContext,
+    IPostImageFileStorageService imageStorageService) : ControllerBase
 {
     private readonly TijarahJoDbContext _dbContext = dbContext;
+    private readonly IPostImageFileStorageService _imageStorageService = imageStorageService;
 
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [Consumes("multipart/form-data")]
     public async Task<ActionResult> CreateReport(
-        [FromBody] CreateReportRequest request,
+        [FromForm] CreateReportRequest request,
         CancellationToken cancellationToken)
     {
         if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int currentUserId, out ActionResult? failureResult))
@@ -62,11 +68,27 @@ public sealed class ReportsController(TijarahJoDbContext dbContext) : Controller
                 report.ReportType == normalizedReportType &&
                 report.TargetID == request.TargetID &&
                 report.ReporterUserID == currentUserId &&
-                report.Status == 0,
+                report.Status == (int)ReportStatus.Pending,
             cancellationToken);
         if (duplicatePendingReportExists)
         {
             return Problem(statusCode: StatusCodes.Status409Conflict, detail: "You already submitted a pending report for this item.");
+        }
+
+        // Save optional evidence image — store the relative path only so the value
+        // is environment-agnostic (works in dev, staging, and production without changes).
+        string? imageUrl = null;
+        if (request.Image is { Length: > 0 })
+        {
+            try
+            {
+                var storedImage = await _imageStorageService.SaveReportImageAsync(request.Image, cancellationToken);
+                imageUrl = storedImage.PublicUrl; // e.g. /uploads/reports/abc.jpg
+            }
+            catch (ArgumentException ex)
+            {
+                return Problem(statusCode: StatusCodes.Status400BadRequest, detail: ex.Message);
+            }
         }
 
         var reportEntity = new ReportEntity
@@ -75,8 +97,9 @@ public sealed class ReportsController(TijarahJoDbContext dbContext) : Controller
             TargetID = request.TargetID,
             Reason = normalizedReason,
             Description = normalizedDescription,
+            ImageUrl = imageUrl,
             ReporterUserID = currentUserId,
-            Status = 0,
+            Status = (int)ReportStatus.Pending,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -86,12 +109,12 @@ public sealed class ReportsController(TijarahJoDbContext dbContext) : Controller
         return StatusCode(StatusCodes.Status201Created, new
         {
             Message = "Report submitted successfully.",
-            ReportID = reportEntity.ReportID
+            reportEntity.ReportID
         });
     }
 
     private static bool IsSupportedReportType(string reportType) =>
-        reportType is "LISTING" or "USER" or "REVIEW" or "CHAT";
+        reportType is "LISTING" or "USER" or "REVIEW" or "COMMENT";
 
     private async Task<bool> TargetExistsAsync(
         string reportType,
@@ -109,8 +132,8 @@ public sealed class ReportsController(TijarahJoDbContext dbContext) : Controller
             "REVIEW" => await _dbContext.Reviews.AnyAsync(
                 review => review.ReviewID == targetId && !review.IsDeleted,
                 cancellationToken),
-            "CHAT" => await _dbContext.Conversations.AnyAsync(
-                conversation => conversation.ConversationID == targetId && !conversation.IsDeleted,
+            "COMMENT" => await _dbContext.PostComments.AnyAsync(
+                comment => comment.CommentID == targetId && !comment.IsDeleted,
                 cancellationToken),
             _ => false
         };

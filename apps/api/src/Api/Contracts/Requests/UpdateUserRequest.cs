@@ -38,4 +38,6 @@ public class UpdateUserRequest
     public int? RoleID { get; set; }
 
     public bool? IsDeleted { get; set; }
+
+    public bool? ClearSuspension { get; set; }
 }

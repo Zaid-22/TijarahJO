@@ -10,14 +10,8 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/reviews")]
-public class AdminReviewsController : ControllerBase
+public class AdminReviewsController(IAdminQueryHandler adminQueries) : ControllerBase
 {
-    private readonly IAdminQueryHandler _adminQueries;
-
-    public AdminReviewsController(IAdminQueryHandler adminQueries)
-    {
-        _adminQueries = adminQueries;
-    }
 
     [HttpGet]
     [Authorize(Policy = AuthorizationPolicies.ReviewsView)]
@@ -29,7 +23,7 @@ public class AdminReviewsController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50)
     {
-        var result = await _adminQueries.GetAdminReviewsAsync(page, pageSize, HttpContext.RequestAborted);
+        var result = await adminQueries.GetAdminReviewsAsync(page, pageSize, HttpContext.RequestAborted);
         if (!result.Success || result.Result == null)
         {
             return Problem(
@@ -61,10 +55,10 @@ public class AdminReviewsController : ControllerBase
             return failureResult!;
         }
 
-        var result = await _adminQueries.SoftDeleteReviewAsync(id, currentUserId, cancellationToken);
+        var result = await adminQueries.SoftDeleteReviewAsync(id, currentUserId, cancellationToken);
         if (result.Success)
         {
-            return Ok(new { Message = result.Message });
+            return Ok(new { result.Message });
         }
 
         return Problem(

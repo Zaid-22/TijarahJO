@@ -1,22 +1,45 @@
-import { lazy } from "react";
-import { CategoryRouteWrapper } from "../CategoryRouteWrapper";
+import { lazy, Suspense } from "react";
 import { useMarketplaceRouteContext } from "./marketplaceRouteContext";
 import { type MarketplaceRouteDefinition } from "./marketplaceRouteDefinitions";
+import { lazyImportWithRetry } from "../../../shared/lib/lazyImportWithRetry";
 import { useSearch } from "../../../contexts/SearchContext";
 import { APP_ROUTE_PATHS } from "../routeConfig";
+import { LoadingState } from "../../../shared/ui/loading-state";
+import { useLocation } from "react-router-dom";
+import { buildCurrentPath } from "../../../shared/lib/backNavigation";
 
-const AllPostsPage = lazy(() =>
-  import("../../../features/marketplace/pages/AllPostsPage").then((m) => ({
-    default: m.AllPostsPage,
-  })),
+const AllPostsPage = lazy(
+  lazyImportWithRetry(
+    () =>
+      import("../../../features/marketplace/pages/AllPostsPage").then((m) => ({
+        default: m.AllPostsPage,
+      })),
+    "lazy-import-retry:all-posts-page",
+  ),
 );
-const SearchResultsPage = lazy(() =>
-  import("../../../features/marketplace/pages/SearchResultsPage").then((m) => ({
-    default: m.SearchResultsPage,
-  })),
+const SearchResultsPage = lazy(
+  lazyImportWithRetry(
+    () =>
+      import("../../../features/marketplace/pages/SearchResultsPage").then(
+        (m) => ({
+          default: m.SearchResultsPage,
+        }),
+      ),
+    "lazy-import-retry:search-results-page",
+  ),
+);
+const CategoryRouteWrapper = lazy(
+  lazyImportWithRetry(
+    () =>
+      import("../CategoryRouteWrapper").then((m) => ({
+        default: m.CategoryRouteWrapper,
+      })),
+    "lazy-import-retry:category-route-wrapper",
+  ),
 );
 
 function AllPostsMarketplaceRouteScreen() {
+  const location = useLocation();
   const {
     appProps,
     navigate,
@@ -31,19 +54,21 @@ function AllPostsMarketplaceRouteScreen() {
       onBack={() => navigate(APP_ROUTE_PATHS.home)}
       language={appProps.language}
       posts={sharedPostRouteProps.availablePosts}
-      onPostClick={(id) => navigateToPost(id, "/posts")}
+      onPostClick={(id) =>
+        navigateToPost(id, buildCurrentPath(location.pathname, location.search))
+      }
       favoriteIds={sharedPostRouteProps.favoriteIds}
       onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
       isAuthenticated={sharedUserRouteProps.isAuthenticated}
       darkMode={appProps.darkMode}
       currentUserId={sharedUserRouteProps.currentUserId}
-      currentUserDisplayName={sharedUserRouteProps.currentUserDisplayName}
       onRequireAuth={promptLoginModal}
     />
   );
 }
 
 function SearchResultsMarketplaceRouteScreen() {
+  const location = useLocation();
   const {
     appProps,
     navigate,
@@ -60,13 +85,14 @@ function SearchResultsMarketplaceRouteScreen() {
       searchQuery={activeSearchQuery}
       posts={sharedPostRouteProps.availablePosts}
       onBack={() => navigate(APP_ROUTE_PATHS.home)}
-      onPostClick={(id) => navigateToPost(id, "/search")}
+      onPostClick={(id) =>
+        navigateToPost(id, buildCurrentPath(location.pathname, location.search))
+      }
       language={appProps.language}
       favoriteIds={sharedPostRouteProps.favoriteIds}
       onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
       isAuthenticated={sharedUserRouteProps.isAuthenticated}
       currentUserId={sharedUserRouteProps.currentUserId}
-      currentUserDisplayName={sharedUserRouteProps.currentUserDisplayName}
       onRequireAuth={promptLoginModal}
       onSearch={(newQuery) => {
         setActiveSearchQuery(newQuery);
@@ -77,6 +103,7 @@ function SearchResultsMarketplaceRouteScreen() {
 }
 
 function CategoryMarketplaceRouteScreen() {
+  const location = useLocation();
   const {
     appProps,
     navigate,
@@ -87,18 +114,22 @@ function CategoryMarketplaceRouteScreen() {
   } = useMarketplaceRouteContext();
 
   return (
-    <CategoryRouteWrapper
-      language={appProps.language}
-      isAuthenticated={sharedUserRouteProps.isAuthenticated}
-      currentUserId={sharedUserRouteProps.currentUserId}
-      currentUserDisplayName={sharedUserRouteProps.currentUserDisplayName}
-      availablePosts={sharedPostRouteProps.availablePosts}
-      favoriteIds={sharedPostRouteProps.favoriteIds}
-      onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
-      onBack={() => navigate(APP_ROUTE_PATHS.home)}
-      onOpenPost={(id) => navigateToPost(id, "/category")}
-      onRequireAuth={promptLoginModal}
-    />
+    <Suspense fallback={<LoadingState minHeightClassName="min-h-96" />}>
+      <CategoryRouteWrapper
+        language={appProps.language}
+        isAuthenticated={sharedUserRouteProps.isAuthenticated}
+        currentUserId={sharedUserRouteProps.currentUserId}
+        availablePosts={sharedPostRouteProps.availablePosts}
+        isLoadingPosts={sharedPostRouteProps.isLoadingPosts}
+        favoriteIds={sharedPostRouteProps.favoriteIds}
+        onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
+        onBack={() => navigate(APP_ROUTE_PATHS.home)}
+        onOpenPost={(id) =>
+          navigateToPost(id, buildCurrentPath(location.pathname, location.search))
+        }
+        onRequireAuth={promptLoginModal}
+      />
+    </Suspense>
   );
 }
 

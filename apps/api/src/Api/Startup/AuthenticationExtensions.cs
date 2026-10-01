@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -10,28 +11,18 @@ namespace TijarahJo.Api.Startup;
 
 public static class AuthenticationExtensions
 {
-    private static bool HasAdminAccessClaim(System.Security.Claims.ClaimsPrincipal user)
-        => user.HasClaim(PermissionClaimTypes.AdminAccess, "true")
-           || user.IsInRole(AppRoles.Admin);
-
-    private static bool HasPermission(
-        System.Security.Claims.ClaimsPrincipal user,
-        string permissionKey)
-        => user.IsInRole(AppRoles.Admin)
-           || user.HasClaim(PermissionClaimTypes.Permission, permissionKey);
-
     private static Action<AuthorizationPolicyBuilder> RequireAdminAccess()
         => policy =>
         {
             policy.RequireAuthenticatedUser();
-            policy.RequireAssertion(context => HasAdminAccessClaim(context.User));
+            policy.RequireAssertion(context => AuthorizationPrincipalHelpers.HasAdminAccess(context.User));
         };
 
     private static Action<AuthorizationPolicyBuilder> RequirePermission(string permissionKey)
         => policy =>
         {
             policy.RequireAuthenticatedUser();
-            policy.RequireAssertion(context => HasPermission(context.User, permissionKey));
+            policy.RequireAssertion(context => AuthorizationPrincipalHelpers.HasPermission(context.User, permissionKey));
         };
 
     public static IServiceCollection AddTijarahJoAuthentication(
@@ -120,39 +111,14 @@ public static class AuthenticationExtensions
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
 
                 ValidateLifetime = true,
-                ClockSkew = TimeSpan.FromSeconds(30) // Small tolerance for clock drift between servers
+                ClockSkew = TimeSpan.FromSeconds(30), // Small tolerance for clock drift between servers
+                NameClaimType = ClaimTypes.NameIdentifier,
+                RoleClaimType = ClaimTypes.Role,
             };
 
             options.Events = new JwtBearerEvents
             {
-                OnTokenValidated = async context =>
-                {
-                    var blacklistService = context.HttpContext.RequestServices.GetRequiredService<TijarahJo.Application.Abstractions.Services.ITokenBlacklistService>();
-                    var principal = context.Principal;
-                    if (principal == null) return;
 
-                    string? jti = principal.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Jti)?.Value;
-                    if (!string.IsNullOrEmpty(jti) && await blacklistService.IsBlacklistedAsync(jti, context.HttpContext.RequestAborted))
-                    {
-                        context.Fail("Token is blacklisted.");
-                        return;
-                    }
-
-                    string? userIdClaim = principal.FindFirst("userId")?.Value ?? principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-                    if (int.TryParse(userIdClaim, out int userId))
-                    {
-                        string? iatClaim = principal.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Iat)?.Value;
-                        if (long.TryParse(iatClaim, out long iatUnix))
-                        {
-                            var iat = DateTimeOffset.FromUnixTimeSeconds(iatUnix);
-                            if (await blacklistService.IsUserSessionInvalidatedAsync(userId, iat, context.HttpContext.RequestAborted))
-                            {
-                                context.Fail("User session was invalidated.");
-                                return;
-                            }
-                        }
-                    }
-                },
                 OnMessageReceived = context =>
                 {
                     if (string.IsNullOrWhiteSpace(context.Token))
@@ -174,7 +140,8 @@ public static class AuthenticationExtensions
             .AddPolicy(AuthorizationPolicies.AdminOnly, policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireRole(AppRoles.Admin);
+                policy.RequireAssertion(context =>
+                    AuthorizationPrincipalHelpers.IsAdminRole(context.User));
             })
             .AddPolicy(AuthorizationPolicies.AdminAccess, RequireAdminAccess())
             .AddPolicy(AuthorizationPolicies.UsersView, RequirePermission(PermissionKeys.UsersView))
@@ -187,12 +154,10 @@ public static class AuthenticationExtensions
             .AddPolicy(AuthorizationPolicies.ReviewsModerate, RequirePermission(PermissionKeys.ReviewsModerate))
             .AddPolicy(AuthorizationPolicies.ReportsView, RequirePermission(PermissionKeys.ReportsView))
             .AddPolicy(AuthorizationPolicies.ReportsResolve, RequirePermission(PermissionKeys.ReportsResolve))
-            .AddPolicy(AuthorizationPolicies.ChatView, RequirePermission(PermissionKeys.ChatView))
             .AddPolicy(AuthorizationPolicies.LocationsManage, RequirePermission(PermissionKeys.LocationsManage))
             .AddPolicy(AuthorizationPolicies.BannersManage, RequirePermission(PermissionKeys.BannersManage))
             .AddPolicy(AuthorizationPolicies.SettingsManage, RequirePermission(PermissionKeys.SettingsManage))
             .AddPolicy(AuthorizationPolicies.AuditView, RequirePermission(PermissionKeys.AuditView))
-            .AddPolicy(AuthorizationPolicies.FraudView, RequirePermission(PermissionKeys.FraudView))
             .AddPolicy(AuthorizationPolicies.RolesManage, RequirePermission(PermissionKeys.RolesManage))
             .AddPolicy(AuthorizationPolicies.CategoriesManage, RequirePermission(PermissionKeys.CategoriesManage));
 

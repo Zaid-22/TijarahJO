@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Api.Common.Configuration;
+using TijarahJo.Api.Common.Authorization;
 using TijarahJo.Api.Common.Services;
 using TijarahJo.Api.Common.Utils;
 using TijarahJo.Api.Contracts.Requests;
@@ -14,42 +15,26 @@ namespace TijarahJo.Api.Features.Posts;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/post-images")]
-public class PostImagesController : ControllerBase
+public class PostImagesController(
+    ILogger<PostImagesController> logger,
+    IPostImageQueryHandler postImageQueries,
+    IPostImageCommandService postImageCommands,
+    IPostImageFileStorageService postImageStorage,
+    IImageModerationService imageModeration,
+    IWebHostEnvironment environment,
+    IOptions<FileStorageOptions> fileStorageOptions) : ControllerBase
 {
-    private readonly ILogger<PostImagesController> _logger;
-    private readonly IPostImageQueryHandler _postImageQueries;
-    private readonly IPostImageCommandService _postImageCommands;
-    private readonly IPostImageFileStorageService _postImageStorage;
-    private readonly IImageModerationService _imageModeration;
-    private readonly IWebHostEnvironment _environment;
-    private readonly FileStorageOptions _fileStorageOptions;
-
-    public PostImagesController(
-        ILogger<PostImagesController> logger,
-        IPostImageQueryHandler postImageQueries,
-        IPostImageCommandService postImageCommands,
-        IPostImageFileStorageService postImageStorage,
-        IImageModerationService imageModeration,
-        IWebHostEnvironment environment,
-        IOptions<FileStorageOptions> fileStorageOptions)
-    {
-        _logger = logger;
-        _postImageQueries = postImageQueries;
-        _postImageCommands = postImageCommands;
-        _postImageStorage = postImageStorage;
-        _imageModeration = imageModeration;
-        _environment = environment;
-        _fileStorageOptions = fileStorageOptions.Value;
-    }
+    private readonly FileStorageOptions _fileStorageOptions = fileStorageOptions.Value;
 
     [HttpGet("")]
+    [Authorize(Policy = AuthorizationPolicies.PostsView)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IEnumerable<PostImageResponseDTO>>> GetAllPostImages(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50)
     {
-        PostImageListQueryResult result = await _postImageQueries.GetAllAsync(page, pageSize, HttpContext.RequestAborted);
+        PostImageListQueryResult result = await postImageQueries.GetAllAsync(page, pageSize, HttpContext.RequestAborted);
         if (!result.Success)
         {
             return this.ToPostImageListQueryProblem(result, "Failed to fetch post images.");
@@ -57,49 +42,52 @@ public class PostImagesController : ControllerBase
 
         if (result.PostImages.Count == 0)
         {
-            return Ok(new List<PostImageResponseDTO>());
+            return Ok(Array.Empty<PostImageResponseDTO>());
         }
 
-        List<PostImageResponseDTO> dtoList = result.PostImages
+        List<PostImageResponseDTO> dtoList = [.. result.PostImages
             .Select(postImage => DTOMapper.ToPostImageResponseDTO(
                 postImage,
-                _environment.ContentRootPath,
-                _fileStorageOptions))
-            .ToList();
+                environment.ContentRootPath,
+                _fileStorageOptions))];
 
-        _logger.LogDebug("Returning {Count} non-deleted post images.", dtoList.Count);
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("Returning {Count} non-deleted post images.", dtoList.Count);
+        }
         return Ok(dtoList);
     }
 
     [HttpGet("post/{postId:int}")]
+    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<PostImageResponseDTO>>> GetPostImagesByPostId(int postId)
     {
-        PostImageListQueryResult result = await _postImageQueries.GetByPostIdAsync(postId, HttpContext.RequestAborted);
+        PostImageListQueryResult result = await postImageQueries.GetByPostIdAsync(postId, HttpContext.RequestAborted);
         if (!result.Success)
         {
             return this.ToPostImageListQueryProblem(result, "Failed to fetch post images.");
         }
 
-        List<PostImageResponseDTO> images = result.PostImages
+        List<PostImageResponseDTO> images = [.. result.PostImages
             .Select(postImage => DTOMapper.ToPostImageResponseDTO(
                 postImage,
-                _environment.ContentRootPath,
-                _fileStorageOptions))
-            .ToList();
+                environment.ContentRootPath,
+                _fileStorageOptions))];
 
         return Ok(images);
     }
 
     [HttpGet("{id:int}")]
+    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<PostImageResponseDTO>> GetPostImageById(int id)
     {
-        PostImageByIdQueryResult result = await _postImageQueries.GetByIdAsync(id, HttpContext.RequestAborted);
+        PostImageByIdQueryResult result = await postImageQueries.GetByIdAsync(id, HttpContext.RequestAborted);
         if (!result.Success || result.PostImage == null)
         {
             return this.ToPostImageByIdQueryProblem(result, "Failed to fetch post image.");
@@ -107,7 +95,7 @@ public class PostImagesController : ControllerBase
 
         return Ok(DTOMapper.ToPostImageResponseDTO(
             result.PostImage,
-            _environment.ContentRootPath,
+            environment.ContentRootPath,
             _fileStorageOptions));
     }
 
@@ -122,7 +110,7 @@ public class PostImagesController : ControllerBase
             return failureResult!;
         }
 
-        PostImageCommandResult result = await _postImageCommands.CreateAsync(
+        PostImageCommandResult result = await postImageCommands.CreateAsync(
             currentUserId,
             ApiControllerHelpers.IsAdminUser(User),
             request.PostID,
@@ -132,7 +120,7 @@ public class PostImagesController : ControllerBase
         );
         if (!result.Success || result.PostImage == null)
         {
-            _logger.LogWarning("Post image creation failed for PostID {PostId}. Reason: {Reason}", request.PostID, result.FailureReason);
+            logger.LogWarning("Post image creation failed for PostID {PostId}. Reason: {Reason}", request.PostID, result.FailureReason);
             return this.ToPostImageCommandProblem(result, "Post image creation failed.");
         }
 
@@ -141,9 +129,48 @@ public class PostImagesController : ControllerBase
             new { id = result.PostImage.PostImageID },
             DTOMapper.ToPostImageResponseDTO(
                 result.PostImage.PostImageModel,
-                _environment.ContentRootPath,
+                environment.ContentRootPath,
                 _fileStorageOptions)
         );
+    }
+
+    [Authorize]
+    [HttpPost("validate")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<ActionResult> ValidatePostImage([FromForm] ValidatePostImageRequest request)
+    {
+        if (request.File == null)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Image file is required.");
+        }
+
+        try
+        {
+            postImageStorage.ValidateFileOrThrow(request.File);
+        }
+        catch (ArgumentException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: ex.Message);
+        }
+
+        ModerationResult moderationResult = await imageModeration.CheckImageAsync(request.File);
+        if (moderationResult.IsUnavailable)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                detail: moderationResult.FailureReason ?? "Image moderation service is unavailable."
+            );
+        }
+
+        if (moderationResult.IsFlagged)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Image rejected by moderation filters (inappropriate content detected).");
+        }
+
+        return Ok(new { Safe = true });
     }
 
     [Authorize]
@@ -167,14 +194,14 @@ public class PostImagesController : ControllerBase
 
         try
         {
-            _postImageStorage.ValidateFileOrThrow(request.File);
+            postImageStorage.ValidateFileOrThrow(request.File);
         }
         catch (ArgumentException ex)
         {
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: ex.Message);
         }
 
-        ModerationResult moderationResult = await _imageModeration.CheckImageAsync(request.File);
+        ModerationResult moderationResult = await imageModeration.CheckImageAsync(request.File);
         if (moderationResult.IsUnavailable)
         {
             return Problem(
@@ -185,21 +212,21 @@ public class PostImagesController : ControllerBase
 
         if (moderationResult.IsFlagged)
         {
-            _logger.LogWarning("User {UserId} attempted to upload a flagged image (Adult: {Adult}, Violence: {Violence}).", currentUserId, moderationResult.RawAdult, moderationResult.RawViolence);
+            logger.LogWarning("User {UserId} attempted to upload a flagged image (Adult: {Adult}, Violence: {Violence}).", currentUserId, moderationResult.RawAdult, moderationResult.RawViolence);
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Image rejected by moderation filters (inappropriate content detected).");
         }
 
         StoredPostImageFile storedFile;
         try
         {
-            storedFile = await _postImageStorage.SaveAsync(request.File, HttpContext.RequestAborted);
+            storedFile = await postImageStorage.SaveAsync(request.File, HttpContext.RequestAborted);
         }
         catch (ArgumentException ex)
         {
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: ex.Message);
         }
 
-        PostImageCommandResult result = await _postImageCommands.CreateAsync(
+        PostImageCommandResult result = await postImageCommands.CreateAsync(
             currentUserId,
             ApiControllerHelpers.IsAdminUser(User),
             request.PostID,
@@ -209,8 +236,8 @@ public class PostImagesController : ControllerBase
         );
         if (!result.Success || result.PostImage == null)
         {
-            await _postImageStorage.DeleteByPublicUrlAsync(storedFile.PublicUrl, HttpContext.RequestAborted);
-            _logger.LogWarning(
+            await postImageStorage.DeleteByPublicUrlAsync(storedFile.PublicUrl, HttpContext.RequestAborted);
+            logger.LogWarning(
                 "Post image upload failed to persist metadata for PostID {PostId}. Reason: {Reason}",
                 request.PostID,
                 result.FailureReason
@@ -220,7 +247,7 @@ public class PostImagesController : ControllerBase
 
         PostImageResponseDTO postImageDto = DTOMapper.ToPostImageResponseDTO(
             result.PostImage.PostImageModel,
-            _environment.ContentRootPath,
+            environment.ContentRootPath,
             _fileStorageOptions);
         return CreatedAtAction(
             nameof(GetPostImageById),
@@ -250,7 +277,7 @@ public class PostImagesController : ControllerBase
             return failureResult!;
         }
 
-        PostImageCommandResult result = await _postImageCommands.UpdateAsync(
+        PostImageCommandResult result = await postImageCommands.UpdateAsync(
             currentUserId,
             ApiControllerHelpers.IsAdminUser(User),
             id,
@@ -261,13 +288,13 @@ public class PostImagesController : ControllerBase
         );
         if (!result.Success || result.PostImage == null)
         {
-            _logger.LogWarning("Post image update failed for PostImageID {PostImageId}. Reason: {Reason}", id, result.FailureReason);
+            logger.LogWarning("Post image update failed for PostImageID {PostImageId}. Reason: {Reason}", id, result.FailureReason);
             return this.ToPostImageCommandProblem(result, "Post image update failed.");
         }
 
         return Ok(DTOMapper.ToPostImageResponseDTO(
             result.PostImage.PostImageModel,
-            _environment.ContentRootPath,
+            environment.ContentRootPath,
             _fileStorageOptions));
     }
 
@@ -288,7 +315,7 @@ public class PostImagesController : ControllerBase
             return failureResult!;
         }
 
-        PostImageCommandResult result = await _postImageCommands.DeleteAsync(
+        PostImageCommandResult result = await postImageCommands.DeleteAsync(
             currentUserId,
             ApiControllerHelpers.IsAdminUser(User),
             id,
@@ -296,7 +323,7 @@ public class PostImagesController : ControllerBase
         );
         if (!result.Success)
         {
-            _logger.LogWarning("Post image deletion failed for PostImageID {PostImageId}. Reason: {Reason}", id, result.FailureReason);
+            logger.LogWarning("Post image deletion failed for PostImageID {PostImageId}. Reason: {Reason}", id, result.FailureReason);
             return this.ToPostImageCommandProblem(result, "Post image deletion failed.");
         }
 
@@ -304,11 +331,12 @@ public class PostImagesController : ControllerBase
     }
 
     [HttpGet("Exists/{id:int}")]
+    [Authorize(Policy = AuthorizationPolicies.PostsView)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<bool>> DoesPostImageExist(int id)
     {
-        PostImageExistsQueryResult result = await _postImageQueries.ExistsAsync(id, HttpContext.RequestAborted);
+        PostImageExistsQueryResult result = await postImageQueries.ExistsAsync(id, HttpContext.RequestAborted);
         if (!result.Success)
         {
             return this.ToPostImageExistsQueryProblem(result, "Failed to check post image existence.");

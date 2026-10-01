@@ -31,6 +31,7 @@ type ParsedAuthEnvelope = {
   user: ParsedAuthUser | null;
   requiresTwoFactor: boolean;
   twoFactorToken?: string;
+  requiresEmailVerification: boolean;
 };
 
 function parseAuthUser(value: unknown): ParsedAuthUser | null {
@@ -87,11 +88,17 @@ export function parseAuthEnvelope(payload: unknown): ParsedAuthEnvelope | null {
     readString(payloadRecord.TwoFactorToken ?? payloadRecord.twoFactorToken) ||
     undefined;
 
+  const requiresEmailVerification = toBoolean(
+    payloadRecord.RequiresEmailVerification ?? payloadRecord.requiresEmailVerification,
+    false,
+  );
+
   return {
     successFlag,
     message,
     user: parseAuthUser(payloadRecord.User ?? payloadRecord.user),
     requiresTwoFactor,
     twoFactorToken,
+    requiresEmailVerification,
   };
 }

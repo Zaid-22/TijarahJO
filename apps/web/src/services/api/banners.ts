@@ -1,5 +1,10 @@
 import { apiRequest, debugError } from "./client";
 import { toCamelCaseKeys } from "./admin";
+import { APP_CONFIG } from "../../constants/appConfig";
+
+// In-flight deduplication — prevents duplicate /banners requests when multiple
+// components mount at the same time before the first response arrives.
+let _bannersInflight: Promise<BannerModel[] | null> | null = null;
 
 export type BannerModel = {
   bannerID: number;
@@ -26,26 +31,61 @@ export type HeroBannerListResult = {
   banners: BannerModel[];
 };
 
+export function normalizeBannerImageUrl(imageUrl: string): string {
+  const trimmed = imageUrl.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  if (trimmed.startsWith("/uploads/")) {
+    return `${APP_CONFIG.backendHostUrl}${trimmed}`;
+  }
+
+  if (trimmed.startsWith("uploads/")) {
+    const backendHost = APP_CONFIG.backendHostUrl.endsWith("/")
+      ? APP_CONFIG.backendHostUrl.slice(0, -1)
+      : APP_CONFIG.backendHostUrl;
+    return `${backendHost}/${trimmed}`;
+  }
+
+  return trimmed;
+}
+
 export const bannersApi = {
   /**
    * Fetch all active hero banners for the homepage
    */
-  getActiveBanners: async (): Promise<BannerModel[]> => {
-    try {
-      const response = await apiRequest<HeroBannerListResult>("/banners", {
-        method: "GET",
-      });
-
-      if (response.success && response.data) {
-        const data = toCamelCaseKeys<HeroBannerListResult>(response.data);
-        if (data.success && data.banners) {
-          return data.banners;
-        }
-      }
-      return [];
-    } catch (error) {
-      debugError("Failed to fetch active banners:", error);
-      return [];
+  getActiveBanners: async (): Promise<BannerModel[] | null> => {
+    // Deduplicate: if another component already triggered this fetch, share the promise.
+    if (_bannersInflight) {
+      return _bannersInflight;
     }
+
+    const promise = (async () => {
+      try {
+        const response = await apiRequest<HeroBannerListResult>("/banners", {
+          method: "GET",
+        });
+
+        if (response.success && response.data) {
+          const data = toCamelCaseKeys<HeroBannerListResult>(response.data);
+          if (data.success && data.banners) {
+            return data.banners.map((banner) => ({
+              ...banner,
+              imageUrl: normalizeBannerImageUrl(banner.imageUrl),
+            }));
+          }
+        }
+        return null;
+      } catch (error) {
+        debugError("Failed to fetch active banners:", error);
+        return null;
+      }
+    })().finally(() => {
+      _bannersInflight = null;
+    });
+
+    _bannersInflight = promise;
+    return promise;
   },
 };

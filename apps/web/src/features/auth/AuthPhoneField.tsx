@@ -44,6 +44,7 @@ export function AuthPhoneField({
   isRTL = false,
 }: AuthPhoneFieldProps) {
   const labelId = `${id}-label`;
+  const errorId = `${id}-error`;
   const isActive = focused || value.length > 0;
   const iconContainerClassName = "";
   const iconClassName = isActive ? "text-primary" : "text-muted-foreground";
@@ -80,7 +81,12 @@ export function AuthPhoneField({
         htmlFor={id}
         className={`text-sm text-foreground block w-full ${isRTL ? "text-right" : "text-left"}`}
       >
-        {label} {required && <span className="text-destructive">*</span>}
+        {label}{" "}
+        {required && (
+          <span className="text-destructive" aria-hidden="true">
+            *
+          </span>
+        )}
       </label>
 
       <div className="relative flex items-center w-full">
@@ -108,6 +114,10 @@ export function AuthPhoneField({
           id={id}
           name={name}
           aria-labelledby={labelId}
+          aria-describedby={error ? errorId : undefined}
+          aria-invalid={Boolean(error)}
+          aria-errormessage={error ? errorId : undefined}
+          required={required}
           type="tel"
           autoComplete={autoComplete || "tel"}
           dir="ltr"
@@ -132,7 +142,9 @@ export function AuthPhoneField({
 
       {error && (
         <p
+          id={errorId}
           className={`mt-1 text-xs text-destructive ${isRTL ? "text-right" : "text-left"}`}
+          role="alert"
         >
           {error}
         </p>

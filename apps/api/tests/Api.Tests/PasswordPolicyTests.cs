@@ -8,7 +8,7 @@ public sealed class PasswordPolicyTests
     [InlineData("")]
     [InlineData(" ")]
     [InlineData(null)]
-    public void IsPasswordPolicyCompliant_ReturnsFalse_WhenNullOrWhitespace(string password)
+    public void IsPasswordPolicyCompliant_ReturnsFalse_WhenNullOrWhitespace(string? password)
     {
         var (isValid, _) = PasswordHelper.IsPasswordPolicyCompliant(password);
         Assert.False(isValid);

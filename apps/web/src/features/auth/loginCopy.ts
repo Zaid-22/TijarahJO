@@ -19,6 +19,8 @@ export interface LoginCopy {
     areaPlaceholder: string;
     identifierLabel: string;
     identifierPlaceholder: string;
+    identifierSignUpLabel: string;
+    identifierSignUpPlaceholder: string;
     passwordLabel: string;
     passwordPlaceholder: string;
     confirmPasswordLabel: string;
@@ -41,6 +43,9 @@ export interface LoginCopy {
     twoFactorSubtitle: string;
     twoFactorCodeLabel: string;
     twoFactorCodePlaceholder: string;
+    twoFactorResendPrompt: string;
+    twoFactorResendAction: string;
+    twoFactorResending: string;
     verifyTwoFactorButton: string;
     verifyingTwoFactor: string;
     cancelTwoFactor: string;
@@ -53,6 +58,7 @@ export interface LoginCopy {
     unexpected: string;
     duplicateHintSuffix: string;
     signUpInvalidIdentifierPrompt: string;
+    signUpIdentifierMustBeEmail: string;
     signUpInvalidPhonePrompt: string;
     signUpCityRequiredPrompt: string;
     signUpAreaRequiredPrompt: string;
@@ -73,7 +79,7 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       signInTitle: "Sign In",
       signUpSubtitle:
         "Create your TijarahJo account to start buying and selling",
-      signInSubtitle: "Sign in to access your TijarahJo account",
+      signInSubtitle: "",
       firstNameLabel: "First Name",
       firstNamePlaceholder: "First name",
       lastNameLabel: "Last Name",
@@ -86,6 +92,8 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       areaPlaceholder: "Area",
       identifierLabel: "Email or Phone",
       identifierPlaceholder: "Email address or phone number",
+      identifierSignUpLabel: "Email Address",
+      identifierSignUpPlaceholder: "your@email.com",
       passwordLabel: "Password",
       passwordPlaceholder: "Password",
       confirmPasswordLabel: "Confirm Password",
@@ -107,7 +115,10 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       twoFactorTitle: "Two-Factor Verification",
       twoFactorSubtitle: "Enter the 6-digit code sent to your email.",
       twoFactorCodeLabel: "Verification Code",
-      twoFactorCodePlaceholder: "123456",
+      twoFactorCodePlaceholder: "",
+      twoFactorResendPrompt: "Didn't get the code?",
+      twoFactorResendAction: "Resend it",
+      twoFactorResending: "Resending...",
       verifyTwoFactorButton: "Verify Code",
       verifyingTwoFactor: "Verifying...",
       cancelTwoFactor: "Back to Sign In",
@@ -116,19 +127,20 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       tapToUpload: "Tap to upload",
     },
     errors: {
-      backendConnection:
-        "Cannot connect to backend. Please make sure the backend is running on",
+      backendConnection: "Unable to connect to the server. Please try again later.",
       unexpected: "An unexpected error occurred. Please try again.",
       duplicateHintSuffix:
         "Try using different credentials, or switch to sign in if you already have an account.",
       signUpInvalidIdentifierPrompt:
         "Please enter a valid email address or Jordanian phone number.",
+      signUpIdentifierMustBeEmail:
+        "Please enter your email address here. Use the Phone Number field below for your phone.",
       signUpInvalidPhonePrompt:
         "Please enter a valid Jordanian phone number starting with 077, 078, or 079.",
       signUpCityRequiredPrompt: "Please enter your city.",
       signUpAreaRequiredPrompt: "Please enter your area.",
       registrationFailedFallback: "Registration failed. Please try again.",
-      loginFailedFallback: "Invalid email or password. Please try again.",
+      loginFailedFallback: "Invalid email, phone number, or password.",
       googleAuthFailedFallback: "Google sign-in failed. Please try again.",
       twoFactorRequiredPrompt:
         "Two-factor verification is required. Enter the code sent to your email.",
@@ -139,6 +151,8 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
     validation: {
       identifierRequired: "Email or phone is required",
       identifierInvalid: "Enter a valid email or Jordanian phone number",
+      emailRequired: "Email address is required",
+      emailInvalid: "Enter a valid email address",
       passwordRequired: "Password is required",
       passwordMinLength: "Password must be at least 8 characters",
       passwordUppercase: "Password must contain at least one uppercase letter",
@@ -161,7 +175,7 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       signUpTitle: "إنشاء حساب",
       signInTitle: "تسجيل الدخول",
       signUpSubtitle: "أنشئ حسابك في تجارة جو لبدء البيع والشراء",
-      signInSubtitle: "سجّل الدخول للوصول إلى حسابك في تجارة جو",
+      signInSubtitle: "",
       firstNameLabel: "الاسم الأول",
       firstNamePlaceholder: "الاسم الأول",
       lastNameLabel: "اسم العائلة",
@@ -174,6 +188,8 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       areaPlaceholder: "المنطقة",
       identifierLabel: "البريد الإلكتروني أو الهاتف",
       identifierPlaceholder: "البريد الإلكتروني أو رقم الهاتف",
+      identifierSignUpLabel: "البريد الإلكتروني",
+      identifierSignUpPlaceholder: "your@email.com",
       passwordLabel: "كلمة المرور",
       passwordPlaceholder: "كلمة المرور",
       confirmPasswordLabel: "تأكيد كلمة المرور",
@@ -196,7 +212,10 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       twoFactorSubtitle:
         "أدخل رمز التحقق المكوّن من 6 أرقام المرسل إلى بريدك الإلكتروني.",
       twoFactorCodeLabel: "رمز التحقق",
-      twoFactorCodePlaceholder: "123456",
+      twoFactorCodePlaceholder: "",
+      twoFactorResendPrompt: "لم يصلك الرمز؟",
+      twoFactorResendAction: "إعادة الإرسال",
+      twoFactorResending: "جارٍ الإرسال...",
       verifyTwoFactorButton: "تأكيد الرمز",
       verifyingTwoFactor: "جارٍ التحقق...",
       cancelTwoFactor: "العودة لتسجيل الدخول",
@@ -205,20 +224,21 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       tapToUpload: "انقر للتحميل",
     },
     errors: {
-      backendConnection:
-        "لا يمكن الاتصال بالخادم الخلفي. تأكد من تشغيل الخادم على",
+      backendConnection: "فشل الاتصال بالخادم. يرجى المحاولة مرة أخرى لاحقاً.",
       unexpected: "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
       duplicateHintSuffix:
         "جرّب بيانات اعتماد مختلفة، أو انتقل إلى تسجيل الدخول إذا كان لديك حساب بالفعل.",
       signUpInvalidIdentifierPrompt:
         "يرجى إدخال بريد إلكتروني صالح أو رقم هاتف أردني صالح.",
+      signUpIdentifierMustBeEmail:
+        "يرجى إدخال بريدك الإلكتروني هنا. استخدم حقل رقم الهاتف أدناه لإدخال هاتفك.",
       signUpInvalidPhonePrompt:
         "يرجى إدخال رقم هاتف متوافق يبدأ بـ 77 أو 78 أو 79.",
       signUpCityRequiredPrompt: "يرجى إدخال المدينة.",
       signUpAreaRequiredPrompt: "يرجى إدخال المنطقة.",
       registrationFailedFallback: "فشل إنشاء الحساب. يرجى المحاولة مرة أخرى.",
       loginFailedFallback:
-        "البريد الإلكتروني أو كلمة المرور غير صحيحة. يرجى المحاولة مرة أخرى.",
+        "البريد الإلكتروني أو رقم الهاتف أو كلمة المرور غير صحيحة.",
       googleAuthFailedFallback:
         "فشل تسجيل الدخول عبر Google. يرجى المحاولة مرة أخرى.",
       twoFactorRequiredPrompt:
@@ -231,6 +251,8 @@ const loginCopyByLanguage: Record<Language, LoginCopy> = {
       identifierRequired: "البريد الإلكتروني أو الهاتف مطلوب",
       identifierInvalid:
         "أدخل بريدًا إلكترونيًا صالحًا أو رقم هاتف أردني صالحًا",
+      emailRequired: "البريد الإلكتروني مطلوب",
+      emailInvalid: "أدخل بريدًا إلكترونيًا صالحًا",
       passwordRequired: "كلمة المرور مطلوبة",
       passwordMinLength: "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل",
       passwordUppercase: "يجب أن تحتوي كلمة المرور على حرف كبير واحد على الأقل",

@@ -1,5 +1,5 @@
-import { useState, type KeyboardEvent } from "react";
-import { Search, X } from "lucide-react";
+import { useRef, type KeyboardEvent } from "react";
+import { Search } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
 import { cn } from "../../../shared/ui/utils";
@@ -7,6 +7,7 @@ import { cn } from "../../../shared/ui/utils";
 interface MarketplaceSearchFieldProps {
   value: string;
   placeholder: string;
+  ariaLabel?: string;
   clearLabel: string;
   onChange: (value: string) => void;
   onSubmit?: (value: string) => void;
@@ -19,20 +20,14 @@ interface MarketplaceSearchFieldProps {
   inputClassName?: string;
   iconClassName?: string;
   clearButtonClassName?: string;
+  submitLabel?: string;
 }
-
-const INPUT_SIZE_CLASS: Record<
-  NonNullable<MarketplaceSearchFieldProps["size"]>,
-  string
-> = {
-  default: "h-14 rounded-2xl text-base",
-  compact: "h-12 rounded-full text-base",
-};
 
 export function MarketplaceSearchField({
   value,
   placeholder,
-  clearLabel,
+  ariaLabel,
+  submitLabel,
   onChange,
   onSubmit,
   id,
@@ -42,10 +37,9 @@ export function MarketplaceSearchField({
   size = "default",
   className,
   inputClassName,
-  iconClassName,
-  clearButtonClassName,
 }: MarketplaceSearchFieldProps) {
-  const [isFocused, setIsFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const effectiveSubmitLabel = submitLabel || (isRTL ? "بحث" : "Search");
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== "Enter" || !onSubmit) {
@@ -53,66 +47,63 @@ export function MarketplaceSearchField({
     }
 
     event.preventDefault();
-    onSubmit(value);
+    onSubmit(event.currentTarget.value);
+    inputRef.current?.blur();
   };
 
-  return (
-    <div
-      className={cn(
-        "relative group transition-all duration-300",
-        className,
-      )}
-    >
-      <Search
-        className={cn(
-          "absolute top-1/2 -translate-y-1/2 h-5 w-5 transition-colors duration-300",
-          isFocused
-            ? "text-primary"
-            : "text-muted-foreground group-hover:text-foreground/70",
-          isRTL ? "right-4" : "left-4",
-          iconClassName,
-        )}
-      />
+  const paddingClass = isRTL
+    ? size === "default"
+      ? "pr-4 pl-16 md:pl-32"
+      : "pr-4 pl-14 md:pl-28"
+    : size === "default"
+      ? "pl-4 pr-16 md:pr-32"
+      : "pl-4 pr-14 md:pr-28";
+  const submitButtonRadiusClass = isRTL
+    ? "rounded-l-[11px] rounded-r-none"
+    : "rounded-r-[11px] rounded-l-none";
 
+  return (
+    <div className={cn("relative group transition-all duration-300", className)}>
       <Input
+        ref={inputRef}
         id={id}
         name={name || "search"}
         autoComplete={autoComplete || "off"}
-        aria-label={placeholder}
+        aria-label={ariaLabel || placeholder}
         placeholder={placeholder}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={handleKeyDown}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
         className={cn(
-          "border border-border/30 bg-muted/20 shadow-sm backdrop-blur-xl hover:bg-muted/40 hover:border-border/60 hover:shadow-md text-foreground placeholder:text-muted-foreground/70 focus-visible:bg-background focus-visible:border-primary/60 focus-visible:ring-4 focus-visible:ring-primary/10 focus-visible:shadow-lg transition-all duration-300",
-          INPUT_SIZE_CLASS[size],
-          "px-12",
+          "border border-slate-200/50 bg-white/60 shadow-sm backdrop-blur-2xl hover:bg-white/80 hover:border-slate-300 hover:shadow-lg text-slate-900 placeholder:text-slate-400 focus-visible:bg-white focus-visible:border-primary/40 focus-visible:ring-[6px] focus-visible:ring-primary/5 focus-visible:shadow-xl transition-all duration-500 ease-out",
+          "dark:border-white/10 dark:bg-slate-900/60 dark:hover:bg-slate-800/80 dark:hover:border-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus-visible:bg-slate-900 dark:focus-visible:border-primary/40",
+          "h-14 rounded-xl text-base",
+          size === "compact" && "h-12",
+          paddingClass,
           inputClassName,
         )}
       />
 
-      {value ? (
+      <div
+        className={cn(
+          "absolute inset-y-px flex items-stretch",
+          isRTL ? "left-px" : "right-px",
+        )}
+      >
         <Button
           type="button"
-          variant="ghost"
           size="icon"
-          aria-label={clearLabel}
-          title={clearLabel}
-          onClick={() => {
-            onChange("");
-            onSubmit?.("");
-          }}
+          aria-label={effectiveSubmitLabel}
+          onClick={() => onSubmit?.(inputRef.current?.value ?? value)}
           className={cn(
-            "absolute top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-foreground",
-            isRTL ? "left-4" : "right-4",
-            clearButtonClassName,
+            "h-full w-12 bg-linear-to-b from-primary to-primary/90 px-0 font-bold text-primary-foreground shadow-none transition-all duration-300 hover:brightness-105 active:brightness-95 md:w-auto md:min-w-24 md:px-4",
+            submitButtonRadiusClass,
           )}
         >
-          <X className="h-5 w-5" />
+          <Search className="h-5 w-5 md:hidden" strokeWidth={2.5} />
+          <span className="hidden text-sm font-bold md:inline">{effectiveSubmitLabel}</span>
         </Button>
-      ) : null}
+      </div>
     </div>
   );
 }

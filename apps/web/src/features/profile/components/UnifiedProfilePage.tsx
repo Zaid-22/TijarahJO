@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { api } from "../../../services/api";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { SubpageHeader } from "../../../shared/ui/subpage-header";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -13,18 +12,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../../../shared/ui/alert-dialog";
+import { Button } from "../../../shared/ui/button";
 import { Dialog } from "../../../shared/ui/dialog";
 import { EditPostDialog } from "../../marketplace/components/EditPostDialog";
+import { ReportPostDialog } from "../../marketplace/components/ReportPostDialog";
 import { toPositiveIntegerId } from "../../../utils/idValidation";
 import type { Language } from "../../../translations";
 import type { Post, ViewMode } from "../../../types";
 import type { UpdatePostInput } from "../../../app/routes/usePostActions";
-import type { UnifiedProfileViewModel } from "../types";
-import { UnifiedProfileAboutCard } from "./UnifiedProfileAboutCard";
+import type { UnifiedProfileViewModel, UnifiedProfileReview } from "../types";
 import { UnifiedProfileHeaderCard } from "./UnifiedProfileHeaderCard";
 import { UnifiedProfileListingCard } from "./UnifiedProfileListingCard";
 import { UnifiedProfileTabs } from "./UnifiedProfileTabs";
 import { buildUnifiedProfileLabels } from "./unifiedProfileLabels";
+import { useLocationOptions } from "../../../shared/hooks/useLocationOptions";
 
 interface UnifiedProfilePageProps {
   language: Language;
@@ -33,7 +34,6 @@ interface UnifiedProfilePageProps {
   isAuthenticated: boolean;
   favoriteIds?: string[];
   currentUserId?: string;
-  currentUserDisplayName?: string;
   onBack: () => void;
   backLabel: string;
   title: string;
@@ -56,7 +56,6 @@ export function UnifiedProfilePage({
   isAuthenticated,
   favoriteIds = [],
   currentUserId,
-  currentUserDisplayName,
   onBack,
   backLabel,
   title,
@@ -74,12 +73,16 @@ export function UnifiedProfilePage({
   const isRTL = language === "ar";
   const dateLocale = isRTL ? "ar-JO" : "en-US";
   const labels = buildUnifiedProfileLabels(language);
+  const { cities, areas } = useLocationOptions(viewModel.profile.city || "", language);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [postToEdit, setPostToEdit] = useState<Post | null>(null);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
-  const listingViewMode: ViewMode = "grid-4";
+  const [isDeletingPost, setIsDeletingPost] = useState(false);
+  const [isReportUserOpen, setIsReportUserOpen] = useState(false);
+  const [reviewToReport, setReviewToReport] = useState<UnifiedProfileReview | null>(null);
+  const listingViewMode: ViewMode = "list";
 
   const averageRating =
     viewModel.reviews.length > 0
@@ -92,9 +95,9 @@ export function UnifiedProfilePage({
   const parsedJoinDate = viewModel.profile.joinedDate
     ? new Date(viewModel.profile.joinedDate)
     : null;
-  const joinYear =
+  const joinDateDisplay =
     parsedJoinDate && !Number.isNaN(parsedJoinDate.getTime())
-      ? parsedJoinDate.getFullYear()
+      ? new Intl.DateTimeFormat(dateLocale, { month: "short", year: "numeric" }).format(parsedJoinDate)
       : "2024";
 
   const handleReviewSubmit = async () => {
@@ -141,9 +144,20 @@ export function UnifiedProfilePage({
       return;
     }
 
-    await onDeletePost(postToDelete);
-    setPostToDelete(null);
-    await onReload?.();
+    setIsDeletingPost(true);
+    try {
+      await onDeletePost(postToDelete);
+      setPostToDelete(null);
+      try {
+        await onReload?.();
+      } catch {
+        // The deletion succeeded; a refresh failure must not reopen the dialog.
+      }
+    } catch {
+      // The route callback owns error feedback. Keep the confirmation open.
+    } finally {
+      setIsDeletingPost(false);
+    }
   };
 
   const handleUpdatePost = async (updatedPost: UpdatePostInput) => {
@@ -154,8 +168,49 @@ export function UnifiedProfilePage({
 
     await onUpdatePost(updatedPost);
     setPostToEdit(null);
-    await onReload?.();
+    try {
+      await onReload?.();
+    } catch {
+      // The authoritative mutation response is already applied elsewhere.
+    }
   };
+
+  const displayLocation = useMemo(() => {
+    if (!viewModel.profile.city && !viewModel.profile.area) {
+      return viewModel.profile.location || labels.jordan;
+    }
+
+    let localizedCity = viewModel.profile.city || "";
+    if (cities.length > 0 && localizedCity) {
+      const normalizedCity = localizedCity.trim().toLowerCase();
+      const cityObj = cities.find(
+        (c) =>
+          c.cityName.toLowerCase() === normalizedCity ||
+          (c.cityNameAr && c.cityNameAr.toLowerCase() === normalizedCity),
+      );
+      if (cityObj) {
+        localizedCity = language === "ar" && cityObj.cityNameAr ? cityObj.cityNameAr : cityObj.cityName;
+      }
+    }
+
+    let localizedArea = viewModel.profile.area || "";
+    if (areas.length > 0 && localizedArea) {
+      const normalizedArea = localizedArea.trim().toLowerCase();
+      const areaObj = areas.find(
+        (a) =>
+          a.areaName.toLowerCase() === normalizedArea ||
+          (a.areaNameAr && a.areaNameAr.toLowerCase() === normalizedArea),
+      );
+      if (areaObj) {
+        localizedArea = language === "ar" && areaObj.areaNameAr ? areaObj.areaNameAr : areaObj.areaName;
+      }
+    }
+
+    if (localizedCity && localizedArea) {
+      return `${localizedCity}، ${localizedArea}`;
+    }
+    return localizedCity || localizedArea || viewModel.profile.location || labels.jordan;
+  }, [cities, areas, viewModel.profile.city, viewModel.profile.area, viewModel.profile.location, language, labels.jordan]);
 
   if (isLoading) {
     return (
@@ -191,15 +246,16 @@ export function UnifiedProfilePage({
           viewModel={viewModel}
           labels={labels}
           averageRating={averageRating}
-          joinYear={joinYear}
+          joinDateDisplay={joinDateDisplay}
+          displayLocation={displayLocation}
           onSettingsClick={onSettingsClick}
           onEditProfileClick={onEditProfileClick}
           onChatWithSeller={onChatWithSeller}
+          onAddPostClick={onAddPostClick}
+          onReportUserClick={isAuthenticated ? () => setIsReportUserOpen(true) : undefined}
         />
 
         <div className="space-y-6">
-          <UnifiedProfileAboutCard viewModel={viewModel} labels={labels} />
-
           <UnifiedProfileTabs
             labels={labels}
             viewModel={viewModel}
@@ -224,7 +280,6 @@ export function UnifiedProfilePage({
                 favoriteIds={favoriteIds}
                 isAuthenticated={isAuthenticated}
                 currentUserId={currentUserId}
-                currentUserDisplayName={currentUserDisplayName}
                 onFavoriteToggle={onFavoriteToggle}
                 onPostClick={onPostClick}
                 onEditPost={onUpdatePost ? setPostToEdit : undefined}
@@ -233,13 +288,19 @@ export function UnifiedProfilePage({
               />
             )}
             dateLocale={dateLocale}
+            currentUserId={currentUserId}
+            onReportReview={isAuthenticated ? setReviewToReport : undefined}
           />
         </div>
       </div>
 
       <AlertDialog
         open={postToDelete !== null}
-        onOpenChange={() => setPostToDelete(null)}
+        onOpenChange={(open) => {
+          if (!open && !isDeletingPost) {
+            setPostToDelete(null);
+          }
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -249,15 +310,18 @@ export function UnifiedProfilePage({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{labels.cancel}</AlertDialogCancel>
-            <AlertDialogAction
+            <AlertDialogCancel disabled={isDeletingPost}>
+              {labels.cancel}
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={isDeletingPost}
               onClick={() => {
                 void handleDeletePost();
               }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {labels.delete}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -266,14 +330,34 @@ export function UnifiedProfilePage({
         {postToEdit ? (
           <EditPostDialog
             post={postToEdit}
-            onSave={(updatedPost) => {
-              void handleUpdatePost(updatedPost);
+            onSave={async (updatedPost) => {
+              await handleUpdatePost(updatedPost as UpdatePostInput);
             }}
             onCancel={() => setPostToEdit(null)}
             language={language}
           />
         ) : null}
       </Dialog>
+
+      <ReportPostDialog
+        open={isReportUserOpen}
+        onOpenChange={setIsReportUserOpen}
+        language={language}
+        reportType="USER"
+        targetId={viewModel.profileUserId}
+        targetTitle={viewModel.profile.name || viewModel.profileUserId}
+      />
+
+      <ReportPostDialog
+        open={reviewToReport !== null}
+        onOpenChange={(open) => {
+          if (!open) setReviewToReport(null);
+        }}
+        language={language}
+        reportType="REVIEW"
+        targetId={reviewToReport?.reviewID}
+        targetTitle={reviewToReport?.comment?.slice(0, 80) || "Review"}
+      />
     </PageShell>
   );
 }

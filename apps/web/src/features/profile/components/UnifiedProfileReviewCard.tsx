@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { Star, User } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Star, User, Flag } from "lucide-react";
+import { Button } from "../../../shared/ui/button";
 import type { UnifiedProfileReview } from "../types";
 import type { UnifiedProfileLabels } from "./unifiedProfileLabels";
 import { formatCompactDateTime } from "../../../shared/lib/dateTime";
@@ -9,15 +11,22 @@ interface UnifiedProfileReviewCardProps {
   review: UnifiedProfileReview;
   labels: UnifiedProfileLabels;
   dateLocale: string;
+  onReportReview?: (review: UnifiedProfileReview) => void;
+  currentUserId?: string;
 }
 
 export function UnifiedProfileReviewCard({
   review,
   labels,
   dateLocale,
+  onReportReview,
+  currentUserId,
 }: UnifiedProfileReviewCardProps) {
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   const formattedTimestamp = formatCompactDateTime(review.timestamp, dateLocale);
+  const handleReportClick = () => {
+    onReportReview?.(review);
+  };
   const reviewerAvatarSrc = resolveAvatarSrc(review.reviewerAvatar);
 
   useEffect(() => {
@@ -25,57 +34,79 @@ export function UnifiedProfileReviewCard({
   }, [review.reviewerAvatar]);
 
   return (
-    <div className="rounded-2xl border border-border bg-background/80 p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10">
-            {reviewerAvatarSrc && !avatarLoadFailed ? (
-              <img
-                src={reviewerAvatarSrc}
-                alt={review.reviewerName || `${labels.userLabel} ${review.reviewerID}`}
-                loading="lazy"
-                decoding="async"
-                className="h-full w-full object-cover"
-                onError={() => setAvatarLoadFailed(true)}
-              />
-            ) : review.reviewerName ? (
-              <span className="text-sm font-semibold text-primary">
-                {getAvatarInitial(review.reviewerName)}
-              </span>
-            ) : (
-              <User className="h-4 w-4 text-primary" />
-            )}
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-foreground">
-              {review.reviewerName || `${labels.userLabel} ${review.reviewerID}`}
-            </p>
-            <div className="mt-1 flex items-center gap-2">
-              <div className="flex text-amber-500">
-                {Array.from({ length: 5 }, (_, index) => (
-                  <Star
-                    key={index}
-                    className={`h-3.5 w-3.5 ${
-                      index < review.rating
-                        ? "fill-current text-amber-500"
-                        : "text-muted-foreground/30"
-                    }`}
-                  />
-                ))}
+    <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm transition-all hover:border-primary/20 hover:shadow-md">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3.5">
+            <Link
+              to={`/seller/${review.reviewerID}`}
+              className="flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-muted border border-border/50 hover:ring-2 hover:ring-primary/50 transition-all shadow-sm"
+            >
+              {reviewerAvatarSrc && !avatarLoadFailed ? (
+                <img
+                  src={reviewerAvatarSrc}
+                  alt={review.reviewerName || `${labels.userLabel} ${review.reviewerID}`}
+                  loading="lazy"
+                  decoding="async"
+                  className="h-full w-full object-cover"
+                  onError={() => setAvatarLoadFailed(true)}
+                />
+              ) : review.reviewerName ? (
+                <span className="text-base font-bold text-foreground/70">
+                  {getAvatarInitial(review.reviewerName)}
+                </span>
+              ) : (
+                <User className="h-5 w-5 text-muted-foreground" />
+              )}
+            </Link>
+            <div className="flex flex-col">
+              <Link
+                to={`/seller/${review.reviewerID}`}
+                className="text-sm font-bold text-foreground hover:text-primary transition-colors"
+              >
+                {review.reviewerName || `${labels.userLabel} ${review.reviewerID}`}
+              </Link>
+              <div className="mt-1 flex items-center gap-2">
+                <div className="flex gap-0.5 text-amber-500">
+                  {Array.from({ length: 5 }, (_, index) => (
+                    <Star
+                      key={index}
+                      className={`h-3.5 w-3.5 ${
+                        index < review.rating
+                          ? "fill-amber-500 text-amber-500"
+                          : "text-muted-foreground/20"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className="text-xs font-bold text-foreground/80">
+                  {review.rating.toFixed(1)}
+                </span>
               </div>
-              <span className="text-xs font-medium text-muted-foreground">
-                {review.rating.toFixed(1)}
-              </span>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">
+              {formattedTimestamp}
+            </span>
+            {currentUserId && currentUserId !== String(review.reviewerID) && onReportReview && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
+                onClick={handleReportClick}
+                aria-label={labels.reportReview}
+                title={labels.reportReview}
+              >
+                <Flag className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
         </div>
-        <span className="text-xs text-muted-foreground">
-          {formattedTimestamp}
-        </span>
+        <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+          {review.comment}
+        </p>
       </div>
-      <p className="mt-3 text-sm leading-6 text-muted-foreground">
-        {review.comment}
-      </p>
     </div>
   );
 }

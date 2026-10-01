@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Hosting;
 using TijarahJo.Domain.Models;
 using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Application.Common;
@@ -21,7 +22,8 @@ internal static class AuthShared
         return user != null &&
                user.UserID.HasValue &&
                !user.IsDeleted &&
-               user.Status == UserStatusPolicy.Active;
+               user.Status == UserStatusPolicy.Active &&
+               (!user.SuspendedUntil.HasValue || user.SuspendedUntil.Value <= DateTime.UtcNow);
     }
 
     public static async Task<string?> ResolveRoleNameForTokenAsync(
@@ -81,31 +83,56 @@ internal static class AuthShared
 
     public static void SetTokenCookie(HttpResponse response, string token)
     {
-        bool isHttpsRequest = response.HttpContext.Request.IsHttps;
-        var cookieOptions = new CookieOptions
-        {
-            HttpOnly = true,
-            Expires = DateTime.UtcNow.AddDays(7),
-            Secure = isHttpsRequest,
-            SameSite = isHttpsRequest ? SameSiteMode.None : SameSiteMode.Lax,
-            Path = "/"
-        };
+        var environment = response.HttpContext.RequestServices.GetRequiredService<IHostEnvironment>();
+        var cookieOptions = BuildAuthCookieOptions(
+            environment,
+            response.HttpContext.Request,
+            DateTime.UtcNow.AddDays(7));
         response.Cookies.Append("jwt", token, cookieOptions);
     }
 
     public static void SetShortLivedAuthCookie(HttpResponse response, string name, string value, TimeSpan lifetime)
     {
-        bool isHttpsRequest = response.HttpContext.Request.IsHttps;
-        var cookieOptions = new CookieOptions
+        var environment = response.HttpContext.RequestServices.GetRequiredService<IHostEnvironment>();
+        var cookieOptions = BuildAuthCookieOptions(
+            environment,
+            response.HttpContext.Request,
+            DateTime.UtcNow.Add(lifetime));
+        response.Cookies.Append(name, value, cookieOptions);
+    }
+
+    private static CookieOptions BuildAuthCookieOptions(
+        IHostEnvironment environment,
+        HttpRequest request,
+        DateTime expiresUtc)
+    {
+        bool isDevelopment = environment.IsDevelopment();
+        bool isHttpsRequest = request.IsHttps;
+
+        // Security-sensitive cookie attributes should not rely solely on Request.IsHttps.
+        // In non-development environments, force Secure cookies and cross-site compatibility
+        // even if a proxy misconfiguration causes IsHttps=false.
+        bool secure = !isDevelopment || isHttpsRequest;
+
+        // Both JWT cookies AND OAuth state/nonce cookies require SameSite=None in production.
+        // The Google OAuth callback is a cross-site top-level redirect from accounts.google.com
+        // back to our domain. Browsers drop SameSite=Lax cookies on such cross-site navigations,
+        // which means the state and nonce cookies are empty on arrival, causing all OAuth logins
+        // to fail with a state-mismatch error. SameSite=None;Secure is the correct setting for
+        // any cookie that must survive a cross-site redirect in the OAuth flow.
+        SameSiteMode sameSite = isDevelopment && !isHttpsRequest
+            ? SameSiteMode.Lax
+            : SameSiteMode.None;
+
+        return new CookieOptions
         {
             HttpOnly = true,
-            Expires = DateTime.UtcNow.Add(lifetime),
-            Secure = isHttpsRequest,
-            SameSite = SameSiteMode.Lax,
+            Expires = expiresUtc,
+            Secure = secure,
+            SameSite = sameSite,
             IsEssential = true,
             Path = "/"
         };
-        response.Cookies.Append(name, value, cookieOptions);
     }
 
     public static void DeleteCookie(HttpResponse response, string name)

@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-import { Loader2, MapPin, Phone, User } from "lucide-react";
+import { Loader2, MapPin, Phone, User, ArrowLeft } from "lucide-react";
 import { api } from "../../../services/api";
+import { useAuth } from "../../../contexts/AuthContext";
 import { useAppSettings } from "../../../contexts/AppSettingsContext";
 import { useUserProfileContext } from "../../../contexts/UserProfileContext";
 import { useLocationOptions } from "../../../shared/hooks/useLocationOptions";
@@ -17,9 +18,41 @@ import { Alert, AlertDescription } from "../../../shared/ui/alert";
 import { Button } from "../../../shared/ui/button";
 import { AlertCircle } from "lucide-react";
 
-/** Returns true when the avatar is empty or is just the local default placeholder. */
+/** Returns true when the avatar is empty or cannot be resolved to an image source. */
 function isPlaceholderAvatar(src: string | undefined | null): boolean {
   return !resolveAvatarSrc(src);
+}
+
+function getPhoneValidationError(
+  value: string,
+  isRTL: boolean,
+  requireComplete = false,
+) {
+  const digits = value.replace(/\D/g, "");
+  const invalidPrefixMessage = isRTL
+    ? "يجب أن يبدأ الرقم بـ 77 أو 78 أو 79"
+    : "Phone number must start with 77, 78, or 79";
+  const requiredMessage = isRTL
+    ? "رقم هاتف أردني صحيح مطلوب"
+    : "Valid Jordan phone required";
+
+  if (!digits) {
+    return requireComplete ? requiredMessage : "";
+  }
+
+  if (digits[0] !== "7") {
+    return invalidPrefixMessage;
+  }
+
+  if (digits.length >= 2 && !["7", "8", "9"].includes(digits[1])) {
+    return invalidPrefixMessage;
+  }
+
+  if ((requireComplete || digits.length === 9) && !normalizeJordanPhone(digits)) {
+    return requiredMessage;
+  }
+
+  return "";
 }
 
 export function CompleteProfilePage() {
@@ -27,6 +60,7 @@ export function CompleteProfilePage() {
   const location = useLocation();
   const { language } = useAppSettings();
   const { userProfile, refreshProfile } = useUserProfileContext();
+  const { logout } = useAuth();
   const isRTL = language === "ar";
 
   const initialAvatar = isPlaceholderAvatar(userProfile?.avatar) ? "" : (userProfile?.avatar || "");
@@ -115,8 +149,9 @@ export function CompleteProfilePage() {
     if (!trimmedLastName) {
       newErrors.lastName = isRTL ? "اسم العائلة مطلوب" : "Last name is required";
     }
-    if (!normalizedPhone || normalizedPhone.length < 12) {
-      newErrors.phone = isRTL ? "رقم هاتف أردني صحيح مطلوب" : "Valid Jordan phone required";
+    const phoneError = getPhoneValidationError(phone, isRTL, true);
+    if (!normalizedPhone || normalizedPhone.length < 12 || phoneError) {
+      newErrors.phone = phoneError;
     }
     if (!city) {
       newErrors.city = isRTL ? "المدينة مطلوبة" : "City is required";
@@ -173,7 +208,7 @@ export function CompleteProfilePage() {
         ...(isValidAvatarUrl ? { Avatar: avatarPreview } : {}),
       });
 
-      refreshProfile();
+      await refreshProfile();
       const fromPath = location.state?.fromPath || "/";
       navigate(fromPath, { replace: true });
     } catch (error) {
@@ -187,6 +222,11 @@ export function CompleteProfilePage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleBack = async () => {
+    await logout();
+    navigate("/login", { replace: true });
   };
 
   const title = isRTL ? "أكمل ملفك الشخصي" : "Complete Your Profile";
@@ -221,6 +261,23 @@ export function CompleteProfilePage() {
 
   return (
     <PageShell tone="account">
+      {/* Back Button */}
+      <div
+        className={`absolute top-4 z-50 sm:top-8 ${
+          isRTL ? "right-4 sm:right-8" : "left-4 sm:left-8"
+        }`}
+      >
+        <Button
+          variant="ghost"
+          onClick={handleBack}
+          className="group flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+          aria-label={isRTL ? "العودة" : "Back"}
+        >
+          <ArrowLeft className={`h-5 w-5 transition-transform ${isRTL ? "rotate-180 group-hover:translate-x-1" : "group-hover:-translate-x-1"}`} />
+          <span className="text-sm font-medium">{isRTL ? "العودة" : "Back"}</span>
+        </Button>
+      </div>
+
       <div className="min-h-screen flex items-center justify-center px-4 py-8 sm:py-12">
         <div
           className="w-full max-w-lg animate-fade-in-up"
@@ -324,9 +381,28 @@ export function CompleteProfilePage() {
                 autoComplete="tel"
                 icon={Phone}
                 focused={focusedField === "phone"}
-                onChange={setPhone}
+                onChange={(value) => {
+                  setPhone(value);
+                  const phoneError = getPhoneValidationError(value, isRTL);
+                  setErrors((prev) => {
+                    if (!phoneError && !prev.phone) {
+                      return prev;
+                    }
+
+                    return {
+                      ...prev,
+                      phone: phoneError,
+                    };
+                  });
+                }}
                 onFocus={() => setFocusedField("phone")}
-                onBlur={() => setFocusedField(null)}
+                onBlur={() => {
+                  setFocusedField(null);
+                  setErrors((prev) => ({
+                    ...prev,
+                    phone: getPhoneValidationError(phone, isRTL, true),
+                  }));
+                }}
                 isRTL={isRTL}
               />
 

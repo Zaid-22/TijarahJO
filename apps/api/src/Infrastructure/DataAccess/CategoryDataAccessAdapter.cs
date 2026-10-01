@@ -9,14 +9,8 @@ using TijarahJo.Infrastructure.Persistence;
 namespace TijarahJo.Infrastructure.DataAccess;
 
 
-public sealed class CategoryDataAccessAdapter : ICategoryDataAccess
+public sealed class CategoryDataAccessAdapter(TijarahJoDbContext dbContext) : ICategoryDataAccess
 {
-    private readonly TijarahJoDbContext _dbContext;
-
-    public CategoryDataAccessAdapter(TijarahJoDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
 
     public CategoryModel GetCategoryByID(int? categoryId)
     {
@@ -25,7 +19,7 @@ public sealed class CategoryDataAccessAdapter : ICategoryDataAccess
             return null!;
         }
 
-        CategoryEntity? entity = _dbContext.Categories
+        CategoryEntity? entity = dbContext.Categories
             .AsNoTracking()
             .FirstOrDefault(item => item.CategoryID == categoryId.Value);
         return entity is null ? null! : ToModel(entity);
@@ -38,7 +32,7 @@ public sealed class CategoryDataAccessAdapter : ICategoryDataAccess
             return null!;
         }
 
-        CategoryEntity? entity = await _dbContext.Categories
+        CategoryEntity? entity = await dbContext.Categories
             .AsNoTracking()
             .FirstOrDefaultAsync(item => item.CategoryID == categoryId.Value, cancellationToken);
         return entity is null ? null! : ToModel(entity);
@@ -55,9 +49,9 @@ public sealed class CategoryDataAccessAdapter : ICategoryDataAccess
             IsDeleted = category.IsDeleted
         };
 
-        _dbContext.Categories.Add(entity);
-        _dbContext.AuditActorUserId = null; // admin-only operation; actor set by command service if needed
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        dbContext.Categories.Add(entity);
+        dbContext.AuditActorUserId = null; // admin-only operation; actor set by command service if needed
+        await dbContext.SaveChangesAsync(cancellationToken);
         return entity.CategoryID;
     }
 
@@ -68,7 +62,7 @@ public sealed class CategoryDataAccessAdapter : ICategoryDataAccess
             return false;
         }
 
-        CategoryEntity? entity = await _dbContext.Categories
+        CategoryEntity? entity = await dbContext.Categories
             .FirstOrDefaultAsync(item => item.CategoryID == category.CategoryID.Value, cancellationToken);
         if (entity is null)
         {
@@ -81,8 +75,8 @@ public sealed class CategoryDataAccessAdapter : ICategoryDataAccess
         entity.CreatedAt = category.CreatedAt == default ? entity.CreatedAt : category.CreatedAt;
         entity.IsDeleted = category.IsDeleted;
 
-        _dbContext.AuditActorUserId = null;
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        dbContext.AuditActorUserId = null;
+        await dbContext.SaveChangesAsync(cancellationToken);
         return true;
     }
 
@@ -93,7 +87,7 @@ public sealed class CategoryDataAccessAdapter : ICategoryDataAccess
             return false;
         }
 
-        CategoryEntity? entity = await _dbContext.Categories
+        CategoryEntity? entity = await dbContext.Categories
             .FirstOrDefaultAsync(item => item.CategoryID == categoryId.Value, cancellationToken);
         if (entity is null)
         {
@@ -106,34 +100,35 @@ public sealed class CategoryDataAccessAdapter : ICategoryDataAccess
         }
 
         entity.IsDeleted = true;
-        _dbContext.AuditActorUserId = null;
-        return await _dbContext.SaveChangesAsync(cancellationToken) > 0;
+        dbContext.AuditActorUserId = null;
+        return await dbContext.SaveChangesAsync(cancellationToken) > 0;
     }
 
     public bool DoesCategoryExist(int? categoryId)
     {
         return categoryId.HasValue
                && categoryId.Value > 0
-               && _dbContext.Categories.AsNoTracking().Any(item => item.CategoryID == categoryId.Value);
+               && dbContext.Categories.AsNoTracking().Any(item => item.CategoryID == categoryId.Value);
     }
 
     public async Task<bool> DoesCategoryExistAsync(int? categoryId, CancellationToken cancellationToken = default)
     {
         return categoryId.HasValue
                && categoryId.Value > 0
-               && await _dbContext.Categories
+               && await dbContext.Categories
                    .AsNoTracking()
                    .AnyAsync(item => item.CategoryID == categoryId.Value, cancellationToken);
     }
 
     public IReadOnlyList<CategoryModel> GetAllCategories()
     {
-        return _dbContext.Categories
+        var categories = dbContext.Categories
             .AsNoTracking()
             .Where(item => !item.IsDeleted)
             .OrderBy(item => item.CategoryID)
-            .Select(ToModel)
-            .ToList();
+            .Select(ToModel);
+
+        return [.. categories];
     }
 
     public async Task<IReadOnlyList<CategoryModel>> GetAllCategoriesAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
@@ -141,7 +136,7 @@ public sealed class CategoryDataAccessAdapter : ICategoryDataAccess
         int safePage = Math.Max(1, pageNumber);
         int safeSize = Math.Clamp(pageSize, 1, 200);
 
-        List<CategoryEntity> entities = await _dbContext.Categories
+        List<CategoryEntity> entities = await dbContext.Categories
             .AsNoTracking()
             .Where(item => !item.IsDeleted)
             .OrderBy(item => item.CategoryID)
@@ -149,7 +144,7 @@ public sealed class CategoryDataAccessAdapter : ICategoryDataAccess
             .Take(safeSize)
             .ToListAsync(cancellationToken);
 
-        return entities.Select(ToModel).ToList();
+        return [.. entities.Select(ToModel)];
     }
 
     private static CategoryModel ToModel(CategoryEntity entity)

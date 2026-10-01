@@ -14,4 +14,7 @@ public sealed class UploadChatImageRequest
 
     [Range(1, int.MaxValue)]
     public int? PostId { get; set; }
+
+    [StringLength(3500)]
+    public string? Caption { get; set; }
 }

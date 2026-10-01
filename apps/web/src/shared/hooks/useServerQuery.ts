@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import {
   useQuery,
   useQueryClient,
@@ -45,9 +45,6 @@ type UseServerQueryResult<TData> = {
   cancel: () => void;
 };
 
-const keyTags = new Map<string, Set<string>>();
-const tagKeys = new Map<string, Set<string>>();
-
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
     return error.message;
@@ -93,41 +90,11 @@ function normalizeServerQueryTags(tags: string[] | undefined): string[] {
   );
 }
 
-function removeTagMappingsForKey(key: string) {
-  const existingTags = keyTags.get(key);
-  if (!existingTags) {
-    return;
-  }
-
-  for (const tag of existingTags) {
-    const keys = tagKeys.get(tag);
-    if (!keys) {
-      continue;
-    }
-
-    keys.delete(key);
-    if (keys.size === 0) {
-      tagKeys.delete(tag);
-    }
-  }
-
-  keyTags.delete(key);
-}
-
-function syncServerQueryKeyTags(key: string, tags: string[]) {
-  removeTagMappingsForKey(key);
-  if (tags.length === 0) {
-    return;
-  }
-
-  const nextTags = new Set(tags);
-  keyTags.set(key, nextTags);
-
-  for (const tag of nextTags) {
-    const keys = tagKeys.get(tag) || new Set<string>();
-    keys.add(key);
-    tagKeys.set(tag, keys);
-  }
+function getServerQueryTags(query: Query): string[] {
+  const tags = query.meta?.serverQueryTags;
+  return Array.isArray(tags)
+    ? tags.filter((tag): tag is string => typeof tag === "string")
+    : [];
 }
 
 function cancelServerQueries(
@@ -174,12 +141,9 @@ export function useServerQuery<TData>({
   const normalizedTags = useMemo(() => normalizeServerQueryTags(tags), [tags]);
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    syncServerQueryKeyTags(key, normalizedTags);
-  }, [key, normalizedTags]);
-
   const query = useQuery({
     queryKey: toQueryKey(key),
+    meta: { serverQueryTags: normalizedTags },
     queryFn: ({ signal }) => queryFn({ signal }),
     enabled,
     staleTime: staleTimeMs,
@@ -230,17 +194,15 @@ function invalidateServerQueryTag(
     return;
   }
 
-  const keys = tagKeys.get(normalizedTag);
-  if (!keys || keys.size === 0) {
-    return;
+  if (options.cancelInFlight) {
+    void queryClient.cancelQueries({
+      predicate: (query) => getServerQueryTags(query).includes(normalizedTag),
+    });
   }
 
-  const keySet = new Set(keys);
-  invalidateServerQueries(
-    (candidateKey) => keySet.has(candidateKey),
-    options,
-    queryClient,
-  );
+  void queryClient.invalidateQueries({
+    predicate: (query) => getServerQueryTags(query).includes(normalizedTag),
+  });
 }
 
 function getServerQueryData<TData>(

@@ -7,7 +7,7 @@ public sealed class CategoryListQueryResult
     public bool Success { get; init; }
     public int StatusCode { get; init; }
     public string? Message { get; init; }
-    public IReadOnlyList<CategoryModel> Categories { get; init; } = Array.Empty<CategoryModel>();
+    public IReadOnlyList<CategoryModel> Categories { get; init; } = [];
 }
 
 public sealed class CategoryByIdQueryResult

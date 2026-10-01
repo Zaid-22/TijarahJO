@@ -6,17 +6,31 @@ on:
     paths:
       - "scripts/**"
       - "infra/docker-compose.yml"
+      - "infra/docker-compose.production.yml"
+      - "infra/.env.example"
+      - "_on_server/**"
       - "apps/api/**"
+      - "apps/web/tests/frontend_api_contract.sh"
+      - ".github/workflows/backend-api-checks.yml"
   push:
     branches:
       - main
     paths:
       - "scripts/**"
       - "infra/docker-compose.yml"
+      - "infra/docker-compose.production.yml"
+      - "infra/.env.example"
+      - "_on_server/**"
       - "apps/api/**"
+      - "apps/web/tests/frontend_api_contract.sh"
+      - ".github/workflows/backend-api-checks.yml"
 
 permissions:
   contents: read
+
+concurrency:
+  group: backend-api-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend-api-checks:
@@ -24,6 +38,8 @@ jobs:
     timeout-minutes: 45
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+      DOTNET_NOLOGO: "true"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "true"
       MSSQL_SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
       JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY }}
       DB_APP_PASSWORD: ${{ secrets.DB_APP_PASSWORD }}
@@ -34,6 +50,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Force LF line endings
+        run: git config core.autocrlf false && git rm --cached -r . > /dev/null 2>&1 && git reset --hard HEAD
+
       - name: Validate required secrets
         run: |
           if [ -z "${MSSQL_SA_PASSWORD:-}" ] || [ -z "${JWT_SIGNING_KEY:-}" ] || [ -z "${DB_APP_PASSWORD:-}" ]; then
@@ -41,13 +60,17 @@ jobs:
             exit 1
           fi
 
-      - name: Install ripgrep
-        run: sudo apt-get update && sudo apt-get install -y ripgrep
-
       - name: Structure compliance check
         run: |
           chmod +x ./scripts/check_structure.sh
           ./scripts/check_structure.sh
+
+      - name: Validate production deployment contract
+        run: |
+          chmod +x ./scripts/compose-production.sh
+          chmod +x ./scripts/migrate-production-db.sh
+          chmod +x ./scripts/tests/production-deployment-contract.sh
+          ./scripts/tests/production-deployment-contract.sh
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
@@ -89,6 +112,7 @@ jobs:
           chmod +x ./scripts/verify_all_apis.sh
           chmod +x ./apps/api/tests/contracts/backend_smoke.sh
           chmod +x ./apps/api/tests/contracts/backend_integration_contract.sh
+          chmod +x ./apps/web/tests/frontend_api_contract.sh
           chmod +x ./apps/api/database/scripts/diagnostics/run_performance_baseline.sh
 
       - name: Bootstrap DB and backend
@@ -106,9 +130,17 @@ jobs:
       - name: Run full API verification
         run: BASE_URL=http://localhost:5033 ./scripts/verify_all_apis.sh
 
+      - name: Run frontend API contract checks
+        run: BASE_URL=http://localhost:5033 ./apps/web/tests/frontend_api_contract.sh
+
       - name: Run SQL performance baseline threshold gate
         run: ./apps/api/database/scripts/diagnostics/run_performance_baseline.sh
 
       - name: Stop backend process
         if: always()
-        run: lsof -ti tcp:5033 | xargs -r kill -9 || true
+        run: |
+          if [ -f .tijarahjo_backend.pid ]; then
+            kill "$(cat .tijarahjo_backend.pid)" >/dev/null 2>&1 || true
+            rm -f .tijarahjo_backend.pid
+          fi
+          lsof -ti tcp:5033 | xargs -r kill -9 || true

@@ -15,7 +15,7 @@ public sealed class DashboardStatsResponse
     public int TotalReviews { get; init; }
     public double AverageRating { get; init; }
     public int SoldPosts { get; init; }
-    public System.Collections.Generic.IReadOnlyList<TijarahJo.Application.Abstractions.DataAccess.RecentAdminAction> RecentActions { get; init; } = System.Array.Empty<TijarahJo.Application.Abstractions.DataAccess.RecentAdminAction>();
+    public System.Collections.Generic.IReadOnlyList<TijarahJo.Application.Abstractions.DataAccess.RecentAdminAction> RecentActions { get; init; } = [];
 
     // Optional metrics that can be added later
     public int PendingReports { get; init; } = 0;
@@ -95,15 +95,13 @@ public interface IAdminQueryHandler
     // Phase 2
     Task<AdminReviewsQueryResult> GetAdminReviewsAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
     Task<AdminReviewDeleteResult> SoftDeleteReviewAsync(int reviewId, int adminUserId, CancellationToken cancellationToken = default);
-    Task<AdminPostCommentsQueryResult> GetAdminPostCommentsAsync(string? search = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
+    Task<AdminPostCommentsQueryResult> GetAdminPostCommentsAsync(string? search = null, int? userId = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
     Task<AdminPostCommentDeleteResult> SoftDeletePostCommentAsync(int commentId, int adminUserId, CancellationToken cancellationToken = default);
     Task<AdminAuditLogQueryResult> GetAuditLogsAsync(string? tableName = null, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
 
     // Phase 3
     Task<AdminSettingsQueryResult> GetAllSettingsAsync(CancellationToken cancellationToken = default);
     Task<AdminSettingUpdateResult> UpdateSettingAsync(string key, string value, CancellationToken cancellationToken = default);
-    Task<AdminConversationsQueryResult> GetConversationsAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
-    Task<AdminConversationDetailQueryResult> GetConversationMessagesAsync(int conversationId, CancellationToken cancellationToken = default);
 }
 
 // Phase 3
@@ -121,20 +119,4 @@ public sealed class AdminSettingUpdateResult
     public bool Success { get; init; }
     public int StatusCode { get; init; }
     public string? Message { get; init; }
-}
-
-public sealed class AdminConversationsQueryResult
-{
-    public bool Success { get; init; }
-    public int StatusCode { get; init; }
-    public string? Message { get; init; }
-    public TijarahJo.Application.Abstractions.DataAccess.AdminConversationListResult? Result { get; init; }
-}
-
-public sealed class AdminConversationDetailQueryResult
-{
-    public bool Success { get; init; }
-    public int StatusCode { get; init; }
-    public string? Message { get; init; }
-    public TijarahJo.Application.Abstractions.DataAccess.AdminConversationDetail? Result { get; init; }
 }

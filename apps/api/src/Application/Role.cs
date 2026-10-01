@@ -2,7 +2,7 @@ using TijarahJo.Domain.Models;
 
 namespace TijarahJo.Application.Common
 {
-    public class Role
+    public class Role(RoleModel roleModel, Role.ModeType mode = Role.ModeType.AddNew)
     {
         public enum ModeType
         {
@@ -10,7 +10,7 @@ namespace TijarahJo.Application.Common
             Update = 1
         }
 
-        public ModeType Mode { get; set; } = ModeType.AddNew;
+        public ModeType Mode { get; set; } = mode;
 
         public RoleModel RoleModel =>
             new(
@@ -20,18 +20,9 @@ namespace TijarahJo.Application.Common
                 this.IsDeleted
             );
 
-        public int? RoleID { get; set; }
-        public string RoleName { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public bool IsDeleted { get; set; }
-
-        public Role(RoleModel roleModel, ModeType mode = ModeType.AddNew)
-        {
-            this.RoleID = roleModel.RoleID;
-            this.RoleName = roleModel.RoleName;
-            this.CreatedAt = roleModel.CreatedAt;
-            this.IsDeleted = roleModel.IsDeleted;
-            this.Mode = mode;
-        }
+        public int? RoleID { get; set; } = roleModel.RoleID;
+        public string RoleName { get; set; } = roleModel.RoleName;
+        public DateTime CreatedAt { get; set; } = roleModel.CreatedAt;
+        public bool IsDeleted { get; set; } = roleModel.IsDeleted;
     }
 }

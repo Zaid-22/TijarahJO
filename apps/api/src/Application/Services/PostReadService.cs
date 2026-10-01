@@ -1,4 +1,5 @@
 using TijarahJo.Domain.Models;
+using TijarahJo.Application.Abstractions.DataAccess;
 using TijarahJo.Application.Abstractions.Services;
 using TijarahJo.Application.Common;
 
@@ -7,10 +8,12 @@ namespace TijarahJo.Application.Services;
 public sealed class PostReadService : IPostReadService
 {
     private readonly IPostService _posts;
+    private readonly IUserDataAccess _users;
 
-    public PostReadService(IPostService posts)
+    public PostReadService(IPostService posts, IUserDataAccess users)
     {
         _posts = posts;
+        _users = users;
     }
 
     public async Task<PostReadResult> GetByIdAsync(int postId, CancellationToken cancellationToken = default)
@@ -26,7 +29,9 @@ public sealed class PostReadService : IPostReadService
         }
 
         Post? post = await _posts.FindAsync(postId, cancellationToken);
-        if (post == null || post.IsDeleted || PostStatusPolicy.IsModerationState(post.Status))
+        if (post == null ||
+            !PostStatusPolicy.IsPubliclyVisible(post.Status, post.IsDeleted) ||
+            !await IsSellerPubliclyVisibleAsync(post.UserID, cancellationToken))
         {
             return new PostReadResult
             {
@@ -55,7 +60,10 @@ public sealed class PostReadService : IPostReadService
             };
         }
 
-        bool exists = await _posts.DoesPostExistAsync(postId, cancellationToken);
+        Post? post = await _posts.FindAsync(postId, cancellationToken);
+        bool exists = post != null &&
+            PostStatusPolicy.IsPubliclyVisible(post.Status, post.IsDeleted) &&
+            await IsSellerPubliclyVisibleAsync(post.UserID, cancellationToken);
         return new PostExistsResult
         {
             Success = true,
@@ -72,6 +80,15 @@ public sealed class PostReadService : IPostReadService
                 Success = false,
                 FailureReason = PostReadFailureReason.InvalidRequest,
                 Message = $"Invalid user ID {userId}"
+            };
+        }
+
+        if (!await IsSellerPubliclyVisibleAsync(userId, cancellationToken))
+        {
+            return new PostReadCollectionResult
+            {
+                Success = true,
+                Posts = []
             };
         }
 
@@ -123,10 +140,10 @@ public sealed class PostReadService : IPostReadService
             };
         }
 
-        // Use DoesPostExistAsync instead of FindAsync — avoids loading the full entity
-        // just to check existence before incrementing the view counter.
-        bool exists = await _posts.DoesPostExistAsync(postId, cancellationToken);
-        if (!exists)
+        Post? post = await _posts.FindAsync(postId, cancellationToken);
+        if (post == null ||
+            !PostStatusPolicy.IsPubliclyVisible(post.Status, post.IsDeleted) ||
+            !await IsSellerPubliclyVisibleAsync(post.UserID, cancellationToken))
         {
             return new PostViewIncrementResult
             {
@@ -155,16 +172,12 @@ public sealed class PostReadService : IPostReadService
 
     private static bool IsPubliclyVisible(PostModel post)
     {
-        if (post.IsDeleted)
-        {
-            return false;
-        }
+        return PostStatusPolicy.IsPubliclyVisible(post.Status, post.IsDeleted);
+    }
 
-        if (post.Status == PostStatusPolicy.Blocked)
-        {
-            return false;
-        }
-
-        return post.Status == PostStatusPolicy.Active || post.Status == PostStatusPolicy.Sold;
+    private async Task<bool> IsSellerPubliclyVisibleAsync(int userId, CancellationToken cancellationToken)
+    {
+        UserModel? seller = await _users.GetUserByIDAsync(userId, cancellationToken);
+        return seller != null && !seller.IsDeleted && seller.Status == UserStatusPolicy.Active;
     }
 }

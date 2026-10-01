@@ -33,8 +33,25 @@ public interface IMessageDataAccess
 {
     Task<int> AddMessageAsync(MessageModel message, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<MessageModel>> GetChatHistoryAsync(int conversationId, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<MessageModel>> GetChatHistoryBetweenUsersAsync(
+        int userA,
+        int userB,
+        int pageNumber = 1,
+        int pageSize = 50,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<MessageModel>>([]);
+    Task<IReadOnlyList<int>> GetConversationIdsBetweenUsersAsync(
+        int userA,
+        int userB,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<int>>([]);
     Task<IReadOnlyList<MessageModel>> GetRecentChatsAsync(int userId, CancellationToken cancellationToken = default);
     Task<bool> MarkMessagesAsReadAsync(int conversationId, int receiverId, CancellationToken cancellationToken = default);
+    Task<bool> MarkMessagesAsReadBetweenUsersAsync(
+        int currentUserId,
+        int otherUserId,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
 }
 
 public sealed class ConversationMetadataModel
@@ -84,6 +101,11 @@ public interface IReviewDataAccess
     Task<int> AddReviewAsync(ReviewModel review, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ReviewModel>> GetReviewsByUserIdAsync(int userId, CancellationToken cancellationToken = default);
     Task<bool> HasReviewedAsync(int reviewerId, int reviewedUserId, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Returns aggregated rating stats for each requested user ID in a single DB round-trip.
+    /// Users with no reviews are omitted from the result.
+    /// </summary>
+    Task<IReadOnlyDictionary<int, (double AverageRating, int ReviewCount)>> GetRatingsByUserIdsAsync(IReadOnlyList<int> userIds, CancellationToken cancellationToken = default);
 }
 
 public interface IRoleDataAccess
@@ -93,7 +115,30 @@ public interface IRoleDataAccess
     Task<bool> UpdateRoleAsync(RoleModel role, CancellationToken cancellationToken = default);
     Task<bool> DeleteRoleAsync(int? roleId, CancellationToken cancellationToken = default);
     Task<bool> DoesRoleExistAsync(int? roleId, CancellationToken cancellationToken = default);
+    Task<bool> IsRoleNameTakenAsync(string roleName, int? excludeRoleId = null, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RoleModel>> GetAllRolesAsync(CancellationToken cancellationToken = default);
+}
+
+[Flags]
+public enum UserUpdateFields
+{
+    None = 0,
+    HashedPassword = 1 << 0,
+    Email = 1 << 1,
+    FirstName = 1 << 2,
+    LastName = 1 << 3,
+    Phone = 1 << 4,
+    Location = 1 << 5,
+    Bio = 1 << 6,
+    Avatar = 1 << 7,
+    Status = 1 << 8,
+    Role = 1 << 9,
+    IsDeleted = 1 << 10,
+    TwoFactorEnabled = 1 << 11,
+    TwoFactorSecret = 1 << 12,
+    TwoFactorPendingSecret = 1 << 13,
+    SuspendedUntil = 1 << 14,
+    IsEmailVerified = 1 << 15
 }
 
 public interface IUserDataAccess
@@ -101,7 +146,17 @@ public interface IUserDataAccess
     // Returns null when userId is invalid or not found.
     Task<UserModel?> GetUserByIDAsync(int? userId, CancellationToken cancellationToken = default);
     Task<int> AddUserAsync(UserModel user, CancellationToken cancellationToken = default);
-    Task<bool> UpdateUserAsync(UserModel user, int actorUserId, CancellationToken cancellationToken = default);
+    Task<bool> UpdateUserFieldsAsync(
+        UserModel user,
+        int actorUserId,
+        UserUpdateFields fields,
+        CancellationToken cancellationToken = default);
+    Task<bool> UpdatePasswordHashForCredentialRehashAsync(
+        int userId,
+        string expectedHashedPassword,
+        string replacementHashedPassword,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
     Task<bool> DeleteUserAsync(int? userId, int actorUserId, CancellationToken cancellationToken = default);
     Task<bool> DoesUserExistAsync(int? userId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<UserModel>> GetAllUsersAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default);
@@ -116,6 +171,40 @@ public interface IVerificationChallengeDataAccess
     Task<string?> GetChallengeStateAsync(int userId, string challengeType, CancellationToken cancellationToken = default);
     Task UpsertChallengeStateAsync(int userId, string challengeType, string stateJson, DateTime expiresAt, CancellationToken cancellationToken = default);
     Task DeleteChallengeStateAsync(int userId, string challengeType, CancellationToken cancellationToken = default);
+
+    async Task<bool> TryReplaceChallengeStateAsync(
+        int userId,
+        string challengeType,
+        string? expectedStateJson,
+        string stateJson,
+        DateTime expiresAt,
+        CancellationToken cancellationToken = default)
+    {
+        string? currentState = await GetChallengeStateAsync(userId, challengeType, cancellationToken);
+        if (!string.Equals(currentState, expectedStateJson, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        await UpsertChallengeStateAsync(userId, challengeType, stateJson, expiresAt, cancellationToken);
+        return true;
+    }
+
+    async Task<bool> TryDeleteChallengeStateAsync(
+        int userId,
+        string challengeType,
+        string expectedStateJson,
+        CancellationToken cancellationToken = default)
+    {
+        string? currentState = await GetChallengeStateAsync(userId, challengeType, cancellationToken);
+        if (!string.Equals(currentState, expectedStateJson, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        await DeleteChallengeStateAsync(userId, challengeType, cancellationToken);
+        return true;
+    }
 }
 
 public interface IPostCommentDataAccess

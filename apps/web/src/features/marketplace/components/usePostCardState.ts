@@ -10,7 +10,6 @@ export interface PostCardSharedProps {
   onFavoriteToggle?: (postId: string) => void;
   isAuthenticated?: boolean;
   currentUserId?: string;
-  hideCategoryBadge?: boolean;
   language?: Language;
   onRequireAuth?: () => void;
 }
@@ -96,6 +95,7 @@ export function usePostCardState({
     resolvedLanguage,
     labels,
     priceLocale,
+    isOwner,
     showFavoriteButton,
     handleFavoriteClick,
     requireAuthForProtectedAction,

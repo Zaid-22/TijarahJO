@@ -7,39 +7,35 @@ using Microsoft.Extensions.Logging;
 
 namespace TijarahJo.Infrastructure.Jobs;
 
-public sealed class BackgroundJobWorker : BackgroundService
+public sealed class BackgroundJobWorker(
+    ChannelBackgroundJobService jobService,
+    IServiceScopeFactory scopeFactory,
+    ILogger<BackgroundJobWorker> logger) : BackgroundService
 {
-    private readonly ChannelBackgroundJobService _jobService;
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ILogger<BackgroundJobWorker> _logger;
-
-    public BackgroundJobWorker(
-        ChannelBackgroundJobService jobService,
-        IServiceScopeFactory scopeFactory,
-        ILogger<BackgroundJobWorker> logger)
-    {
-        _jobService = jobService;
-        _scopeFactory = scopeFactory;
-        _logger = logger;
-    }
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Background job worker is starting.");
+        logger.LogInformation("Background job worker is starting.");
 
-        await foreach (var workItem in _jobService.Reader.ReadAllAsync(stoppingToken))
+        try
         {
-            try
+            await foreach (var workItem in jobService.Reader.ReadAllAsync(stoppingToken))
             {
-                using IServiceScope scope = _scopeFactory.CreateScope();
-                await workItem(scope.ServiceProvider, stoppingToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error executing background job.");
+                try
+                {
+                    using IServiceScope scope = scopeFactory.CreateScope();
+                    await workItem(scope.ServiceProvider, stoppingToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error executing background job.");
+                }
             }
         }
+        catch (OperationCanceledException)
+        {
+            // Ignored to allow graceful shutdown without noisy logs
+        }
 
-        _logger.LogInformation("Background job worker is stopping.");
+        logger.LogInformation("Background job worker is stopping.");
     }
 }

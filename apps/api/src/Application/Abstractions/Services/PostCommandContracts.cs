@@ -12,8 +12,8 @@ public sealed class CreatePostCommand
     public string? Title { get; init; }
     public string? Description { get; init; }
     public decimal? Price { get; init; }
-    public int? CityId { get; init; }
-    public int? AreaId { get; init; }
+    public int CityId { get; init; }
+    public int AreaId { get; init; }
 }
 
 public sealed class UpdatePostCommand
@@ -25,8 +25,8 @@ public sealed class UpdatePostCommand
     public string? Title { get; init; }
     public string? Description { get; init; }
     public decimal? Price { get; init; }
-    public int? CityId { get; init; }
-    public int? AreaId { get; init; }
+    public int CityId { get; init; }
+    public int AreaId { get; init; }
 }
 
 public enum PostMutationFailureReason

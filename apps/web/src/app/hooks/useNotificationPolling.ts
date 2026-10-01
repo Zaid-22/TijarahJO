@@ -8,38 +8,85 @@ import { deferredToast } from "../../utils/toast";
 import { toPositiveIntegerId } from "../../utils/idValidation";
 
 const UNREAD_COUNT_REFRESH_MS = 30_000;
+const NOTIFICATION_SERVICE_RETRY_MS = 60_000;
+
+type UseNotificationPollingOptions = {
+  suspended?: boolean;
+};
 
 /**
  * Manages unread notification count via polling, SignalR realtime updates,
  * and chat-route refresh. Returns the current count.
  * Uses dynamic import for chatService to defer SignalR loading.
  */
-export function useNotificationPolling() {
-  const { isAuthenticated } = useAuth();
+export function useNotificationPolling(
+  options: UseNotificationPollingOptions = {},
+) {
+  const { suspended = false } = options;
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const [loadedOwnerId, setLoadedOwnerId] = useState("");
+  const [notificationsRetryAt, setNotificationsRetryAt] = useState<number | null>(null);
   const subscriptionCleanupRef = useRef<(() => void) | null>(null);
+  const ownerId = isAuthenticated ? String(user?.id || "").trim() : "";
 
   const normalizedPathname = location.pathname
     .toLowerCase()
     .replace(/\/+$/, "");
   const isChatRoute =
     normalizedPathname === "/chat" || normalizedPathname.startsWith("/chat/");
+  const isNotificationsServiceCoolingDown =
+    notificationsRetryAt !== null && notificationsRetryAt > Date.now();
+
+  useEffect(() => {
+    if (notificationsRetryAt === null) {
+      return;
+    }
+
+    const remainingMs = notificationsRetryAt - Date.now();
+    if (remainingMs <= 0) {
+      setNotificationsRetryAt(null);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setNotificationsRetryAt(null);
+    }, remainingMs);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [notificationsRetryAt]);
 
   // Polling
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || suspended) {
       setUnreadNotificationsCount(0);
+      setLoadedOwnerId("");
+      return;
+    }
+
+    if (isNotificationsServiceCoolingDown) {
       return;
     }
 
     let isCancelled = false;
+    setUnreadNotificationsCount(0);
+    setLoadedOwnerId("");
     const refreshUnreadCount = async () => {
       try {
-        const unreadCount = await api.notifications.getUnreadCount();
+        const result = await api.notifications.getUnreadCountResult(ownerId);
         if (!isCancelled) {
-          setUnreadNotificationsCount(unreadCount);
+          if (result.serviceUnavailable) {
+            setNotificationsRetryAt(Date.now() + NOTIFICATION_SERVICE_RETRY_MS);
+            return;
+          }
+
+          setNotificationsRetryAt(null);
+          setUnreadNotificationsCount(result.unreadCount);
+          setLoadedOwnerId(ownerId);
         }
       } catch (error) {
         logger.warn("[App] Failed to load unread notifications count:", error);
@@ -59,11 +106,11 @@ export function useNotificationPolling() {
       window.clearInterval(intervalId);
       window.removeEventListener("tijarahjo:refreshUnreadCount", refreshUnreadCount);
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, ownerId, suspended, isNotificationsServiceCoolingDown]);
 
   // Realtime notifications via SignalR (dynamically loaded)
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || suspended) {
       subscriptionCleanupRef.current?.();
       subscriptionCleanupRef.current = null;
       return;
@@ -112,9 +159,19 @@ export function useNotificationPolling() {
         }
 
         void api.notifications
-          .getUnreadCount()
-          .then((count) => {
-            setUnreadNotificationsCount(count);
+          .getUnreadCountResult(ownerId)
+          .then((result) => {
+            if (isDisposed) {
+              return;
+            }
+            if (result.serviceUnavailable) {
+              setNotificationsRetryAt(Date.now() + NOTIFICATION_SERVICE_RETRY_MS);
+              return;
+            }
+
+            setNotificationsRetryAt(null);
+            setUnreadNotificationsCount(result.unreadCount);
+            setLoadedOwnerId(ownerId);
           })
           .catch((error) => {
             logger.warn(
@@ -136,19 +193,38 @@ export function useNotificationPolling() {
     location.search,
     navigate,
     normalizedPathname,
+    ownerId,
+    suspended,
+    isNotificationsServiceCoolingDown,
   ]);
 
   // Refresh on chat route entry
   useEffect(() => {
-    if (!isAuthenticated || !isChatRoute) {
+    if (
+      !isAuthenticated ||
+      suspended ||
+      isNotificationsServiceCoolingDown ||
+      !isChatRoute
+    ) {
       return;
     }
 
+    let isCancelled = false;
     const timeoutId = window.setTimeout(() => {
       void api.notifications
-        .getUnreadCount()
-        .then((count) => {
-          setUnreadNotificationsCount(count);
+        .getUnreadCountResult(ownerId)
+        .then((result) => {
+          if (isCancelled) {
+            return;
+          }
+          if (result.serviceUnavailable) {
+            setNotificationsRetryAt(Date.now() + NOTIFICATION_SERVICE_RETRY_MS);
+            return;
+          }
+
+          setNotificationsRetryAt(null);
+          setUnreadNotificationsCount(result.unreadCount);
+          setLoadedOwnerId(ownerId);
         })
         .catch((error) => {
           logger.warn(
@@ -159,9 +235,13 @@ export function useNotificationPolling() {
     }, 1200);
 
     return () => {
+      isCancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [isAuthenticated, isChatRoute, location.pathname]);
+  }, [isAuthenticated, isChatRoute, location.pathname, ownerId, suspended, isNotificationsServiceCoolingDown]);
 
-  return { unreadNotificationsCount };
+  return {
+    unreadNotificationsCount:
+      loadedOwnerId === ownerId ? unreadNotificationsCount : 0,
+  };
 }

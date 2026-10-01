@@ -23,8 +23,8 @@ const SettingsPage = lazy(() =>
 const FavoritesPage = lazy(() =>
   import("../../../features/marketplace/pages/FavoritesPage").then((m) => ({ default: m.FavoritesPage })),
 );
-const SellItemPage = lazy(() =>
-  import("../../../features/marketplace/pages/SellItemPage").then((m) => ({ default: m.SellItemPage })),
+const CreatePostPage = lazy(() =>
+  import("../../../features/marketplace/pages/CreatePostPage").then((m) => ({ default: m.CreatePostPage })),
 );
 const EditProfilePage = lazy(() =>
   import("../../../features/profile/pages/EditProfilePage").then((m) => ({
@@ -33,6 +33,11 @@ const EditProfilePage = lazy(() =>
 );
 const ProfilePage = lazy(() =>
   import("../../../features/profile/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
+);
+const ComparePage = lazy(() =>
+  import("../../../features/marketplace/pages/ComparePage").then((m) => ({
+    default: m.default,
+  })),
 );
 
 interface AccountRouteGroupParams {
@@ -59,7 +64,7 @@ export function renderAccountRouteGroup({
       return;
     }
 
-    window.location.href = `mailto:info@tijarahjo.com?subject=${encodeURIComponent(subject)}`;
+    window.location.href = `mailto:info@tijarahjo.online?subject=${encodeURIComponent(subject)}`;
   };
   const currentUserId = appProps.isAuthenticated
     ? routeState.currentUserId
@@ -81,7 +86,13 @@ export function renderAccountRouteGroup({
         path={APP_ROUTE_PATHS.settings}
         element={requireAuth(
           <SettingsPage
-            onBackToMarketplace={() => navigate(APP_ROUTE_PATHS.home)}
+            onBackToMarketplace={() => {
+              if (window.history.length > 2) {
+                navigate(-1);
+              } else {
+                navigate(APP_ROUTE_PATHS.home);
+              }
+            }}
             language={appProps.language}
             darkMode={appProps.darkMode}
             onDarkModeChange={appProps.setDarkMode}
@@ -165,7 +176,13 @@ export function renderAccountRouteGroup({
         path={APP_ROUTE_PATHS.favorites}
         element={requireAuth(
           <FavoritesPage
-            onBackToMarketplace={() => navigate(APP_ROUTE_PATHS.home)}
+            onBackToMarketplace={() => {
+              if (window.history.length > 2) {
+                navigate(-1);
+              } else {
+                navigate(APP_ROUTE_PATHS.home);
+              }
+            }}
             language={appProps.language}
             favoriteIds={routeState.favoriteIds}
             posts={sharedPostRouteProps.availablePosts}
@@ -185,17 +202,20 @@ export function renderAccountRouteGroup({
       <Route
         path={APP_ROUTE_PATHS.sell}
         element={requireAuth(
-          <SellItemPage
+          <CreatePostPage
             language={appProps.language}
             onBack={() => navigate(APP_ROUTE_PATHS.home)}
             onSubmit={async (post) => {
               try {
-                await postActions.createPost(post);
+                const result = await postActions.createPost(post) as Record<string, unknown> | undefined;
                 deferredToast.success(
                   appProps.language === "ar"
                     ? "تم نشر المنشور!"
                     : "Post created!",
                 );
+                if (result && typeof result.message === "string" && result.message.trim().length > 0) {
+                  deferredToast.error(result.message);
+                }
                 navigate(APP_ROUTE_PATHS.home);
               } catch (error) {
                 deferredToast.error(
@@ -225,22 +245,34 @@ export function renderAccountRouteGroup({
               try {
                 await postActions.deletePost(postId);
                 deferredToast.success("Post deleted");
-              } catch {
-                deferredToast.error("Error deleting post");
+              } catch (error) {
+                deferredToast.error(
+                  error instanceof Error ? error.message : "Error deleting post",
+                );
+                throw error;
               }
             }}
             onUpdatePost={async (updatedPost) => {
               try {
-                await postActions.updatePost(updatedPost);
+                const result = await postActions.updatePost(updatedPost);
                 deferredToast.success("Post updated");
-              } catch {
-                deferredToast.error("Error updating post");
+                if (result.message?.trim()) {
+                  deferredToast.error(result.message);
+                }
+              } catch (error) {
+                deferredToast.error(
+                  error instanceof Error ? error.message : "Error updating post",
+                );
+                throw error;
               }
             }}
             onAddPost={async (post) => {
               try {
-                await postActions.createPost(post);
+                const result = await postActions.createPost(post) as Record<string, unknown> | undefined;
                 deferredToast.success("Post created");
+                if (result && typeof result.message === "string" && result.message.trim().length > 0) {
+                  deferredToast.error(result.message);
+                }
               } catch (error) {
                 deferredToast.error(
                   error instanceof Error ? error.message : "Error creating post",
@@ -256,7 +288,6 @@ export function renderAccountRouteGroup({
             favoriteIds={sharedPostRouteProps.favoriteIds}
             onFavoriteToggle={sharedPostRouteProps.onFavoriteToggle}
             isAuthenticated={sharedUserRouteProps.isAuthenticated}
-            currentUserDisplayName={sharedUserRouteProps.currentUserDisplayName}
           />,
         )}
       />
@@ -280,6 +311,11 @@ export function renderAccountRouteGroup({
             language={appProps.language}
           />,
         )}
+      />
+
+      <Route
+        path={APP_ROUTE_PATHS.compare}
+        element={requireAuth(<ComparePage />)}
       />
     </>
   );

@@ -25,7 +25,9 @@ public sealed class PostMutationServiceTests
         {
             ActorUserId = 1,
             CategoryId = 1,
-            Title = ""
+            Title = "",
+            CityId = 1,
+            AreaId = 1
         });
 
         Assert.False(result.Success);
@@ -41,7 +43,9 @@ public sealed class PostMutationServiceTests
         {
             ActorUserId = 1,
             CategoryId = 0,
-            Title = "Test Post"
+            Title = "Test Post",
+            CityId = 1,
+            AreaId = 1
         });
 
         Assert.False(result.Success);
@@ -49,7 +53,7 @@ public sealed class PostMutationServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_ReturnsInvalidRequest_WhenAreaIdWithoutCityId()
+    public async Task CreateAsync_ReturnsInvalidRequest_WhenCityIdIsInvalid()
     {
         var service = BuildService();
 
@@ -59,7 +63,7 @@ public sealed class PostMutationServiceTests
             CategoryId = 1,
             Title = "Test Post",
             AreaId = 5,
-            CityId = null
+            CityId = 0
         });
 
         Assert.False(result.Success);
@@ -77,7 +81,9 @@ public sealed class PostMutationServiceTests
             CategoryId = 1,
             Title = "Test Post",
             Description = "A description",
-            Price = 100m
+            Price = 100m,
+            CityId = 1,
+            AreaId = 1
         });
 
         Assert.True(result.Success);
@@ -98,7 +104,9 @@ public sealed class PostMutationServiceTests
             PostId = 1,
             ActorUserId = 1,
             CategoryId = 1,
-            Title = ""
+            Title = "",
+            CityId = 1,
+            AreaId = 1
         });
 
         Assert.False(result.Success);
@@ -115,7 +123,9 @@ public sealed class PostMutationServiceTests
             PostId = 999,
             ActorUserId = 1,
             CategoryId = 1,
-            Title = "Updated"
+            Title = "Updated",
+            CityId = 1,
+            AreaId = 1
         });
 
         Assert.False(result.Success);
@@ -133,7 +143,9 @@ public sealed class PostMutationServiceTests
             ActorUserId = 99, // Not the owner (owner is userId 1)
             ActorIsAdmin = false,
             CategoryId = 1,
-            Title = "Hacked"
+            Title = "Hacked",
+            CityId = 1,
+            AreaId = 1
         });
 
         Assert.False(result.Success);
@@ -151,7 +163,9 @@ public sealed class PostMutationServiceTests
             ActorUserId = 1,
             CategoryId = 2,
             Title = "Updated Title",
-            Description = "Updated Description"
+            Description = "Updated Description",
+            CityId = 1,
+            AreaId = 1
         });
 
         Assert.True(result.Success);
@@ -170,7 +184,9 @@ public sealed class PostMutationServiceTests
             ActorUserId = 99, // Not the owner, but admin
             ActorIsAdmin = true,
             CategoryId = 1,
-            Title = "Admin Updated"
+            Title = "Admin Updated",
+            CityId = 1,
+            AreaId = 1
         });
 
         Assert.True(result.Success);
@@ -229,9 +245,9 @@ public sealed class PostMutationServiceTests
     // Fakes
     // -------------------------------------------------------------------------
 
-    private sealed class FakePostService : IPostService
+    private sealed class FakePostService(bool findReturnsNull = false) : IPostService
     {
-        private readonly bool _findReturnsNull;
+        private readonly bool _findReturnsNull = findReturnsNull;
 
         private static readonly PostModel DefaultPostModel = new(
             postid: 1,
@@ -244,11 +260,9 @@ public sealed class PostMutationServiceTests
             createdat: DateTime.UtcNow,
             isdeleted: false,
             views: 0,
-            cityId: null,
-            areaId: null
+            cityId: 1,
+            areaId: 1
         );
-
-        public FakePostService(bool findReturnsNull = false) => _findReturnsNull = findReturnsNull;
 
         public Task<Post?> FindAsync(int? postId, CancellationToken ct = default)
             => Task.FromResult<Post?>(_findReturnsNull ? null : new Post(DefaultPostModel, Post.ModeType.Update));

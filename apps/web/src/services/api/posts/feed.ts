@@ -9,46 +9,16 @@ import {
 } from "../schemas/postSchema";
 import { transformPostModelToPost } from "./mappers";
 import {
-  getPostImagePreviewUrl,
-  getPostImageRowsByPostId,
   enrichPostsWithCategoryAndSeller,
 } from "./lookups";
-import { RawPost } from "./types";
 
-const FEED_PAGE_SIZE = 500;
+const FEED_PAGE_SIZE = 200;
 
 type FeedApiOptions = Pick<ApiRequestOptions, "signal" | "throwOnAbort">;
 
 type FeedPageResult = 
   | { posts: PostsListResponse["posts"]; pagination: NonNullable<PostsListResponse["pagination"]> }
   | { error: { code?: string; message?: string } };
-
-function getPostId(post: RawPost): string {
-  return String(post?.PostID ?? post?.postID ?? post?.id ?? "").trim();
-}
-
-function postHasEmbeddedImages(post: RawPost): boolean {
-  const imageCandidates = Array.isArray(post?.Images)
-    ? post.Images
-    : Array.isArray(post?.images)
-      ? post.images
-      : [];
-  const hasImageArrayEntry = imageCandidates.some(
-    (value) => typeof value === "string" && value.trim().length > 0,
-  );
-
-  if (hasImageArrayEntry) {
-    return true;
-  }
-
-  const singleImageCandidate =
-    typeof post?.PostImageURL === "string"
-      ? post.PostImageURL
-      : typeof post?.postImageURL === "string"
-        ? post.postImageURL
-        : "";
-  return singleImageCandidate.trim().length > 0;
-}
 
 async function fetchFeedPage(
   page: number,
@@ -73,51 +43,16 @@ async function fetchFeedPage(
     return { error: { code: "PARSE_ERROR" } };
   }
 
-  const missingImagePostIds = Array.from(
-    new Set(
-      parsedPayload.posts
-        .filter((post) => !postHasEmbeddedImages(post))
-        .map((post) => getPostId(post))
-        .filter((postId) => postId.length > 0),
-    ),
-  );
-  const imageEntries = await Promise.all(
-    missingImagePostIds.map(async (postId) => {
-      const imageRows = await getPostImageRowsByPostId(postId);
-      const images = imageRows
-        .map((row) => row.PostImageURL ?? row.postImageURL)
-        .filter(
-          (value): value is string =>
-            typeof value === "string" && value.trim().length > 0,
-        );
-      return [
-        postId,
-        {
-          images,
-          thumbnailImage: getPostImagePreviewUrl(imageRows),
-        },
-      ] as const;
-    }),
-  );
-  const imagesByPostId = Object.fromEntries(imageEntries);
-
   const enrichedPosts = await enrichPostsWithCategoryAndSeller(parsedPayload.posts);
 
   const posts = enrichedPosts.map((post, index) =>
     transformPostModelToPost(
-      {
-        ...post,
-        thumbnailImage:
-          imagesByPostId[getPostId(post)]?.thumbnailImage ||
-          post.thumbnailImage ||
-          post.ThumbnailImage,
-      },
-      imagesByPostId[getPostId(post)]?.images ||
-        (Array.isArray(post?.Images)
-          ? post.Images
-          : Array.isArray(post?.images)
-            ? post.images
-            : []),
+      post,
+      Array.isArray(post?.Images)
+        ? post.Images.filter((image): image is string => typeof image === "string")
+        : Array.isArray(post?.images)
+          ? post.images.filter((image): image is string => typeof image === "string")
+          : [],
       index,
     ),
   );
@@ -144,7 +79,7 @@ export async function getPostsFromFeed(
   const rowsPerPage =
     params?.limit && Number.isFinite(params.limit) && params.limit > 0
       ? Math.min(FEED_PAGE_SIZE, Math.floor(params.limit))
-      : 20;
+      : FEED_PAGE_SIZE;
 
   const pagedFeed = await fetchFeedPage(pageNumber, rowsPerPage, options);
   if (!pagedFeed || !('posts' in pagedFeed)) {
@@ -161,7 +96,7 @@ export async function getPostsFromFeed(
       error: {
         message: errorCode === "DATABASE_UNAVAILABLE" 
             ? "TijarahJo is currently undergoing maintenance (database unreachable). Please try again later."
-            : "Failed to fetch posts feed page.",
+            : "We're having trouble loading the marketplace feed right now. Please check your connection and refresh the page to try again.",
         code: errorCode === "DATABASE_UNAVAILABLE" 
             ? "DATABASE_UNAVAILABLE" 
             : "FEED_PAGE_FAILED",

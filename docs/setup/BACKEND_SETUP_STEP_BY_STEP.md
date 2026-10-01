@@ -26,13 +26,20 @@ Fill in at least:
 
 - `MSSQL_SA_PASSWORD`
 - `JWT_SIGNING_KEY`
+- `JWT_ISSUER`
+- `JWT_AUDIENCE`
 - `DB_APP_PASSWORD`
+- `FRONTEND_URL`
+- `CORS_ALLOWED_ORIGINS`
+- `ALLOWED_HOSTS`
 
 Optional:
 
 - `DB_RUNTIME_PRINCIPAL`
 - `DATABASE_CONNECTION_STRING`
 - `GOOGLE_AUTH_*`
+- `PasswordResetEmail__ResendApiKey`
+- `EmailTwoFactor__ResendApiKey`
 
 ### 3. Bootstrap backend + database
 
@@ -97,7 +104,7 @@ No mock-mode toggle is required in the current frontend.
 - Canonical backend base URL is `http://localhost:5033`
 - Canonical frontend API base URL is `http://localhost:5033/api/v1`
 - Cookie-backed JWT auth is used
-- Session recovery uses `POST /api/auth/refresh` and `GET /api/auth/me`
+- Session recovery uses `POST /api/v1/auth/refresh` and `GET /api/v1/auth/me`
 - Signed-in hard refresh should restore account state without a temporary logged-out header flash
 
 ## Troubleshooting
@@ -141,4 +148,4 @@ Check backend logs and verify:
 - `docs/setup/DATABASE_SETUP_CHECKLIST.md`
 - `apps/api/src/Api/ENVIRONMENT_VARIABLES.md`
 
-**Last Updated:** 2026-04-02
+**Last Updated:** 2026-05-22

@@ -13,8 +13,7 @@ import { SubpageHeader } from "../../../shared/ui/subpage-header";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { InfoPageIntroCard } from "../../../shared/ui/info-page";
 import { Button } from "../../../shared/ui/button";
-import { usePushNotificationsPreference } from "../usePushNotificationsPreference";
-import { useSettingsNotifications } from "../useSettingsNotifications";
+
 import { useTwoFactorSettings } from "../useTwoFactorSettings";
 import { TwoFactorDialog } from "../TwoFactorDialog";
 import { DeleteAccountDialog } from "../DeleteAccountDialog";
@@ -78,24 +77,7 @@ export function SettingsPage({
     language === "ar"
       ? "تحكم في إعدادات الحساب، الإشعارات، والخصوصية من لوحة واحدة."
       : "Manage account preferences, notifications, and privacy from one place.";
-  const {
-    isPushStatusLoading,
-    isPushUpdatePending,
-    isPushToggleAvailable,
-    handlePushNotificationsToggle,
-  } = usePushNotificationsPreference({
-    language,
-    setSettingsPreferences,
-  });
-  const {
-    notifications,
-    isNotificationsLoading,
-    isNotificationsMutationPending,
-    handleMarkNotificationAsRead,
-    handleMarkAllNotificationsAsRead,
-  } = useSettingsNotifications({
-    language,
-  });
+
   const {
     copy: twoFactorCopy,
     twoFactorDescription,
@@ -178,15 +160,7 @@ export function SettingsPage({
           text={text}
           settingsPreferences={settingsPreferences}
           updatePreference={updatePreference}
-          onPushNotificationsChange={handlePushNotificationsToggle}
-          isPushNotificationsDisabled={
-            isPushStatusLoading || isPushUpdatePending || !isPushToggleAvailable
-          }
-          notifications={notifications}
-          isNotificationsLoading={isNotificationsLoading}
-          isNotificationsMutationPending={isNotificationsMutationPending}
-          onMarkNotificationAsRead={handleMarkNotificationAsRead}
-          onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead}
+
           displayName={displayName}
           displayEmail={displayEmail}
           displayPhone={displayPhone}

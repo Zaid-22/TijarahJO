@@ -12,18 +12,11 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/posts")]
-public class AdminPostsController : ControllerBase
+public class AdminPostsController(
+    IAdminQueryHandler adminQueries,
+    IPostStatusTransitionService postStatusTransitions,
+    IAdminDataAccess adminData) : ControllerBase
 {
-    private readonly IAdminQueryHandler _adminQueries;
-    private readonly IPostStatusTransitionService _postStatusTransitions;
-
-    public AdminPostsController(
-        IAdminQueryHandler adminQueries,
-        IPostStatusTransitionService postStatusTransitions)
-    {
-        _adminQueries = adminQueries;
-        _postStatusTransitions = postStatusTransitions;
-    }
 
     [HttpGet]
     [Authorize(Policy = AuthorizationPolicies.PostsView)]
@@ -45,7 +38,7 @@ public class AdminPostsController : ControllerBase
             CityId = cityId
         };
 
-        var result = await _adminQueries.GetAdminPostsAsync(filter, page, pageSize, HttpContext.RequestAborted);
+        var result = await adminQueries.GetAdminPostsAsync(filter, page, pageSize, HttpContext.RequestAborted);
         if (!result.Success || result.Result == null)
         {
             return Problem(
@@ -77,7 +70,7 @@ public class AdminPostsController : ControllerBase
             return failureResult!;
         }
 
-        var result = await _postStatusTransitions.UpdateStatusAsync(
+        var result = await postStatusTransitions.UpdateStatusAsync(
             id,
             currentUserId,
             true, // ActorIsAdmin is true since this is the Admin endpoint
@@ -95,5 +88,32 @@ public class AdminPostsController : ControllerBase
             title: "STATUS_UPDATE_FAILED",
             detail: result.Message
         );
+    }
+
+    /// <summary>Soft-delete a post (admin moderation action).</summary>
+    [HttpDelete("{id}")]
+    [Authorize(Policy = AuthorizationPolicies.PostsModerate)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> SoftDeletePost(int id)
+    {
+        if (id < 1)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid post ID.");
+        }
+
+        if (!ApiControllerHelpers.TryGetCurrentUserIdOrProblem(this, out int adminUserId, out ActionResult? failureResult))
+        {
+            return failureResult!;
+        }
+
+        bool success = await adminData.SoftDeletePostAsync(id, adminUserId, HttpContext.RequestAborted);
+        if (!success)
+        {
+            return NotFound(new { Message = "Post not found." });
+        }
+
+        return Ok(new { Message = "Post deleted successfully." });
     }
 }

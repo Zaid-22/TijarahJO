@@ -1,0 +1,376 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { translations } from "../../../translations";
+import { Language } from "../../../types";
+import { UserProfile } from "../../../types";
+import { toast } from "sonner";
+import { useCatalogCategories } from "../../../shared/hooks/useCatalogCategories";
+import { useLocationOptions } from "../../../shared/hooks/useLocationOptions";
+import { CreatePostInput } from "../../../app/routes/appRoutesUtils";
+import { MarketplaceProgressBar } from "./MarketplaceProgressBar";
+import { PostForm } from "./PostForm";
+import { apiRequest } from "../../../services/api/client";
+
+const MAX_IMAGES = 5;
+
+type SelectedImage = {
+  id: string;
+  previewUrl: string;
+  file: File;
+  isValidating?: boolean;
+  error?: string;
+};
+
+interface CreatePostDialogProps {
+  language: Language;
+  onClose: () => void;
+  onSubmit?: (post: CreatePostInput) => void | Promise<void>;
+  userProfile: UserProfile;
+}
+
+export function CreatePostDialogContent({
+  language,
+  onClose,
+  onSubmit,
+  userProfile,
+}: CreatePostDialogProps) {
+  const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
+  const [imageValidationError, setImageValidationError] = useState<string | undefined>(undefined);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    title: "",
+    price: "",
+    category: "",
+    location: userProfile.city || "",
+    area: userProfile.area || "",
+    description: "",
+  });
+  const [errors, setErrors] = useState({
+    title: false,
+    price: false,
+    category: false,
+    location: false,
+    area: false,
+    images: false,
+    description: false,
+  });
+
+  const progress = useMemo(() => {
+    const steps = [
+      Boolean(formData.title.trim()),
+      Boolean(formData.price && parseFloat(formData.price) >= 0.01),
+      Boolean(formData.category),
+      Boolean(formData.location),
+      Boolean(formData.area),
+      Boolean(formData.description.trim()),
+      selectedImages.length > 0,
+    ];
+    const completedSteps = steps.filter(Boolean).length;
+    return Math.round((completedSteps / steps.length) * 100);
+  }, [formData, selectedImages.length]);
+
+  const objectUrlsRef = useRef<Set<string>>(new Set());
+  const { categories: catalogCategories, isLoading: isLoadingCategories } = useCatalogCategories();
+  
+  const categories = useMemo(() => {
+    const valid = catalogCategories.filter(c => c.name.trim().length > 0);
+    const map = new Map<string, { value: string; label: string }>();
+    valid.forEach(c => {
+      const name = c.name.trim();
+      if (!map.has(name)) {
+        map.set(name, {
+          value: name,
+          label: language === "ar" && c.nameAr ? c.nameAr : name
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [catalogCategories, language]);
+
+  const { cityNames, areaNames, isLoadingCities, isLoadingAreas, cities, areas } = useLocationOptions(
+    formData.location,
+    language,
+  );
+
+  // Automatically switch English/Arabic city names in formData to match current language
+  useEffect(() => {
+    const rawLoc = formData.location.trim().toLowerCase();
+    if (!rawLoc || cities.length === 0) return;
+
+    const matchedCity = cities.find(
+      (c) => c.cityName.toLowerCase() === rawLoc || c.cityNameAr?.toLowerCase() === rawLoc
+    );
+
+    if (matchedCity) {
+      const localizedName = language === "ar" && matchedCity.cityNameAr ? matchedCity.cityNameAr : matchedCity.cityName;
+      if (localizedName !== formData.location) {
+        setFormData(prev => ({ ...prev, location: localizedName }));
+      }
+    }
+  }, [formData.location, cities, language]);
+
+  // Automatically switch English/Arabic area names in formData to match current language
+  useEffect(() => {
+    const rawArea = formData.area.trim().toLowerCase();
+    if (!rawArea || areas.length === 0) return;
+
+    const matchedArea = areas.find(
+      (a) => a.areaName.toLowerCase() === rawArea || a.areaNameAr?.toLowerCase() === rawArea
+    );
+
+    if (matchedArea) {
+      const localizedArea = language === "ar" && matchedArea.areaNameAr ? matchedArea.areaNameAr : matchedArea.areaName;
+      if (localizedArea !== formData.area) {
+        setFormData(prev => ({ ...prev, area: localizedArea }));
+      }
+    }
+  }, [formData.area, areas, language]);
+
+  const cityOptions = useMemo(() => {
+    const normalizedOptionSet = new Set(
+      cityNames.map((city) => city.trim().toLocaleLowerCase()).filter((city) => city.length > 0),
+    );
+    const normalizedCurrentCity = formData.location.trim();
+    if (normalizedCurrentCity && !normalizedOptionSet.has(normalizedCurrentCity.toLocaleLowerCase())) {
+      return [normalizedCurrentCity, ...cityNames];
+    }
+    return cityNames;
+  }, [cityNames, formData.location]);
+
+  const areaSuggestions = useMemo(() => {
+    const normalizedOptionSet = new Set(
+      areaNames.map((area) => area.trim().toLocaleLowerCase()).filter((area) => area.length > 0),
+    );
+    const normalizedCurrentArea = formData.area.trim();
+    if (normalizedCurrentArea && !normalizedOptionSet.has(normalizedCurrentArea.toLocaleLowerCase())) {
+      return [normalizedCurrentArea, ...areaNames];
+    }
+    return areaNames;
+  }, [areaNames, formData.area]);
+
+  const t = translations[language];
+
+  useEffect(() => {
+    const objectUrls = objectUrlsRef.current;
+    return () => {
+      for (const objectUrl of objectUrls) {
+        URL.revokeObjectURL(objectUrl);
+      }
+      objectUrls.clear();
+    };
+  }, []);
+
+  useEffect(() => {
+    setFormData((prev) => {
+      const nextLocation = prev.location || userProfile.city || "";
+      const nextArea = prev.area || userProfile.area || "";
+      if (nextLocation === prev.location && nextArea === prev.area) return prev;
+      return { ...prev, location: nextLocation, area: nextArea };
+    });
+  }, [userProfile.area, userProfile.city]);
+
+  const getLocalizedImageError = (rawError: string, lang: Language) => {
+    const errorLower = rawError.toLowerCase();
+    if (errorLower.includes("moderation") || errorLower.includes("inappropriate") || errorLower.includes("flagged")) {
+      return lang === "ar"
+        ? "تم رفض الصورة بسبب فلاتر الأمان (تم اكتشاف محتوى غير لائق)."
+        : "Image rejected by moderation filters (inappropriate content detected).";
+    }
+    if (errorLower.includes("exceeds size") || errorLower.includes("size limit") || errorLower.includes("too large")) {
+      return lang === "ar"
+        ? "حجم الصورة يتجاوز الحد المسموح به."
+        : "Image size exceeds the allowed limit.";
+    }
+    if (errorLower.includes("extension") || errorLower.includes("unsupported") || errorLower.includes("content type") || errorLower.includes("type")) {
+      return lang === "ar"
+        ? "صيغة الصورة غير مدعومة."
+        : "Unsupported image file format.";
+    }
+    if (errorLower.includes("empty") || errorLower.includes("required")) {
+      return lang === "ar"
+        ? "ملف الصورة فارغ أو مطلوب."
+        : "Image file is empty or required.";
+    }
+    return lang === "ar" ? "فشل التحقق من صحة الصورة." : rawError;
+  };
+
+  const validateImageAsync = async (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append("File", file);
+
+    try {
+      const response = await apiRequest<{ safe: boolean }>("/post-images/validate", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.success) {
+        setSelectedImages((prev) =>
+          prev.map((img) =>
+            img.id === id ? { ...img, isValidating: false, error: undefined } : img
+          )
+        );
+      } else {
+        const errorMsg = response.error?.message || "Failed to validate image";
+        setSelectedImages((prev) =>
+          prev.map((img) =>
+            img.id === id ? { ...img, isValidating: false, error: getLocalizedImageError(errorMsg, language) } : img
+          )
+        );
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "Validation failed";
+      setSelectedImages((prev) =>
+        prev.map((img) =>
+          img.id === id ? { ...img, isValidating: false, error: getLocalizedImageError(errorMsg, language) } : img
+        )
+      );
+    }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    setImageValidationError(undefined);
+
+    const filesArray = Array.from(files);
+    const remainingSlots = Math.max(0, MAX_IMAGES - selectedImages.length);
+    const nextItems = filesArray.slice(0, remainingSlots).map((file, index) => {
+      const previewUrl = URL.createObjectURL(file);
+      objectUrlsRef.current.add(previewUrl);
+      return {
+        id: `${file.name}-${file.size}-${file.lastModified}-${index}-${Date.now()}`,
+        previewUrl,
+        file,
+        isValidating: true,
+      };
+    });
+
+    setSelectedImages((prev) => [...prev, ...nextItems].slice(0, MAX_IMAGES));
+    for (const item of nextItems) {
+      void validateImageAsync(item.id, item.file);
+    }
+    e.target.value = "";
+  };
+
+  const removeImage = (index: number) => {
+    setImageValidationError(undefined);
+    setSelectedImages((prev) => {
+      const target = prev[index];
+      if (target && objectUrlsRef.current.delete(target.previewUrl)) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+
+    const hasValidating = selectedImages.some(img => img.isValidating);
+    if (hasValidating) {
+      setImageValidationError(
+        language === "ar"
+          ? "يرجى الانتظار حتى ينتهي التحقق من الصور"
+          : "Please wait for image verification to complete"
+      );
+      return;
+    }
+
+    const hasErrors = selectedImages.some(img => img.error);
+    if (hasErrors) {
+      setImageValidationError(
+        language === "ar"
+          ? "فشل التحقق من أمان صورة واحدة أو أكثر. يرجى إزالة أو استبدال الصور المرفوضة قبل النشر"
+          : "One or more images failed safety verification. Please remove or replace the flagged images before publishing"
+      );
+      return;
+    }
+
+    const newErrors = {
+      title: !formData.title,
+      price: !formData.price || parseFloat(formData.price) < 0.01,
+      category: !formData.category,
+      location: !formData.location,
+      area: !formData.area,
+      description: !formData.description.trim(),
+      images: selectedImages.length === 0,
+    };
+
+    setErrors(newErrors);
+
+    if (newErrors.images) {
+      setImageValidationError(t.imagesRequired || (language === "ar" ? "يجب إضافة صورة واحدة على الأقل" : "At least one image is required"));
+    } else {
+      setImageValidationError(undefined);
+    }
+
+    if (Object.values(newErrors).some((error) => error)) {
+      const otherErrors = { ...newErrors, images: false };
+      const hasOtherErrors = Object.values(otherErrors).some(e => e);
+      if (hasOtherErrors) {
+        toast.error(language === "ar" ? "يرجى ملء جميع الحقول المطلوبة" : "Please fill in all required fields");
+      }
+      return;
+    }
+
+    const newPost: CreatePostInput = {
+      name: formData.title,
+      price: parseFloat(formData.price),
+      category: formData.category,
+      location: formData.location,
+      area: formData.area,
+      description: formData.description,
+      image: selectedImages[0]?.previewUrl || "",
+      images: selectedImages.map((entry) => entry.file),
+    };
+
+    if (onSubmit) {
+      setIsSubmitting(true);
+      try {
+        await onSubmit(newPost);
+        onClose();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : language === "ar"
+              ? "تعذر نشر المنشور"
+              : "Failed to publish post",
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
+      onClose();
+    }
+  };
+
+  return (
+    <div className="space-y-4 py-4">
+      <MarketplaceProgressBar progress={progress} language={language} />
+      
+      <PostForm
+        language={language}
+        t={t}
+        formData={formData}
+        setFormData={setFormData}
+        errors={errors}
+        setErrors={setErrors}
+        categories={categories}
+        isLoadingCategories={isLoadingCategories}
+        cityOptions={cityOptions}
+        isLoadingCities={isLoadingCities}
+        areaSuggestions={areaSuggestions}
+        isLoadingAreas={isLoadingAreas}
+        selectedImages={selectedImages}
+        maxImages={MAX_IMAGES}
+        handleImageUpload={handleImageUpload}
+        removeImage={removeImage}
+        isSubmitting={isSubmitting}
+        onSubmit={handleSubmit}
+        submitLabel={language === "ar" ? "نشر المنشور" : "Publish Post"}
+        imageValidationError={imageValidationError}
+      />
+    </div>
+  );
+}

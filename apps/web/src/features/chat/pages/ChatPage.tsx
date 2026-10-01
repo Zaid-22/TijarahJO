@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useChatList } from "../useChatList";
 import { MessageSquare } from "lucide-react";
 import { ChatList } from "../components/ChatList";
 import { ChatWindow } from "../components/ChatWindow";
@@ -7,29 +8,27 @@ import { api } from "../../../services/api";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toPositiveIntegerId } from "../../../utils/idValidation";
 import { resolveUserDisplayName } from "../../../utils/userDisplayName";
-import { logger } from "../../../shared/lib/logger";
-import { chatService } from "../../../services/chatService";
 import { resolveDocumentLanguage } from "../../../shared/lib/locale";
+import { logger } from "../../../shared/lib/logger";
 import type { Language } from "../../../types";
 import { Button } from "../../../shared/ui/button";
 import { SubpageHeader } from "../../../shared/ui/subpage-header";
 import { PageShell } from "../../../shared/ui/page-shell";
 import { LoadingState } from "../../../shared/ui/loading-state";
 import { useMediaQuery } from "../../../shared/hooks/useMediaQuery";
-import { formatChatPreviewText } from "../chatMessageContent";
 import {
   buildCurrentPath,
+  resolveBackPathFromHistoryState,
   resolveBackPathFromLocationState,
 } from "../../../shared/lib/backNavigation";
-
-interface ChatSummary {
-  userId: number;
-  displayName: string;
-  avatar?: string;
-  lastMessage: string;
-  timestamp: string;
-  isRead: boolean;
-}
+import {
+  readPersistedChatReturnState,
+  clearPersistedChatReturnPath,
+} from "../chatSessionUtils";
+import type {
+  ChatLocationState,
+  PersistedChatReturnState,
+} from "../chatSessionUtils";
 
 interface ChatPageProps {
   language?: Language;
@@ -43,11 +42,59 @@ export function ChatPage({ language }: ChatPageProps) {
   const resolvedLanguage = language || resolveDocumentLanguage();
   const isRTL = resolvedLanguage === "ar";
   const currentPath = buildCurrentPath(location.pathname, location.search);
+  const locationState =
+    typeof location.state === "object" && location.state !== null
+      ? (location.state as ChatLocationState)
+      : null;
   const safeBackPath = resolveBackPathFromLocationState({
-    locationState: location.state,
+    locationState,
     currentPath,
     fallbackPath: "/",
   });
+  const queryReturnPath = (() => {
+    const rawValue = new URLSearchParams(location.search).get("returnTo");
+    return typeof rawValue === "string" && rawValue.startsWith("/")
+      ? rawValue
+      : "/";
+  })();
+  const historyBackPath =
+    typeof window === "undefined"
+      ? "/"
+      : resolveBackPathFromHistoryState({
+          historyState: window.history.state,
+          currentPath,
+          fallbackPath: "/",
+        });
+  const routeSelectedUserId = toPositiveIntegerId(userId);
+  const persistedReturnState = readPersistedChatReturnState();
+  const persistedBackPath =
+    routeSelectedUserId !== null &&
+    persistedReturnState?.chatUserId === String(routeSelectedUserId)
+      ? persistedReturnState.returnPath
+      : null;
+  const [sessionReturnState, setSessionReturnState] = useState<
+    PersistedChatReturnState | null
+  >(persistedReturnState);
+  const rememberedBackPath =
+    routeSelectedUserId !== null &&
+    sessionReturnState?.chatUserId === String(routeSelectedUserId)
+      ? sessionReturnState.returnPath
+      : null;
+  const resolvedBackPath =
+    queryReturnPath !== "/"
+      ? queryReturnPath
+      : safeBackPath !== "/"
+        ? safeBackPath
+        : historyBackPath !== "/"
+          ? historyBackPath
+          : routeSelectedUserId !== null
+            ? rememberedBackPath ?? persistedBackPath ?? safeBackPath
+            : safeBackPath;
+  const chatListPath =
+    typeof locationState?.chatListPath === "string" &&
+    locationState.chatListPath.startsWith("/")
+      ? locationState.chatListPath
+      : null;
   const labels = {
     userPrefix: resolvedLanguage === "ar" ? "مستخدم" : "User",
     me: resolvedLanguage === "ar" ? "أنا" : "Me",
@@ -61,166 +108,58 @@ export function ChatPage({ language }: ChatPageProps) {
       resolvedLanguage === "ar"
         ? "اختر محادثة للبدء بالدردشة"
         : "Select a conversation to start chatting",
+    loadChatsFailed:
+      resolvedLanguage === "ar"
+        ? "تعذر تحميل المحادثات. حاول مرة أخرى."
+        : "We couldn't load your conversations. Try again.",
+    retry: resolvedLanguage === "ar" ? "إعادة المحاولة" : "Retry",
     back: resolvedLanguage === "ar" ? "العودة" : "Back",
   };
 
-  const initialSelectedUserId = toPositiveIntegerId(userId);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(
-    initialSelectedUserId ?? null,
+    routeSelectedUserId ?? null,
   );
-  const [selectedDisplayName, setSelectedDisplayName] = useState("");
-  const [selectedUserAvatar, setSelectedUserAvatar] = useState<string | undefined>();
-  const [userDisplayNamesById, setUserDisplayNamesById] = useState<
-    Record<number, string>
-  >({});
-  const [userAvatarsById, setUserAvatarsById] = useState<
-    Record<number, string | undefined>
-  >({});
-  const [chats, setChats] = useState<ChatSummary[]>([]);
-  const [isLoadingChats, setIsLoadingChats] = useState(true);
   const isMobile = useMediaQuery("(max-width: 767px)");
 
-  useEffect(() => {
-    async function fetchChats() {
-      if (!isAuthenticated || !user?.id) {
-        setChats([]);
-        setUserDisplayNamesById({});
-        setIsLoadingChats(false);
-        return;
-      }
-
-      setIsLoadingChats(true);
-      try {
-        const currentUserId = toPositiveIntegerId(user.id);
-        if (!currentUserId) {
-          setChats([]);
-          return;
-        }
-
-        const recentMessages = await api.chat.getRecentChats();
-
-        const sortedRecentMessages = [...recentMessages].sort(
-          (a, b) =>
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-        );
-
-        const chatsByUser = new Map<number, ChatSummary>();
-        sortedRecentMessages.forEach((message) => {
-          const otherUser =
-            message.senderId === currentUserId
-              ? message.receiverId
-              : message.senderId;
-
-          if (
-            !otherUser ||
-            otherUser === currentUserId ||
-            chatsByUser.has(otherUser)
-          ) {
-            return;
-          }
-
-          chatsByUser.set(otherUser, {
-            userId: otherUser,
-            displayName: `${labels.userPrefix} ${otherUser}`,
-            lastMessage: formatChatPreviewText(
-              message.content,
-              resolvedLanguage,
-            ),
-            timestamp: message.timestamp,
-            isRead:
-              message.senderId === currentUserId
-                ? true
-                : Boolean(message.isRead),
-          });
-        });
-
-        const otherUserIds = Array.from(chatsByUser.keys());
-        const namesById: Record<number, string> = {};
-        const avatarsById: Record<number, string | undefined> = {};
-
-        await Promise.all(
-          otherUserIds.map(async (otherUserId) => {
-            const userData = await api.users.getUser(String(otherUserId));
-            namesById[otherUserId] = resolveUserDisplayName(
-              userData as Record<string, unknown> | null | undefined,
-              otherUserId,
-            );
-            if (userData && userData.avatar) {
-              avatarsById[otherUserId] = userData.avatar;
-            }
-          }),
-        );
-
-        setUserDisplayNamesById(namesById);
-        setUserAvatarsById(avatarsById);
-        setChats(
-          Array.from(chatsByUser.values()).map((chat) => ({
-            ...chat,
-            displayName: namesById[chat.userId] || chat.displayName,
-            avatar: avatarsById[chat.userId],
-          })),
-        );
-      } catch (error) {
-        logger.warn("Failed to load chats", error);
-        setChats([]);
-        setUserDisplayNamesById({});
-      } finally {
-        setIsLoadingChats(false);
-      }
-    }
-
-    fetchChats();
-  }, [isAuthenticated, labels.userPrefix, user?.id, resolvedLanguage]);
-
-  useEffect(() => {
-    if (!isAuthenticated || !user?.id) {
-      return;
-    }
-
-    const currentUserId = toPositiveIntegerId(user.id);
-    if (!currentUserId) {
-      return;
-    }
-
-    return chatService.onMessageReceived((message) => {
-      const otherUserId =
-        message.senderId === currentUserId
-          ? message.receiverId
-          : message.senderId;
-      if (!otherUserId || otherUserId === currentUserId) {
-        return;
-      }
-
-      setChats((prevChats) => {
-        const existingChat = prevChats.find(
-          (chat) => chat.userId === otherUserId,
-        );
-        const updatedChat: ChatSummary = {
-          userId: otherUserId,
-          displayName:
-            existingChat?.displayName || `${labels.userPrefix} ${otherUserId}`,
-          avatar: existingChat?.avatar || userAvatarsById[otherUserId],
-          lastMessage: formatChatPreviewText(message.content, resolvedLanguage),
-          timestamp: message.timestamp,
-          isRead:
-            message.senderId === currentUserId ||
-            selectedUserId === otherUserId,
-        };
-
-        return [
-          updatedChat,
-          ...prevChats.filter((chat) => chat.userId !== otherUserId),
-        ];
-      });
-    });
-  }, [
-    isAuthenticated,
-    labels.userPrefix,
-    user?.id,
-    selectedUserId,
-    resolvedLanguage,
+  const {
+    chats,
+    isLoadingChats,
+    chatListError,
+    refetchChats,
+    userDisplayNamesById,
     userAvatarsById,
-  ]);
+    setUserDisplayNamesById,
+    setUserAvatarsById,
+    fetchedIdsRef,
+  } = useChatList({
+    isAuthenticated,
+    userId: user?.id ? String(user.id) : undefined,
+    resolvedLanguage,
+    userPrefix: labels.userPrefix,
+    selectedUserId,
+  });
+
+  // Derived reactively from the shared cache — no intermediate state, no flash.
+  // As soon as useChatList or the fetch effect populates the map, the header updates.
+  const selectedDisplayName = selectedUserId
+    ? (userDisplayNamesById[selectedUserId] ?? "")
+    : "";
+  const selectedUserAvatar = selectedUserId
+    ? userAvatarsById[selectedUserId]
+    : undefined;
+
+  // Clear postTitle from history state after first render so it only pre-fills once
+  useEffect(() => {
+    if (locationState?.postTitle) {
+      const { postTitle: _, ...restState } = locationState;
+      navigate(location.pathname + location.search, {
+        replace: true,
+        state: restState,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   useEffect(() => {
     if (!userId) {
@@ -233,84 +172,113 @@ export function ChatPage({ language }: ChatPageProps) {
   }, [userId]);
 
   useEffect(() => {
-    if (selectedUserId === null) {
-      setSelectedDisplayName("");
+    if (routeSelectedUserId === null) {
+      setSessionReturnState(null);
       return;
     }
 
-    const cachedName = userDisplayNamesById[selectedUserId];
-    if (cachedName) {
-      setSelectedDisplayName(cachedName);
-      setSelectedUserAvatar(userAvatarsById[selectedUserId]);
+    if (safeBackPath !== "/") {
+      setSessionReturnState({
+        chatUserId: String(routeSelectedUserId),
+        returnPath: safeBackPath,
+      });
       return;
     }
 
-    setSelectedDisplayName(`${labels.userPrefix} ${selectedUserId}`);
-    setSelectedUserAvatar(undefined);
+    if (persistedBackPath) {
+      setSessionReturnState({
+        chatUserId: String(routeSelectedUserId),
+        returnPath: persistedBackPath,
+      });
+    }
+  }, [persistedBackPath, routeSelectedUserId, safeBackPath]);
 
+  useEffect(() => {
+    if (currentPath === "/chat" && typeof locationState?.fromPath !== "string") {
+      clearPersistedChatReturnPath();
+      return;
+    }
+
+    if (
+      routeSelectedUserId !== null &&
+      safeBackPath === "/" &&
+      persistedReturnState !== null
+    ) {
+      clearPersistedChatReturnPath();
+    }
+  }, [currentPath, locationState, persistedReturnState, routeSelectedUserId, safeBackPath]);
+
+  // Single-responsibility effect: fetch and populate the cache only.
+  // Uses the shared fetchedIdsRef from useChatList to avoid duplicate requests.
+  useEffect(() => {
+    if (selectedUserId === null) return;
+    const requestedOwnerId = String(user?.id || "").trim();
+    if (!requestedOwnerId) return;
+    if (fetchedIdsRef.current?.has(selectedUserId)) return; // already fetched by useChatList or us
+
+    fetchedIdsRef.current?.add(selectedUserId);
     let isCancelled = false;
     (async () => {
-      const userData = await api.users.getUser(String(selectedUserId));
-      if (isCancelled) {
-        return;
-      }
+      try {
+        const userData = await api.users.getUser(String(selectedUserId));
+        if (isCancelled || String(user?.id || "").trim() !== requestedOwnerId) return;
 
-      const resolvedName = resolveUserDisplayName(
-        userData as Record<string, unknown> | null | undefined,
-        selectedUserId,
-      );
-      setSelectedDisplayName(resolvedName);
-      if (userData?.avatar) {
-        setSelectedUserAvatar(userData.avatar);
-      }
-      setUserDisplayNamesById((prev) => ({
-        ...prev,
-        [selectedUserId]: resolvedName,
-      }));
-      if (userData?.avatar) {
-        setUserAvatarsById((prev) => ({
-          ...prev,
-          [selectedUserId]: userData.avatar,
-        }));
+        const resolvedName = resolveUserDisplayName(
+          userData as Record<string, unknown> | null | undefined,
+          selectedUserId,
+        );
+        setUserDisplayNamesById((prev) => ({ ...prev, [selectedUserId]: resolvedName }));
+        if (userData?.avatar) {
+          setUserAvatarsById((prev) => ({ ...prev, [selectedUserId]: userData.avatar }));
+        }
+      } catch (error) {
+        fetchedIdsRef.current?.delete(selectedUserId);
+        if (!isCancelled) {
+          logger.warn("[ChatPage] Failed to load selected user", error);
+        }
       }
     })();
 
-    return () => {
-      isCancelled = true;
-    };
-  }, [labels.userPrefix, selectedUserId, userDisplayNamesById, userAvatarsById]);
+    return () => { isCancelled = true; };
+  }, [selectedUserId, setUserDisplayNamesById, setUserAvatarsById, fetchedIdsRef, user?.id]);
 
   const handleSelectUser = (id: number) => {
     const normalizedUserId = toPositiveIntegerId(id);
-    if (!normalizedUserId) {
-      return;
-    }
+    if (!normalizedUserId) return;
 
     setSelectedUserId(normalizedUserId);
-    setSelectedDisplayName(
-      userDisplayNamesById[normalizedUserId] ||
-        `${labels.userPrefix} ${normalizedUserId}`,
-    );
-    setSelectedUserAvatar(userAvatarsById[normalizedUserId]);
+    // No need to set displayName/avatar — both are derived from the shared cache.
     navigate(`/chat/${normalizedUserId}`, {
       state: {
-        fromPath: safeBackPath,
+        fromPath: resolvedBackPath,
+        chatListPath: "/chat",
       },
     });
   };
 
   const handlePageBack = () => {
     if (isMobile && selectedUserId) {
-      setSelectedUserId(null);
-      navigate("/chat", {
-        state: {
-          fromPath: safeBackPath,
-        },
-      });
+      if (chatListPath) {
+        setSelectedUserId(null);
+        navigate(chatListPath, {
+          state: {
+            fromPath: resolvedBackPath,
+          },
+        });
+        return;
+      }
+
+      if (resolvedBackPath !== "/chat") {
+        clearPersistedChatReturnPath();
+      }
+      navigate(resolvedBackPath, { replace: true });
       return;
     }
 
-    navigate(safeBackPath, { replace: true });
+    if (resolvedBackPath !== "/chat") {
+      clearPersistedChatReturnPath();
+    }
+    navigate(resolvedBackPath, { replace: true });
   };
 
   if (!isAuthenticated) {
@@ -338,8 +306,8 @@ export function ChatPage({ language }: ChatPageProps) {
   }
 
   return (
-    <PageShell tone="account" className="h-[100dvh] overflow-hidden">
-      <div className="flex h-full min-h-0 flex-col overflow-hidden">
+    <PageShell tone="account" className="h-dvh overflow-hidden">
+      <div className="flex h-dvh min-h-0 flex-col overflow-hidden">
         <SubpageHeader
           onBack={handlePageBack}
           isRTL={isRTL}
@@ -362,6 +330,18 @@ export function ChatPage({ language }: ChatPageProps) {
                 }
                 minHeightClassName="min-h-64"
               />
+            ) : chatListError ? (
+              <div
+                className="flex min-h-64 flex-col items-center justify-center gap-4 rounded-2xl border border-destructive/30 bg-card p-6 text-center"
+                role="alert"
+              >
+                <p className="text-sm text-destructive">
+                  {labels.loadChatsFailed}
+                </p>
+                <Button type="button" variant="outline" onClick={refetchChats}>
+                  {labels.retry}
+                </Button>
+              </div>
             ) : (
               <ChatList
                 chats={chats}
@@ -378,25 +358,48 @@ export function ChatPage({ language }: ChatPageProps) {
           >
             {selectedUserId ? (
               <ChatWindow
+                key={`${user?.id || "signed-out"}:${selectedUserId}`}
                 otherUserId={selectedUserId}
-                otherDisplayName={
-                  selectedDisplayName ||
-                  `${labels.userPrefix} ${selectedUserId}`
-                }
+                otherDisplayName={selectedDisplayName}
                 otherUserAvatar={selectedUserAvatar}
                 currentUser={{
                   id: user?.id || "",
                   name: user?.name || labels.me,
                 }}
                 onBack={() => {
+                  if (isMobile) {
+                    if (chatListPath) {
+                      setSelectedUserId(null);
+                      navigate(chatListPath, {
+                        state: {
+                          fromPath: resolvedBackPath,
+                        },
+                      });
+                      return;
+                    }
+
+                    if (resolvedBackPath !== "/chat") {
+                      clearPersistedChatReturnPath();
+                    }
+                    navigate(resolvedBackPath, { replace: true });
+                    return;
+                  }
+
                   setSelectedUserId(null);
                   navigate("/chat", {
                     state: {
-                      fromPath: safeBackPath,
+                      fromPath: resolvedBackPath,
                     },
                   });
                 }}
                 language={resolvedLanguage}
+                showBackButton={isMobile}
+                initialMessage={locationState?.postTitle
+                  ? (resolvedLanguage === "ar"
+                    ? `مرحباً، أود الاستفسار عن: ${locationState.postTitle}`
+                    : `Hi, I'm interested in "${locationState.postTitle}". Could you provide more details?`)
+                  : undefined
+                }
               />
             ) : (
               <div className="h-full flex flex-col items-center justify-center rounded-lg border border-border bg-muted/40 p-8 text-center">

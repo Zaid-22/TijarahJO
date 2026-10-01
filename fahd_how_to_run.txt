@@ -1,0 +1,23 @@
+Running the project locally on Windows (PowerShell)
+
+1. From the repository root, copy .env.example to .env and replace every
+   CHANGE_ME value. Never commit the populated .env file.
+
+2. Start the database using the instructions in README-RUN.md.
+
+3. Start the API from the repository root:
+
+   $env:ASPNETCORE_ENVIRONMENT = "Development"
+   $env:ASPNETCORE_URLS = "http://localhost:5033"
+   $env:JWT_SIGNING_KEY = "<generate-a-random-secret-of-at-least-32-bytes>"
+   $env:DATABASE_CONNECTION_STRING = "Data Source=localhost,1433;Database=TijarahJoDB;User Id=sa;Password=<your-local-database-password>;TrustServerCertificate=True;Encrypt=True;"
+   dotnet run --project apps/api/src/Api/TijarahJo.Api.csproj --no-launch-profile
+
+4. In a second PowerShell terminal, start the web app:
+
+   cd apps/web
+   npm ci
+   npm run dev
+
+See README-RUN.md for the supported macOS/Linux workflow, database bootstrap,
+verification commands, and troubleshooting guidance.

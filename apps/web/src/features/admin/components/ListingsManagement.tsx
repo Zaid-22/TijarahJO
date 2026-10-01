@@ -1,6 +1,6 @@
-/* eslint-disable jsx-a11y/control-has-associated-label */
+/* eslint-disable max-lines */
 import { useEffect, useState } from "react";
-import { Search, Eye, Ban, CheckCircle, Clock, Download } from "lucide-react";
+import { Search, Eye, Ban, CheckCircle, Download, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
@@ -11,6 +11,7 @@ import { logger } from "../../../shared/lib/logger";
 import { exportToCsv } from "../utils/exportCsv";
 import { ListingDetailModal } from "./ListingDetailModal";
 import { useAdminKeyboardShortcuts } from "../hooks/useAdminKeyboardShortcuts";
+import { Link } from "react-router-dom";
 
 export function ListingsManagement() {
   const [postsResult, setPostsResult] = useState<AdminPostListResult>({
@@ -33,6 +34,7 @@ export function ListingsManagement() {
 
   // Bulk actions state
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   // Listing detail modal
   const [detailPost, setDetailPost] = useState<
     AdminPostListResult["posts"][0] | null
@@ -66,6 +68,11 @@ export function ListingsManagement() {
     void fetchPosts(page, statusFilter);
   }, [page, statusFilter]);
 
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setFocusedIndex(-1);
+  }, [page, searchQuery, statusFilter]);
+
   const handleUpdateStatus = async () => {
     if (!actionPost) return;
 
@@ -90,6 +97,29 @@ export function ListingsManagement() {
     }
   };
 
+  const [deletePost, setDeletePost] = useState<{
+    id: number;
+    title: string;
+  } | null>(null);
+
+  const handleDeletePost = async () => {
+    if (!deletePost) return;
+    try {
+      const success = await api.admin.softDeletePost(deletePost.id);
+      if (success) {
+        toast.success("Post deleted successfully");
+        await fetchPosts(page, statusFilter);
+      } else {
+        toast.error("Failed to delete post");
+      }
+    } catch (error) {
+      logger.warn("[ListingsManagement] Failed to delete post", error);
+      toast.error("Error deleting post");
+    } finally {
+      setDeletePost(null);
+    }
+  };
+
   const getStatusBadge = (status: number) => {
     switch (status) {
       case 0:
@@ -105,15 +135,10 @@ export function ListingsManagement() {
           </span>
         );
       case 2:
-        return (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-            <Clock className="w-3 h-3 mr-1" /> Sold/Archived
-          </span>
-        );
       case 3:
         return (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            <Clock className="w-3 h-3 mr-1" /> Suspended
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            <CheckCircle className="w-3 h-3 mr-1" /> Sold
           </span>
         );
       default:
@@ -153,15 +178,38 @@ export function ListingsManagement() {
   };
 
   const handleBulkBlock = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0 || isBulkUpdating) {
+      return;
+    }
+
+    setIsBulkUpdating(true);
+    let succeeded = 0;
+    let failed = 0;
     try {
-      for (const id of selectedIds) {
-        await api.admin.updatePostStatus(id, 1);
+      for (const id of ids) {
+        try {
+          const success = await api.admin.updatePostStatus(id, 1);
+          if (success) {
+            succeeded += 1;
+          } else {
+            failed += 1;
+          }
+        } catch {
+          failed += 1;
+        }
       }
-      toast.success(`Blocked ${selectedIds.size} listings`);
+
+      if (succeeded > 0) {
+        toast.success(`Blocked ${succeeded} ${succeeded === 1 ? "listing" : "listings"}`);
+      }
+      if (failed > 0) {
+        toast.error(`Failed to block ${failed} ${failed === 1 ? "listing" : "listings"}`);
+      }
       setSelectedIds(new Set());
       await fetchPosts(page, statusFilter);
-    } catch {
-      toast.error("Failed to bulk block listings");
+    } finally {
+      setIsBulkUpdating(false);
     }
   };
 
@@ -236,8 +284,7 @@ export function ListingsManagement() {
             <option value="">All Statuses</option>
             <option value="0">Active</option>
             <option value="1">Blocked</option>
-            <option value="2">Sold/Archived</option>
-            <option value="3">Suspended</option>
+            <option value="3">Sold</option>
           </select>
         </div>
       </div>
@@ -286,7 +333,7 @@ export function ListingsManagement() {
                     colSpan={8}
                     className="px-6 py-12 text-center text-muted-foreground"
                   >
-                    <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" role="status" aria-label="Loading" /><span className="sr-only">Loading…</span>
                   </td>
                 </tr>
               ) : filteredPosts.length === 0 ? (
@@ -320,8 +367,14 @@ export function ListingsManagement() {
                     >
                       {post.title || "Untitled"}
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground">
-                      {post.sellerName}
+                    <td className="px-6 py-4">
+                      <Link
+                        to={`/admin/users/${post.userID}`}
+                        className="text-primary hover:underline font-medium transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {post.sellerName}
+                      </Link>
                     </td>
                     <td className="px-6 py-4">{post.categoryName}</td>
                     <td className="px-6 py-4">{post.price ?? 0} JOD</td>
@@ -338,23 +391,40 @@ export function ListingsManagement() {
                           <Eye className="w-4 h-4 text-muted-foreground" />
                         </Button>
                         {post.status === 0 ? (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Block Post"
-                            aria-label={`Block Post ${post.title}`}
-                            className="text-destructive hover:bg-destructive/10"
-                            onClick={() =>
-                              setActionPost({
-                                id: post.postID,
-                                title: post.title,
-                                newStatus: 1,
-                                label: "Blocked",
-                              })
-                            }
-                          >
-                            <Ban className="w-4 h-4" />
-                          </Button>
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Delete Post"
+                              aria-label={`Delete Post ${post.title}`}
+                              className="text-destructive hover:bg-destructive/10"
+                              onClick={() =>
+                                setDeletePost({
+                                  id: post.postID,
+                                  title: post.title,
+                                })
+                              }
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Block Post"
+                              aria-label={`Block Post ${post.title}`}
+                              className="text-destructive hover:bg-destructive/10"
+                              onClick={() =>
+                                setActionPost({
+                                  id: post.postID,
+                                  title: post.title,
+                                  newStatus: 1,
+                                  label: "Blocked",
+                                })
+                              }
+                            >
+                              <Ban className="w-4 h-4" />
+                            </Button>
+                          </>
                         ) : (
                           <Button
                             variant="ghost"
@@ -425,6 +495,21 @@ export function ListingsManagement() {
         onConfirm={handleUpdateStatus}
       />
 
+      <ConfirmActionDialog
+        open={deletePost !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeletePost(null);
+        }}
+        title="Delete post?"
+        description={
+          deletePost
+            ? `Are you sure you want to delete "${deletePost.title || "Untitled"}"? This action will soft-delete the post and hide it from the marketplace.`
+            : ""
+        }
+        confirmLabel="Delete"
+        onConfirm={handleDeletePost}
+      />
+
       {/* Listing Detail Modal */}
       <ListingDetailModal
         post={detailPost}
@@ -438,6 +523,12 @@ export function ListingsManagement() {
             title: detailPost?.title || "",
             newStatus: 1,
             label: "Blocked",
+          })
+        }
+        onDelete={(id) =>
+          setDeletePost({
+            id,
+            title: detailPost?.title || "",
           })
         }
         onApprove={(id) =>
@@ -456,7 +547,12 @@ export function ListingsManagement() {
           <span className="text-sm font-medium">
             {selectedIds.size} selected
           </span>
-          <Button variant="destructive" size="sm" onClick={handleBulkBlock}>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleBulkBlock}
+            disabled={isBulkUpdating}
+          >
             <Ban className="w-3.5 h-3.5 mr-1.5" /> Bulk Block
           </Button>
           <Button

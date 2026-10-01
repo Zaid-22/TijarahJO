@@ -1,4 +1,4 @@
-import { ArrowRight, ShieldAlert } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Logo } from "../../shared/ui/logo";
 
@@ -10,7 +10,6 @@ type MaintenanceScreenProps = {
 
 const copyByLanguage = {
   en: {
-    eyebrow: "Maintenance mode",
     title: "We'll be back shortly.",
     description: "The marketplace is temporarily unavailable.",
     expectedReturnLabel: "Expected return",
@@ -22,7 +21,6 @@ const copyByLanguage = {
     adminAction: "Admin sign in",
   },
   ar: {
-    eyebrow: "وضع الصيانة",
     title: "سنعود قريباً.",
     description: "السوق متوقف مؤقتاً.",
     expectedReturnLabel: "الوقت المتوقع للعودة",
@@ -51,25 +49,16 @@ export function MaintenanceScreen({
   return (
     <div
       dir={isArabic ? "rtl" : "ltr"}
-      className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,_#f8fbff_0%,_#eef3ff_55%,_#ffffff_100%)] text-slate-950"
+      className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,#f8fbff_0%,#eef3ff_55%,#ffffff_100%)] text-slate-950"
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_center,_rgba(59,130,246,0.12),_transparent_62%)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.12),transparent_62%)]" />
 
       <div className="mx-auto flex min-h-screen max-w-3xl items-center px-6 py-10 sm:px-8 lg:px-10">
         <section
-          className={`w-full rounded-[2rem] border border-slate-200/80 bg-white/95 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-sm sm:p-12 ${textAlignClass}`}
+          className={`w-full rounded-4xl border border-slate-200/80 bg-white/95 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-sm sm:p-12 animate-in fade-in slide-in-from-bottom-6 duration-1000 ${textAlignClass}`}
         >
           <div className={`mb-8 flex ${isArabic ? "justify-start sm:justify-end" : "justify-start"}`}>
             <Logo size="md" />
-          </div>
-
-          <div
-            className={`mb-6 flex ${isArabic ? "justify-start sm:justify-end" : "justify-start"}`}
-          >
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700">
-              <ShieldAlert className="h-4 w-4" />
-              <span>{copy.eyebrow}</span>
-            </div>
           </div>
 
           <div className="space-y-4">
@@ -111,17 +100,17 @@ export function MaintenanceScreen({
           </div>
 
           <div
-            className={`mt-8 flex ${
+            className={`mt-10 flex ${
               isArabic ? "justify-start sm:justify-end" : "justify-start"
             }`}
           >
             <Link
               to="/login"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-8 py-3.5 text-sm font-bold text-white shadow-md transition-all hover:bg-primary/90 hover:shadow-lg active:scale-95"
             >
               <span>{copy.adminAction}</span>
               <ArrowRight
-                className={`h-4 w-4 ${isArabic ? "rotate-180" : ""}`}
+                className={`h-4.5 w-4.5 ${isArabic ? "rotate-180" : ""}`}
               />
             </Link>
           </div>

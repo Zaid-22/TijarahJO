@@ -7,7 +7,14 @@ using TijarahJo.Application.Abstractions.DataAccess;
 
 namespace TijarahJo.Application.Services;
 
-public sealed class AuthCommandService : IAuthCommandService
+public sealed class AuthCommandService(
+    IUserDataAccess users,
+    IExternalIdentityDataAccess externalIdentities,
+    IRoleService roles,
+    ILocationReadService locations,
+    IAccountLockoutService accountLockout,
+    ISystemSettingsRuntimeService systemSettings,
+    ILogger<AuthCommandService> logger) : IAuthCommandService
 {
     private const string DefaultUserRoleName = "User";
     private const string GoogleProviderName = "google";
@@ -16,25 +23,13 @@ public sealed class AuthCommandService : IAuthCommandService
     // preventing timing-based user-enumeration attacks.
     private static readonly string _dummyHash = PasswordHelper.HashPassword("dummy-timing-guard-password");
 
-    private readonly IUserDataAccess _users;
-    private readonly IExternalIdentityDataAccess _externalIdentities;
-    private readonly IRoleService _roles;
-    private readonly ILocationReadService _locations;
-    private readonly ILogger<AuthCommandService> _logger;
-
-    public AuthCommandService(
-        IUserDataAccess users,
-        IExternalIdentityDataAccess externalIdentities,
-        IRoleService roles,
-        ILocationReadService locations,
-        ILogger<AuthCommandService> logger)
-    {
-        _users = users;
-        _externalIdentities = externalIdentities;
-        _roles = roles;
-        _locations = locations;
-        _logger = logger;
-    }
+    private readonly IUserDataAccess _users = users;
+    private readonly IExternalIdentityDataAccess _externalIdentities = externalIdentities;
+    private readonly IRoleService _roles = roles;
+    private readonly ILocationReadService _locations = locations;
+    private readonly IAccountLockoutService _accountLockout = accountLockout;
+    private readonly ISystemSettingsRuntimeService _systemSettings = systemSettings;
+    private readonly ILogger<AuthCommandService> _logger = logger;
 
     public async Task<AuthCommandResult> LoginAsync(LoginCommand command, CancellationToken cancellationToken = default)
     {
@@ -54,6 +49,22 @@ public sealed class AuthCommandService : IAuthCommandService
         }
 
         UserModel? user = await _users.GetUserByLoginCandidatesAsync(loginCandidates, cancellationToken);
+        string? observedLockoutStateToken = null;
+
+        // Check account lockout before password verification
+        if (user != null && user.UserID.HasValue)
+        {
+            AccountLockoutResult lockoutResult = await _accountLockout.IsLockedOutAsync(user.UserID.Value, cancellationToken);
+            observedLockoutStateToken = lockoutResult.StateToken;
+            if (lockoutResult.IsLockedOut)
+            {
+                string remainingTime = FormatLockoutRemaining(lockoutResult.LockedUntilUtc);
+                return Failure(
+                    AuthCommandFailureReason.AccountLocked,
+                    $"Too many failed login attempts. Please try again {remainingTime}."
+                );
+            }
+        }
 
         // Always run a hash comparison to prevent timing-based user enumeration.
         // When user is null, compare against a dummy hash so both paths take equal time.
@@ -62,6 +73,20 @@ public sealed class AuthCommandService : IAuthCommandService
 
         if (user == null || user.UserID == null || !passwordValid)
         {
+            // Record failed attempt for lockout tracking
+            if (user != null && user.UserID.HasValue)
+            {
+                AccountLockoutResult lockoutAfterFail = await _accountLockout.RecordFailedAttemptAsync(user.UserID.Value, cancellationToken);
+                if (lockoutAfterFail.IsLockedOut)
+                {
+                    string remainingTime = FormatLockoutRemaining(lockoutAfterFail.LockedUntilUtc);
+                    return Failure(
+                        AuthCommandFailureReason.AccountLocked,
+                        $"Too many failed login attempts. Please try again {remainingTime}."
+                    );
+                }
+            }
+
             return Failure(AuthCommandFailureReason.InvalidCredentials, "Invalid email/phone or password.");
         }
 
@@ -75,18 +100,40 @@ public sealed class AuthCommandService : IAuthCommandService
             return Failure(AuthCommandFailureReason.UserInactive, "User account is banned or inactive.");
         }
 
+        if (!user.IsEmailVerified)
+        {
+            return Failure(AuthCommandFailureReason.EmailNotVerified, "Please verify your email address before logging in.");
+        }
+
+        if (user.SuspendedUntil.HasValue && user.SuspendedUntil.Value > DateTime.UtcNow)
+        {
+            string until = user.SuspendedUntil.Value.ToString("yyyy-MM-dd HH:mm") + " UTC";
+            return Failure(AuthCommandFailureReason.UserInactive, $"Your account is suspended until {until}. Please try again later.");
+        }
+
         if (PasswordHelper.NeedsRehash(user.HashedPassword))
         {
             try
             {
-                user = user with { HashedPassword = PasswordHelper.HashPassword(command.Password) };
-                await _users.UpdateUserAsync(user, user.UserID.Value, cancellationToken);
+                string replacementHash = PasswordHelper.HashPassword(command.Password);
+                await _users.UpdatePasswordHashForCredentialRehashAsync(
+                    user.UserID.Value,
+                    user.HashedPassword,
+                    replacementHash,
+                    cancellationToken);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 // Authentication should not fail because opportunistic hash upgrade failed.
+                _logger.LogWarning(ex, "Opportunistic password hash upgrade failed for user {UserId}.", user.UserID);
             }
         }
+
+        // Clear lockout on successful authentication
+        await _accountLockout.ClearLockoutAsync(
+            user.UserID!.Value,
+            observedLockoutStateToken,
+            cancellationToken);
 
         string? roleName = await ResolveRoleNameForTokenAsync(user.RoleID, cancellationToken);
         if (string.IsNullOrWhiteSpace(roleName))
@@ -104,6 +151,15 @@ public sealed class AuthCommandService : IAuthCommandService
 
     public async Task<AuthCommandResult> SignupAsync(SignupCommand command, CancellationToken cancellationToken = default)
     {
+        // Check registration gate first — before any DB work
+        bool registrationEnabled = await _systemSettings.IsRegistrationEnabledAsync(cancellationToken);
+        if (!registrationEnabled)
+        {
+            return Failure(
+                AuthCommandFailureReason.RegistrationDisabled,
+                "New user registrations are currently disabled. Please try again later.");
+        }
+
         if (string.IsNullOrWhiteSpace(command.Password) || string.IsNullOrWhiteSpace(command.FirstName))
         {
             return Failure(AuthCommandFailureReason.InvalidRequest, "Invalid signup data. Password and first name are required.");
@@ -132,7 +188,8 @@ public sealed class AuthCommandService : IAuthCommandService
 
         if (command.CityId.HasValue || command.AreaId.HasValue)
         {
-            (bool isValid, string validationMessage) = await ValidateLocationSelectionAsync(
+            (bool isValid, string validationMessage) = await ValidationHelpers.ValidateLocationAsync(
+                _locations,
                 command.CityId,
                 command.AreaId,
                 cancellationToken);
@@ -151,6 +208,32 @@ public sealed class AuthCommandService : IAuthCommandService
         {
             normalizedEmail = BuildPhoneAliasEmail(normalizedPhone!);
         }
+
+        // --- Pre-insert duplicate checks (no DB unique constraint on Phone) ---
+        if (!string.IsNullOrWhiteSpace(normalizedPhone))
+        {
+            UserModel? existingByPhone = await _users.GetUserByLoginAsync(normalizedPhone, cancellationToken);
+            if (existingByPhone != null && !existingByPhone.IsDeleted)
+            {
+                return Failure(
+                    AuthCommandFailureReason.DuplicateIdentity,
+                    "An account with this phone number already exists. Please use a different phone number or try logging in.");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(normalizedEmail))
+        {
+            UserModel? existingByEmail = await _users.GetUserByLoginAsync(normalizedEmail, cancellationToken);
+            if (existingByEmail != null && !existingByEmail.IsDeleted)
+            {
+                return Failure(
+                    AuthCommandFailureReason.DuplicateIdentity,
+                    isPhoneOnlySignup
+                        ? "An account with this phone number already exists. Please use a different phone number or try logging in."
+                        : "An account with this email address already exists. Please use a different email or try logging in.");
+            }
+        }
+
 
         // Use the shared RoleResolution helper — eliminates the private duplicate method.
         int? defaultRoleId = await RoleResolution.ResolveRoleIdByNameAsync(_roles, _logger, DefaultUserRoleName, cancellationToken);
@@ -198,15 +281,16 @@ public sealed class AuthCommandService : IAuthCommandService
                 RoleName = roleName
             };
         }
-        catch (Exception ex) when (LooksLikeDuplicateIdentity(ex.Message))
+        catch (Exception ex) when (LooksLikeDuplicateIdentity(GetFullExceptionMessage(ex)))
         {
-            _logger.LogInformation(
-                ex,
-                "Signup rejected due to duplicate identity. email={Email} phone={Phone}",
-                normalizedEmail,
-                normalizedPhone
-            );
-            return Failure(AuthCommandFailureReason.DuplicateIdentity, ResolveDuplicateIdentityMessage(ex.Message, isPhoneOnlySignup));
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Signup rejected due to duplicate identity. email={Email} phone={Phone}",
+                    normalizedEmail,
+                    normalizedPhone);
+            }
+            return Failure(AuthCommandFailureReason.DuplicateIdentity, ResolveDuplicateIdentityMessage(GetFullExceptionMessage(ex), isPhoneOnlySignup));
         }
         catch (Exception ex)
         {
@@ -246,19 +330,44 @@ public sealed class AuthCommandService : IAuthCommandService
             UserModel? linkedUser = await _users.GetUserByIDAsync(linkedUserId.Value, cancellationToken);
             if (linkedUser == null || linkedUser.UserID == null)
             {
+                // Identity link is orphaned — the user row is missing entirely.
+                // Clean up the stale link and let a fresh account be created.
                 _logger.LogWarning(
-                    "Google identity mapping points to missing user. provider={Provider} subject={Subject} userId={UserId}",
+                    "Google identity mapping points to missing user. Removing orphaned link. provider={Provider} subject={Subject} userId={UserId}",
                     GoogleProviderName,
                     normalizedSubject,
                     linkedUserId.Value
                 );
-                return Failure(
-                    AuthCommandFailureReason.PersistenceFailed,
-                    "Google sign-in account mapping is invalid. Please contact support."
+                await _externalIdentities.DeleteIdentityLinkBySubjectAsync(
+                    GoogleProviderName,
+                    normalizedSubject,
+                    cancellationToken
                 );
+                // Fall through to signup flow below.
             }
-
-            return await BuildGoogleSuccessResultAsync(linkedUser, command, cancellationToken);
+            else if (linkedUser.IsDeleted)
+            {
+                // The linked account was soft-deleted — remove the stale identity link so
+                // a fresh signup can claim this Google identity without hitting the
+                // UQ_UserExternalIdentities_Provider_Subject constraint.
+                _logger.LogInformation(
+                    "Google identity mapping points to a deleted user. Removing stale link and creating new account. " +
+                    "provider={Provider} subject={Subject} deletedUserId={UserId}",
+                    GoogleProviderName,
+                    normalizedSubject,
+                    linkedUserId.Value
+                );
+                await _externalIdentities.DeleteIdentityLinkBySubjectAsync(
+                    GoogleProviderName,
+                    normalizedSubject,
+                    cancellationToken
+                );
+                // Fall through to email-match / signup flow below.
+            }
+            else
+            {
+                return await BuildGoogleSuccessResultAsync(linkedUser, command, cancellationToken);
+            }
         }
 
         UserModel? emailMatchedUser = await _users.GetUserByLoginAsync(normalizedEmail, cancellationToken);
@@ -412,6 +521,20 @@ public sealed class AuthCommandService : IAuthCommandService
         GoogleAuthCommand command,
         CancellationToken cancellationToken)
     {
+        // Block Google login when account is locked (lockout applies to all login methods)
+        if (user.UserID.HasValue)
+        {
+            AccountLockoutResult lockoutResult = await _accountLockout.IsLockedOutAsync(user.UserID.Value, cancellationToken);
+            if (lockoutResult.IsLockedOut)
+            {
+                string remainingTime = FormatLockoutRemaining(lockoutResult.LockedUntilUtc);
+                return Failure(
+                    AuthCommandFailureReason.AccountLocked,
+                    $"Too many failed login attempts. Please try again {remainingTime}."
+                );
+            }
+        }
+
         AuthCommandResult? userStateFailure = ValidateGoogleUserState(user);
         if (userStateFailure != null)
         {
@@ -425,6 +548,25 @@ public sealed class AuthCommandService : IAuthCommandService
             command.Avatar,
             cancellationToken
         );
+
+        // Google already verified the email — mark as verified if not already
+        if (!user.IsEmailVerified && user.UserID.HasValue)
+        {
+            user = user with { IsEmailVerified = true };
+            try
+            {
+                await _users.UpdateUserFieldsAsync(
+                    user,
+                    user.UserID.Value,
+                    UserUpdateFields.IsEmailVerified,
+                    cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // Don't fail the login over this — log and continue
+                _logger.LogWarning(ex, "Failed to auto-verify email for Google user {UserId}.", user.UserID);
+            }
+        }
 
         string? roleName = await ResolveRoleNameForTokenAsync(user.RoleID, cancellationToken);
         if (string.IsNullOrWhiteSpace(roleName))
@@ -457,19 +599,19 @@ public sealed class AuthCommandService : IAuthCommandService
             return Failure(AuthCommandFailureReason.UserInactive, "User account is banned or inactive.");
         }
 
+        if (user.SuspendedUntil.HasValue && user.SuspendedUntil.Value > DateTime.UtcNow)
+        {
+            string until = user.SuspendedUntil.Value.ToString("yyyy-MM-dd HH:mm") + " UTC";
+            return Failure(AuthCommandFailureReason.UserInactive, $"Your account is suspended until {until}. Please try again later.");
+        }
+
         return null;
     }
 
-    private sealed class GoogleIdentityLinkResolution
+    private sealed class GoogleIdentityLinkResolution(int? linkedUserId, AuthCommandResult? failure)
     {
-        public GoogleIdentityLinkResolution(int? linkedUserId, AuthCommandResult? failure)
-        {
-            LinkedUserId = linkedUserId;
-            Failure = failure;
-        }
-
-        public int? LinkedUserId { get; }
-        public AuthCommandResult? Failure { get; }
+        public int? LinkedUserId { get; } = linkedUserId;
+        public AuthCommandResult? Failure { get; } = failure;
     }
 
     private static string? NormalizeEmail(string? email)
@@ -479,7 +621,7 @@ public sealed class AuthCommandService : IAuthCommandService
 
     private static string BuildPhoneAliasEmail(string normalizedPhone)
     {
-        string digitsOnly = new string(normalizedPhone.Where(char.IsDigit).ToArray());
+        string digitsOnly = new([.. normalizedPhone.Where(char.IsDigit)]);
         return $"phone_{digitsOnly}@tijarahjo.local";
     }
 
@@ -504,25 +646,38 @@ public sealed class AuthCommandService : IAuthCommandService
         CancellationToken cancellationToken)
     {
         bool changed = false;
+        UserUpdateFields updateFields = UserUpdateFields.None;
 
         if (string.IsNullOrWhiteSpace(user.FirstName) && !string.IsNullOrWhiteSpace(firstName))
         {
             user = user with { FirstName = firstName.Trim() };
             changed = true;
+            updateFields |= UserUpdateFields.FirstName;
         }
 
         if (string.IsNullOrWhiteSpace(user.LastName) && !string.IsNullOrWhiteSpace(lastName))
         {
             user = user with { LastName = lastName.Trim() };
             changed = true;
+            updateFields |= UserUpdateFields.LastName;
         }
 
-        if (string.IsNullOrWhiteSpace(user.Avatar) &&
-            !string.IsNullOrWhiteSpace(avatar) &&
-            ValidationHelpers.IsValidAvatarUrl(avatar))
+        string? normalizedGoogleAvatar =
+            !string.IsNullOrWhiteSpace(avatar) && ValidationHelpers.IsValidAvatarUrl(avatar)
+                ? avatar.Trim()
+                : null;
+        string? currentAvatar = user.Avatar?.Trim();
+        bool shouldRefreshExternalAvatar =
+            normalizedGoogleAvatar != null &&
+            (ValidationHelpers.IsMissingOrInvalidAvatar(currentAvatar) ||
+             (!ValidationHelpers.IsStoredUploadAvatar(currentAvatar) &&
+              !string.Equals(currentAvatar, normalizedGoogleAvatar, StringComparison.Ordinal)));
+
+        if (shouldRefreshExternalAvatar)
         {
-            user = user with { Avatar = avatar.Trim() };
+            user = user with { Avatar = normalizedGoogleAvatar };
             changed = true;
+            updateFields |= UserUpdateFields.Avatar;
         }
 
         if (!changed)
@@ -532,11 +687,18 @@ public sealed class AuthCommandService : IAuthCommandService
 
         try
         {
-            await _users.UpdateUserAsync(user, user.UserID!.Value, cancellationToken);
+            await _users.UpdateUserFieldsAsync(
+                user,
+                user.UserID!.Value,
+                updateFields,
+                cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _logger.LogDebug(ex, "Google profile hydration failed for user {UserId}.", user.UserID);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Google profile hydration failed for user {UserId}.", user.UserID);
+            }
         }
 
         return user;
@@ -572,6 +734,24 @@ public sealed class AuthCommandService : IAuthCommandService
         // Password is not user-facing for OAuth-created users; generate strong random bytes.
         string random = Convert.ToBase64String(RandomNumberGenerator.GetBytes(24));
         return $"G!{random}a9";
+    }
+
+    /// <summary>Walks the full exception chain and concatenates all messages for constraint detection.</summary>
+    private static string GetFullExceptionMessage(Exception? ex)
+    {
+        if (ex is null) return string.Empty;
+        var sb = new System.Text.StringBuilder();
+        var current = ex;
+        while (current != null)
+        {
+            if (!string.IsNullOrWhiteSpace(current.Message))
+            {
+                if (sb.Length > 0) sb.Append(' ');
+                sb.Append(current.Message);
+            }
+            current = current.InnerException;
+        }
+        return sb.ToString();
     }
 
     private static bool LooksLikeDuplicateIdentity(string? message)
@@ -614,46 +794,21 @@ public sealed class AuthCommandService : IAuthCommandService
             : "An account with this information already exists. Please check your details and try again.";
     }
 
-    private async Task<(bool IsValid, string Message)> ValidateLocationSelectionAsync(
-        int? cityId,
-        int? areaId,
-        CancellationToken cancellationToken)
+    private static string FormatLockoutRemaining(DateTime? lockedUntilUtc)
     {
-        if (!cityId.HasValue)
+        if (!lockedUntilUtc.HasValue)
         {
-            return (true, string.Empty);
+            return "in a few minutes";
         }
 
-        if (cityId.Value < 1)
-        {
-            return (false, "CityId must be a positive integer.");
-        }
+        double remainingMinutes = Math.Ceiling((lockedUntilUtc.Value - DateTime.UtcNow).TotalMinutes);
 
-        IReadOnlyList<CityLookupResult> cities = await _locations.GetCitiesAsync(cancellationToken);
-        bool cityExists = cities.Any(city => city.CityId == cityId.Value);
-        if (!cityExists)
+        return remainingMinutes switch
         {
-            return (false, "Selected city is invalid.");
-        }
-
-        if (!areaId.HasValue)
-        {
-            return (true, string.Empty);
-        }
-
-        if (areaId.Value < 1)
-        {
-            return (false, "AreaId must be a positive integer.");
-        }
-
-        IReadOnlyList<AreaLookupResult> areas = await _locations.GetAreasByCityAsync(cityId.Value, cancellationToken);
-        bool areaBelongsToCity = areas.Any(area => area.AreaId == areaId.Value);
-        if (!areaBelongsToCity)
-        {
-            return (false, "Selected area does not belong to the selected city.");
-        }
-
-        return (true, string.Empty);
+            <= 1 => "in about a minute",
+            <= 2 => "in a couple of minutes",
+            _ => $"in {(int)remainingMinutes} minutes"
+        };
     }
 
     private static AuthCommandResult Failure(AuthCommandFailureReason reason, string message)

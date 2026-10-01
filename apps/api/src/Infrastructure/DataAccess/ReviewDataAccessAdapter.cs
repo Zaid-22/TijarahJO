@@ -9,14 +9,8 @@ using TijarahJo.Infrastructure.Persistence;
 namespace TijarahJo.Infrastructure.DataAccess;
 
 
-public sealed class ReviewDataAccessAdapter : IReviewDataAccess
+public sealed class ReviewDataAccessAdapter(TijarahJoDbContext dbContext) : IReviewDataAccess
 {
-    private readonly TijarahJoDbContext _dbContext;
-
-    public ReviewDataAccessAdapter(TijarahJoDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
 
     public async Task<int> AddReviewAsync(ReviewModel review, CancellationToken cancellationToken = default)
     {
@@ -29,19 +23,19 @@ public sealed class ReviewDataAccessAdapter : IReviewDataAccess
             CreatedAt = review.Timestamp == default ? DateTime.UtcNow : review.Timestamp
         };
 
-        _dbContext.Reviews.Add(entity);
-        _dbContext.AuditActorUserId = review.ReviewerID > 0 ? review.ReviewerID : null;
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        dbContext.Reviews.Add(entity);
+        dbContext.AuditActorUserId = review.ReviewerID > 0 ? review.ReviewerID : null;
+        await dbContext.SaveChangesAsync(cancellationToken);
         return entity.ReviewID;
     }
 
     public async Task<IReadOnlyList<ReviewModel>> GetReviewsByUserIdAsync(int userId, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Reviews
+        return await dbContext.Reviews
             .AsNoTracking()
             .Where(r => r.ReviewedUserID == userId)
             .Join(
-                _dbContext.Users.AsNoTracking(),
+                dbContext.Users.AsNoTracking(),
                 review => review.ReviewerID,
                 user => user.UserID,
                 (review, user) => new ReviewModel
@@ -62,8 +56,33 @@ public sealed class ReviewDataAccessAdapter : IReviewDataAccess
 
     public Task<bool> HasReviewedAsync(int reviewerId, int reviewedUserId, CancellationToken cancellationToken = default)
     {
-        return _dbContext.Reviews
+        return dbContext.Reviews
             .AsNoTracking()
             .AnyAsync(item => item.ReviewerID == reviewerId && item.ReviewedUserID == reviewedUserId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<int, (double AverageRating, int ReviewCount)>> GetRatingsByUserIdsAsync(
+        IReadOnlyList<int> userIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (userIds == null || userIds.Count == 0)
+            return new Dictionary<int, (double, int)>();
+
+        // EF Core translates Contains() to SQL IN (...), giving us a single round-trip.
+        var stats = await dbContext.Reviews
+            .AsNoTracking()
+            .Where(r => userIds.Contains(r.ReviewedUserID))
+            .GroupBy(r => r.ReviewedUserID)
+            .Select(g => new
+            {
+                UserId = g.Key,
+                Average = g.Average(r => (double)r.Rating),
+                Count = g.Count()
+            })
+            .ToListAsync(cancellationToken);
+
+        return stats.ToDictionary(
+            s => s.UserId,
+            s => (s.Average, s.Count));
     }
 }

@@ -59,11 +59,33 @@ public sealed class MessageService : IMessageService
     public async Task<List<MessageModel>> GetChatHistoryAsync(int conversationId, int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
         => new(await _messages.GetChatHistoryAsync(conversationId, pageNumber, pageSize, cancellationToken));
 
+    public async Task<List<MessageModel>> GetChatHistoryBetweenUsersAsync(
+        int userA,
+        int userB,
+        int pageNumber = 1,
+        int pageSize = 50,
+        CancellationToken cancellationToken = default)
+        => new(await _messages.GetChatHistoryBetweenUsersAsync(
+            userA, userB, pageNumber, pageSize, cancellationToken));
+
+    public Task<IReadOnlyList<int>> GetConversationIdsBetweenUsersAsync(
+        int userA,
+        int userB,
+        CancellationToken cancellationToken = default)
+        => _messages.GetConversationIdsBetweenUsersAsync(userA, userB, cancellationToken);
+
     public async Task<List<MessageModel>> GetRecentChatsAsync(int userId, CancellationToken cancellationToken = default)
         => new(await _messages.GetRecentChatsAsync(userId, cancellationToken));
 
     public Task<bool> MarkAsReadAsync(int conversationId, int receiverId, CancellationToken cancellationToken = default)
         => _messages.MarkMessagesAsReadAsync(conversationId, receiverId, cancellationToken);
+
+    public Task<bool> MarkAsReadBetweenUsersAsync(
+        int currentUserId,
+        int otherUserId,
+        CancellationToken cancellationToken = default)
+        => _messages.MarkMessagesAsReadBetweenUsersAsync(
+            currentUserId, otherUserId, cancellationToken);
 
     public Message Create(MessageModel model) => new(model);
 

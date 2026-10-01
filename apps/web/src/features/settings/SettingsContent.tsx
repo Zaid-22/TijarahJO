@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { Language } from "../../translations";
 import { SettingsTranslations } from "../../translations/settings";
 import { SettingsPreferences } from "./types";
-import type { AppNotification } from "../../types";
 import { AccountSection } from "./components/AccountSection";
 import { NotificationsSettingsSection } from "./components/NotificationsSettingsSection";
 import { PrivacySection } from "./components/PrivacySection";
@@ -29,13 +28,6 @@ interface SettingsContentProps {
   updatePreference: (
     key: keyof SettingsPreferences,
   ) => (value: boolean) => void;
-  onPushNotificationsChange?: (value: boolean) => void;
-  isPushNotificationsDisabled?: boolean;
-  notifications: AppNotification[];
-  isNotificationsLoading: boolean;
-  isNotificationsMutationPending: boolean;
-  onMarkNotificationAsRead?: (notificationId: number) => void;
-  onMarkAllNotificationsAsRead?: () => void;
   displayName: string;
   displayEmail: string;
   displayPhone: string;
@@ -61,13 +53,6 @@ export function SettingsContent({
   text,
   settingsPreferences,
   updatePreference,
-  onPushNotificationsChange,
-  isPushNotificationsDisabled = false,
-  notifications,
-  isNotificationsLoading,
-  isNotificationsMutationPending,
-  onMarkNotificationAsRead,
-  onMarkAllNotificationsAsRead,
   displayName,
   displayEmail,
   displayPhone,
@@ -88,16 +73,8 @@ export function SettingsContent({
 
       <NotificationsSettingsSection
         text={text}
-        language={language}
         settingsPreferences={settingsPreferences}
         updatePreference={updatePreference}
-        onPushNotificationsChange={onPushNotificationsChange}
-        isPushNotificationsDisabled={isPushNotificationsDisabled}
-        notifications={notifications}
-        isNotificationsLoading={isNotificationsLoading}
-        isNotificationsMutationPending={isNotificationsMutationPending}
-        onMarkNotificationAsRead={onMarkNotificationAsRead}
-        onMarkAllNotificationsAsRead={onMarkAllNotificationsAsRead}
       />
 
       <PrivacySection

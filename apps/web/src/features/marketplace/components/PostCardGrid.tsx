@@ -1,23 +1,38 @@
 import React from "react";
-import { CardContent } from "../../../shared/ui/card";
 import { Badge } from "../../../shared/ui/badge";
+import { CardContent } from "../../../shared/ui/card";
 import { Star } from "lucide-react";
 import { ImageWithFallback } from "./ImageWithFallback";
-import { toThumbnailUrl } from "../../../shared/lib/thumbnail";
+import { getResponsiveImageProps } from "../../../shared/lib/thumbnail";
+
 import { PostCardFavoriteButton } from "./PostCardFavoriteButton";
+import { CompareButton } from "./CompareButton";
 import { PostCardPriceBadge } from "./PostCardPriceBadge";
 import { postCardMediaClass } from "./postCardMediaClass";
+
 import { usePostCardState, type PostCardSharedProps } from "./usePostCardState";
 
-export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardSharedProps) {
+export const PostCardGrid = React.memo(function PostCardGrid(
+  props: PostCardSharedProps,
+) {
   const { post, isFavorite = false } = props;
+  const imageProps = getResponsiveImageProps(post.image, {
+    width: 480,
+    aspectRatio: 4 / 5,
+    quality: 60,
+    widths: [240, 360, 480],
+    sizes: resolveGridImageSizes(props.viewMode),
+  });
+
   const {
     labels,
     priceLocale,
     showFavoriteButton,
     handleFavoriteClick,
     openPost,
+    resolvedLanguage,
   } = usePostCardState(props);
+
   const sellerAverageRating =
     typeof post.averageRating === "number" && post.averageRating > 0
       ? post.averageRating
@@ -28,90 +43,118 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
       : null;
   const hasSellerRating =
     sellerAverageRating !== null && sellerReviewCount !== null;
-  const detailLocation = post.area
-    ? post.location + ", " + post.area
+  const isArabic = resolvedLanguage === "ar";
+  const displayLocation = isArabic
+    ? post.locationAr || post.location
     : post.location;
+  const displayArea = isArabic ? post.areaAr || post.area : post.area;
+  const separator = isArabic ? "، " : ", ";
+  const detailLocation = displayArea
+    ? displayLocation + separator + displayArea
+    : displayLocation;
 
   return (
-    <article className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-[24px] border border-border/60 bg-card animate-fade-in shadow-sm sm:shadow-md">
+    <article className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-black/5 transition-all duration-300 hover:bg-slate-50 hover:shadow-inner hover:ring-black/10 dark:ring-white/5 dark:hover:bg-slate-900/60">
       <button
         type="button"
         onClick={openPost}
         aria-label={labels.viewDetailsAria}
-        className="absolute inset-0 z-10 rounded-[24px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        className="absolute inset-0 z-10 rounded-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       />
 
-      <div className="px-3 pt-3">
-        <div
-          className={`${postCardMediaClass} pointer-events-none rounded-[20px] border border-border/40 bg-muted/30 aspect-[16/9] overflow-hidden shadow-lg`}
-        >
-          <ImageWithFallback
-            src={toThumbnailUrl(post.image) || post.image}
-            fallbackSrc={post.image}
-            alt={post.name}
-            className="absolute inset-0 block h-full min-h-full w-full min-w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/[0.02] via-transparent to-black/[0.18]" />
+      <div
+        className={
+          postCardMediaClass +
+          " pointer-events-none relative aspect-4/5 overflow-hidden bg-muted/30"
+        }
+      >
+        <ImageWithFallback
+          src={imageProps.src || post.image}
+          srcSet={imageProps.srcSet}
+          sizes={imageProps.sizes}
+          fallbackSrc={post.image}
+          alt={post.name}
+          width={480}
+          height={600}
+          className="absolute inset-0 block h-full! w-full! max-w-none object-cover"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.04)_0%,rgba(15,23,42,0)_42%,rgba(15,23,42,0.22)_100%)]" />
 
-          {post.status === "SOLD" && (
-            <div className="absolute left-3 top-3 z-10">
-              <Badge className="border-white/35 bg-slate-950/55 px-2.5 py-1 text-xs font-semibold text-white shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-slate-950/40">
+        <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 p-2.5">
+          <div className="flex flex-wrap gap-1.5">
+            {post.status === "SOLD" && (
+              <Badge className="border-white/20 bg-slate-950/60 px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm backdrop-blur-md supports-backdrop-filter:bg-slate-950/45">
                 {labels.soldOut}
               </Badge>
-            </div>
-          )}
-
-          {post.condition && post.status !== "SOLD" && (
-            <div className="absolute bottom-3 left-3 z-10">
-              <Badge className="border-white/35 bg-white/78 px-2 py-0.5 text-xs font-medium text-foreground shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-white/60">
+            )}
+            {post.condition && post.status !== "SOLD" && (
+              <Badge className="border-white/45 bg-white/88 px-2 py-0.5 text-xs font-semibold text-slate-900 shadow-sm backdrop-blur-md supports-backdrop-filter:bg-white/70">
                 {post.condition}
               </Badge>
+            )}
+          </div>
+
+          {showFavoriteButton && (
+            <div className="flex items-center gap-1.5">
+              <CompareButton
+                post={{
+                  id: String(post.id),
+                  name: post.name,
+                  price: post.price ?? 0,
+                  image: post.image ?? "",
+                  category: post.category ?? "",
+                  categoryId: post.categoryId || "",
+                  location: detailLocation || post.location || "",
+                  views: post.views,
+                  averageRating: sellerAverageRating || undefined,
+                  reviewCount: sellerReviewCount || undefined,
+                  sellerId: post.sellerId || "",
+                  sellerName: post.seller,
+                }}
+                isAuthenticated={props.isAuthenticated}
+                onRequireAuth={props.onRequireAuth}
+              />
+              <PostCardFavoriteButton
+                isFavorite={isFavorite}
+                label={labels.favoriteLabel}
+                onClick={handleFavoriteClick}
+                className="pointer-events-auto z-30"
+              />
             </div>
           )}
-
-          <div className="absolute bottom-2.5 right-2.5 z-10">
-            <PostCardPriceBadge
-              price={post.price}
-              currency={labels.currency}
-              locale={priceLocale}
-            />
-          </div>
         </div>
       </div>
 
-      {showFavoriteButton && (
-        <PostCardFavoriteButton
-          isFavorite={isFavorite}
-          label={labels.favoriteLabel}
-          onClick={handleFavoriteClick}
-          className="absolute right-5 top-5 z-30 pointer-events-auto h-9 w-9"
-        />
-      )}
-
-      <CardContent className="pointer-events-none relative z-20 flex flex-grow flex-col px-4 pb-4 pt-3.5 sm:px-4.5 sm:pb-4.5 sm:pt-3.5">
-        <div className="flex-grow space-y-1">
-          <h3 className="line-clamp-1 text-base font-semibold leading-[1.2] tracking-[-0.015em] text-foreground transition-colors group-hover:text-primary sm:text-lg">
+      <CardContent className="pointer-events-none relative z-20 flex flex-col gap-2 px-2.5 pb-2.5 pt-2.5 sm:px-3 sm:pb-3">
+        <div className="space-y-1">
+          <PostCardPriceBadge
+            price={post.price}
+            currency={labels.currency}
+            locale={priceLocale}
+            variant="inline"
+            className="mb-0 shrink-0 self-start"
+          />
+          <h3 className="line-clamp-2 text-base font-semibold leading-tight text-foreground sm:text-lg">
             {post.name}
           </h3>
-          {detailLocation ? (
-            <p className="line-clamp-1 text-sm font-medium text-slate-600 dark:text-slate-300">
-              {detailLocation}
-            </p>
-          ) : (
-            <div className="h-5" />
-          )}
-
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5">
+          <div className="flex flex-wrap items-center gap-x-2 text-xs font-medium text-muted-foreground sm:text-xs">
+            <span
+              className="truncate"
+              title={detailLocation || post.location || ""}
+            >
+              {detailLocation || "-"}
+            </span>
             {hasSellerRating && (
-              <div className="flex flex-shrink-0 items-center gap-1 rounded-full bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
-                <Star className="h-3 w-3 fill-current" />
-                <span>
-                  {sellerAverageRating?.toFixed(1)}
-                  <span className="ms-1 font-medium opacity-70">
+              <>
+                <span className="text-slate-300 dark:text-slate-700">•</span>
+                <div className="flex items-center gap-1 text-amber-500 font-bold">
+                  <Star className="h-3 w-3 fill-current" />
+                  <span>{sellerAverageRating?.toFixed(1)}</span>
+                  <span className="text-xs font-medium opacity-60">
                     ({sellerReviewCount})
                   </span>
-                </span>
-              </div>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -119,3 +162,19 @@ export const PostCardGrid = React.memo(function PostCardGrid(props: PostCardShar
     </article>
   );
 });
+
+function resolveGridImageSizes(
+  viewMode: PostCardSharedProps["viewMode"],
+): string {
+  switch (viewMode) {
+    case "grid-2":
+      return "(max-width: 639px) 92vw, 46vw";
+    case "grid-3":
+      return "(max-width: 639px) 92vw, (max-width: 1023px) 45vw, 30vw";
+    case "grid-4":
+      return "(max-width: 639px) 92vw, (max-width: 1023px) 45vw, (max-width: 1279px) 30vw, 23vw";
+    case "list":
+    default:
+      return "(max-width: 639px) 92vw, 23vw";
+  }
+}

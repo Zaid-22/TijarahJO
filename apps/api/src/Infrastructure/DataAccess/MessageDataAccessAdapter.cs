@@ -9,14 +9,8 @@ using TijarahJo.Infrastructure.Persistence;
 namespace TijarahJo.Infrastructure.DataAccess;
 
 
-public sealed class MessageDataAccessAdapter : IMessageDataAccess
+public sealed class MessageDataAccessAdapter(TijarahJoDbContext dbContext) : IMessageDataAccess
 {
-    private readonly TijarahJoDbContext _dbContext;
-
-    public MessageDataAccessAdapter(TijarahJoDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
 
     public async Task<int> AddMessageAsync(MessageModel message, CancellationToken cancellationToken = default)
     {
@@ -35,8 +29,8 @@ public sealed class MessageDataAccessAdapter : IMessageDataAccess
             IsRead = message.IsRead
         };
 
-        await _dbContext.Messages.AddAsync(entity, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await dbContext.Messages.AddAsync(entity, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
         return entity.MessageID;
     }
 
@@ -52,13 +46,13 @@ public sealed class MessageDataAccessAdapter : IMessageDataAccess
         int safePage = Math.Max(1, pageNumber);
         int safeSize = Math.Clamp(pageSize, 1, 200);
 
-        ConversationMetadata? metadata = await _dbContext.Conversations
+        ConversationMetadata? metadata = await dbContext.Conversations
             .AsNoTracking()
             .Where(c => c.ConversationID == conversationId)
             .Select(c => new ConversationMetadata(c.User1ID, c.User2ID, c.PostID))
             .FirstOrDefaultAsync(cancellationToken);
 
-        List<MessageEntity> messages = await _dbContext.Messages
+        List<MessageEntity> messages = await dbContext.Messages
             .AsNoTracking()
             .Where(item => item.ConversationID == conversationId)
             .OrderByDescending(item => item.CreatedAt)
@@ -70,9 +64,57 @@ public sealed class MessageDataAccessAdapter : IMessageDataAccess
         // Reverse to chronological order after pagination
         messages.Reverse();
 
-        return messages
-            .Select(item => ToModel(item, metadata?.User1ID, metadata?.User2ID, metadata?.PostID))
-            .ToList();
+        return [.. messages
+            .Select(item => ToModel(item, metadata?.PostID))];
+    }
+
+    public async Task<IReadOnlyList<MessageModel>> GetChatHistoryBetweenUsersAsync(
+        int userA,
+        int userB,
+        int pageNumber = 1,
+        int pageSize = 50,
+        CancellationToken cancellationToken = default)
+    {
+        int user1Id = Math.Min(userA, userB);
+        int user2Id = Math.Max(userA, userB);
+        int safePage = Math.Max(1, pageNumber);
+        int safeSize = Math.Clamp(pageSize, 1, 200);
+
+        var rows = await (
+            from message in dbContext.Messages.AsNoTracking()
+            join conversation in dbContext.Conversations.AsNoTracking()
+                on message.ConversationID equals conversation.ConversationID
+            where conversation.User1ID == user1Id && conversation.User2ID == user2Id
+            orderby message.CreatedAt descending, message.MessageID descending
+            select new
+            {
+                Message = message,
+                conversation.PostID
+            })
+            .Skip((safePage - 1) * safeSize)
+            .Take(safeSize)
+            .ToListAsync(cancellationToken);
+
+        rows.Reverse();
+        return [.. rows.Select(row => ToModel(row.Message, row.PostID))];
+    }
+
+    public async Task<IReadOnlyList<int>> GetConversationIdsBetweenUsersAsync(
+        int userA,
+        int userB,
+        CancellationToken cancellationToken = default)
+    {
+        int user1Id = Math.Min(userA, userB);
+        int user2Id = Math.Max(userA, userB);
+
+        return await dbContext.Conversations
+            .AsNoTracking()
+            .Where(conversation =>
+                conversation.User1ID == user1Id &&
+                conversation.User2ID == user2Id)
+            .OrderBy(conversation => conversation.ConversationID)
+            .Select(conversation => conversation.ConversationID)
+            .ToListAsync(cancellationToken);
     }
 
     /// <summary>
@@ -130,7 +172,7 @@ ORDER BY CreatedAt DESC, MessageID DESC;";
 
         var userIdParameter = new SqlParameter("@UserID", userId);
 
-        List<MessageEntity> recent = await _dbContext.Messages
+        List<MessageEntity> recent = await dbContext.Messages
             .FromSqlRaw(sql, userIdParameter)
             .IgnoreQueryFilters()
             .AsNoTracking()
@@ -141,7 +183,7 @@ ORDER BY CreatedAt DESC, MessageID DESC;";
             .Distinct()
             .ToList();
 
-        var metadataByConversationId = await _dbContext.Conversations
+        var metadataByConversationId = await dbContext.Conversations
             .AsNoTracking()
             .Where(c => conversationIds.Contains(c.ConversationID))
             .Select(c => new
@@ -151,11 +193,11 @@ ORDER BY CreatedAt DESC, MessageID DESC;";
             })
             .ToDictionaryAsync(c => c.ConversationID, c => c.Metadata, cancellationToken);
 
-        return recent.Select(item =>
+        return [.. recent.Select(item =>
         {
             metadataByConversationId.TryGetValue(item.ConversationID, out var metadata);
-            return ToModel(item, metadata?.User1ID, metadata?.User2ID, metadata?.PostID);
-        }).ToList();
+            return ToModel(item, metadata?.PostID);
+        })];
     }
 
     /// <summary>
@@ -163,7 +205,7 @@ ORDER BY CreatedAt DESC, MessageID DESC;";
     /// </summary>
     public async Task<bool> MarkMessagesAsReadAsync(int conversationId, int receiverId, CancellationToken cancellationToken = default)
     {
-        int updatedRows = await _dbContext.Messages
+        int updatedRows = await dbContext.Messages
             .Where(item =>
                 item.ConversationID == conversationId &&
                 item.SenderID != receiverId &&
@@ -172,7 +214,31 @@ ORDER BY CreatedAt DESC, MessageID DESC;";
         return updatedRows > 0;
     }
 
-    private static MessageModel ToModel(MessageEntity entity, int? user1Id = null, int? user2Id = null, int? postId = null)
+    public async Task<bool> MarkMessagesAsReadBetweenUsersAsync(
+        int currentUserId,
+        int otherUserId,
+        CancellationToken cancellationToken = default)
+    {
+        int user1Id = Math.Min(currentUserId, otherUserId);
+        int user2Id = Math.Max(currentUserId, otherUserId);
+        IQueryable<int> conversationIds = dbContext.Conversations
+            .Where(c => c.User1ID == user1Id && c.User2ID == user2Id)
+            .Select(c => c.ConversationID);
+
+        int updatedRows = await dbContext.Messages
+            .Where(message =>
+                conversationIds.Contains(message.ConversationID) &&
+                message.SenderID == otherUserId &&
+                message.ReceiverID == currentUserId &&
+                !message.IsRead)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(message => message.IsRead, true),
+                cancellationToken);
+
+        return updatedRows > 0;
+    }
+
+    private static MessageModel ToModel(MessageEntity entity, int? postId = null)
     {
         return new MessageModel(
             entity.MessageID,

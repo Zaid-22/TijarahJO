@@ -11,7 +11,7 @@ export interface AuthContextType extends AuthState {
     area: string,
   ) => Promise<boolean>;
   logout: () => Promise<void>;
-  loginAsGuest: () => void;
+  loginAsGuest: () => Promise<void>;
   checkAuth: () => Promise<void>;
   isGuest: boolean;
   loading: boolean;

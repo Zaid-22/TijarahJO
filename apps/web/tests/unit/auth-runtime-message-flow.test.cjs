@@ -6,6 +6,9 @@ const {
   OFFLINE_SESSION_MESSAGE,
   shouldEmitAuthError,
 } = require("../../.unit-dist/contexts/authRuntimePolicy.js");
+const {
+  normalizeAuthRejectionMessage,
+} = require("../../.unit-dist/contexts/authUtils.js");
 
 const BACKEND_UNAVAILABLE_MESSAGE =
   "Cannot verify your session right now. Please check your connection and try again.";
@@ -101,4 +104,30 @@ test("timeline emits once per message per cooldown window", () => {
     BACKEND_UNAVAILABLE_MESSAGE,
     BACKEND_UNAVAILABLE_MESSAGE,
   ]);
+});
+
+test("auth rejection messages are normalized before user-facing display", () => {
+  const sessionExpiredMessage = "Your session has expired. Please sign in again.";
+
+  assert.equal(
+    normalizeAuthRejectionMessage(
+      {
+        code: "HTTP_401",
+        message: "Unauthorized",
+      },
+      sessionExpiredMessage,
+    ),
+    sessionExpiredMessage,
+  );
+
+  assert.equal(
+    normalizeAuthRejectionMessage(
+      {
+        code: "HTTP_403",
+        message: "Forbidden",
+      },
+      sessionExpiredMessage,
+    ),
+    sessionExpiredMessage,
+  );
 });

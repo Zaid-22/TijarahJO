@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Language, UserProfile } from "../../types";
 import { DEBOUNCE_DELAY } from "../../constants";
 import { useDebounce } from "../../shared/hooks/useDebounce";
@@ -11,6 +12,7 @@ import {
   shouldLoadFavoritesForPath,
   shouldLoadPostsForPath,
 } from "./appRoutesUtils";
+import { useCatalogCategories } from "../../shared/hooks/useCatalogCategories";
 
 interface UseMarketplaceRouteStateParams {
   pathname: string;
@@ -25,8 +27,40 @@ export function useMarketplaceRouteState({
   language,
   userProfile,
 }: UseMarketplaceRouteStateParams) {
-  const shouldLoadPostsData = shouldLoadPostsForPath(pathname);
-  const shouldLoadFavoritesData = shouldLoadFavoritesForPath(pathname);
+  const normalizedPathname = pathname.toLowerCase().replace(/\/+$/, "") || "/";
+  const isHomeRoute = normalizedPathname === "/";
+  const [isHomeRouteDataReady, setIsHomeRouteDataReady] = useState(
+    !isHomeRoute,
+  );
+
+  useEffect(() => {
+    if (!isHomeRoute) {
+      setIsHomeRouteDataReady(true);
+      return;
+    }
+
+    setIsHomeRouteDataReady(false);
+
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+    const animationFrameHandle = window.requestAnimationFrame(() => {
+      timeoutHandle = setTimeout(() => {
+        setIsHomeRouteDataReady(true);
+      }, 0);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameHandle);
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+      }
+    };
+  }, [isHomeRoute]);
+
+  const shouldLoadPostsData =
+    shouldLoadPostsForPath(pathname) && (!isHomeRoute || isHomeRouteDataReady);
+  const shouldLoadFavoritesData =
+    shouldLoadFavoritesForPath(pathname) &&
+    (!isHomeRoute || isHomeRouteDataReady);
 
   const debouncedSearchQuery = useDebounce(
     searchQuery,
@@ -45,6 +79,7 @@ export function useMarketplaceRouteState({
 
   const { favoriteIds, toggleFavorite } = useFavorites({
     enabled: shouldLoadFavoritesData,
+    userIdHint: userProfile.id,
   });
 
   const {
@@ -56,10 +91,13 @@ export function useMarketplaceRouteState({
     itemsPerPage: 12,
   });
 
+  const { categories: catalogCategories } = useCatalogCategories({
+    useInitialFallback: true,
+  });
   const t = translations[language];
   const isRTL = language === "ar";
   const translateCategory = (category: string) =>
-    getCategoryTranslation(category, language);
+    getCategoryTranslation(category, language, catalogCategories);
   const currentUserId = resolveCurrentUserId(userProfile) || undefined;
 
   return {

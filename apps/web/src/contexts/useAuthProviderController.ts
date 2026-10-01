@@ -1,7 +1,10 @@
+/* eslint-disable max-lines */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AuthState, User } from "../types";
 import { api } from "../services/api";
+import { serverQueryClient } from "../shared/query/queryClient";
 import {
+  normalizeAuthRejectionMessage,
   resolveUserFromAuthPayload,
   shouldClearTokenForAuthError,
 } from "./authUtils";
@@ -32,7 +35,7 @@ import {
   persistAuthSessionHint,
   SESSION_EXPIRED_MESSAGE,
 } from "./authContextUtils";
-import { performAuthLogin, performAuthRegister } from "./authActions";
+import { performAuthLogin, performAuthRegister, PerformAuthLoginResult } from "./authActions";
 import { useAuthEventSync } from "./useAuthEventSync";
 import { AuthContextType } from "./authContextTypes";
 
@@ -49,6 +52,8 @@ export function useAuthProviderController(): AuthContextType {
   const lastRevalidateAtRef = useRef(0);
   const consecutiveNetworkFailuresRef = useRef(0);
   const didInitialAuthCheckRef = useRef(false);
+  const authStateRef = useRef(authState);
+  authStateRef.current = authState;
   const lastAuthErrorEmissionRef = useRef<{
     message: string;
     emittedAt: number;
@@ -62,6 +67,21 @@ export function useAuthProviderController(): AuthContextType {
     }
     // Clear favorites when logging out to prevent guest mode from inheriting them
     localStorage.removeItem("tijarahjo_favorites");
+    // Clear comparison cache when logging out
+    sessionStorage.removeItem("tijarahjo_compare_items");
+    // Clear the in-memory TanStack Query cache for all favorites queries so
+    // stale authenticated favorite IDs are not shown after logout.
+    serverQueryClient.removeQueries({
+      predicate: (query) => {
+        const queryKey = query.queryKey;
+        return (
+          Array.isArray(queryKey) &&
+          queryKey.length >= 2 &&
+          typeof queryKey[1] === "string" &&
+          queryKey[1].startsWith("favorites:")
+        );
+      },
+    });
     // Note: AUTH_LOGOUT_KEY is intentionally NOT cleared here —
     // it is only cleared on explicit login/signup.
   }, []);
@@ -174,8 +194,8 @@ export function useAuthProviderController(): AuthContextType {
 
           return {
             status: "auth_error",
-            message: normalizeMessage(
-              response.error?.message,
+            message: normalizeAuthRejectionMessage(
+              response.error,
               SESSION_EXPIRED_MESSAGE,
             ),
           };
@@ -259,6 +279,22 @@ export function useAuthProviderController(): AuthContextType {
       setLoading(true);
     }
 
+    // Detect OAuth success redirect from backend (?oauthSuccess=1).
+    // The backend appends this parameter after a successful Google OAuth login.
+    // The full-page redirect chain may have cleared localStorage session hints,
+    // so we restore them here and clear any stale logout flag to ensure the
+    // backend probe always runs and the JWT cookie is picked up.
+    const oauthSuccessParams = new URLSearchParams(window.location.search);
+    if (oauthSuccessParams.get("oauthSuccess") === "1") {
+      localStorage.removeItem(AUTH_LOGOUT_KEY);
+      persistAuthSessionHint();
+      // Strip the param from the URL without triggering a navigation.
+      oauthSuccessParams.delete("oauthSuccess");
+      const cleanSearch = oauthSuccessParams.toString();
+      const cleanUrl = `${window.location.pathname}${cleanSearch ? `?${cleanSearch}` : ""}${window.location.hash}`;
+      window.history.replaceState(window.history.state, "", cleanUrl);
+    }
+
     // If user explicitly logged out, don't auto-restore session.
     if (localStorage.getItem(AUTH_LOGOUT_KEY) === "true") {
       clearAuthStorage();
@@ -271,9 +307,10 @@ export function useAuthProviderController(): AuthContextType {
     const guestMode = localStorage.getItem(AUTH_GUEST_KEY);
     const hasAnySessionHint = hasStoredAuthSessionHint() || AUTH_LEGACY_KEYS.some((k) => localStorage.getItem(k) !== null);
 
+    const currentAuthState = authStateRef.current;
     const shouldSkipLoggedOutProbe =
-      !authState.isAuthenticated &&
-      !authState.user &&
+      !currentAuthState.isAuthenticated &&
+      !currentAuthState.user &&
       !hasAnySessionHint;
 
     if (shouldSkipLoggedOutProbe) {
@@ -291,13 +328,13 @@ export function useAuthProviderController(): AuthContextType {
       return;
     }
 
-    let currentUserResult = await fetchCurrentUser(authState.user?.email || "");
+    let currentUserResult = await fetchCurrentUser(currentAuthState.user?.email || "");
     if (currentUserResult.status === "network_error") {
       const retryDelayMs = getNetworkRetryDelayMs(
         consecutiveNetworkFailuresRef.current,
       );
       await pause(retryDelayMs);
-      currentUserResult = await fetchCurrentUser(authState.user?.email || "");
+      currentUserResult = await fetchCurrentUser(currentAuthState.user?.email || "");
     }
 
     if (!isLatestRun()) {
@@ -340,8 +377,7 @@ export function useAuthProviderController(): AuthContextType {
       debugAuthWarn("[AuthContext] No valid authenticated session");
 
       const wasAuthenticated =
-        authState.isAuthenticated ||
-        AUTH_LEGACY_KEYS.some((k) => localStorage.getItem(k) !== null);
+        currentAuthState.isAuthenticated;
 
       clearAuthStorage();
 
@@ -358,7 +394,7 @@ export function useAuthProviderController(): AuthContextType {
       debugAuthWarn("[AuthContext] Backend unavailable during auth check");
 
       const wasAuthenticated =
-        authState.isAuthenticated ||
+        currentAuthState.isAuthenticated ||
         AUTH_LEGACY_KEYS.some((k) => localStorage.getItem(k) !== null);
 
       if (wasAuthenticated) {
@@ -381,10 +417,7 @@ export function useAuthProviderController(): AuthContextType {
     if (isLatestRun()) {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    authState.isAuthenticated,
-    authState.user?.email,
     clearAuthStorage,
     emitAuthError,
     fetchCurrentUser,
@@ -408,7 +441,7 @@ export function useAuthProviderController(): AuthContextType {
 
   const login = useCallback(
     async (email: string, password: string): Promise<boolean> => {
-      return performAuthLogin({
+      const result: PerformAuthLoginResult = await performAuthLogin({
         email,
         password,
         resolveAuthUser,
@@ -417,6 +450,13 @@ export function useAuthProviderController(): AuthContextType {
         setAuthError,
         getErrorMessage,
       });
+      if (result.status === "requires_email_verification") {
+        // Surface a clear message; the LoginPage's own handleSignIn handles
+        // showing the verification panel, so this covers modal / other callers.
+        setAuthError(result.message);
+        return false;
+      }
+      return result.status === "success";
     },
     [hydrateAuthenticatedUser, persistAuthenticatedSession, resolveAuthUser],
   );
@@ -450,26 +490,35 @@ export function useAuthProviderController(): AuthContextType {
   const logout = useCallback(async () => {
     // Set logout flag FIRST so checkAuth won't auto-restore even if
     // the backend call fails or the cookie isn't properly deleted.
+    authCheckRunIdRef.current += 1;
     localStorage.setItem(AUTH_LOGOUT_KEY, "true");
+    clearAuthStorage();
+    setSignedOutState();
+    setLoading(false);
     try {
       await api.auth.logout();
     } catch (error) {
       debugAuthError("Logout error:", error);
-    } finally {
-      clearAuthStorage();
-      setSignedOutState();
     }
   }, [clearAuthStorage, setSignedOutState]);
 
-  const loginAsGuest = useCallback(() => {
-    clearAuthStorage();
-    localStorage.setItem(AUTH_GUEST_KEY, "true");
-    setIsGuest(true);
-    setAuthError(null);
-    setAuthState({
-      isAuthenticated: false,
-      user: null,
-    });
+  const loginAsGuest = useCallback(async () => {
+    authCheckRunIdRef.current += 1;
+    try {
+      await api.auth.logout();
+    } catch (error) {
+      debugAuthError("Guest mode logout cleanup error:", error);
+    } finally {
+      clearAuthStorage();
+      localStorage.removeItem(AUTH_LOGOUT_KEY);
+      localStorage.setItem(AUTH_GUEST_KEY, "true");
+      setIsGuest(true);
+      setAuthError(null);
+      setAuthState({
+        isAuthenticated: false,
+        user: null,
+      });
+    }
   }, [clearAuthStorage]);
 
   return {

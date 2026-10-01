@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using TijarahJo.Domain.Models;
 using TijarahJo.Application.Abstractions.DataAccess;
 using TijarahJo.Application.Common;
@@ -7,14 +8,10 @@ using TijarahJo.Infrastructure.Persistence;
 
 namespace TijarahJo.Infrastructure.DataAccess;
 
-public sealed class UserDataAccessAdapter : IUserDataAccess
+public sealed class UserDataAccessAdapter(TijarahJoDbContext dbContext, ILogger<UserDataAccessAdapter> logger) : IUserDataAccess
 {
-    private readonly TijarahJoDbContext _dbContext;
-
-    public UserDataAccessAdapter(TijarahJoDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
+    private readonly TijarahJoDbContext _dbContext = dbContext;
+    private readonly ILogger<UserDataAccessAdapter> _logger = logger;
 
     public async Task<UserModel?> GetUserByIDAsync(int? userId, CancellationToken cancellationToken = default)
     {
@@ -48,7 +45,8 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
             IsDeleted = user.IsDeleted,
             TwoFactorEnabled = user.TwoFactorEnabled,
             TwoFactorSecret = user.TwoFactorSecret,
-            TwoFactorPendingSecret = user.TwoFactorPendingSecret
+            TwoFactorPendingSecret = user.TwoFactorPendingSecret,
+            IsEmailVerified = user.IsEmailVerified
         };
 
         await _dbContext.Users.AddAsync(entity, cancellationToken);
@@ -57,9 +55,52 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
         return entity.UserID;
     }
 
-    public async Task<bool> UpdateUserAsync(UserModel user, int actorUserId, CancellationToken cancellationToken = default)
+    public async Task<bool> UpdateUserFieldsAsync(
+        UserModel user,
+        int actorUserId,
+        UserUpdateFields fields,
+        CancellationToken cancellationToken = default)
     {
-        if (!user.UserID.HasValue || user.UserID.Value < 1 || actorUserId < 1)
+        return await UpdateUserCoreAsync(user, actorUserId, fields, cancellationToken);
+    }
+
+    public async Task<bool> UpdatePasswordHashForCredentialRehashAsync(
+        int userId,
+        string expectedHashedPassword,
+        string replacementHashedPassword,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId < 1 ||
+            string.IsNullOrWhiteSpace(expectedHashedPassword) ||
+            string.IsNullOrWhiteSpace(replacementHashedPassword) ||
+            string.Equals(expectedHashedPassword, replacementHashedPassword, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        int updatedRows = await _dbContext.Users
+            .Where(user =>
+                user.UserID == userId &&
+                user.HashedPassword == expectedHashedPassword)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(
+                    user => user.HashedPassword,
+                    replacementHashedPassword),
+                cancellationToken);
+
+        return updatedRows == 1;
+    }
+
+    private async Task<bool> UpdateUserCoreAsync(
+        UserModel user,
+        int actorUserId,
+        UserUpdateFields fields,
+        CancellationToken cancellationToken)
+    {
+        if (!user.UserID.HasValue ||
+            user.UserID.Value < 1 ||
+            actorUserId < 1 ||
+            fields == UserUpdateFields.None)
         {
             return false;
         }
@@ -71,24 +112,11 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
             return false;
         }
 
-        entity.HashedPassword = string.IsNullOrWhiteSpace(user.HashedPassword)
-            ? entity.HashedPassword
-            : user.HashedPassword;
-        entity.Email = user.Email;
-        entity.FirstName = user.FirstName;
-        entity.LastName = user.LastName;
-        entity.Phone = user.Phone;
-        entity.CityID = user.CityId;
-        entity.AreaID = user.AreaId;
-        entity.Bio = user.Bio;
-        entity.Avatar = user.Avatar;
-        entity.JoinDate = user.JoinDate == default ? entity.JoinDate : user.JoinDate;
-        entity.Status = user.Status;
-        entity.RoleID = user.RoleID;
-        entity.IsDeleted = user.IsDeleted;
-        entity.TwoFactorEnabled = user.TwoFactorEnabled;
-        entity.TwoFactorSecret = user.TwoFactorSecret;
-        entity.TwoFactorPendingSecret = user.TwoFactorPendingSecret;
+        bool securityStateChanged = ApplyUserUpdateFields(entity, user, fields);
+        if (securityStateChanged)
+        {
+            entity.LastInvalidatedAt = DateTime.UtcNow;
+        }
 
         _dbContext.AuditActorUserId = actorUserId;
         try
@@ -98,10 +126,65 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
         }
         catch (DbUpdateException ex)
         {
-            System.IO.File.WriteAllText("/tmp/tj_db_error.log", ex.ToString());
-            Console.WriteLine("DB UPDATE EXCEPTION: " + ex.ToString());
+            _logger.LogError(ex, "Failed to update user {UserId}", user.UserID);
             return false;
         }
+    }
+
+    internal static bool ApplyUserUpdateFields(
+        UserEntity entity,
+        UserModel user,
+        UserUpdateFields fields)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+        ArgumentNullException.ThrowIfNull(user);
+
+        string originalHashedPassword = entity.HashedPassword;
+        string originalEmail = entity.Email;
+        int originalStatus = entity.Status;
+        int originalRoleId = entity.RoleID;
+        bool originalIsDeleted = entity.IsDeleted;
+        bool originalTwoFactorEnabled = entity.TwoFactorEnabled;
+        string? originalTwoFactorSecret = entity.TwoFactorSecret;
+        DateTime? originalSuspendedUntil = entity.SuspendedUntil;
+
+        if (fields.HasFlag(UserUpdateFields.HashedPassword) &&
+            !string.IsNullOrWhiteSpace(user.HashedPassword))
+        {
+            entity.HashedPassword = user.HashedPassword;
+        }
+        if (fields.HasFlag(UserUpdateFields.Email)) entity.Email = user.Email;
+        if (fields.HasFlag(UserUpdateFields.FirstName)) entity.FirstName = user.FirstName;
+        if (fields.HasFlag(UserUpdateFields.LastName)) entity.LastName = user.LastName;
+        if (fields.HasFlag(UserUpdateFields.Phone)) entity.Phone = user.Phone;
+        if (fields.HasFlag(UserUpdateFields.Location))
+        {
+            entity.CityID = user.CityId;
+            entity.AreaID = user.AreaId;
+        }
+        if (fields.HasFlag(UserUpdateFields.Bio)) entity.Bio = user.Bio;
+        if (fields.HasFlag(UserUpdateFields.Avatar)) entity.Avatar = user.Avatar;
+        if (fields.HasFlag(UserUpdateFields.Status)) entity.Status = user.Status;
+        if (fields.HasFlag(UserUpdateFields.Role)) entity.RoleID = user.RoleID;
+        if (fields.HasFlag(UserUpdateFields.IsDeleted)) entity.IsDeleted = user.IsDeleted;
+        if (fields.HasFlag(UserUpdateFields.TwoFactorEnabled)) entity.TwoFactorEnabled = user.TwoFactorEnabled;
+        if (fields.HasFlag(UserUpdateFields.TwoFactorSecret)) entity.TwoFactorSecret = user.TwoFactorSecret;
+        if (fields.HasFlag(UserUpdateFields.TwoFactorPendingSecret))
+        {
+            entity.TwoFactorPendingSecret = user.TwoFactorPendingSecret;
+        }
+        if (fields.HasFlag(UserUpdateFields.SuspendedUntil)) entity.SuspendedUntil = user.SuspendedUntil;
+        if (fields.HasFlag(UserUpdateFields.IsEmailVerified)) entity.IsEmailVerified = user.IsEmailVerified;
+
+        return
+            !string.Equals(originalHashedPassword, entity.HashedPassword, StringComparison.Ordinal) ||
+            !string.Equals(originalEmail, entity.Email, StringComparison.OrdinalIgnoreCase) ||
+            originalStatus != entity.Status ||
+            originalRoleId != entity.RoleID ||
+            originalIsDeleted != entity.IsDeleted ||
+            originalTwoFactorEnabled != entity.TwoFactorEnabled ||
+            !string.Equals(originalTwoFactorSecret, entity.TwoFactorSecret, StringComparison.Ordinal) ||
+            originalSuspendedUntil != entity.SuspendedUntil;
     }
 
     public async Task<bool> DeleteUserAsync(int? userId, int actorUserId, CancellationToken cancellationToken = default)
@@ -161,7 +244,7 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
                 NewValues = $"{{\"UserID\":{userId.Value},\"IsDeleted\":true}}"
             });
 
-            entity.IsDeleted = true;
+            ApplyDeletionState(entity, DateTime.UtcNow);
             _dbContext.AuditActorUserId = actorUserId;
             bool deleted = await _dbContext.SaveChangesAsync(cancellationToken) > 0;
             if (!deleted)
@@ -180,6 +263,13 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
         }
     }
 
+    internal static void ApplyDeletionState(UserEntity entity, DateTime utcNow)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+        entity.IsDeleted = true;
+        entity.LastInvalidatedAt = utcNow;
+    }
+
     public async Task<bool> DoesUserExistAsync(int? userId, CancellationToken cancellationToken = default)
     {
         return userId.HasValue
@@ -192,7 +282,7 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
     public async Task<IReadOnlyList<UserModel>> GetAllUsersAsync(int pageNumber = 1, int pageSize = 50, CancellationToken cancellationToken = default)
     {
         int safePage = Math.Max(1, pageNumber);
-        int safeSize = Math.Clamp(pageSize, 1, 200);
+        int safeSize = Math.Clamp(pageSize, 1, 1000);
 
         List<UserEntity> entities = await _dbContext.Users
             .AsNoTracking()
@@ -202,7 +292,7 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
             .Take(safeSize)
             .ToListAsync(cancellationToken);
 
-        return entities.Select(ToPublicModel).ToList();
+        return [.. entities.Select(ToPublicModel)];
     }
 
     public async Task<UserModel?> GetUserByLoginAsync(string login, CancellationToken cancellationToken = default)
@@ -302,7 +392,9 @@ public sealed class UserDataAccessAdapter : IUserDataAccess
             entity.IsDeleted,
             entity.TwoFactorEnabled,
             entity.TwoFactorSecret,
-            entity.TwoFactorPendingSecret
+            entity.TwoFactorPendingSecret,
+            entity.SuspendedUntil,
+            entity.IsEmailVerified
         );
     }
 

@@ -7,7 +7,7 @@ public sealed class RoleListQueryResult
     public bool Success { get; init; }
     public int StatusCode { get; init; }
     public string? Message { get; init; }
-    public IReadOnlyList<RoleModel> Roles { get; init; } = Array.Empty<RoleModel>();
+    public IReadOnlyList<RoleModel> Roles { get; init; } = [];
 }
 
 public sealed class RoleByIdQueryResult

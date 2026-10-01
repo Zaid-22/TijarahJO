@@ -18,6 +18,15 @@ cd apps/web
 npm run test:e2e:browser
 ```
 
+By default, this suite runs the mocked browser workflows only and excludes
+`backend-live.spec.cjs` so the result is not padded with an intentional skip.
+To include the backend-connected browser journey in the chromium pass, run:
+
+```bash
+cd apps/web
+E2E_BACKEND_LIVE=1 npm run test:e2e:browser
+```
+
 ## Backend-Connected Browser E2E
 
 To execute journeys against a real backend (no mock API interception), run:

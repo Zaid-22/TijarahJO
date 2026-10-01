@@ -10,14 +10,8 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/audit-logs")]
 [Authorize(Policy = AuthorizationPolicies.AuditView)]
-public class AdminAuditLogController : ControllerBase
+public class AdminAuditLogController(IAdminQueryHandler adminQueries) : ControllerBase
 {
-    private readonly IAdminQueryHandler _adminQueries;
-
-    public AdminAuditLogController(IAdminQueryHandler adminQueries)
-    {
-        _adminQueries = adminQueries;
-    }
 
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -29,7 +23,7 @@ public class AdminAuditLogController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50)
     {
-        var result = await _adminQueries.GetAuditLogsAsync(tableName, page, pageSize, HttpContext.RequestAborted);
+        var result = await adminQueries.GetAuditLogsAsync(tableName, page, pageSize, HttpContext.RequestAborted);
         if (!result.Success || result.Result == null)
         {
             return Problem(

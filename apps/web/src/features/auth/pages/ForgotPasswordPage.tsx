@@ -1,7 +1,7 @@
 import { FormEvent, useState } from "react";
-import { AlertCircle, CheckCircle2, KeyRound, Lock, Mail } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { APP_CONFIG } from "../../../constants/appConfig";
+import { AlertCircle, CheckCircle2, Lock, Mail } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
 import { api } from "../../../services/api";
 import type { Language } from "../../../types";
 import { Alert, AlertDescription } from "../../../shared/ui/alert";
@@ -9,22 +9,20 @@ import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
 import { Label } from "../../../shared/ui/label";
 import { PageShell } from "../../../shared/ui/page-shell";
-import { SubpageHeader } from "../../../shared/ui/subpage-header";
 import { AuthPageLayout } from "../components/AuthPageLayout";
-import {
-  buildCurrentPath,
-  resolveBackPathFromLocationState,
-} from "../../../shared/lib/backNavigation";
+import { OtpCodeInput } from "../components/OtpCodeInput";
 
 interface ForgotPasswordPageProps {
   language: Language;
 }
 
-type ResetStep = "request" | "confirm" | "complete";
+type ResetStep = "request" | "verify" | "password" | "complete";
 
 type ForgotPasswordCopy = {
   title: string;
   subtitle: string;
+  verifySubtitle: string;
+  passwordSubtitle: string;
   emailLabel: string;
   emailPlaceholder: string;
   codeLabel: string;
@@ -35,6 +33,11 @@ type ForgotPasswordCopy = {
   confirmPasswordPlaceholder: string;
   sendCode: string;
   sendingCode: string;
+  resendPrompt: string;
+  resendCode: string;
+  resendingCode: string;
+  verifyCode: string;
+  verifyingCode: string;
   resetPassword: string;
   resettingPassword: string;
   backToLogin: string;
@@ -50,6 +53,7 @@ type ForgotPasswordCopy = {
     passwordMinLength: string;
     passwordMismatch: string;
     requestFailed: string;
+    verifyFailed: string;
     confirmFailed: string;
   };
 };
@@ -58,8 +62,10 @@ const forgotPasswordCopyByLanguage: Record<Language, ForgotPasswordCopy> = {
   en: {
     title: "Reset your password",
     subtitle: "We will send a verification code to your email.",
+    verifySubtitle: "Enter the 6-digit code we sent to your email.",
+    passwordSubtitle: "Choose a new password for your account.",
     emailLabel: "Email address",
-    emailPlaceholder: "name@example.com",
+    emailPlaceholder: "Enter your email",
     codeLabel: "Verification code",
     codePlaceholder: "6-digit code",
     newPasswordLabel: "New password",
@@ -68,16 +74,20 @@ const forgotPasswordCopyByLanguage: Record<Language, ForgotPasswordCopy> = {
     confirmPasswordPlaceholder: "Re-enter new password",
     sendCode: "Send verification code",
     sendingCode: "Sending code...",
+    resendPrompt: "Didn't get the code?",
+    resendCode: "Resend it",
+    resendingCode: "Resending...",
+    verifyCode: "Continue",
+    verifyingCode: "Verifying...",
     resetPassword: "Reset password",
     resettingPassword: "Resetting password...",
     backToLogin: "Back to sign in",
     codeSentHint:
-      "If an account exists for this email, a verification code has been sent.",
+      "A verification code has been sent to your email.",
     successTitle: "Password updated",
     successBody: "Your password has been reset. You can now sign in.",
     errors: {
-      backendConnection:
-        "Cannot connect to backend. Please make sure the backend is running on",
+      backendConnection: "Unable to connect to the server. Please try again later.",
       emailRequired: "Email is required.",
       emailInvalid: "Enter a valid email address.",
       codeRequired: "Verification code is required.",
@@ -85,14 +95,17 @@ const forgotPasswordCopyByLanguage: Record<Language, ForgotPasswordCopy> = {
       passwordMinLength: "Password must be at least 8 characters.",
       passwordMismatch: "Passwords do not match.",
       requestFailed: "Could not send a verification code. Please try again.",
+      verifyFailed: "Invalid or expired verification code.",
       confirmFailed: "Could not reset password. Please check your code.",
     },
   },
   ar: {
     title: "إعادة تعيين كلمة المرور",
     subtitle: "سنرسل رمز تحقق إلى بريدك الإلكتروني.",
+    verifySubtitle: "أدخل رمز التحقق المكوّن من 6 أرقام الذي أرسلناه إلى بريدك الإلكتروني.",
+    passwordSubtitle: "اختر كلمة مرور جديدة لحسابك.",
     emailLabel: "البريد الإلكتروني",
-    emailPlaceholder: "name@example.com",
+    emailPlaceholder: "أدخل بريدك الإلكتروني",
     codeLabel: "رمز التحقق",
     codePlaceholder: "رمز مكوّن من 6 أرقام",
     newPasswordLabel: "كلمة المرور الجديدة",
@@ -101,16 +114,20 @@ const forgotPasswordCopyByLanguage: Record<Language, ForgotPasswordCopy> = {
     confirmPasswordPlaceholder: "أعد إدخال كلمة المرور الجديدة",
     sendCode: "إرسال رمز التحقق",
     sendingCode: "جارٍ إرسال الرمز...",
+    resendPrompt: "لم يصلك الرمز؟",
+    resendCode: "إعادة الإرسال",
+    resendingCode: "جارٍ الإرسال...",
+    verifyCode: "متابعة",
+    verifyingCode: "جارٍ التحقق...",
     resetPassword: "إعادة تعيين كلمة المرور",
     resettingPassword: "جارٍ إعادة التعيين...",
     backToLogin: "العودة إلى تسجيل الدخول",
     codeSentHint:
-      "إذا كان هناك حساب مرتبط بهذا البريد، فسيتم إرسال رمز تحقق إليه.",
+      "تم إرسال رمز التحقق إلى بريدك الإلكتروني.",
     successTitle: "تم تحديث كلمة المرور",
     successBody: "تمت إعادة تعيين كلمة المرور. يمكنك تسجيل الدخول الآن.",
     errors: {
-      backendConnection:
-        "لا يمكن الاتصال بالخادم الخلفي. تأكد من تشغيل الخادم على",
+      backendConnection: "فشل الاتصال بالخادم. يرجى المحاولة مرة أخرى لاحقاً.",
       emailRequired: "البريد الإلكتروني مطلوب.",
       emailInvalid: "أدخل بريدًا إلكترونيًا صالحًا.",
       codeRequired: "رمز التحقق مطلوب.",
@@ -118,6 +135,7 @@ const forgotPasswordCopyByLanguage: Record<Language, ForgotPasswordCopy> = {
       passwordMinLength: "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.",
       passwordMismatch: "كلمتا المرور غير متطابقتين.",
       requestFailed: "تعذر إرسال رمز التحقق. حاول مرة أخرى.",
+      verifyFailed: "رمز التحقق غير صالح أو منتهي الصلاحية.",
       confirmFailed: "تعذر إعادة تعيين كلمة المرور. تحقق من الرمز.",
     },
   },
@@ -125,18 +143,14 @@ const forgotPasswordCopyByLanguage: Record<Language, ForgotPasswordCopy> = {
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function normalizeVerificationCode(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 6);
+}
+
 export function ForgotPasswordPage({ language }: ForgotPasswordPageProps) {
   const navigate = useNavigate();
-  const location = useLocation();
   const copy = forgotPasswordCopyByLanguage[language];
   const isRTL = language === "ar";
-  const currentPath = buildCurrentPath(location.pathname, location.search);
-  const backPath = resolveBackPathFromLocationState({
-    locationState: location.state,
-    currentPath,
-    fallbackPath: "/login",
-    blockedPathnames: ["/forgot-password"],
-  });
   const iconPositionClass = isRTL ? "right-3" : "left-3";
   const inputPaddingClass = "ps-9";
 
@@ -146,12 +160,12 @@ export function ForgotPasswordPage({ language }: ForgotPasswordPageProps) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isRequestLoading, setIsRequestLoading] = useState(false);
+  const [isVerifyLoading, setIsVerifyLoading] = useState(false);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [infoMessage, setInfoMessage] = useState("");
 
-  const backendConnectionMessage =
-    `${copy.errors.backendConnection} ${APP_CONFIG.backendHostUrl}`;
+  const backendConnectionMessage = copy.errors.backendConnection;
 
   const validateEmail = (): string => {
     const normalized = email.trim();
@@ -166,8 +180,7 @@ export function ForgotPasswordPage({ language }: ForgotPasswordPageProps) {
     return "";
   };
 
-  const handleRequestCode = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const requestCode = async () => {
     setErrorMessage("");
     setInfoMessage("");
 
@@ -190,12 +203,61 @@ export function ForgotPasswordPage({ language }: ForgotPasswordPageProps) {
         return;
       }
 
-      setStep("confirm");
+      setCode("");
+      setStep("verify");
       setInfoMessage(result.message || copy.codeSentHint);
     } catch {
       setErrorMessage(copy.errors.requestFailed);
     } finally {
       setIsRequestLoading(false);
+    }
+  };
+
+  const handleRequestCode = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await requestCode();
+  };
+
+  const handleVerifyCode = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage("");
+    setInfoMessage("");
+
+    const emailError = validateEmail();
+    if (emailError) {
+      setErrorMessage(emailError);
+      return;
+    }
+
+    const normalizedCode = normalizeVerificationCode(code);
+    if (normalizedCode.length !== 6) {
+      setErrorMessage(copy.errors.codeRequired);
+      return;
+    }
+
+    setIsVerifyLoading(true);
+    try {
+      const result = await api.auth.verifyPasswordResetCode(
+        email.trim(),
+        normalizedCode,
+      );
+
+      if (!result.success) {
+        setErrorMessage(
+          result.message ||
+            (result.error?.code === "CONNECTION_REFUSED"
+              ? backendConnectionMessage
+              : copy.errors.verifyFailed),
+        );
+        return;
+      }
+
+      setCode(normalizedCode);
+      setStep("password");
+    } catch {
+      setErrorMessage(copy.errors.verifyFailed);
+    } finally {
+      setIsVerifyLoading(false);
     }
   };
 
@@ -210,8 +272,10 @@ export function ForgotPasswordPage({ language }: ForgotPasswordPageProps) {
       return;
     }
 
-    if (!code.trim()) {
+    const normalizedCode = normalizeVerificationCode(code);
+    if (normalizedCode.length !== 6) {
       setErrorMessage(copy.errors.codeRequired);
+      setStep("verify");
       return;
     }
 
@@ -234,7 +298,7 @@ export function ForgotPasswordPage({ language }: ForgotPasswordPageProps) {
     try {
       const result = await api.auth.confirmPasswordReset(
         email.trim(),
-        code.trim(),
+        normalizedCode,
         newPassword,
       );
 
@@ -259,16 +323,18 @@ export function ForgotPasswordPage({ language }: ForgotPasswordPageProps) {
 
   return (
     <PageShell tone="account">
-      <SubpageHeader
-        onBack={() => navigate(backPath, { replace: true })}
-        isRTL={isRTL}
-        backLabel={copy.backToLogin}
-        onLogoClick={() => navigate("/")}
-      />
         <AuthPageLayout
           direction={isRTL ? "rtl" : "ltr"}
           title={copy.title}
-          subtitle={copy.subtitle}
+          subtitle={
+            step === "request"
+              ? copy.subtitle
+              : step === "verify"
+                ? copy.verifySubtitle
+                : step === "password"
+                  ? copy.passwordSubtitle
+                  : undefined
+          }
           footer={
             step !== "complete" ? (
               <div className="text-center mt-4">
@@ -284,14 +350,14 @@ export function ForgotPasswordPage({ language }: ForgotPasswordPageProps) {
           }
         >
             {errorMessage && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="mb-4 sm:mb-6">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription className="text-sm">{errorMessage}</AlertDescription>
               </Alert>
             )}
 
             {infoMessage && (
-              <Alert>
+              <Alert className="mb-4 sm:mb-6">
                 <CheckCircle2 className="h-4 w-4" />
                 <AlertDescription className="text-sm">{infoMessage}</AlertDescription>
               </Alert>
@@ -323,46 +389,37 @@ export function ForgotPasswordPage({ language }: ForgotPasswordPageProps) {
               </form>
             )}
 
-            {step === "confirm" && (
+            {step === "verify" && (
+              <form className="space-y-4" onSubmit={handleVerifyCode} noValidate>
+                <OtpCodeInput
+                  id="verification-code"
+                  label={copy.codeLabel}
+                  value={code}
+                  onChange={setCode}
+                  disabled={isVerifyLoading || isConfirmLoading || isRequestLoading}
+                  resendPrompt={copy.resendPrompt}
+                  resendLabel={copy.resendCode}
+                  resendingLabel={copy.resendingCode}
+                  isResending={isRequestLoading}
+                  onResend={requestCode}
+                />
+
+                <Button
+                  type="submit"
+                  className="w-full h-11"
+                  disabled={
+                    isVerifyLoading ||
+                    isRequestLoading ||
+                    normalizeVerificationCode(code).length !== 6
+                  }
+                >
+                  {isVerifyLoading ? copy.verifyingCode : copy.verifyCode}
+                </Button>
+              </form>
+            )}
+
+            {step === "password" && (
               <form className="space-y-4" onSubmit={handleConfirmReset} noValidate>
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-email">{copy.emailLabel}</Label>
-                  <div className="relative">
-                    <Mail
-                      className={`pointer-events-none absolute ${iconPositionClass} top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground`}
-                    />
-                    <Input
-                      id="confirm-email"
-                      type="email"
-                      value={email}
-                      onChange={(event) => setEmail(event.target.value)}
-                      placeholder={copy.emailPlaceholder}
-                      autoComplete="email"
-                      className={inputPaddingClass}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="verification-code">{copy.codeLabel}</Label>
-                  <div className="relative">
-                    <KeyRound
-                      className={`pointer-events-none absolute ${iconPositionClass} top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground`}
-                    />
-                    <Input
-                      id="verification-code"
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      value={code}
-                      onChange={(event) => setCode(event.target.value)}
-                      placeholder={copy.codePlaceholder}
-                      autoComplete="one-time-code"
-                      className={inputPaddingClass}
-                    />
-                  </div>
-                </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="new-password">{copy.newPasswordLabel}</Label>
                   <div className="relative">

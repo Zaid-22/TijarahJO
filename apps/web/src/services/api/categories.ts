@@ -1,6 +1,7 @@
 import { CategoriesResponse, Category } from "../../types/api";
 import { toPositiveIntegerId } from "../../utils/idValidation";
 import { apiRequest } from "./client";
+import { logger } from "../../shared/lib/logger";
 import {
   parseCategoryCollectionPayload,
   parseCategoryExistsPayload,
@@ -8,25 +9,37 @@ import {
   normalizeCategory,
 } from "./schemas/categorySchema";
 
+// In-flight deduplication — prevents duplicate GET /categories requests when
+// Header, feed page, and other components all mount before the first response.
+let _categoriesGetAllInflight: Promise<CategoriesResponse> | null = null;
+
 export const categoriesApi = {
   getCategories: async (): Promise<CategoriesResponse> => {
-    const response = await apiRequest<unknown>("/categories", {
-      method: "GET",
-    });
-
-    if (response.success) {
-      const rawCategories = parseCategoryCollectionPayload(response.data);
-      const categories = rawCategories.map((cat, index) =>
-        normalizeCategory(cat, index),
-      );
-
-      return {
-        success: true,
-        categories,
-      };
+    // Deduplicate: if another caller is already fetching all categories, share the promise.
+    if (_categoriesGetAllInflight) {
+      return _categoriesGetAllInflight;
     }
 
-    return { success: false, categories: [] };
+    const promise = (async () => {
+      const response = await apiRequest<unknown>("/categories", {
+        method: "GET",
+      });
+
+      if (response.success) {
+        const rawCategories = parseCategoryCollectionPayload(response.data);
+        const categories = rawCategories.map((cat, index) =>
+          normalizeCategory(cat, index),
+        );
+        return { success: true, categories };
+      }
+
+      return { success: false, categories: [] };
+    })().finally(() => {
+      _categoriesGetAllInflight = null;
+    });
+
+    _categoriesGetAllInflight = promise;
+    return promise;
   },
 
   getCategory: async (id: string): Promise<Category | null> => {
@@ -93,15 +106,13 @@ export const categoriesApi = {
       }
 
       const errorMessage = response.error?.message || "Failed to create category";
-      // eslint-disable-next-line no-console
-      console.warn("[categoriesApi.createCategory] API error:", response.error);
+      logger.warn("[categoriesApi.createCategory] API error:", response.error);
       return {
         success: false,
         message: errorMessage,
       };
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("[categoriesApi.createCategory] Exception:", error);
+      logger.error("[categoriesApi.createCategory] Exception:", error);
       return {
         success: false,
         message: error instanceof Error ? error.message : "Failed to create category",
@@ -205,6 +216,23 @@ export const categoriesApi = {
   },
 
   uploadImage: async (file: File): Promise<{ success: boolean; url?: string; message?: string }> => {
+    // Validate file size client-side before uploading — catches oversized files immediately
+    // without waiting for Nginx to reject the upload mid-transfer.
+    const MAX_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB — matches Nginx client_max_body_size
+    if (file.size > MAX_SIZE_BYTES) {
+      return {
+        success: false,
+        message: `Image is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Maximum allowed size is 20 MB. Please compress or resize the image and try again.`,
+      };
+    }
+
+    if (!file.type.startsWith("image/")) {
+      return {
+        success: false,
+        message: "Only image files are allowed (JPG, PNG, WebP, GIF).",
+      };
+    }
+
     const formData = new FormData();
     formData.append("file", file);
 

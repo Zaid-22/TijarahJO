@@ -19,14 +19,16 @@ type ParsedUserSchema = {
   joinedDate: string;
   joinedAt: string;
   status: number;
+  suspendedUntil?: string;
   roleId: number;
   isDeleted: boolean;
   raw: Record<string, unknown>;
+  cityId?: number;
+  areaId?: number;
 };
 
 function resolveRawUserId(
   record: Record<string, unknown>,
-  fallbackId: string,
 ): string {
   const normalizeCandidate = (candidate: unknown): string => {
     if (typeof candidate === "string") {
@@ -51,7 +53,6 @@ function resolveRawUserId(
     record.id,
     record.UserID,
     record.userID,
-    fallbackId,
   ];
   for (const candidate of candidates) {
     const normalized = normalizeCandidate(candidate);
@@ -81,7 +82,7 @@ export function parseUserSchema(
     return null;
   }
 
-  const id = resolveRawUserId(userRecord, fallbackUserId);
+  const id = resolveRawUserId(userRecord);
   if (!id) {
     return null;
   }
@@ -107,6 +108,9 @@ export function parseUserSchema(
       userRecord.Status ?? userRecord.status,
       DEFAULT_ACTIVE_STATUS,
     ),
+    suspendedUntil:
+      readString(userRecord.SuspendedUntil ?? userRecord.suspendedUntil) ||
+      undefined,
     roleId: toIntegerOrDefault(
       userRecord.RoleID ?? userRecord.roleID,
       DEFAULT_USER_ROLE_ID,
@@ -114,6 +118,8 @@ export function parseUserSchema(
     ),
     isDeleted: Boolean(userRecord.IsDeleted ?? userRecord.isDeleted ?? false),
     raw: userRecord,
+    cityId: toPositiveIntegerId(userRecord.CityId ?? userRecord.cityId),
+    areaId: toPositiveIntegerId(userRecord.AreaId ?? userRecord.areaId),
   };
 }
 

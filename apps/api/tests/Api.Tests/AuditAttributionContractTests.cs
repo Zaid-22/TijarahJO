@@ -5,9 +5,9 @@ namespace TijarahJo.Api.Tests;
 public sealed class AuditAttributionContractTests
 {
     [Fact]
-    public void UserDataAccess_UpdateUserAsync_RequiresActorUserIdParameter()
+    public void UserDataAccess_UpdateUserFieldsAsync_RequiresActorUserIdParameter()
     {
-        var method = typeof(IUserDataAccess).GetMethod(nameof(IUserDataAccess.UpdateUserAsync));
+        var method = typeof(IUserDataAccess).GetMethod(nameof(IUserDataAccess.UpdateUserFieldsAsync));
 
         Assert.NotNull(method);
         Assert.Contains(

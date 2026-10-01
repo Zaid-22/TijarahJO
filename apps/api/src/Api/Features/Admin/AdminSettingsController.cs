@@ -10,20 +10,14 @@ namespace TijarahJo.Api.Features.Admin;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin/settings")]
 [Authorize(Policy = AuthorizationPolicies.SettingsManage)]
-public class AdminSettingsController : ControllerBase
+public class AdminSettingsController(IAdminQueryHandler adminQueries) : ControllerBase
 {
-    private readonly IAdminQueryHandler _adminQueries;
-
-    public AdminSettingsController(IAdminQueryHandler adminQueries)
-    {
-        _adminQueries = adminQueries;
-    }
 
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult> GetAllSettings()
     {
-        var result = await _adminQueries.GetAllSettingsAsync(HttpContext.RequestAborted);
+        var result = await adminQueries.GetAllSettingsAsync(HttpContext.RequestAborted);
         if (!result.Success)
         {
             return Problem(statusCode: result.StatusCode, title: "SETTINGS_FAILED", detail: result.Message);
@@ -41,10 +35,10 @@ public class AdminSettingsController : ControllerBase
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid request.");
         }
 
-        var result = await _adminQueries.UpdateSettingAsync(key, request.Value, cancellationToken);
+        var result = await adminQueries.UpdateSettingAsync(key, request.Value, cancellationToken);
         if (result.Success)
         {
-            return Ok(new { Message = result.Message });
+            return Ok(new { result.Message });
         }
 
         return Problem(statusCode: result.StatusCode, title: "SETTING_UPDATE_FAILED", detail: result.Message);

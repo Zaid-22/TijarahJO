@@ -44,6 +44,68 @@ public sealed class UserQueryHandlerTests
         Assert.Equal("User with ID 42 not found.", result.Message);
     }
 
+    [Theory]
+    [InlineData(UserStatusPolicy.Banned)]
+    [InlineData(UserStatusPolicy.Inactive)]
+    public async Task GetByIdAsync_ReturnsNotFound_ForNonActivePublicProfile(int status)
+    {
+        var users = new FakeUserDataAccess
+        {
+            NextFindUser = CreateUserModel(userId: 42) with { Status = status }
+        };
+        var handler = new UserQueryHandler(users);
+
+        UserByIdQueryResult result = await handler.GetByIdAsync(new UserByIdQuery
+        {
+            TargetUserId = 42,
+            RequesterUserId = 7,
+            RequesterIsAdmin = false
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal(404, result.StatusCode);
+        Assert.Null(result.User);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ReturnsNotFound_ForDeletedPublicProfile()
+    {
+        var users = new FakeUserDataAccess
+        {
+            NextFindUser = CreateUserModel(userId: 42) with { IsDeleted = true }
+        };
+        var handler = new UserQueryHandler(users);
+
+        UserByIdQueryResult result = await handler.GetByIdAsync(new UserByIdQuery
+        {
+            TargetUserId = 42,
+            RequesterUserId = null,
+            RequesterIsAdmin = false
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal(404, result.StatusCode);
+        Assert.Null(result.User);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_AllowsAdminToViewNonActiveProfile()
+    {
+        UserModel model = CreateUserModel(userId: 42) with { Status = UserStatusPolicy.Banned };
+        var users = new FakeUserDataAccess { NextFindUser = model };
+        var handler = new UserQueryHandler(users);
+
+        UserByIdQueryResult result = await handler.GetByIdAsync(new UserByIdQuery
+        {
+            TargetUserId = 42,
+            RequesterUserId = 1,
+            RequesterIsAdmin = true
+        });
+
+        Assert.True(result.Success);
+        Assert.Equal(UserStatusPolicy.Banned, result.User?.Status);
+    }
+
     [Fact]
     public async Task GetByIdAsync_RedactsSensitiveFields_ForNonOwnerNonAdmin()
     {
@@ -69,7 +131,7 @@ public sealed class UserQueryHandlerTests
     }
 
     [Fact]
-    public async Task GetByIdAsync_RedactsContactAndProfileFields_ForNonOwnerNonAdmin()
+    public async Task GetByIdAsync_RedactsPrivateFields_ButKeepsPublicAvatar_ForNonOwnerNonAdmin()
     {
         var users = new FakeUserDataAccess
         {
@@ -88,7 +150,7 @@ public sealed class UserQueryHandlerTests
         Assert.NotNull(result.User);
         Assert.Null(result.User!.Phone);
         Assert.Null(result.User.Bio);
-        Assert.Null(result.User.Avatar);
+        Assert.Equal("avatar.png", result.User.Avatar);
     }
 
     [Fact]
@@ -129,6 +191,21 @@ public sealed class UserQueryHandlerTests
         Assert.Equal("Not accepted ID 0", result.Message);
     }
 
+    [Fact]
+    public async Task GetAllAsync_PreservesSuspendedUntil()
+    {
+        DateTime suspendedUntil = DateTime.UtcNow.AddHours(24);
+        var source = CreateUserModel(userId: 3) with { SuspendedUntil = suspendedUntil };
+        var users = new FakeUserDataAccess { NextUsers = new[] { source } };
+        var handler = new UserQueryHandler(users);
+
+        UserListQueryResult result = await handler.GetAllAsync();
+
+        Assert.True(result.Success);
+        Assert.Single(result.Users);
+        Assert.Equal(suspendedUntil, result.Users[0].SuspendedUntil);
+    }
+
     private static UserModel CreateUserModel(int userId)
     {
         return new UserModel(
@@ -145,7 +222,7 @@ public sealed class UserQueryHandlerTests
             joindate: DateTime.UtcNow,
             status: 1,
             roleid: 2,
-            isdeleted: true
+            isdeleted: false
         );
     }
 
@@ -170,7 +247,11 @@ public sealed class UserQueryHandlerTests
         public Task<int> AddUserAsync(UserModel user, CancellationToken cancellationToken = default)
             => Task.FromResult(user.UserID ?? 1);
 
-        public Task<bool> UpdateUserAsync(UserModel user, int actorUserId, CancellationToken cancellationToken = default)
+        public Task<bool> UpdateUserFieldsAsync(
+            UserModel user,
+            int actorUserId,
+            UserUpdateFields fields,
+            CancellationToken cancellationToken = default)
             => Task.FromResult(true);
 
         public Task<bool> DeleteUserAsync(int? userId, int actorUserId, CancellationToken cancellationToken = default)

@@ -75,8 +75,9 @@ print_name_duplicates() {
 
   echo "$title"
   duplicates="$(
-    rg --no-filename -o "$regex" "${ACTIVE_PROC_SCAN_DIRS[@]}" -S \
-    --glob '!**/legacy/**' \
+    grep -roEi "$regex" "${ACTIVE_PROC_SCAN_DIRS[@]}" --include='*.sql' \
+    | grep -v '/legacy/' \
+    | sed -E "s/^[^:]*://" \
     | sed -E "$cleanup_sed" \
     | sort \
     | uniq -c \

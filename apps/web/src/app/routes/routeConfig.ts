@@ -4,6 +4,7 @@ export const APP_ROUTE_PATHS = {
   login: "/login",
   forgotPassword: "/forgot-password",
   completeProfile: "/complete-profile",
+  verifyEmail: "/verify-email",
   settings: "/settings",
   favorites: "/favorites",
   sell: "/sell",
@@ -13,6 +14,7 @@ export const APP_ROUTE_PATHS = {
   chatUser: "/chat/:userId",
   posts: "/posts",
   search: "/search",
+  compare: "/compare",
   category: "/category/:categoryName",
   postDetails: "/post/:id",
   sellerProfile: "/seller/:userId",
@@ -63,12 +65,10 @@ export const APP_DATA_ROUTE_CONFIG: readonly AppDataRouteConfig[] = [
   },
   {
     path: APP_ROUTE_PATHS.posts,
-    loadsPostsData: true,
     loadsFavoritesData: true,
   },
   {
     path: APP_ROUTE_PATHS.search,
-    loadsPostsData: true,
     loadsFavoritesData: true,
   },
   {
@@ -78,7 +78,6 @@ export const APP_DATA_ROUTE_CONFIG: readonly AppDataRouteConfig[] = [
   },
   {
     path: APP_ROUTE_PATHS.category,
-    loadsPostsData: true,
     loadsFavoritesData: true,
   },
   {

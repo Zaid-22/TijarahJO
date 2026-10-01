@@ -20,7 +20,7 @@ const variantStyles = {
   accent:
     "bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border border-amber-200/50 dark:border-amber-800/40",
   gradient:
-    "bg-gradient-to-r from-primary to-secondary text-primary-foreground border-0",
+    "bg-gradient-to-r from-primary to-secondary text-white border-0",
 };
 
 export function HomePromotionalBanner({
@@ -50,7 +50,7 @@ export function HomePromotionalBanner({
           <>
             <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
             <div className="absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
-            <div className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.15)_1px,transparent_1px)] [background-size:32px_32px]" />
+            <div className="pointer-events-none absolute inset-0 opacity-[0.08] bg-[linear-gradient(rgba(255,255,255,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.15)_1px,transparent_1px)] bg-size-[32px_32px]" />
           </>
         )}
 
@@ -97,7 +97,7 @@ export function HomePromotionalBanner({
           {buttonLabel && onButtonClick && (
             <Button
               size="lg"
-              className={`rounded-xl flex-shrink-0 ${
+              className={`rounded-xl shrink-0 ${
                 isGradient
                   ? "bg-white text-primary hover:bg-white/90 shadow-lg"
                   : "shadow-md"

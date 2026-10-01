@@ -1,28 +1,39 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Search, Ban, UserCheck } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "../../../shared/ui/button";
-import { Input } from "../../../shared/ui/input";
 import { api } from "../../../services/api";
 import { AdminUserRecord } from "../../../services/api/users";
-import { CreateUserDialog } from "./users/CreateUserDialog";
 import { UsersTable } from "./users/UsersTable";
+import { BulkUserActionsBar } from "./users/BulkUserActionsBar";
+import { UsersManagementHeader } from "./users/UsersManagementHeader";
+import { UsersManagementDialogs } from "./users/UsersManagementDialogs";
 import { CreateUserForm, initialCreateUserForm } from "./users/types";
-import { formatCompactDate } from "../../../shared/lib/dateTime";
 import { logger } from "../../../shared/lib/logger";
-import { useNavigate } from "react-router-dom";
-import { TypeToConfirmDialog } from "../../../shared/ui/type-to-confirm-dialog";
+import { useLocation, useNavigate } from "react-router-dom";
+import { emitAuthSessionChanged } from "../../../contexts/authContextUtils";
+import type { NormalizedRole } from "../../../services/api/roles";
+import { buildCurrentPath } from "../../../shared/lib/backNavigation";
+import {
+  formatJoinedDate,
+  getAssignableRoles,
+  getDefaultCreateRoleId,
+} from "./users/userManagementUtils";
 
-function formatJoinedDate(dateValue?: string): string {
-  if (!dateValue) {
-    return "N/A";
+async function verifyUserExists(userId: string): Promise<boolean | null> {
+  try {
+    return await api.users.exists(userId);
+  } catch (error) {
+    logger.warn("[UsersManagement] Failed to verify user existence", error);
+    toast.error("Could not verify the user. The user list was not changed.");
+    return null;
   }
-  return formatCompactDate(dateValue) || dateValue;
 }
 
 export function UsersManagement() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const currentPath = buildCurrentPath(location.pathname, location.search);
   const [users, setUsers] = useState<AdminUserRecord[]>([]);
+  const [roles, setRoles] = useState<NormalizedRole[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
@@ -33,20 +44,35 @@ export function UsersManagement() {
     id: string;
     displayName: string;
   } | null>(null);
+  const [pendingSuspendUser, setPendingSuspendUser] = useState<{
+    id: string;
+    displayName: string;
+  } | null>(null);
+  const [suspendDurationHours, setSuspendDurationHours] = useState<string>("24");
+  const [isSuspending, setIsSuspending] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const filteredUsers = useMemo(
-    () =>
-      users.filter(
-        (user) =>
-          (user.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (user.email || "").toLowerCase().includes(searchQuery.toLowerCase()),
-      ),
-    [searchQuery, users],
-  );
+  const filteredUsers = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return users;
+    }
+
+    return users.filter(
+      (user) =>
+        (user.name || "").toLowerCase().includes(normalizedQuery) ||
+        (user.email || "").toLowerCase().includes(normalizedQuery) ||
+        (user.phone || "").toLowerCase().includes(normalizedQuery),
+    );
+  }, [searchQuery, users]);
+
+  const assignableRoles = useMemo(() => getAssignableRoles(roles), [roles]);
 
   const resetCreateForm = () => {
-    setCreateForm(initialCreateUserForm);
+    setCreateForm({
+      ...initialCreateUserForm,
+      roleId: getDefaultCreateRoleId(roles),
+    });
   };
 
   const fetchUsers = async () => {
@@ -63,9 +89,38 @@ export function UsersManagement() {
     }
   };
 
+  const fetchRoles = async () => {
+    try {
+      const nextRoles = await api.roles.getRoles();
+      setRoles(nextRoles);
+    } catch (error) {
+      logger.warn("[UsersManagement] Failed to fetch roles", error);
+      toast.error("Error fetching roles");
+    }
+  };
+
   useEffect(() => {
     void fetchUsers();
+    void fetchRoles();
   }, []);
+
+  useEffect(() => {
+    const nextDefaultRoleId = getDefaultCreateRoleId(roles);
+    if (!nextDefaultRoleId) {
+      return;
+    }
+
+    const hasSelectedAssignableRole = assignableRoles.some(
+      (role) => String(role.RoleID) === createForm.roleId,
+    );
+
+    if (!hasSelectedAssignableRole) {
+      setCreateForm((previous) => ({
+        ...previous,
+        roleId: nextDefaultRoleId,
+      }));
+    }
+  }, [assignableRoles, createForm.roleId, roles]);
 
   const handleCreateUser = async () => {
     const firstName = createForm.firstName.trim();
@@ -73,10 +128,19 @@ export function UsersManagement() {
     const email = createForm.email.trim().toLowerCase();
     const password = createForm.password;
     const phone = createForm.phone.trim();
-    const roleId = createForm.role === "admin" ? 1 : 2;
+    const roleId = Number.parseInt(createForm.roleId, 10);
 
-    if (!firstName || !email || !password) {
-      toast.error("First name, email, and password are required");
+    const selectedRole = assignableRoles.find((role) => role.RoleID === roleId);
+
+    if (
+      !firstName ||
+      !email ||
+      !password ||
+      !Number.isInteger(roleId) ||
+      roleId < 1 ||
+      !selectedRole
+    ) {
+      toast.error("First name, email, password, and a valid role are required");
       return;
     }
 
@@ -98,7 +162,7 @@ export function UsersManagement() {
         toast.success("User created successfully");
         setIsCreateOpen(false);
         resetCreateForm();
-        await fetchUsers();
+        await Promise.all([fetchUsers(), fetchRoles()]);
       } else {
         toast.error(response.message || "Failed to create user");
       }
@@ -110,25 +174,99 @@ export function UsersManagement() {
     }
   };
 
+  const handleSuspendUser = async () => {
+    if (!pendingSuspendUser) return;
+    const durationHours =
+      suspendDurationHours === "null" ? null : Number(suspendDurationHours);
+
+    setIsSuspending(true);
+    try {
+      const result = await api.admin.suspendUser(
+        parseInt(pendingSuspendUser.id, 10),
+        durationHours,
+      );
+
+      if (result.success) {
+        toast.success(result.message ?? "User suspended successfully");
+        setPendingSuspendUser(null);
+        await fetchUsers();
+      } else {
+        toast.error(result.message ?? "Failed to suspend user");
+      }
+    } catch (error) {
+      logger.warn("[UsersManagement] Suspend user failed", error);
+      toast.error("Failed to suspend user");
+    } finally {
+      setIsSuspending(false);
+    }
+  };
+
+  const handleBulkSuspend = async (durationHours: number | null) => {
+    if (selectedIds.size === 0) return;
+    const userIds = Array.from(selectedIds)
+      .map((id) => Number.parseInt(id, 10))
+      .filter((id) => Number.isInteger(id) && id > 0);
+
+    if (userIds.length === 0) {
+      toast.error("No valid users selected");
+      return;
+    }
+
+    setIsSuspending(true);
+    try {
+      const results = await Promise.all(
+        userIds.map((userId) => api.admin.suspendUser(userId, durationHours)),
+      );
+      const successCount = results.filter((result) => result.success).length;
+
+      if (successCount > 0) {
+        toast.success(
+          durationHours === null
+            ? `${successCount} users permanently banned`
+            : `${successCount} users suspended`,
+        );
+        setSelectedIds(new Set());
+        await fetchUsers();
+      }
+
+      if (successCount < userIds.length) {
+        toast.error(
+          `${userIds.length - successCount} users could not be suspended`,
+        );
+      }
+    } catch (error) {
+      logger.warn("[UsersManagement] Bulk suspend failed", error);
+      toast.error("Failed to suspend selected users");
+    } finally {
+      setIsSuspending(false);
+    }
+  };
+
   const handleStatusChange = async (
     userId: string,
     newStatus: "active" | "banned",
   ) => {
-    try {
-      const exists = await api.users.exists(userId);
-      if (!exists) {
-        setUsers((previous) => previous.filter((user) => user.id !== userId));
-        toast.error("User no longer exists");
-        return;
-      }
+    const exists = await verifyUserExists(userId);
+    if (exists === null) {
+      return;
+    }
+    if (!exists) {
+      setUsers((previous) => previous.filter((user) => user.id !== userId));
+      toast.error("User no longer exists");
+      return;
+    }
 
+    try {
       const success = await api.users.updateUserStatus(userId, newStatus);
       if (success) {
         setUsers((previous) =>
           previous.map((user) =>
-            user.id === userId ? { ...user, status: newStatus } : user,
+            user.id === userId
+              ? { ...user, status: newStatus, suspendedUntil: undefined }
+              : user,
           ),
         );
+        emitAuthSessionChanged();
         toast.success(`User status updated to ${newStatus}`);
       } else {
         toast.error("Failed to update status");
@@ -139,25 +277,39 @@ export function UsersManagement() {
     }
   };
 
-  const toggleRole = async (userId: string, currentRole: "admin" | "user") => {
-    const newRole = currentRole === "admin" ? "user" : "admin";
+  const handleRoleChange = async (userId: string, newRoleId: number) => {
+    const exists = await verifyUserExists(userId);
+    if (exists === null) {
+      return;
+    }
+    if (!exists) {
+      setUsers((previous) => previous.filter((user) => user.id !== userId));
+      toast.error("User no longer exists");
+      return;
+    }
 
     try {
-      const exists = await api.users.exists(userId);
-      if (!exists) {
-        setUsers((previous) => previous.filter((user) => user.id !== userId));
-        toast.error("User no longer exists");
+      const targetRole = roles.find((role) => role.RoleID === newRoleId);
+      if (!targetRole) {
+        toast.error("Selected role was not found");
         return;
       }
 
-      const success = await api.users.updateUserRole(userId, newRole);
+      const success = await api.users.updateUserRole(userId, newRoleId);
       if (success) {
         setUsers((previous) =>
           previous.map((user) =>
-            user.id === userId ? { ...user, role: newRole } : user,
+            user.id === userId
+              ? {
+                  ...user,
+                  roleId: targetRole.RoleID,
+                  roleName: targetRole.RoleName,
+                }
+              : user,
           ),
         );
-        toast.success(`User role updated to ${newRole}`);
+        emitAuthSessionChanged();
+        toast.success(`User role updated to ${targetRole.RoleName}`);
       } else {
         toast.error("Failed to update role");
       }
@@ -168,14 +320,17 @@ export function UsersManagement() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    try {
-      const exists = await api.users.exists(userId);
-      if (!exists) {
-        setUsers((previous) => previous.filter((user) => user.id !== userId));
-        toast.error("User already deleted");
-        return;
-      }
+    const exists = await verifyUserExists(userId);
+    if (exists === null) {
+      return;
+    }
+    if (!exists) {
+      setUsers((previous) => previous.filter((user) => user.id !== userId));
+      toast.error("User already deleted");
+      return;
+    }
 
+    try {
       const response = await api.users.deleteUser(userId);
       if (response.success) {
         setUsers((previous) => previous.filter((user) => user.id !== userId));
@@ -198,7 +353,11 @@ export function UsersManagement() {
       );
       if (success) {
         setUsers((prev) =>
-          prev.map((u) => (selectedIds.has(u.id) ? { ...u, status } : u)),
+          prev.map((u) =>
+            selectedIds.has(u.id)
+              ? { ...u, status, suspendedUntil: undefined }
+              : u,
+          ),
         );
         toast.success(
           `${selectedIds.size} users ${status === "banned" ? "banned" : "activated"}`,
@@ -215,47 +374,38 @@ export function UsersManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between gap-4 items-center">
-        <h1 className="text-2xl font-bold text-foreground">Users Management</h1>
-
-        <div className="flex w-full sm:w-auto items-center gap-3">
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search users..."
-              className="pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <Button
-            onClick={() => {
-              setIsCreateOpen(true);
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add User
-          </Button>
-        </div>
-      </div>
+      <UsersManagementHeader
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
+        onAddUser={() => setIsCreateOpen(true)}
+      />
 
       <UsersTable
         users={filteredUsers}
-        onToggleRole={(userId, role) => {
-          void toggleRole(userId, role);
+        roles={assignableRoles}
+        onChangeRole={(userId, roleId) => {
+          void handleRoleChange(userId, roleId);
         }}
         onChangeStatus={(userId, status) => {
           void handleStatusChange(userId, status);
         }}
         onViewDetails={(userId) => {
-          navigate(`/admin/users/${userId}`);
+          navigate(`/admin/users/${userId}`, {
+            state: { fromPath: currentPath },
+          });
         }}
         onDeleteRequest={(user) => {
           setPendingDeleteUser({
             id: user.id,
             displayName: user.name || user.email,
           });
+        }}
+        onSuspendRequest={(user) => {
+          setPendingSuspendUser({
+            id: user.id,
+            displayName: user.name || user.email,
+          });
+          setSuspendDurationHours("24");
         }}
         formatJoinedDate={formatJoinedDate}
         selectedIds={selectedIds}
@@ -264,84 +414,48 @@ export function UsersManagement() {
 
       {/* Floating Bulk Action Bar */}
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-lg border border-border bg-card px-5 py-3 shadow-xl">
-          <span className="text-sm font-medium text-foreground">
-            {selectedIds.size} selected
-          </span>
-          <div className="h-4 w-px bg-border" />
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => void handleBulkAction("banned")}
-          >
-            <Ban className="w-3.5 h-3.5 mr-1.5" />
-            Bulk Ban
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void handleBulkAction("active")}
-          >
-            <UserCheck className="w-3.5 h-3.5 mr-1.5" />
-            Bulk Activate
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSelectedIds(new Set())}
-          >
-            Clear
-          </Button>
-        </div>
+        <BulkUserActionsBar
+          selectedCount={selectedIds.size}
+          isSuspending={isSuspending}
+          onBan={() => void handleBulkAction("banned")}
+          onActivate={() => void handleBulkAction("active")}
+          onClear={() => setSelectedIds(new Set())}
+          onSuspend={(durationHours) => void handleBulkSuspend(durationHours)}
+        />
       )}
 
-      <CreateUserDialog
-        open={isCreateOpen}
+      <UsersManagementDialogs
+        isCreateOpen={isCreateOpen}
         isCreatingUser={isCreatingUser}
-        formData={createForm}
-        onOpenChange={(open) => {
+        createForm={createForm}
+        roles={assignableRoles}
+        pendingDeleteUser={pendingDeleteUser}
+        pendingSuspendUser={pendingSuspendUser}
+        suspendDurationHours={suspendDurationHours}
+        isSuspending={isSuspending}
+        onCreateOpenChange={(open) => {
           setIsCreateOpen(open);
-          if (!open) {
-            resetCreateForm();
-          }
+          if (!open) resetCreateForm();
         }}
-        onFormDataChange={setCreateForm}
-        onSubmit={() => {
-          void handleCreateUser();
-        }}
-        onCancel={() => {
+        onCreateFormChange={setCreateForm}
+        onCreateSubmit={() => void handleCreateUser()}
+        onCreateCancel={() => {
           setIsCreateOpen(false);
           resetCreateForm();
         }}
-      />
-
-      <TypeToConfirmDialog
-        open={pendingDeleteUser !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setPendingDeleteUser(null);
-          }
+        onDeleteOpenChange={(open) => {
+          if (!open) setPendingDeleteUser(null);
         }}
-        title="Delete User"
-        description={
-          pendingDeleteUser
-            ? `Delete user "${pendingDeleteUser.displayName}"? This action cannot be undone.`
-            : ""
-        }
-        impactItems={[
-          "All active listings",
-          "All chat conversations",
-          "All submitted reviews",
-        ]}
-        confirmPhrase="DELETE"
-        onConfirm={() => {
-          if (!pendingDeleteUser) {
-            return;
-          }
-
+        onDeleteConfirm={() => {
+          if (!pendingDeleteUser) return;
           void handleDeleteUser(pendingDeleteUser.id);
           setPendingDeleteUser(null);
         }}
+        onSuspendOpenChange={(open) => {
+          if (!open) setPendingSuspendUser(null);
+        }}
+        onSuspendDurationChange={setSuspendDurationHours}
+        onSuspend={() => void handleSuspendUser()}
       />
     </div>
   );

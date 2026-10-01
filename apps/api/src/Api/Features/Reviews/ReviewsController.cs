@@ -12,24 +12,55 @@ namespace TijarahJo.Api.Features.Reviews
     [ApiController]
     [ApiVersion("1.0")]
     [Route("api/v{version:apiVersion}/reviews")]
-    public class ReviewsController : ControllerBase
+    public class ReviewsController(IReviewService reviews, IReviewSubmissionService reviewSubmissions) : ControllerBase
     {
-        private readonly IReviewService _reviews;
-        private readonly IReviewSubmissionService _reviewSubmissions;
-
-        public ReviewsController(IReviewService reviews, IReviewSubmissionService reviewSubmissions)
-        {
-            _reviews = reviews;
-            _reviewSubmissions = reviewSubmissions;
-        }
-
         [HttpGet("user/{userId}")]
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<ReviewResponseDTO>>> GetUserReviews(int userId)
         {
             if (userId < 1) return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Invalid user ID");
-            IReadOnlyList<TijarahJo.Domain.Models.ReviewModel> reviews = await _reviews.GetReviewsAsync(userId, HttpContext.RequestAborted);
-            return Ok(reviews.Select(r => DTOMapper.ToReviewResponseDTO(r, Request)).ToList());
+            IReadOnlyList<TijarahJo.Domain.Models.ReviewModel> reviewList = await reviews.GetReviewsAsync(userId, HttpContext.RequestAborted);
+            return Ok(reviewList.Select(r => DTOMapper.ToReviewResponseDTO(r, Request)).ToList());
+        }
+
+        /// <summary>
+        /// Returns aggregated rating stats (average rating + review count) for a batch of seller user IDs.
+        /// Accepts a comma-separated list via query parameter, e.g. GET /reviews/ratings?userIds=1,2,3
+        /// Maximum 100 IDs per request.
+        /// </summary>
+        [HttpGet("ratings")]
+        [AllowAnonymous]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<Dictionary<int, SellerRatingDTO>>> GetBatchRatings([FromQuery] string? userIds)
+        {
+            if (string.IsNullOrWhiteSpace(userIds))
+                return Ok(new Dictionary<int, SellerRatingDTO>());
+
+            var parsedIds = userIds
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(s => int.TryParse(s, out int id) && id > 0 ? (int?)id : null)
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .Distinct()
+                .Take(100)
+                .ToList();
+
+            if (parsedIds.Count == 0)
+                return Ok(new Dictionary<int, SellerRatingDTO>());
+
+            var stats = await reviews.GetRatingsByUserIdsAsync(parsedIds, HttpContext.RequestAborted);
+
+            var result = stats.ToDictionary(
+                kvp => kvp.Key,
+                kvp => new SellerRatingDTO
+                {
+                    AverageRating = kvp.Value.AverageRating,
+                    ReviewCount = kvp.Value.ReviewCount
+                });
+
+            return Ok(result);
         }
 
         [Authorize]
@@ -50,7 +81,7 @@ namespace TijarahJo.Api.Features.Reviews
                 return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "Review payload is required.");
             }
 
-            ReviewSubmissionResult result = await _reviewSubmissions.SubmitAsync(
+            ReviewSubmissionResult result = await reviewSubmissions.SubmitAsync(
                 currentUserId,
                 request.ReviewedUserID,
                 request.Rating,

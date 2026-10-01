@@ -8,6 +8,10 @@ let postImageRowsByPostIdCache: Record<
   { rows: RawPostImage[]; updatedAt: number }
 > = {};
 
+// In-flight deduplication — when multiple callers request images for the same
+// post before the first response arrives, they share one HTTP request.
+const _postImagesInflight: Map<string, Promise<RawPostImage[]>> = new Map();
+
 const LOOKUP_CACHE_TTL_MS = 60_000;
 
 function isCacheFresh(updatedAt: number): boolean {
@@ -103,20 +107,31 @@ export async function getPostImageRowsByPostId(
     return cachedEntry.rows;
   }
 
-  const imagesResponse = await apiRequest<RawPostImage[]>(
-    `${POST_IMAGES_ENDPOINT}/post/${encodeURIComponent(normalizedPostId)}`,
-    {
-      method: "GET",
-    },
-  );
-
-  if (imagesResponse.success && Array.isArray(imagesResponse.data)) {
-    postImageRowsByPostIdCache[normalizedPostId] = {
-      rows: imagesResponse.data,
-      updatedAt: Date.now(),
-    };
-    return imagesResponse.data;
+  // Deduplicate: if another caller is already fetching images for this post, share the promise.
+  let inflight = _postImagesInflight.get(normalizedPostId);
+  if (!forceRefresh && inflight) {
+    return inflight;
   }
 
-  return cachedEntry?.rows || [];
+  inflight = (async () => {
+    const imagesResponse = await apiRequest<RawPostImage[]>(
+      `${POST_IMAGES_ENDPOINT}/post/${encodeURIComponent(normalizedPostId)}`,
+      {
+        method: "GET",
+      },
+    );
+
+    if (imagesResponse.success && Array.isArray(imagesResponse.data)) {
+      postImageRowsByPostIdCache[normalizedPostId] = {
+        rows: imagesResponse.data,
+        updatedAt: Date.now(),
+      };
+      return imagesResponse.data;
+    }
+
+    return postImageRowsByPostIdCache[normalizedPostId]?.rows || [];
+  })().finally(() => { _postImagesInflight.delete(normalizedPostId); });
+  _postImagesInflight.set(normalizedPostId, inflight);
+
+  return inflight;
 }

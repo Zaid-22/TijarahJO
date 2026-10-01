@@ -153,7 +153,7 @@ public static class PasswordHelper
         return CryptographicOperations.FixedTimeEquals(paddedLeft, paddedRight) && lengthMatch;
     }
 
-    public static (bool IsValid, string? ErrorMessage) IsPasswordPolicyCompliant(string password)
+    public static (bool IsValid, string? ErrorMessage) IsPasswordPolicyCompliant(string? password)
     {
         if (string.IsNullOrWhiteSpace(password))
         {

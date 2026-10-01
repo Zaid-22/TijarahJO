@@ -1,4 +1,4 @@
-/* eslint-disable jsx-a11y/control-has-associated-label */
+
 import { useEffect, useState, Fragment } from "react";
 import { Search, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
@@ -130,7 +130,7 @@ export function AuditLogViewer() {
           <table className="w-full text-sm text-left">
             <thead className="text-xs uppercase bg-muted text-muted-foreground sticky top-0">
               <tr>
-                <th scope="col" className="px-4 py-3 w-8" />
+                <th scope="col" className="px-4 py-3 w-8"><span className="sr-only">Expand</span></th>
                 <th scope="col" className="px-4 py-3">
                   ID
                 </th>
@@ -158,7 +158,7 @@ export function AuditLogViewer() {
                     colSpan={7}
                     className="px-6 py-12 text-center text-muted-foreground"
                   >
-                    <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" role="status" aria-label="Loading" /><span className="sr-only">Loading…</span>
                   </td>
                 </tr>
               ) : filteredEntries.length === 0 ? (
@@ -175,6 +175,9 @@ export function AuditLogViewer() {
                   <Fragment key={entry.auditLogID}>
                     <tr
                       className="border-b border-border hover:bg-muted/50 transition-colors cursor-pointer"
+                      tabIndex={0}
+                      role="row"
+                      aria-expanded={expandedRow === entry.auditLogID}
                       onClick={() =>
                         setExpandedRow(
                           expandedRow === entry.auditLogID
@@ -182,6 +185,16 @@ export function AuditLogViewer() {
                             : entry.auditLogID,
                         )
                       }
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setExpandedRow(
+                            expandedRow === entry.auditLogID
+                              ? null
+                              : entry.auditLogID,
+                          );
+                        }
+                      }}
                     >
                       <td className="px-4 py-3">
                         {expandedRow === entry.auditLogID ? (

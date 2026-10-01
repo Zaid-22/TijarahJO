@@ -108,7 +108,7 @@ export function FavoritesPage({
         {/* Page Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary to-secondary">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-linear-to-br from-primary to-secondary">
               <Heart className="h-6 w-6 fill-primary-foreground text-primary-foreground" />
             </div>
             <div>
