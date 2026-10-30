@@ -9,6 +9,7 @@ import { community } from "./community";
 import { chat } from "./chat";
 import { admin } from "./admin";
 import { compare } from "./compare";
+import { demoBanners } from "./banners";
 
 type Options = RequestInit & { throwOnAbort?: boolean };
 let queue: Promise<unknown> = Promise.resolve();
@@ -28,7 +29,7 @@ async function dispatch(endpoint: string, options: Options): Promise<ApiResponse
       await clearImages(); request.state = createSeed(); result = { success: true };
     }
     else if (request.path === "/system/status" && request.method === "GET") result = { MaintenanceMode: false, RegistrationEnabled: false };
-    else if (request.path === "/banners" && request.method === "GET") result = { success: true, banners: [] };
+    else if (request.path === "/banners" && request.method === "GET") result = { success: true, statusCode: 200, banners: demoBanners };
     else for (const handler of [accounts, marketplace, community, chat, admin, compare]) {
       result = await handler(request);
       if (result !== undefined) break;

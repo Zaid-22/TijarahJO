@@ -12,6 +12,27 @@ const call = (url, method = "GET", body, options = {}) => demoRequest(url, { met
 const login = name => call("/auth/login", "POST", { Login: name + "@demo.example", Password: "Demo123!" });
 beforeEach(() => { storage.clear(); resetState(); });
 
+test("homepage banners load for guests with bundled responsive images and populated destinations", async () => {
+  const response = await call("/banners");
+  assert.equal(response.success, true);
+  assert.equal(response.data.success, true);
+  assert.equal(response.data.banners.length, 3);
+  for (const banner of response.data.banners) {
+    assert.equal(banner.isActive, true);
+    for (const field of ["title", "titleAr", "subtitle", "subtitleAr", "buttonText", "buttonTextAr"]) {
+      assert.ok(banner[field].trim());
+    }
+    const asset = path.join(__dirname, "../../public", banner.imageUrl);
+    for (const file of [asset, asset.replace(".webp", "-360w.webp"), asset.replace(".webp", ".png")]) {
+      assert.ok(fs.statSync(file).size > 0, `Missing banner media: ${file}`);
+    }
+    const destination = banner.linkUrl === "/posts" ? "/posts/feed" : `/search?category=${banner.linkUrl.split("/").pop()}`;
+    assert.ok((await call(destination)).data.posts.length > 0);
+  }
+  await call("/demo/reset", "POST");
+  assert.deepEqual((await call("/banners")).data, response.data);
+});
+
 test("fresh catalog, filters and pagination return real API shapes", async () => {
   const feed = await call("/posts/feed?page=1&limit=12");
   assert.equal(feed.success, true); assert.equal(feed.data.posts.length, 12);
