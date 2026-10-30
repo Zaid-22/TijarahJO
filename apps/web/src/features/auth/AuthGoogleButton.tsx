@@ -1,4 +1,5 @@
 import { Button } from "../../shared/ui/button";
+import { DEMO_MODE } from "../../demo/config";
 
 interface AuthGoogleButtonProps {
   onContinueWithGoogle: () => void;
@@ -13,6 +14,7 @@ export function AuthGoogleButton({
   continueText,
   orUseEmailText,
 }: AuthGoogleButtonProps) {
+  if (DEMO_MODE) return <p className="text-sm text-muted-foreground">Use a sample account in the demo toolbar. Google sign-in and email verification are unavailable here.<br />استخدم حساباً تجريبياً من شريط العرض بالأعلى.</p>;
   return (
     <>
       <Button
