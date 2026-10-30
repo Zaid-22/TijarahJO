@@ -1,0 +1,7 @@
+.demo-toolbar { position: fixed; inset: 0 0 auto; z-index: 60; }
+.demo-mode { padding-top: var(--demo-toolbar-height, 100px); }
+.demo-mode header.sticky { top: var(--demo-toolbar-height, 100px); }
+.demo-mode .h-screen { height: calc(100dvh - var(--demo-toolbar-height, 100px)); }
+@media (max-width: 767px) {
+  .demo-mode aside.fixed { top: var(--demo-toolbar-height, 100px); }
+}

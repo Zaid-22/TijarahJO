@@ -91,14 +91,14 @@ const configuredApiBaseUrl = normalizeApiBaseUrl(
   ),
 );
 
-const backendHostUrl = configuredApiBaseUrl.replace(/\/api(?:\/v\d+)?$/i, "");
+const backendHostUrl = env.VITE_DEMO_MODE === "true" ? "" : configuredApiBaseUrl.replace(/\/api(?:\/v\d+)?$/i, "");
 const isDevMode = parseBooleanFlag(env.DEV, false);
 
 export const APP_CONFIG = {
   apiBaseUrl: configuredApiBaseUrl,
   backendHostUrl,
-  googleAuthEnabled: parseBooleanFlag(env.VITE_GOOGLE_AUTH_ENABLED, false),
-  googleMapsApiKey: parseNonEmptyString(env.VITE_GOOGLE_MAPS_API_KEY, ""),
+  googleAuthEnabled: env.VITE_DEMO_MODE === "true" ? false : parseBooleanFlag(env.VITE_GOOGLE_AUTH_ENABLED, false),
+  googleMapsApiKey: env.VITE_DEMO_MODE === "true" ? "" : parseNonEmptyString(env.VITE_GOOGLE_MAPS_API_KEY, ""),
   googleMapsMapId: parseNonEmptyString(
     env.VITE_GOOGLE_MAPS_MAP_ID,
     isDevMode ? "DEMO_MAP_ID" : "",

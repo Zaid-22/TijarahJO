@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Car, ExternalLink, Loader2, MapPin, Navigation } from "lucide-react";
 import { APP_CONFIG } from "../../constants/appConfig";
+import { DEMO_MODE } from "../../demo/config";
 import { useAppSettings } from "../../contexts/AppSettingsContext";
 import { Button } from "../../shared/ui/button";
 import { Card, CardContent } from "../../shared/ui/card";
@@ -46,10 +47,10 @@ const copy = {
     openMaps: "Open in Google Maps",
     mapPreview: "Open location in Google Maps",
     useLocation: "Use my location",
-    prompt: "Use my location to see distance and time.",
+    prompt: DEMO_MODE ? "Sample location. Live directions are unavailable in this demo." : "Use my location to see distance and time.",
     loadingRoute: "Calculating distance and travel time...",
     routeError: "Could not calculate distance right now.",
-    mapUnavailable: "Google Maps is not configured yet.",
+    mapUnavailable: DEMO_MODE ? "Illustrative listing location" : "Google Maps is not configured yet.",
     locationUnavailable: "Your browser could not share location.",
   },
   ar: {
@@ -57,10 +58,10 @@ const copy = {
     openMaps: "افتح في خرائط Google",
     mapPreview: "افتح الموقع في خرائط Google",
     useLocation: "استخدم موقعي",
-    prompt: "استخدم موقعك لمعرفة المسافة والوقت.",
+    prompt: DEMO_MODE ? "موقع توضيحي. الاتجاهات المباشرة غير متاحة في العرض." : "استخدم موقعك لمعرفة المسافة والوقت.",
     loadingRoute: "جارٍ حساب المسافة ووقت الوصول...",
     routeError: "تعذر حساب المسافة حالياً.",
-    mapUnavailable: "لم يتم إعداد خرائط Google بعد.",
+    mapUnavailable: DEMO_MODE ? "موقع توضيحي للإعلان" : "لم يتم إعداد خرائط Google بعد.",
     locationUnavailable: "تعذر الوصول إلى موقعك من المتصفح.",
   },
 } as const;
