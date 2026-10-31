@@ -1,9 +1,16 @@
 .demo-toolbar { position: fixed; inset: 0 0 auto; z-index: 60; }
-.demo-mode { padding-top: var(--demo-toolbar-height, 100px); }
+/* Keep body from becoming a padded scroll container for sticky headers. */
+html:has(body.demo-mode),
+body.demo-mode { overflow-x: clip; }
+.demo-mode #root {
+  padding-top: var(--demo-toolbar-height, 100px);
+  min-height: 100dvh;
+}
 .demo-mode header.sticky { top: var(--demo-toolbar-height, 100px); }
-.demo-mode .h-screen,
-.demo-mode .h-dvh { height: calc(100dvh - var(--demo-toolbar-height, 100px)); }
-.demo-mode .min-h-screen { min-height: calc(100dvh - var(--demo-toolbar-height, 100px)); }
+/* Portaled dialogs and image viewers must retain their full viewport height. */
+.demo-mode #root .h-screen,
+.demo-mode #root .h-dvh { height: calc(100dvh - var(--demo-toolbar-height, 100px)); }
+.demo-mode #root .min-h-screen { min-height: calc(100dvh - var(--demo-toolbar-height, 100px)); }
 @media (max-width: 767px) {
   .demo-mode aside.fixed { top: var(--demo-toolbar-height, 100px); }
 }

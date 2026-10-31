@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useAppSettings } from "../contexts/AppSettingsContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -19,11 +19,13 @@ export default function DemoToolbar() {
   const [error, setError] = useState("");
   const [confirmReset, setConfirmReset] = useState(false);
   const toolbar = useRef<HTMLElement>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.body.classList.add("demo-mode");
-    const observer = new ResizeObserver(() => {
+    const measureToolbar = () => {
       document.documentElement.style.setProperty("--demo-toolbar-height", `${toolbar.current?.offsetHeight ?? 0}px`);
-    });
+    };
+    measureToolbar();
+    const observer = new ResizeObserver(measureToolbar);
     if (toolbar.current) observer.observe(toolbar.current);
     return () => { observer.disconnect(); document.body.classList.remove("demo-mode"); document.documentElement.style.removeProperty("--demo-toolbar-height"); };
   }, []);
