@@ -33,6 +33,9 @@ import { lazyImportWithRetry } from "../shared/lib/lazyImportWithRetry";
 import { Header } from "../features/marketplace/components/Header";
 import { ComparePanel } from "../features/marketplace/components/ComparePanel";
 import { AppRoutes } from "./routes/AppRoutes";
+import { DEMO_MODE } from "../demo/config";
+
+const DemoToolbar = DEMO_MODE ? lazy(() => import("../demo/DemoToolbar")) : null;
 
 const MaintenanceScreen = lazy(
   lazyImportWithRetry(
@@ -172,6 +175,7 @@ function writeCachedMaintenanceStatus(status: PublicSystemStatus): void {
 export default function App() {
   return (
     <AppSettingsProvider>
+      {DemoToolbar ? <Suspense fallback={null}><DemoToolbar /></Suspense> : null}
       <UserProfileProvider>
         <SearchProvider>
           <CompareProvider>

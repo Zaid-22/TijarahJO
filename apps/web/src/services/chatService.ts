@@ -10,6 +10,8 @@ import { toPositiveIntegerId } from "../utils/idValidation";
 import { chatApi } from "./api/chat";
 import { normalizeChatMessage, RawChatMessage } from "./api/chatNormalization";
 import { logger } from "../shared/lib/logger";
+import { DemoChatService } from "../demo/chatService";
+import { DEMO_MODE } from "../demo/config";
 
 const DEBUG_CHAT =
   Boolean(import.meta.env.DEV) && import.meta.env.VITE_DEBUG_CHAT === "true";
@@ -308,8 +310,6 @@ class ChatService {
   }
 
   public disconnect(): Promise<void> {
-    // Disable all sends immediately, even if another transition is in flight.
-    this.requestedUserId = null;
     this.intentionalDisconnect = true;
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
@@ -514,4 +514,4 @@ class ChatService {
   }
 }
 
-export const chatService = new ChatService();
+export const chatService = DEMO_MODE ? new DemoChatService() : new ChatService();

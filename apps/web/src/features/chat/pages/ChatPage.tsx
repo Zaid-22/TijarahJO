@@ -309,6 +309,8 @@ export function ChatPage({ language }: ChatPageProps) {
     <PageShell tone="account" className="h-dvh overflow-hidden">
       <div className="flex h-dvh min-h-0 flex-col overflow-hidden">
         <SubpageHeader
+          sticky={false}
+          className="shrink-0"
           onBack={handlePageBack}
           isRTL={isRTL}
           backLabel={labels.back}

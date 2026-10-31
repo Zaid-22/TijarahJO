@@ -219,6 +219,7 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       react(),
       VitePWA({
+        disable: env.VITE_DEMO_MODE === "true",
         registerType: "autoUpdate",
         includeAssets: ["favicon.svg", "icons/*.png"],
         manifest: {

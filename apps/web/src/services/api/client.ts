@@ -1,4 +1,6 @@
+import { getCookieValue } from "./cookies";
 import { APP_CONFIG } from "../../constants/appConfig";
+import { DEMO_MODE } from "../../demo/config";
 import { ApiResponse } from "../../types/api";
 import { logger } from "../../shared/lib/logger";
 import { shouldPrimeCsrfForEndpoint } from "./csrfPolicy";
@@ -25,23 +27,6 @@ export type ApiRequestOptions = RequestInit & {
 };
 
 
-
-function getCookieValue(name: string): string | null {
-  if (typeof document === "undefined") {
-    return null;
-  }
-
-  const needle = `${encodeURIComponent(name)}=`;
-  const parts = document.cookie.split("; ");
-  for (const part of parts) {
-    if (part.startsWith(needle)) {
-      const rawValue = part.slice(needle.length);
-      return decodeURIComponent(rawValue);
-    }
-  }
-
-  return null;
-}
 
 function isUnsafeMethod(method: string): boolean {
   const normalized = method.toUpperCase();
@@ -253,6 +238,10 @@ export async function apiRequest<T>(
   endpoint: string,
   options: ApiRequestOptions = {},
 ): Promise<ApiResponse<T>> {
+  if (DEMO_MODE) {
+    const { demoRequest } = await import("../../demo/api");
+    return demoRequest<T>(endpoint, options);
+  }
   const {
     timeoutMs = REQUEST_TIMEOUT_MS,
     throwOnAbort = false,
@@ -538,6 +527,5 @@ export async function apiRequest<T>(
     if (callerSignal) {
       callerSignal.removeEventListener("abort", syncAbortFromCaller);
     }
-  // eslint-disable-next-line max-lines
   }
 }

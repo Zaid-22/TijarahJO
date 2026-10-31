@@ -8,6 +8,7 @@ import { serverQueryClient } from "../shared/query/queryClient";
 import { ErrorBoundary } from "../shared/ui/error-boundary";
 import { purgeLegacySensitiveRuntimeCaches } from "../shared/pwa/cacheHygiene";
 import App from "./App";
+import { DEMO_MODE } from "../demo/config";
 import "../styles/globals.css";
 
 // Global safety net for dynamic import/chunk loading failures.
@@ -76,6 +77,10 @@ const appTree = (
 );
 
 async function bootstrap() {
+  if (DEMO_MODE && "serviceWorker" in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations().catch(() => []);
+    await Promise.all(registrations.map(registration => registration.unregister()));
+  }
   await purgeLegacySensitiveRuntimeCaches();
 
   ReactDOM.createRoot(rootContainer).render(appTree);
