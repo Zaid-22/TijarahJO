@@ -7,7 +7,6 @@ import { ConfirmActionDialog } from "../shared/ui/confirm-action-dialog";
 import { AUTH_ADMIN_ACCESS_HINT_KEY, AUTH_GUEST_KEY, AUTH_LEGACY_KEYS, AUTH_LOGOUT_KEY, AUTH_SESSION_HINT_KEY } from "../shared/constants/authStorageKeys";
 import { serverQueryClient } from "../shared/query/queryClient";
 import { demoRequest } from "./api";
-import { hasPersistentStorage } from "./store";
 import "./demo.css";
 
 export default function DemoToolbar() {
@@ -37,18 +36,6 @@ export default function DemoToolbar() {
       sessionStorage.removeItem("tijarahjo_public_system_status_v1");
     } catch { /* In-memory demo remains accessible with blocked storage. */ }
   }
-  async function selectAccount(persona: string) {
-    setBusy(true); setError("");
-    const response = await demoRequest("/auth/login", { method: "POST", body: JSON.stringify({ Login: `${persona}@demo.example`, Password: "Demo123!" }) });
-    if (!response.success) { setError(response.error.message); setBusy(false); return; }
-    if (!hasPersistentStorage()) { setError(ar ? "اسمح بتخزين بيانات الموقع لتبديل الحسابات." : "Allow browser site storage to switch demo accounts."); setBusy(false); return; }
-    await clearSessionCaches();
-    try {
-      localStorage.setItem(AUTH_SESSION_HINT_KEY, "true");
-      if (persona === "admin") localStorage.setItem(AUTH_ADMIN_ACCESS_HINT_KEY, "true");
-    } catch { /* Auth restoration will use the demo session. */ }
-    window.location.assign(persona === "admin" ? "/admin" : persona === "seller" ? "/profile" : "/");
-  }
   async function reset() {
     setBusy(true);
     await clearSessionCaches();
@@ -65,8 +52,6 @@ export default function DemoToolbar() {
           {user ? <span className="ms-2 font-medium">{user.name}</span> : null}
         </div>
         <div className="flex flex-wrap items-center gap-1">
-          {([['buyer', 'Buyer', 'مشتري'], ['seller', 'Seller', 'بائع'], ['admin', 'Admin', 'مدير']] as const).map(([key, en, arabic]) =>
-            <Button key={key} size="sm" variant="outline" disabled={busy} onClick={() => void selectAccount(key)}>{ar ? `جرّب كـ${arabic}` : `Try as ${en}`}</Button>)}
           <Button size="sm" variant="ghost" onClick={toggleLanguage}>{ar ? "English" : "العربية"}</Button>
           <Button size="sm" variant="ghost" onClick={() => setDarkMode(!darkMode)}>{darkMode ? (ar ? "فاتح" : "Light") : (ar ? "داكن" : "Dark")}</Button>
           <Button size="sm" variant="ghost" disabled={busy} onClick={() => setConfirmReset(true)}>{ar ? "إعادة ضبط" : "Reset demo"}</Button>
